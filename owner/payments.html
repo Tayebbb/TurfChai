@@ -44,7 +44,23 @@
     <!-- ═══════ Net Income Over Time Chart ═══════ -->
     <div class="card income-chart-card" style="margin-bottom:16px;padding:20px 24px 16px">
       <div class="income-chart-header">
-        <h3 style="margin:0;font-size:18px">Net Income Over Time</h3>
+        <div class="income-chart-title-row">
+          <h3 style="margin:0;font-size:18px">Net Income Over Time</h3>
+          <div class="sport-picker" id="sportPicker">
+            <div class="sport-picker-trigger" tabindex="0" aria-haspopup="listbox" aria-label="Select sports to compare">
+              <span class="sport-picker-placeholder">Select sports…</span>
+            </div>
+            <div class="sport-picker-dropdown" role="listbox">
+              <label><input type="checkbox" value="__all__" checked> Select All</label>
+              <div class="sp-divider"></div>
+              <label><input type="checkbox" value="football" checked><span class="sp-color-dot" style="background:#06B6D4"></span>⚽ Football</label>
+              <label><input type="checkbox" value="cricket" checked><span class="sp-color-dot" style="background:#E879F9"></span>🏐 Cricket</label>
+              <label><input type="checkbox" value="badminton" checked><span class="sp-color-dot" style="background:#FB923C"></span>🏸 Badminton</label>
+              <label><input type="checkbox" value="futsal" checked><span class="sp-color-dot" style="background:#A3E635"></span>🥅 Futsal</label>
+              <label><input type="checkbox" value="volleyball" checked><span class="sp-color-dot" style="background:#F472B6"></span>🏐 Volleyball</label>
+            </div>
+          </div>
+        </div>
         <div class="income-chart-filters" role="group" aria-label="Time range">
           <button class="income-tf-btn active" data-timeframe="daily">Daily (7 Days)</button>
           <button class="income-tf-btn" data-timeframe="weekly">Weekly (14 Weeks)</button>
@@ -252,61 +268,108 @@
 })();
 </script>
 
-<!-- ═══════ Income Chart Logic ═══════ -->
+<!-- ═══════ Income Chart Logic (Multi-sport) ═══════ -->
 <script>
 (function() {
   'use strict';
 
-  /* ---- Sample data for all four time frames ---- */
+  /* ═══ Sport registry with distinct accessible colors ═══ */
+  const SPORTS = [
+    { key: 'football',   label: '⚽ Football',   color: '#06B6D4', tagBg: 'rgba(6,182,212,.15)' },
+    { key: 'cricket',    label: '🏐 Cricket',    color: '#E879F9', tagBg: 'rgba(232,121,249,.15)' },
+    { key: 'badminton',  label: '🏸 Badminton',  color: '#FB923C', tagBg: 'rgba(251,146,60,.15)' },
+    { key: 'futsal',     label: '🥅 Futsal',     color: '#A3E635', tagBg: 'rgba(163,230,53,.15)' },
+    { key: 'volleyball', label: '🏐 Volleyball', color: '#F472B6', tagBg: 'rgba(244,114,182,.15)' }
+  ];
+
+  /* ═══ API-Ready mock data: sport × timeframe ═══ */
+  const tfLabels = {
+    daily:   ['2 Aug','3 Aug','4 Aug','5 Aug','6 Aug','7 Aug','8 Aug'],
+    weekly:  ['W22','W23','W24','W25','W26','W27','W28','W29','W30','W31','W32','W33','W34','W35'],
+    monthly: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+    yearly:  ['2022','2023','2024','2025','2026']
+  };
+
   const chartData = {
-    daily: {
-      labels: ['2 Aug','3 Aug','4 Aug','5 Aug','6 Aug','7 Aug','8 Aug'],
-      data:   [12400, 15800, 9200, 18600, 17800, 14200, 16365]
+    football: {
+      daily:  [6200,8400,4100,10200,9800,7600,8900],
+      weekly: [42000,49800,45600,54200,51800,47400,56700,60300,53500,50600,58300,61800,55000,59400],
+      monthly:[156000,171000,163000,189000,170000,157000,195000,207000,187000,216000,229000,245000],
+      yearly: [980000,1240000,1650000,2060000,2368000]
     },
-    weekly: {
-      labels: ['W22','W23','W24','W25','W26','W27','W28','W29','W30','W31','W32','W33','W34','W35'],
-      data:   [78500,92300,85100,101200,96400,88700,105600,112400,99800,94300,108700,115200,102500,110800]
+    cricket: {
+      daily:  [3800,4200,3100,5000,4800,3900,4500],
+      weekly: [22000,25600,23800,28400,26900,24800,29400,31200,27800,26200,30100,32000,28500,30800],
+      monthly:[78000,85600,81400,94200,84600,78200,97000,103000,93300,107800,114000,121800],
+      yearly: [520000,658000,876000,1094000,1218000]
     },
-    monthly: {
-      labels: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
-      data:   [285000,312000,298000,345000,310000,287000,356000,378000,342000,395000,418000,446800]
+    badminton: {
+      daily:  [2400,3200,2000,3400,3200,2700,2965],
+      weekly: [14500,16900,15700,18600,17700,16500,19500,20900,18500,17500,20300,21400,19000,20600],
+      monthly:[51000,55400,53600,61800,55400,51800,64000,68000,61700,71200,75000,80000],
+      yearly: [350000,442000,594000,736000,882000]
     },
-    yearly: {
-      labels: ['2022','2023','2024','2025','2026'],
-      data:   [1850000,2340000,3120000,3890000,4468000]
+    futsal: {
+      daily:  [1800,2100,1400,2600,2400,1900,2200],
+      weekly: [11200,13400,12200,14800,14100,12900,15300,16500,14600,13800,15900,16800,14900,16200],
+      monthly:[38000,41200,39800,46000,41200,38600,47600,50600,45900,53000,55800,59500],
+      yearly: [260000,328000,441000,547000,595000]
+    },
+    volleyball: {
+      daily:  [1200,1500,900,1800,1700,1300,1600],
+      weekly: [8400,9900,9100,10800,10300,9400,11200,11900,10600,10000,11500,12200,10800,11700],
+      monthly:[28500,31200,29700,34400,30900,28600,35500,37700,34200,39500,41800,44600],
+      yearly: [195000,246000,327000,409000,468000]
     }
   };
 
-  /* ---- Theme-aware color helpers ---- */
-  function isDark() {
-    return document.documentElement.getAttribute('data-theme') === 'dark';
-  }
+  /* ═══ State ═══ */
+  let selectedSports = SPORTS.map(s => s.key); // all selected initially
+  let currentTimeframe = 'daily';
+
+  /* ═══ Theme helpers ═══ */
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
   function themeColors() {
     const dark = isDark();
     return {
-      line:     dark ? '#22C55E' : '#0E7A4A',
-      gridLine: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-      tickText: dark ? '#A6B8AA'  : '#4C5F55',
-      tooltip:  dark ? '#1C291E'  : '#FFFFFF',
-      tooltipText: dark ? '#F2F6F2' : '#122019',
+      gridLine:      dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+      tickText:      dark ? '#A6B8AA'  : '#4C5F55',
+      tooltip:       dark ? '#1C291E'  : '#FFFFFF',
+      tooltipText:   dark ? '#F2F6F2' : '#122019',
       tooltipBorder: dark ? '#2C3C2F' : '#E4EAE6'
     };
   }
-
-  /* ---- Build gradient fill ---- */
-  function makeGradient(ctx, dark) {
+  function makeGradient(ctx, color) {
     const grad = ctx.createLinearGradient(0, 0, 0, ctx.canvas.clientHeight);
-    if (dark) {
-      grad.addColorStop(0, 'rgba(34,197,94,0.28)');
-      grad.addColorStop(1, 'rgba(34,197,94,0.00)');
-    } else {
-      grad.addColorStop(0, 'rgba(14,122,74,0.18)');
-      grad.addColorStop(1, 'rgba(14,122,74,0.00)');
-    }
+    grad.addColorStop(0, color + '28');
+    grad.addColorStop(1, color + '00');
     return grad;
   }
 
-  /* ---- Create chart ---- */
+  /* ═══ Build datasets from selected sports ═══ */
+  function buildDatasets() {
+    const dark = isDark();
+    return selectedSports.map(key => {
+      const sport = SPORTS.find(s => s.key === key);
+      const data = chartData[key][currentTimeframe];
+      return {
+        label: sport.label,
+        data: data,
+        borderColor: sport.color,
+        backgroundColor: makeGradient(ctx, sport.color),
+        borderWidth: 2.5,
+        tension: 0.4,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: sport.color,
+        pointBorderColor: dark ? '#10170F' : '#FFFFFF',
+        pointBorderWidth: 2
+      };
+    });
+  }
+
+  /* ═══ Create chart ═══ */
   const canvas = document.getElementById('incomeChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -315,21 +378,8 @@
   const chart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartData.daily.labels,
-      datasets: [{
-        label: 'Net Income',
-        data: chartData.daily.data,
-        borderColor: tc.line,
-        backgroundColor: makeGradient(ctx, isDark()),
-        borderWidth: 2.5,
-        tension: 0.4,
-        fill: true,
-        pointRadius: 4,
-        pointHoverRadius: 7,
-        pointBackgroundColor: tc.line,
-        pointBorderColor: isDark() ? '#10170F' : '#FFFFFF',
-        pointBorderWidth: 2
-      }]
+      labels: tfLabels[currentTimeframe],
+      datasets: buildDatasets()
     },
     options: {
       responsive: true,
@@ -339,18 +389,23 @@
         legend: { display: false },
         tooltip: {
           backgroundColor: tc.tooltip,
-          titleColor: tc.tooltipText,
-          bodyColor: tc.tooltipText,
           borderColor: tc.tooltipBorder,
           borderWidth: 1,
           cornerRadius: 10,
           padding: { top: 10, right: 14, bottom: 10, left: 14 },
           titleFont: { family: 'Inter, system-ui, sans-serif', weight: 600, size: 13 },
-          bodyFont: { family: 'Inter, system-ui, sans-serif', weight: 700, size: 15 },
-          displayColors: false,
+          bodyFont: { family: 'Inter, system-ui, sans-serif', weight: 600, size: 13 },
+          titleColor: tc.tooltipText,
+          usePointStyle: true,
           callbacks: {
             title: (items) => items[0].label,
-            label: (item) => '৳' + item.parsed.y.toLocaleString('en-IN')
+            label: (item) => ' ' + item.dataset.label + ':  ৳' + item.parsed.y.toLocaleString('en-IN'),
+            labelColor: (item) => ({
+              borderColor: item.dataset.borderColor,
+              backgroundColor: item.dataset.borderColor,
+              borderWidth: 2,
+              borderRadius: 4
+            })
           }
         }
       },
@@ -374,41 +429,129 @@
     }
   });
 
-  /* ---- Timeframe switching ---- */
-  document.querySelectorAll('.income-tf-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.income-tf-btn').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      const tf = this.getAttribute('data-timeframe');
-      const d = chartData[tf];
-      chart.data.labels = d.labels;
-      chart.data.datasets[0].data = d.data;
-      chart.update('active');
-    });
-  });
-
-  /* ---- Theme change observer ---- */
-  function refreshTheme() {
+  /* ═══ Sync chart from state ═══ */
+  function syncChart() {
     const tc = themeColors();
-    const dark = isDark();
-    chart.data.datasets[0].borderColor = tc.line;
-    chart.data.datasets[0].pointBackgroundColor = tc.line;
-    chart.data.datasets[0].pointBorderColor = dark ? '#10170F' : '#FFFFFF';
-    chart.data.datasets[0].backgroundColor = makeGradient(ctx, dark);
+    chart.data.labels = tfLabels[currentTimeframe];
+    chart.data.datasets = buildDatasets();
     chart.options.scales.x.grid.color = tc.gridLine;
     chart.options.scales.x.ticks.color = tc.tickText;
     chart.options.scales.y.grid.color = tc.gridLine;
     chart.options.scales.y.ticks.color = tc.tickText;
     chart.options.plugins.tooltip.backgroundColor = tc.tooltip;
     chart.options.plugins.tooltip.titleColor = tc.tooltipText;
-    chart.options.plugins.tooltip.bodyColor = tc.tooltipText;
     chart.options.plugins.tooltip.borderColor = tc.tooltipBorder;
-    chart.update('none');
+    chart.update('active');
   }
 
+  /* ═══ Timeframe buttons ═══ */
+  document.querySelectorAll('.income-tf-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.income-tf-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentTimeframe = this.getAttribute('data-timeframe');
+      syncChart();
+    });
+  });
+
+  /* ═══ Multi-select sport picker ═══ */
+  const picker = document.getElementById('sportPicker');
+  if (!picker) return;
+  const trigger = picker.querySelector('.sport-picker-trigger');
+  const dropdown = picker.querySelector('.sport-picker-dropdown');
+  const allCheckbox = dropdown.querySelector('input[value="__all__"]');
+  const sportCheckboxes = [...dropdown.querySelectorAll('input[type="checkbox"]')].filter(cb => cb.value !== '__all__');
+
+  // Toggle dropdown open/close
+  trigger.addEventListener('click', (e) => {
+    if (e.target.closest('.sport-tag-x')) return; // don't toggle when clicking X
+    picker.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!picker.contains(e.target)) picker.classList.remove('open');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') picker.classList.remove('open');
+  });
+
+  // Render tags inside trigger
+  function renderTags() {
+    const existing = trigger.querySelectorAll('.sport-tag, .sport-picker-placeholder');
+    existing.forEach(el => el.remove());
+
+    if (selectedSports.length === 0) {
+      const ph = document.createElement('span');
+      ph.className = 'sport-picker-placeholder';
+      ph.textContent = 'Select sports…';
+      trigger.prepend(ph);
+    } else {
+      selectedSports.forEach(key => {
+        const sport = SPORTS.find(s => s.key === key);
+        const tag = document.createElement('span');
+        tag.className = 'sport-tag';
+        tag.style.background = sport.tagBg;
+        tag.style.color = sport.color;
+        tag.innerHTML = `<span class="sport-tag-dot" style="background:${sport.color}"></span>${sport.label.split(' ')[1]}<span class="sport-tag-x" data-key="${key}">×</span>`;
+        trigger.prepend(tag);
+      });
+    }
+  }
+
+  // Sync "Select All" checkbox state
+  function syncAllCheckbox() {
+    allCheckbox.checked = selectedSports.length === SPORTS.length;
+    allCheckbox.indeterminate = selectedSports.length > 0 && selectedSports.length < SPORTS.length;
+  }
+
+  // Handle sport checkbox changes
+  sportCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        if (!selectedSports.includes(cb.value)) selectedSports.push(cb.value);
+      } else {
+        selectedSports = selectedSports.filter(k => k !== cb.value);
+      }
+      syncAllCheckbox();
+      renderTags();
+      syncChart();
+    });
+  });
+
+  // Handle "Select All"
+  allCheckbox.addEventListener('change', () => {
+    if (allCheckbox.checked) {
+      selectedSports = SPORTS.map(s => s.key);
+      sportCheckboxes.forEach(cb => cb.checked = true);
+    } else {
+      selectedSports = [];
+      sportCheckboxes.forEach(cb => cb.checked = false);
+    }
+    renderTags();
+    syncChart();
+  });
+
+  // Handle tag X click (remove sport)
+  trigger.addEventListener('click', (e) => {
+    const x = e.target.closest('.sport-tag-x');
+    if (!x) return;
+    e.stopPropagation();
+    const key = x.getAttribute('data-key');
+    selectedSports = selectedSports.filter(k => k !== key);
+    const cb = dropdown.querySelector(`input[value="${key}"]`);
+    if (cb) cb.checked = false;
+    syncAllCheckbox();
+    renderTags();
+    syncChart();
+  });
+
+  // Initial render
+  renderTags();
+  syncAllCheckbox();
+
+  /* ═══ Theme observer ═══ */
   const observer = new MutationObserver(mutations => {
     for (const m of mutations) {
-      if (m.attributeName === 'data-theme') { refreshTheme(); break; }
+      if (m.attributeName === 'data-theme') { syncChart(); break; }
     }
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });

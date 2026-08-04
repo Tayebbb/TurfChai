@@ -219,35 +219,33 @@ document.querySelectorAll('[data-scan]').forEach(btn => btn.addEventListener('cl
 (function() {
   'use strict';
 
-  /* ---- Sample data for two time frames ---- */
-  const chartData = {
-    monthly: {
-      labels: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
-      data:   [285000,312000,298000,345000,310000,287000,356000,378000,342000,395000,418000,446800]
-    },
-    yearly: {
-      labels: ['2022','2023','2024','2025','2026'],
-      data:   [1850000,2340000,3120000,3890000,4468000]
-    }
+  /* ---- API-Ready mock data: timeframe (monthly + yearly only) ---- */
+  const labels = {
+    monthly: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+    yearly:  ['2022','2023','2024','2025','2026']
   };
 
-  /* ---- Theme-aware color helpers ---- */
-  function isDark() {
-    return document.documentElement.getAttribute('data-theme') === 'dark';
-  }
+  const chartData = {
+    monthly: { labels: labels.monthly, data: [285000,312000,298000,345000,310000,287000,356000,378000,342000,395000,418000,446800] },
+    yearly:  { labels: labels.yearly,  data: [1850000,2340000,3120000,3890000,4468000] }
+  };
+
+  /* ---- State ---- */
+  let currentTimeframe = 'monthly';
+
+  /* ---- Theme helpers ---- */
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
   function themeColors() {
     const dark = isDark();
     return {
-      line:     dark ? '#22C55E' : '#0E7A4A',
-      gridLine: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-      tickText: dark ? '#A6B8AA'  : '#4C5F55',
-      tooltip:  dark ? '#1C291E'  : '#FFFFFF',
-      tooltipText: dark ? '#F2F6F2' : '#122019',
+      line:          dark ? '#22C55E' : '#0E7A4A',
+      gridLine:      dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+      tickText:      dark ? '#A6B8AA'  : '#4C5F55',
+      tooltip:       dark ? '#1C291E'  : '#FFFFFF',
+      tooltipText:   dark ? '#F2F6F2' : '#122019',
       tooltipBorder: dark ? '#2C3C2F' : '#E4EAE6'
     };
   }
-
-  /* ---- Build gradient fill ---- */
   function makeGradient(ctx, dark) {
     const grad = ctx.createLinearGradient(0, 0, 0, ctx.canvas.clientHeight);
     if (dark) {
@@ -265,14 +263,15 @@ document.querySelectorAll('[data-scan]').forEach(btn => btn.addEventListener('cl
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const tc = themeColors();
+  const initData = chartData[currentTimeframe];
 
   const chart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartData.monthly.labels,
+      labels: initData.labels,
       datasets: [{
         label: 'Net Income',
-        data: chartData.monthly.data,
+        data: initData.data,
         borderColor: tc.line,
         backgroundColor: makeGradient(ctx, isDark()),
         borderWidth: 2.5,
@@ -328,23 +327,14 @@ document.querySelectorAll('[data-scan]').forEach(btn => btn.addEventListener('cl
     }
   });
 
-  /* ---- Timeframe switching ---- */
-  document.querySelectorAll('.income-tf-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.income-tf-btn').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      const tf = this.getAttribute('data-timeframe');
-      const d = chartData[tf];
-      chart.data.labels = d.labels;
-      chart.data.datasets[0].data = d.data;
-      chart.update('active');
-    });
-  });
-
-  /* ---- Theme change observer ---- */
-  function refreshTheme() {
+  /* ---- Unified update function ---- */
+  function updateChart(timeframe) {
+    currentTimeframe = timeframe;
+    const d = chartData[timeframe];
     const tc = themeColors();
     const dark = isDark();
+    chart.data.labels = d.labels;
+    chart.data.datasets[0].data = d.data;
     chart.data.datasets[0].borderColor = tc.line;
     chart.data.datasets[0].pointBackgroundColor = tc.line;
     chart.data.datasets[0].pointBorderColor = dark ? '#10170F' : '#FFFFFF';
@@ -357,12 +347,25 @@ document.querySelectorAll('[data-scan]').forEach(btn => btn.addEventListener('cl
     chart.options.plugins.tooltip.titleColor = tc.tooltipText;
     chart.options.plugins.tooltip.bodyColor = tc.tooltipText;
     chart.options.plugins.tooltip.borderColor = tc.tooltipBorder;
-    chart.update('none');
+    chart.update('active');
   }
 
+  /* ---- Timeframe buttons ---- */
+  document.querySelectorAll('.income-tf-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.income-tf-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      updateChart(this.getAttribute('data-timeframe'));
+    });
+  });
+
+  /* ---- Theme observer ---- */
   const observer = new MutationObserver(mutations => {
     for (const m of mutations) {
-      if (m.attributeName === 'data-theme') { refreshTheme(); break; }
+      if (m.attributeName === 'data-theme') {
+        updateChart(currentTimeframe);
+        break;
+      }
     }
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
