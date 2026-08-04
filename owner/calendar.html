@@ -31,7 +31,6 @@
       <a href="promotions.html"><span class="ico">🎁</span>Promotions</a>
       <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
       <a href="staff.html"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
-      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
     </nav>
   </aside>
 
@@ -112,7 +111,7 @@
     </div>
     <div class="field"><label for="mbNote">Notes (optional)</label><input class="input" id="mbNote" placeholder="e.g. regular customer, wants bibs"></div>
     <div class="pricerow total"><span>Slot price</span><span class="num">৳1,500</span></div>
-    <button class="btn btn-primary btn-lg btn-block" style="margin-top:12px" data-close data-toast="Booking added — slot closed online, logged to your shift ✓">Confirm booking</button>
+    <button class="btn btn-primary btn-lg btn-block" style="margin-top:12px" id="confirmManualBookingBtn">Confirm booking</button>
   </div>
 </div>
 
@@ -137,5 +136,35 @@
   </div>
 </div>
 <script src="../js/turfchai.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let activeAddBtn = null;
+
+  document.querySelectorAll('.addcell').forEach(btn => {
+    btn.addEventListener('click', function() {
+      activeAddBtn = this;
+    });
+  });
+
+  document.getElementById('confirmManualBookingBtn')?.addEventListener('click', function() {
+    const pitchVal = document.getElementById('mbPitch').value;
+    const name = document.getElementById('mbName').value.trim() || 'Manual Booking';
+    const src = document.getElementById('mbSrc').value;
+    const evClass = src === 'Walk-in' ? 'walkin' : 'phone';
+
+    if (activeAddBtn && activeAddBtn.parentElement) {
+      const cell = activeAddBtn.parentElement;
+      cell.innerHTML = `<div class="cal-ev ${evClass}" data-open="#evDetail">${name} · ${src.toLowerCase()}</div>`;
+    }
+
+    if (window.showToast) {
+      showToast(`Manual booking confirmed for ${name} (${pitchVal}) ✓`);
+    }
+
+    const closeBtn = document.querySelector('#manualBooking [data-close]');
+    if (closeBtn) closeBtn.click();
+  });
+});
+</script>
 </body>
 </html>
