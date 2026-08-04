@@ -221,24 +221,75 @@
 
 <!-- Notification Panel Drawer -->
 <div class="overlay drawer-mode" id="notifDrawer" role="dialog" aria-modal="true" aria-labelledby="ndTitle">
-  <div class="modal" style="border-radius:24px">
-    <div class="between" style="margin-bottom:16px">
-      <h3 id="ndTitle" style="margin:0">Alerts &amp; Notifications</h3>
-      <button class="icon-btn" data-close aria-label="Close">✕</button>
+  <div class="modal" style="border-radius:24px; max-width:440px">
+    <div class="between" style="margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border-soft)">
+      <div>
+        <h3 id="ndTitle" style="margin:0; font-size:18px; font-weight:800">Alerts &amp; Notifications</h3>
+        <span class="subtle tiny" style="margin-top:2px; display:block">Platform status &amp; priority actions</span>
+      </div>
+      <button class="icon-btn" data-close aria-label="Close" style="width:32px; height:32px; border-radius:8px">✕</button>
     </div>
-    <div class="stack-sm">
-      <div class="alert warn" style="margin:0;padding:12px;border-radius:12px">
-        <div>
-          <b style="display:block;margin-bottom:2px">SLA Risk: TR-1038</b>
-          <span class="small">Waiting for 3 days (Target SLA: 48h).</span>
-          <a href="request-review.html" style="display:block;margin-top:6px;font-weight:700">Review Request →</a>
+    <div class="stack-sm" style="gap:12px">
+      <!-- Alert 1: SLA Overdue (Critical Danger) -->
+      <div class="alert danger" style="margin:0;padding:14px;border-radius:14px;background:rgba(201,59,59,0.06);border:1px solid rgba(201,59,59,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">🚨</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge red nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">SLA CRITICAL</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">3d overdue</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">TR-1038 · Verification Overdue</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Banani Rooftop Futsal has been in queue for 72+ hours. Target SLA is 48 hours.</p>
+            <a class="btn btn-sm btn-secondary" href="request-review.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Review Request →</a>
+          </div>
         </div>
       </div>
-      <div class="alert danger" style="margin:0;padding:12px;border-radius:12px">
-        <div>
-          <b style="display:block;margin-bottom:2px">Payout Anomaly: Venue #77</b>
-          <span class="small">Refund ratio 4× baseline this week.</span>
-          <a href="activity.html" style="display:block;margin-top:6px;font-weight:700">Investigate Log →</a>
+
+      <!-- Alert 2: Payout Anomaly (Risk Warning) -->
+      <div class="alert warn" style="margin:0;padding:14px;border-radius:14px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">⚠️</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge amber nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">RISK WARNING</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">11:30 AM</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">Venue #77 Payout Anomaly</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Refund ratio spike detected (> 4.2% threshold). Host payouts suspended automatically.</p>
+            <a class="btn btn-sm btn-secondary" href="activity.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Investigate Log →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert 3: New Verification Submission (Info) -->
+      <div class="alert info" style="margin:0;padding:14px;border-radius:14px;background:rgba(38,96,216,0.06);border:1px solid rgba(38,96,216,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">ℹ️</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge blue nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">NEW REQUEST</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">4h ago</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">TR-1042 · Kick Off Arena</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Mahmudul Hasan submitted a new venue listing request with 3/3 verified documents.</p>
+            <a class="btn btn-sm btn-secondary" href="request-review.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Start Verification →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert 4: Backup (Success/OK) -->
+      <div class="alert ok" style="margin:0;padding:14px;border-radius:14px;background:rgba(14,122,74,0.06);border:1px solid rgba(14,122,74,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">✅</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge green nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">SUCCESS</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">9:00 AM</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">System Audit Log Sync</b>
+            <p class="small subtle" style="margin:0;line-height:1.4;font-size:12px">Database backup and administrative action logs synchronized successfully.</p>
+          </div>
         </div>
       </div>
     </div>
