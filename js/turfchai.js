@@ -249,6 +249,20 @@
     document.head.appendChild(l);
   }
 
+  /* ---------- Global ambient orbs (injected so every page matches the admin console) ---------- */
+  function injectLiquidOrbs() {
+    if (document.querySelector('.liquid-bg-orbs')) return;
+    const orbs = document.createElement('div');
+    orbs.className = 'liquid-bg-orbs';
+    orbs.setAttribute('aria-hidden', 'true');
+    for (let i = 1; i <= 3; i++) {
+      const orb = document.createElement('div');
+      orb.className = 'liquid-orb liquid-orb-' + i;
+      orbs.appendChild(orb);
+    }
+    document.body.appendChild(orbs);
+  }
+
   /* ---------- Global back button ---------- */
   function injectBackButton() {
     // Pages with their own contextual back pill (.btn-back) skip the global one
@@ -271,6 +285,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    injectLiquidOrbs();
     injectFavicon();
     injectBackButton();
     injectSiteNav();

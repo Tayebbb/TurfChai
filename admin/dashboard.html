@@ -9,25 +9,6 @@
 <link rel="stylesheet" href="../css/turfchai.css">
 <style>
   /* Page specific glass depth adjustments */
-  .admin-page-wrap {
-    max-width: 1340px;
-    margin: 0 auto;
-    padding: 24px 32px 64px;
-    box-sizing: border-box;
-    position: relative;
-    z-index: 1;
-  }
-
-  .nav-icon {
-    width: 18px;
-    height: 18px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    flex-shrink: 0;
-  }
 
   .kpi-card {
     display: flex;
@@ -42,108 +23,6 @@
     margin-top: 14px;
     align-self: flex-start;
   }
-
-  .spark-bar {
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
-    height: 24px;
-    margin-top: 8px;
-  }
-  .spark-bar div {
-    flex: 1;
-    background: var(--brand);
-    opacity: 0.35;
-    border-radius: 2px;
-    transition: opacity 180ms ease, height 180ms ease;
-  }
-  .spark-bar div:hover {
-    opacity: 1;
-  }
-
-  .stat-chip {
-    padding: 12px 18px;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border-soft);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .stat-chip b {
-    font-size: 20px;
-    font-weight: 800;
-    font-family: var(--font-display);
-    line-height: 1.2;
-  }
-
-  .select-glass {
-    appearance: none;
-    background-color: rgba(255,255,255,0.06);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    padding: 6px 32px 6px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--border-strong);
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    outline: none;
-    transition: all 180ms ease;
-  }
-  .select-glass:hover, .select-glass:focus {
-    border-color: var(--brand);
-    background-color: rgba(255,255,255,0.12);
-  }
-
-  .chart-container {
-    position: relative;
-    width: 100%;
-    height: 320px;
-    margin-top: 16px;
-  }
-
-  .chart-canvas {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-  }
-
-  .user-breakdown-legend {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    justify-content: center;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border-soft);
-    transition: background 180ms ease;
-  }
-  .legend-item:hover {
-    background: rgba(255,255,255,0.08);
-  }
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 8px;
-  }
-
-  .history-item:hover {
-    transform: translateY(-2px);
-    border-color: var(--brand) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  }
 </style>
 </head>
 <body>
@@ -155,7 +34,7 @@
   <div class="liquid-orb liquid-orb-3"></div>
 </div>
 
-<header class="topbar glass" style="background: rgba(10, 15, 11, 0.75); backdrop-filter: blur(20px);">
+<header class="topbar glass">
   <div class="topbar-inner" style="max-width:100%;padding:0 28px">
     <a class="brand" href="dashboard.html">
       <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>
