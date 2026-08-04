@@ -50,95 +50,117 @@
 
   <main class="main">
     <div class="main-header">
-      <div><h1>Good evening, Mahmud 🏟️</h1><span class="subtle small">Kick Off Arena · Dhanmondi · <span class="badge green">Live</span></span></div>
+      <div>
+        <h1>Good evening, Mahmud 🏟️</h1><span class="subtle small">Kick Off Arena · Dhanmondi · <span
+            class="badge green">Live</span></span>
+      </div>
       <div class="row">
-        <a class="btn btn-secondary" href="calendar.html">🗓️ Today's calendar</a>
+        <a class="btn btn-secondary" href="calendar.html">🗓️ Calendar</a>
         <a class="btn btn-secondary" href="calendar.html">+ Manual booking</a>
         <button class="btn btn-primary" data-open="#qrScanner">📷 Scan player QR</button>
       </div>
     </div>
 
-    <!-- ═══════ Net Income Over Time Chart ═══════ -->
-    <div class="card income-chart-card" style="margin-bottom:16px;padding:20px 24px 16px">
-      <div class="income-chart-header">
-        <h3 style="margin:0;font-size:18px">Net Income Over Time</h3>
-        <div class="income-chart-filters" role="group" aria-label="Time range">
-          <button class="income-tf-btn active" data-timeframe="monthly">Monthly (12 Months)</button>
-          <button class="income-tf-btn" data-timeframe="yearly">Yearly (5 Years)</button>
-        </div>
-      </div>
-      <div style="position:relative;height:280px;margin-top:14px">
-        <canvas id="incomeChart" aria-label="Net income chart"></canvas>
-      </div>
+    <!-- Operational KPI Summary Grid -->
+    <div class="grid4" style="margin-bottom:20px">
+      <div class="kpi"><span class="label">Today's revenue</span><b class="value num">৳18,400</b><span
+          class="delta up">▲ 12% vs last Fri</span></div>
+      <div class="kpi"><span class="label">Bookings today</span><b class="value num">14</b><span class="delta up">▲ 2
+          more than avg</span></div>
+      <div class="kpi"><span class="label">Occupancy</span><b class="value num">72%</b><span class="delta">Peak 4–11
+          PM: 94%</span></div>
+      <div class="kpi"><span class="label">Pending payments</span><b class="value num">৳4,300</b><span
+          class="delta down">3 bookings awaiting</span></div>
     </div>
 
-    <div class="grid4" style="margin-bottom:16px">
-      <div class="kpi"><span class="label">Today's revenue</span><b class="value num">৳18,400</b><span class="delta up">▲ 12% vs last Fri</span></div>
-      <div class="kpi"><span class="label">Bookings today</span><b class="value num">14</b><span class="delta up">▲ 2 more than avg</span></div>
-      <div class="kpi"><span class="label">Occupancy</span><b class="value num">72%</b><span class="delta">Peak 4–11 PM: 94%</span></div>
-      <div class="kpi"><span class="label">Pending payments</span><b class="value num">৳4,300</b><span class="delta down">3 bookings awaiting</span></div>
-    </div>
-
+    <!-- 2-Column Minimal Operational Grid -->
     <div class="grid2" style="align-items:start">
+      <!-- Left Column: Pitch Schedule & Live Activity -->
       <div class="stack">
         <section class="card">
-          <div class="between"><h3 style="margin:0">Next up on your pitches</h3><a class="btn btn-sm btn-tertiary" href="calendar.html">Full calendar →</a></div>
-          <div class="stack-sm" style="margin-top:10px">
-            <div class="panel between"><div><b class="small num">7:30 PM · Pitch 2</b> <span class="badge green nodot">Online · paid</span><div class="tiny subtle">Rafiul Karim · 10 players · TC-48291 · handover 7:20</div></div><a class="btn btn-sm btn-secondary" href="bookings.html">Detail</a></div>
-            <div class="panel between"><div><b class="small num">7:30 PM · Pitch 1</b> <span class="badge amber nodot">Phone · deposit</span><div class="tiny subtle">Karim Traders XI · ৳765 paid · ৳1,785 due at venue</div></div><button class="btn btn-sm btn-secondary" data-toast="Marked as arrived ✓">Arrived</button></div>
-            <div class="panel between"><div><b class="small num">9:00 PM · Pitch 2</b> <span class="badge blue nodot">Open game</span><div class="tiny subtle">Friday Night Football · host Rifat H. · 10/10 paid</div></div><a class="btn btn-sm btn-secondary" href="bookings.html">Detail</a></div>
-            <div class="panel between"><div><b class="small num">9:00 PM · Pitch 3</b> <span class="badge gray nodot">Empty</span><div class="tiny subtle">Futsal court unbooked tonight</div></div><a class="btn btn-sm btn-primary" href="promotions.html">Promote</a></div>
+          <div class="between" style="margin-bottom:12px">
+            <h3 style="margin:0">Next up on your pitches</h3><a class="btn btn-sm btn-tertiary"
+              href="calendar.html">View schedule →</a>
+          </div>
+          <div class="stack-sm">
+            <div class="panel between">
+              <div><b class="small num">7:30 PM · Pitch 2</b> <span class="badge green nodot">Online · paid</span>
+                <div class="tiny subtle">Rafiul Karim · 10 players · TC-48291 · handover 7:20</div>
+              </div><a class="btn btn-sm btn-secondary" href="bookings.html">Detail</a>
+            </div>
+            <div class="panel between">
+              <div><b class="small num">7:30 PM · Pitch 1</b> <span class="badge amber nodot">Phone · deposit</span>
+                <div class="tiny subtle">Karim Traders XI · ৳765 paid · ৳1,785 due</div>
+              </div><button class="btn btn-sm btn-secondary" data-toast="Marked as arrived ✓">Arrived</button>
+            </div>
+            <div class="panel between">
+              <div><b class="small num">9:00 PM · Pitch 2</b> <span class="badge blue nodot">Open game</span>
+                <div class="tiny subtle">Friday Night Football · host Rifat H. · 10/10 paid</div>
+              </div><a class="btn btn-sm btn-secondary" href="bookings.html">Detail</a>
+            </div>
+            <div class="panel between">
+              <div><b class="small num">9:00 PM · Pitch 3</b> <span class="badge gray nodot">Empty</span>
+                <div class="tiny subtle">Futsal court unbooked tonight</div>
+              </div><a class="btn btn-sm btn-primary" href="promotions.html">Promote</a>
+            </div>
           </div>
         </section>
 
         <section class="card">
-          <div class="between"><h3 style="margin:0">Recent activity</h3><a class="btn btn-sm btn-tertiary" href="payments.html">Ledger →</a></div>
-          <ul class="tline" style="margin-top:10px">
-            <li><b class="small">bKash payment reconciled — ৳2,550</b><p class="tiny muted" style="margin:0">TC-48291 · Rafiul K. · auto-matched to evening shift · 6:12 PM</p></li>
-            <li><b class="small">Open game filled 10/10</b><p class="tiny muted" style="margin:0">Friday Night Football · last share ৳280 paid · 5:47 PM</p></li>
-            <li><b class="small">Walk-in cash booking — ৳1,700</b><p class="tiny muted" style="margin:0">Pitch 3 · added by staff Sumon · afternoon shift · 3:05 PM</p></li>
-            <li><b class="small">Refund issued — ৳2,200</b><p class="tiny muted" style="margin:0">TC-48102 cancelled 26h ahead · full refund per policy · 11:40 AM</p></li>
+          <div class="between" style="margin-bottom:12px">
+            <h3 style="margin:0">Recent activity</h3><a class="btn btn-sm btn-tertiary" href="payments.html">Ledger →</a>
+          </div>
+          <ul class="tline">
+            <li><b class="small">bKash payment reconciled — ৳2,550</b>
+              <p class="tiny muted" style="margin:0">TC-48291 · Rafiul K. · auto-matched to evening shift · 6:12 PM</p>
+            </li>
+            <li><b class="small">Open game filled 10/10</b>
+              <p class="tiny muted" style="margin:0">Friday Night Football · last share ৳280 paid · 5:47 PM</p>
+            </li>
+            <li><b class="small">Walk-in cash booking — ৳1,700</b>
+              <p class="tiny muted" style="margin:0">Pitch 3 · added by staff Sumon · afternoon shift · 3:05 PM</p>
+            </li>
+            <li><b class="small">Refund issued — ৳2,200</b>
+              <p class="tiny muted" style="margin:0">TC-48102 cancelled 26h ahead · full refund per policy · 11:40 AM</p>
+            </li>
           </ul>
         </section>
       </div>
 
+      <!-- Right Column: Priority Alerts & Weekly Performance -->
       <div class="stack">
-        <section class="glass glass-card">
-          <h3>Quick actions</h3>
-          <div class="grid2" style="gap:8px;margin-top:10px">
-            <button class="btn btn-primary" data-open="#qrScanner">📷 Scan player QR</button>
-            <a class="btn btn-secondary" href="calendar.html">+ Manual booking</a>
-            <a class="btn btn-secondary" href="calendar.html">⛔ Block a slot</a>
-            <a class="btn btn-secondary" href="promotions.html">🎁 New promotion</a>
+        <section class="card">
+          <div class="between" style="margin-bottom:12px">
+            <h3 style="margin:0">Needs attention</h3><span class="countpill">3</span>
+          </div>
+          <div class="stack-sm">
+            <div class="alert warn" style="margin:0"><span class="ico">💰</span>
+              <div><b>3 deposit bookings due tonight</b>৳4,300 to collect at venue. <a href="bookings.html">View list</a></div>
+            </div>
+            <div class="alert info" style="margin:0"><span class="ico">⭐</span>
+              <div><b>2 new reviews await response</b>Replying raises repeat bookings. <a href="reviews.html">Respond</a></div>
+            </div>
+            <div class="alert info" style="margin:0"><span class="ico">📉</span>
+              <div><b>Tue–Wed 2–4 PM off-peak low</b>Try an off-peak promo. <a href="promotions.html">Create</a></div>
+            </div>
           </div>
         </section>
 
         <section class="card">
-          <div class="between"><h3 style="margin:0">Tonight's check-ins</h3><span class="badge green nodot">QR gate on</span></div>
-          <div class="stack-sm" id="checkinList" style="margin-top:10px">
-            <div class="panel between"><div><b class="small">Karim Traders XI · TC-48102</b><div class="tiny subtle">Pitch 1 · 6:00 PM · QR scan · 5:52 PM</div></div><span class="badge green nodot">Checked in</span></div>
-            <div class="panel between"><div><b class="small">Sunset Strikers · TC-48077</b><div class="tiny subtle">Pitch 3 · 6:00 PM · marked by staff · 5:58 PM</div></div><span class="badge green nodot">Checked in</span></div>
+          <h3 style="margin-bottom:12px">Weekly performance</h3>
+          <div class="stack-sm">
+            <div>
+              <div class="between small"><span class="muted">Revenue goal</span><b class="num">৳96,700 / ৳110,000 (88%)</b></div>
+              <div class="progress"><i style="width:88%"></i></div>
+            </div>
+            <div>
+              <div class="between small"><span class="muted">Occupancy rate</span><b class="num">68%</b></div>
+              <div class="progress"><i style="width:68%"></i></div>
+            </div>
           </div>
-        </section>
-
-        <section class="card">
-          <h3>This week</h3>
-          <div class="stack-sm" style="margin-top:10px">
-            <div><div class="between small"><span class="muted">Revenue</span><b class="num">৳96,700 / ৳110,000 goal</b></div><div class="progress"><i style="width:88%"></i></div></div>
-            <div><div class="between small"><span class="muted">Occupancy</span><b class="num">68%</b></div><div class="progress"><i style="width:68%"></i></div></div>
-            <div><div class="between small"><span class="muted">No-show rate</span><b class="num">4%</b></div><div class="progress"><i style="width:4%;background:var(--danger)"></i></div></div>
-          </div>
-          <div class="between small" style="margin-top:12px"><span class="muted">Booking sources</span></div>
-          <div class="row-wrap" style="margin-top:6px"><span class="badge green nodot">Online 61%</span><span class="badge amber nodot">Phone 22%</span><span class="badge blue nodot">Walk-in 17%</span></div>
-        </section>
-
-        <section class="card">
-          <div class="between"><h3 style="margin:0">Needs attention</h3><span class="countpill">3</span></div>
-          <div class="stack-sm" style="margin-top:10px">
-            <div class="alert warn" style="margin:0"><span class="ico">💰</span><div><b>3 deposit bookings due tonight</b>৳4,300 to collect at the venue. <a href="bookings.html">View list</a></div></div>
-            <div class="alert info" style="margin:0"><span class="ico">⭐</span><div><b>2 new reviews await response</b>Replying raises repeat bookings. <a href="reviews.html">Respond</a></div></div>
-            <div class="alert info" style="margin:0"><span class="ico">📉</span><div><b>Tue–Wed 2–4 PM keeps going empty</b>Try an off-peak promo. <a href="promotions.html">Create</a></div></div>
-          </div>
+          <div class="between small" style="margin-top:14px"><span class="muted">Booking channels</span></div>
+          <div class="row-wrap" style="margin-top:6px"><span class="badge green nodot">Online 61%</span><span
+              class="badge amber nodot">Phone 22%</span><span class="badge blue nodot">Walk-in 17%</span></div>
         </section>
       </div>
     </div>
