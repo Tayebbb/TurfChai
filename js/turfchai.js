@@ -189,6 +189,7 @@
       ]],
       ['Tournament hosts', [
         ['player/home.html#host', 'Tournament hub'],
+        ['host/tournament.html', 'Tournament details'],
         ['host/multi-pitch.html', 'Multi-pitch booking'],
         ['host/reserve.html', 'Reserve & pay'],
       ]],
