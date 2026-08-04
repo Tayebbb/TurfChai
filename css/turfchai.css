@@ -127,7 +127,7 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .spacer{flex:1}
-.section{margin:44px 0}
+.section{margin-block:44px}
 .section-title{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
 .section-title h2{margin:0;font-size:19px}
 .section-title a{font-size:13px;font-weight:600}
