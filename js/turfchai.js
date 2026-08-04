@@ -16,7 +16,12 @@
       sync();
       btn.addEventListener('click', () => {
         const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
+        // crossfade colors while the palette swaps
+        const root = document.documentElement;
+        root.classList.add('theme-switching');
+        clearTimeout(root._themeFadeT);
+        root._themeFadeT = setTimeout(() => root.classList.remove('theme-switching'), 380);
+        root.setAttribute('data-theme', next);
         localStorage.setItem('tc-theme', next);
         document.querySelectorAll('[data-toggle-theme]').forEach(b => {
           b.textContent = next === 'dark' ? '☀️' : '🌙';
@@ -189,7 +194,7 @@
       ]],
       ['Tournament hosts', [
         ['player/home.html#host', 'Tournament hub'],
-        ['host/search.html', 'Find a venue'],
+        ['host/tournament.html', 'Tournament details'],
         ['host/multi-pitch.html', 'Multi-pitch booking'],
         ['host/reserve.html', 'Reserve & pay'],
       ]],
@@ -244,8 +249,45 @@
     document.head.appendChild(l);
   }
 
+  /* ---------- Global ambient orbs (injected so every page matches the admin console) ---------- */
+  function injectLiquidOrbs() {
+    if (document.querySelector('.liquid-bg-orbs')) return;
+    const orbs = document.createElement('div');
+    orbs.className = 'liquid-bg-orbs';
+    orbs.setAttribute('aria-hidden', 'true');
+    for (let i = 1; i <= 3; i++) {
+      const orb = document.createElement('div');
+      orb.className = 'liquid-orb liquid-orb-' + i;
+      orbs.appendChild(orb);
+    }
+    document.body.appendChild(orbs);
+  }
+
+  /* ---------- Global back button ---------- */
+  function injectBackButton() {
+    // Pages with their own contextual back pill (.btn-back) skip the global one
+    if (document.querySelector('.global-back-btn, .btn-back')) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'global-back-btn';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Go back');
+    btn.innerHTML = '<span class="arr" aria-hidden="true">←</span> Back';
+    btn.addEventListener('click', () => {
+      if (window.history.length > 1) {
+        history.back();
+      } else if (document.referrer) {
+        window.location.href = document.referrer;
+      }
+    });
+
+    document.body.appendChild(btn);
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    injectLiquidOrbs();
     injectFavicon();
+    injectBackButton();
     injectSiteNav();
     bindThemeToggles();
     bindTabs();
@@ -253,5 +295,36 @@
     bindToasts();
     bindSlots();
     bindCountdowns();
+    
+    // Responsive sidebar drawer & desktop toggle
+    let backdrop = document.querySelector('.sidebar-backdrop');
+    if (!backdrop) {
+      backdrop = document.createElement('div');
+      backdrop.className = 'sidebar-backdrop';
+      document.body.appendChild(backdrop);
+    }
+    backdrop.addEventListener('click', () => {
+      document.body.classList.remove('sidebar-open');
+    });
+
+    document.querySelectorAll('[data-toggle-sidebar]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.innerWidth <= 900) {
+          document.body.classList.toggle('sidebar-open');
+        } else {
+          document.body.classList.toggle('sidebar-closed');
+        }
+      });
+    });
+
+    document.querySelectorAll('.sidebar .sidenav a').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 900) {
+          document.body.classList.remove('sidebar-open');
+        }
+      });
+    });
   });
 })();

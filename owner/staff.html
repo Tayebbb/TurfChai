@@ -11,6 +11,7 @@
 <body>
 <header class="topbar glass">
   <div class="topbar-inner">
+    <button class="icon-btn mobile-menu-btn" data-toggle-sidebar aria-label="Toggle menu">☰</button>
     <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge blue nodot" style="margin-left:6px">Owner</span></a>
     <div class="spacer"></div>
     <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
@@ -24,14 +25,12 @@
       <a href="dashboard.html"><span class="ico">📊</span>Overview</a>
       <a href="calendar.html"><span class="ico">🗓️</span>Calendar</a>
       <a href="bookings.html"><span class="ico">📅</span>Bookings</a>
-      <a href="payments.html"><span class="ico">💰</span>Payments</a>
+      <a href="payments.html"><span class="ico">📈</span>Reports</a>
       <a href="venue-setup.html"><span class="ico">🏟️</span>Venues</a>
       <a href="customers.html"><span class="ico">👥</span>Customers</a>
       <a href="promotions.html"><span class="ico">🎁</span>Promotions</a>
       <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
-      <a href="payments.html#reports"><span class="ico">📈</span>Reports</a>
       <a href="staff.html" class="active"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
-      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
     </nav>
   </aside>
 
@@ -124,10 +123,10 @@
 <div class="overlay" id="inviteStaffModal" role="dialog" aria-modal="true" aria-labelledby="isTitle">
   <div class="modal" style="max-width:480px">
     <div class="between"><h3 id="isTitle">Invite team member or co-owner</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
-    <p class="subtle small" style="margin:4px 0 12px">An invitation SMS with entry credentials will be sent to the phone number below.</p>
+    <p class="subtle small" style="margin:4px 0 12px">An invitation link with setup credentials will be sent to the email address below.</p>
     
     <div class="field"><label for="stName">Full Name</label><input class="input" id="stName" placeholder="e.g. Tariqul Islam"></div>
-    <div class="field"><label for="stPhone">Phone Number</label><input class="input num" id="stPhone" placeholder="+880 1711 000 111"></div>
+    <div class="field"><label for="stEmail">Email Address</label><input class="input" type="email" id="stEmail" placeholder="e.g. tariqul@example.com"></div>
     
     <div class="field">
       <label for="stRole">Role &amp; Access Level</label>
@@ -140,7 +139,7 @@
     </div>
 
     <div class="stack-sm" style="margin-top:16px">
-      <button class="btn btn-primary btn-block" id="sendInviteBtn">Send SMS Invitation ✉️</button>
+      <button class="btn btn-primary btn-block" id="sendInviteBtn">Send Email Invitation Link 📧</button>
       <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
     </div>
   </div>
@@ -150,7 +149,7 @@
 <script>
 document.getElementById('sendInviteBtn')?.addEventListener('click', function() {
   const name = document.getElementById('stName').value.trim() || 'Invited Member';
-  const phone = document.getElementById('stPhone').value.trim() || '+880 1800 000 000';
+  const email = document.getElementById('stEmail').value.trim() || 'member@example.com';
   const role = document.getElementById('stRole').value;
 
   let badgeClass = 'green';
@@ -174,7 +173,7 @@ document.getElementById('sendInviteBtn')?.addEventListener('click', function() {
         <span class="avatar" style="background:var(--brand-soft);color:var(--brand)">${initials}</span>
         <div>
           <b class="small">${name}</b> <span class="badge ${badgeClass} nodot">${role}</span> <span class="badge amber nodot">Invite sent</span>
-          <div class="tiny subtle">${subtitle} · ${phone}</div>
+          <div class="tiny subtle">${subtitle} · ${email}</div>
         </div>
       </div>
       <button class="btn btn-sm btn-secondary" data-open="#perm">Permissions</button>
@@ -183,11 +182,11 @@ document.getElementById('sendInviteBtn')?.addEventListener('click', function() {
 
   document.getElementById('teamList')?.insertAdjacentHTML('beforeend', newMemberHTML);
   if (window.showToast) {
-    showToast(`Invitation sent to ${name} (${role}) via SMS ✉️`);
+    showToast(`Invitation link sent to ${email} (${role}) via Email 📧`);
   }
   document.querySelector('#inviteStaffModal [data-close]')?.click();
   document.getElementById('stName').value = '';
-  document.getElementById('stPhone').value = '';
+  document.getElementById('stEmail').value = '';
 });
 </script>
 </body>

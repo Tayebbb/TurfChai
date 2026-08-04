@@ -4,89 +4,389 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Checkout · TurfChai</title>
+<meta name="description" content="Complete your booking for Kick Off Arena on TurfChai.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/turfchai.css">
 <style>
-  .co-grid{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
-  @media (max-width:900px){.co-grid{grid-template-columns:1fr}}
-  .payopt{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--border-strong);border-radius:14px;cursor:pointer;background:var(--surface)}
-  .payopt input{width:18px;height:18px;margin-top:2px;accent-color:var(--brand)}
-  .payopt.sel{border-color:var(--brand);background:var(--brand-soft)}
-  .method{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border-strong);border-radius:12px;cursor:pointer;background:var(--surface);font-weight:700;font-size:14px}
-  .method.sel{border-color:var(--brand);background:var(--brand-soft)}
-  .mlogo{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;flex:none}
+
+  /* ── Layout ── */
+  .co-grid{display:grid;grid-template-columns:1fr 360px;gap:32px;align-items:start}
+  @media(max-width:900px){.co-grid{grid-template-columns:1fr}}
+
+  /* ── Steps (borderless sections) ── */
+  .co-step{margin-bottom:36px}
+  .co-step:last-child{margin-bottom:0}
+  .co-step-header{
+    display:flex;align-items:center;gap:10px;margin-bottom:16px;
+  }
+  .co-step-num{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--text);color:var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800;flex:none;font-family:var(--font-display);
+  }
+  [data-theme="dark"] .co-step-num{background:var(--text);color:var(--bg)}
+  .co-step-title{font-size:18px;font-weight:700;font-family:var(--font-display);letter-spacing:-.015em}
+
+  /* ── Payment option cards ── */
+  .payopt{
+    display:flex;gap:14px;align-items:flex-start;
+    padding:16px;border-radius:14px;cursor:pointer;
+    background:var(--surface);border:none;
+    box-shadow:0 2px 12px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+    transition:box-shadow .18s ease,background .15s ease;
+  }
+  [data-theme="dark"] .payopt{box-shadow:0 3px 16px rgba(0,0,0,.32), 0 1px 4px rgba(0,0,0,.16)}
+  .payopt:hover{box-shadow:0 4px 18px rgba(0,0,0,.09)}
+  .payopt input{width:18px;height:18px;margin-top:2px;accent-color:var(--brand);flex:none}
+  .payopt:has(input:checked){
+    background:var(--brand-soft);
+    box-shadow:0 0 0 1.5px var(--brand), 0 2px 12px rgba(0,0,0,.06);
+  }
+  [data-theme="dark"] .payopt:has(input:checked){
+    box-shadow:0 0 0 1.5px var(--brand), 0 3px 16px rgba(0,0,0,.3);
+  }
+  .payopt-label b{font-size:14px;font-weight:700;display:block;margin-bottom:3px;color:var(--text)}
+  .payopt-label span{font-size:13px;color:var(--text-3);line-height:1.5}
+
+  /* ── Payment method grid ── */
+  .method-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:480px){.method-grid{grid-template-columns:1fr}}
+
+  .method{
+    display:flex;align-items:center;gap:10px;
+    padding:13px 16px;border-radius:14px;cursor:pointer;
+    background:var(--surface);border:none;
+    box-shadow:0 2px 12px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+    font-weight:700;font-size:14px;color:var(--text);
+    font-family:inherit;text-align:left;
+    transition:box-shadow .18s ease,background .15s ease;
+  }
+  [data-theme="dark"] .method{box-shadow:0 3px 16px rgba(0,0,0,.3)}
+  .method:hover{box-shadow:0 4px 18px rgba(0,0,0,.09)}
+  .method:has(input:checked){
+    background:var(--brand-soft);
+    box-shadow:0 0 0 1.5px var(--brand), 0 2px 12px rgba(0,0,0,.06);
+  }
+  [data-theme="dark"] .method:has(input:checked){
+    box-shadow:0 0 0 1.5px var(--brand), 0 3px 16px rgba(0,0,0,.3);
+  }
+  /* Hide the native radio input in method cards */
+  .method input[type="radio"]{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+  
+  /* Show "Selected" badge only when checked */
+  .method .sel-badge{display:none;margin-left:auto;font-size:11px}
+  .method:has(input:checked) .sel-badge{display:inline-block}
+  .mlogo{
+    width:32px;height:32px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:11px;font-weight:800;flex:none;
+  }
+  .method-hint{font-size:12px;color:var(--text-3);margin-top:10px;line-height:1.5}
+
+  /* ── Policy section ── */
+  .policy-box{
+    background:rgba(38,96,216,.08);
+    border:1px solid rgba(38,96,216,.15);
+    border-radius:12px;
+    padding:16px;
+  }
+  [data-theme="dark"] .policy-box{background:rgba(38,96,216,.15);border-color:rgba(38,96,216,.2)}
+  .policy-list{
+    list-style:none;margin:0;padding:0;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .policy-list li{
+    display:flex;align-items:flex-start;gap:10px;
+    font-size:13.5px;color:var(--text-2);line-height:1.5;
+  }
+  .policy-list li svg{flex:none;margin-top:2px;color:var(--text-3)}
+  .policy-list li.ok svg{color:var(--brand)}
+  .policy-list li.warn svg{color:var(--warn)}
+  .policy-list li.no svg{color:var(--danger)}
+
+  /* ── Summary sidebar (glassmorphism) ── */
+  .co-summary{
+    position:sticky;top:84px;
+    border-radius:20px;padding:22px;
+    background:var(--glass-bg-strong);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    backdrop-filter:blur(20px) saturate(160%);
+    border:1px solid var(--glass-border);
+    box-shadow:0 8px 32px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.06);
+  }
+  [data-theme="dark"] .co-summary{
+    box-shadow:0 10px 40px rgba(0,0,0,.45), 0 2px 10px rgba(0,0,0,.22);
+  }
+
+  /* ── Venue thumbnail in summary ── */
+  .co-venue-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .co-venue-thumb{
+    width:50px;height:50px;border-radius:12px;flex:none;overflow:hidden;
+  }
+  .co-venue-thumb .photo{border-radius:0;height:100%}
+  .co-venue-name{font-size:14px;font-weight:700;line-height:1.3}
+  .co-venue-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+
+  /* ── Booking detail rows ── */
+  .co-detail{
+    background:var(--surface-2);border-radius:12px;
+    padding:14px 16px;margin-bottom:16px;
+    display:flex;flex-direction:column;gap:9px;
+  }
+  .co-detail-row{display:flex;justify-content:space-between;align-items:center}
+  .co-detail-label{font-size:12.5px;font-weight:500;color:var(--text-3)}
+  .co-detail-value{font-size:13px;font-weight:700;color:var(--text)}
+
+  /* ── Price breakdown ── */
+  .pricerow{
+    display:flex;justify-content:space-between;
+    font-size:13.5px;padding:7px 0;
+    font-variant-numeric:tabular-nums;
+    border-bottom:1px solid var(--border);
+  }
+  .pricerow:last-of-type{border-bottom:none}
+  .pricerow .pr-label{font-weight:500;color:var(--text-3)}
+  .pricerow .pr-val{font-weight:700;color:var(--text)}
+  .pricerow .pr-val.neg{color:var(--brand-600)}
+  [data-theme="dark"] .pricerow .pr-val.neg{color:var(--brand)}
+  .pricerow.total{
+    border-top:1px solid var(--border-strong);
+    border-bottom:none;
+    padding-top:12px;margin-top:4px;
+  }
+  .pricerow.total .pr-label{font-size:15px;font-weight:700;color:var(--text)}
+  .pricerow.total .pr-val{font-size:17px;font-weight:800;color:var(--text)}
+
 </style>
 </head>
 <body>
+
+<!-- ═══ Top bar ═══ -->
 <header class="topbar glass">
   <div class="topbar-inner">
-    <a class="brand" href="home.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
+    <a class="brand" href="home.html">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+        <path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/>
+        <rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/>
+        <line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/>
+        <circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/>
+      </svg>
+      TurfChai
+    </a>
     <div class="spacer"></div>
-    <div class="lock-timer" role="timer" aria-label="Slot locked, time remaining">🔒 Slot locked · <span data-countdown="293">4:53</span></div>
+    <!-- Lock timer (no emoji) -->
+    <div class="lock-timer" role="timer" aria-label="Slot locked, time remaining">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Slot locked &middot; <span data-countdown="293">4:53</span>
+    </div>
   </div>
 </header>
 
-<main class="wrap" style="padding-top:24px;max-width:1000px">
-  <a class="btn btn-tertiary btn-sm" href="venue.html">← Back to venue</a>
-  <h1 style="font-size:24px;margin-top:8px">Confirm and pay</h1>
-  <p class="subtle" style="margin-bottom:20px">Your slot is held for 5 minutes — no one else can take it while you pay.</p>
+<main class="wrap" style="padding-top:28px;max-width:1000px;padding-bottom:60px">
+
+  <!-- Page header -->
+  <a class="btn btn-tertiary btn-sm" href="venue.html" style="padding-left:0">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to venue
+  </a>
+  <h1 style="font-size:26px;margin:10px 0 4px">Confirm and pay</h1>
+  <p style="font-size:14px;color:var(--text-3);margin-bottom:28px">Your slot is held for 5 minutes — no one else can take it while you pay.</p>
 
   <div class="co-grid">
-    <!-- LEFT: payment -->
-    <div class="stack">
-      <section class="card">
-        <h3>1 · Payment option</h3>
-        <div class="stack-sm" style="margin-top:10px" role="radiogroup" aria-label="Payment option">
-          <label class="payopt sel"><input type="radio" name="opt" checked>
-            <span><b>Pay full amount — ৳2,550</b><br><span class="subtle small">Done in one go. Best for solo captains.</span></span></label>
-          <label class="payopt"><input type="radio" name="opt">
-            <span><b>Pay 30% deposit — ৳765</b><br><span class="subtle small">Rest due at the venue before kickoff. Deposit is non-refundable within 6h.</span></span></label>
-          <label class="payopt"><input type="radio" name="opt">
-            <span><b>Split with my team</b> <span class="badge green nodot">Popular</span><br><span class="subtle small">Pay your share now, invite teammates to pay theirs. You stay in control.</span></span></label>
+
+    <!-- ════ LEFT: payment steps ════ -->
+    <div>
+
+      <!-- Step 1: Payment option -->
+      <div class="co-step">
+        <div class="co-step-header">
+          <div class="co-step-num" aria-hidden="true">1</div>
+          <div class="co-step-title">Payment option</div>
         </div>
-      </section>
+        <div class="stack-sm" role="radiogroup" aria-label="Payment option">
 
-      <section class="card">
-        <h3>2 · Payment method</h3>
-        <div class="grid2" style="margin-top:10px;gap:10px" role="radiogroup" aria-label="Payment method">
-          <button class="method sel"><span class="mlogo" style="background:#D12053">bK</span> bKash <span class="badge green nodot" style="margin-left:auto">Selected</span></button>
-          <button class="method"><span class="mlogo" style="background:#F26522">N</span> Nagad</button>
-          <button class="method"><span class="mlogo" style="background:#2660D8">💳</span> Card</button>
-          <button class="method"><span class="mlogo" style="background:#5B6B76">🏦</span> Bank transfer</button>
+          <label class="payopt">
+            <input type="radio" name="opt" checked>
+            <div class="payopt-label">
+              <b>Pay full amount &mdash; ৳2,550</b>
+              <span>Done in one go. Best for solo captains.</span>
+            </div>
+          </label>
+
+          <label class="payopt">
+            <input type="radio" name="opt">
+            <div class="payopt-label">
+              <b>Pay 30% deposit &mdash; ৳765</b>
+              <span>Rest due at the venue before kickoff. Deposit is non-refundable within 6h.</span>
+            </div>
+          </label>
+
+          <label class="payopt">
+            <input type="radio" name="opt">
+            <div class="payopt-label">
+              <b>Split with my team <span class="badge green nodot" style="vertical-align:2px">Popular</span></b>
+              <span>Pay your share now, invite teammates to pay theirs. You stay in control.</span>
+            </div>
+          </label>
+
         </div>
-        <p class="subtle tiny" style="margin:10px 0 0">You'll approve the payment in your bKash app. TurfChai never sees your PIN.</p>
-      </section>
-
-      <section class="card">
-        <h3>3 · Policy</h3>
-        <div class="alert info" style="margin-top:8px"><span class="ico">ℹ️</span><div><b>Cancellation &amp; refund</b>Free cancellation until Thu 7 Aug, 7:30 PM (24h before) · 50% refund until Fri 1:30 PM · no refund after. Refunds return to your bKash within 3–5 days.</div></div>
-        <label class="checkline" style="margin-top:12px"><input type="checkbox" checked><span>I understand the cancellation policy and the exact slot time (7:30–9:00 PM, arrive 7:20 for handover).</span></label>
-      </section>
-    </div>
-
-    <!-- RIGHT: summary -->
-    <aside class="glass glass-card" style="position:sticky;top:84px">
-      <div class="row">
-        <div class="photo" style="width:52px;height:52px;font-size:20px;flex:none">⚽</div>
-        <div><b>Kick Off Arena</b><div class="subtle small">Pitch 2 · 7-a-side · Dhanmondi 27</div></div>
       </div>
-      <div class="panel" style="margin:12px 0">
-        <div class="between small"><span class="muted">Date</span><b>Fri 8 Aug 2026</b></div>
-        <div class="between small"><span class="muted">Play time</span><b class="num">7:30 – 9:00 PM</b></div>
-        <div class="between small"><span class="muted">Handover</span><b>Arrive 7:20 PM</b></div>
+
+      <!-- Step 2: Payment method -->
+      <div class="co-step">
+        <div class="co-step-header">
+          <div class="co-step-num" aria-hidden="true">2</div>
+          <div class="co-step-title">Payment method</div>
+        </div>
+        <div class="method-grid" role="radiogroup" aria-label="Payment method">
+
+          <label class="method" id="pay-bkash">
+            <input type="radio" name="method" checked>
+            <span class="mlogo" style="background:#D12053">bK</span>
+            bKash
+            <span class="badge green nodot sel-badge">Selected</span>
+          </label>
+
+          <label class="method" id="pay-nagad">
+            <input type="radio" name="method">
+            <span class="mlogo" style="background:#F26522">N</span>
+            Nagad
+            <span class="badge green nodot sel-badge">Selected</span>
+          </label>
+
+          <label class="method" id="pay-card">
+            <input type="radio" name="method">
+            <span class="mlogo" style="background:#2660D8">
+              <!-- credit card icon -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </span>
+            Card
+            <span class="badge green nodot sel-badge">Selected</span>
+          </label>
+
+          <label class="method" id="pay-bank">
+            <input type="radio" name="method">
+            <span class="mlogo" style="background:#5B6B76">
+              <!-- bank icon -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </span>
+            Bank transfer
+            <span class="badge green nodot sel-badge">Selected</span>
+          </label>
+
+        </div>
+        <p class="method-hint">You'll approve the payment in your bKash app. TurfChai never sees your PIN.</p>
       </div>
-      <div class="pricerow"><span>Slot (90 min)</span><span class="num">৳2,500</span></div>
-      <div class="pricerow"><span>Service fee</span><span class="num">৳150</span></div>
-      <div class="pricerow"><span class="neg">Off-peak discount</span><span class="num neg">−৳0</span></div>
-      <div class="pricerow"><span class="neg">Rewards (100 pts) <button class="btn btn-sm btn-tertiary" data-toast="100 points applied ✓" style="min-height:24px;padding:0 8px">apply</button></span><span class="num neg">−৳100</span></div>
-      <div class="pricerow total"><span>Due now</span><span class="num">৳2,550</span></div>
-      <p class="subtle tiny" style="margin:4px 0 12px">Remaining after payment: ৳0</p>
-      <a class="btn btn-primary btn-lg btn-block" href="booking-success.html">Pay ৳2,550 with bKash</a>
-      <a class="btn btn-tertiary btn-block" href="payment-retry.html" style="margin-top:6px">Simulate failed payment →</a>
+
+      <!-- Step 3: Policy -->
+      <div class="co-step">
+        <div class="co-step-header">
+          <div class="co-step-num" aria-hidden="true">3</div>
+          <div class="co-step-title">Cancellation policy</div>
+        </div>
+
+        <div class="policy-box">
+          <ul class="policy-list">
+            <li class="ok">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Free cancellation before <b>Thu 7 Aug, 7:30 PM</b>
+            </li>
+            <li class="warn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              50% refund until <b>Fri 8 Aug, 1:30 PM</b>
+            </li>
+            <li class="no">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              No refund within 6h of kickoff
+            </li>
+            <li>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Refunds return to your bKash within 3–5 days
+            </li>
+          </ul>
+        </div>
+
+        <label class="checkline" style="margin-top:16px">
+          <input type="checkbox" checked>
+          <span style="font-size:13.5px;color:var(--text-2)">I understand the cancellation policy and the exact slot time <b>(7:30–9:00 PM, arrive 7:20 for handover)</b>.</span>
+        </label>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- ════ RIGHT: Order summary (glassmorphism) ════ -->
+    <aside class="co-summary">
+
+      <!-- Venue info -->
+      <div class="co-venue-row">
+        <div class="co-venue-thumb">
+          <div class="photo"></div>
+        </div>
+        <div>
+          <div class="co-venue-name">Kick Off Arena</div>
+          <div class="co-venue-sub">Pitch 2 &middot; 7-a-side &middot; Dhanmondi 27</div>
+        </div>
+      </div>
+
+      <!-- Booking details -->
+      <div class="co-detail">
+        <div class="co-detail-row">
+          <span class="co-detail-label">Date</span>
+          <span class="co-detail-value">Fri 8 Aug 2026</span>
+        </div>
+        <div class="co-detail-row">
+          <span class="co-detail-label">Play time</span>
+          <span class="co-detail-value num">7:30 – 9:00 PM</span>
+        </div>
+        <div class="co-detail-row">
+          <span class="co-detail-label">Arrive by</span>
+          <span class="co-detail-value">7:20 PM</span>
+        </div>
+      </div>
+
+      <!-- Price breakdown -->
+      <div style="margin-bottom:8px">
+        <div class="pricerow">
+          <span class="pr-label">Slot (90 min)</span>
+          <span class="pr-val num">৳2,500</span>
+        </div>
+        <div class="pricerow">
+          <span class="pr-label">Service fee</span>
+          <span class="pr-val num">৳150</span>
+        </div>
+        <div class="pricerow">
+          <span class="pr-label neg" style="color:var(--brand-600)">Off-peak discount</span>
+          <span class="pr-val neg num">−৳0</span>
+        </div>
+        <div class="pricerow">
+          <span class="pr-label" style="display:flex;align-items:center;gap:8px">
+            Rewards (100 pts)
+            <button class="btn btn-sm btn-tertiary" data-toast="100 points applied" style="min-height:22px;padding:0 8px;font-size:12px">Apply</button>
+          </span>
+          <span class="pr-val neg num">−৳100</span>
+        </div>
+      </div>
+
+      <div class="pricerow total">
+        <span class="pr-label">Due now</span>
+        <span class="pr-val num">৳2,550</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-3);margin:6px 0 16px">Remaining balance after payment: ৳0</p>
+
+      <!-- CTA -->
+      <a class="btn btn-primary btn-lg btn-block" href="booking-success.html" id="pay-cta">
+        Pay ৳2,550 with bKash
+      </a>
+      <a class="btn btn-tertiary btn-block" href="payment-retry.html" style="margin-top:6px;font-size:13px">
+        Simulate failed payment
+      </a>
     </aside>
-  </div>
+
+  </div><!-- /co-grid -->
 </main>
+
 <script src="../js/turfchai.js"></script>
 </body>
 </html>

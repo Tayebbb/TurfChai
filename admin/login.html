@@ -3,34 +3,71 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin sign in · TurfChai</title>
+<title>Admin Sign In · TurfChai</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/turfchai.css">
 </head>
-<body>
-<main class="wrap-form" style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:32px;padding-bottom:32px">
-  <div class="center" style="margin-bottom:20px">
-    <a class="brand" href="../index.html" style="justify-content:center"><svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
-    <h1 style="font-size:22px;margin-top:10px">Admin Console</h1>
-    <p class="subtle small">Restricted area · authorized administrators only</p>
+<body style="background: radial-gradient(circle at 50% 20%, rgba(34, 197, 94, 0.12), transparent 70%), var(--bg);">
+<!-- Apple Liquid Glass Background Light Orbs -->
+<div class="liquid-bg-orbs">
+  <div class="liquid-orb liquid-orb-1"></div>
+  <div class="liquid-orb liquid-orb-2"></div>
+  <div class="liquid-orb liquid-orb-3"></div>
+</div>
+<main class="wrap-form" style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:40px;padding-bottom:40px">
+  
+  <div class="center" style="margin-bottom:24px">
+    <a class="brand" href="../index.html" style="justify-content:center;font-size:24px">
+      <svg viewBox="0 0 32 32" width="36" height="36" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>
+      TurfChai
+    </a>
+    <h1 style="font-size:24px;margin-top:12px;margin-bottom:4px;font-weight:800">Admin Portal</h1>
+    <p class="subtle small">Restricted access · Authorized personnel only</p>
   </div>
 
-  <div class="glass glass-card">
-    <!-- Invalid credentials state -->
-    <div class="alert danger" style="margin-bottom:14px"><span class="ico">⚠️</span><div><b>Invalid credentials</b>Email or password is incorrect. 2 attempts remaining before a 15-minute lockout.</div></div>
-
-    <div class="field"><label for="em">Work email</label><input class="input" id="em" type="email" value="nadia@turfchai.com" autocomplete="username"></div>
-    <div class="field"><label for="pw">Password</label><input class="input" id="pw" type="password" value="••••••••••" autocomplete="current-password" aria-invalid="true" style="border-color:var(--danger)"></div>
-    <div class="between" style="margin-bottom:14px">
-      <label class="checkline" style="margin:0"><input type="checkbox"><span class="small">Trust this device 30 days</span></label>
-      <a class="small" href="#" data-toast="Reset link sent to your work email 📩">Forgot password?</a>
+  <div class="liquid-glass" style="padding:28px;border-radius:24px">
+    <!-- Alert message -->
+    <div class="alert danger" style="margin-bottom:18px;border-radius:12px;background:rgba(201,59,59,0.12)">
+      <span class="ico">⚠️</span>
+      <div>
+        <b style="display:block;margin-bottom:2px">Authentication Required</b>
+        <span class="small">Enter your admin credentials to access the management console.</span>
+      </div>
     </div>
-    <a class="btn btn-primary btn-lg btn-block" href="dashboard.html">Retry sign in</a>
-    <p class="tiny subtle center" style="margin-top:10px">🔐 Protected by 2FA — you'll confirm a code after sign-in. All sessions are logged in the <b>activity trail</b>.</p>
+
+    <form onsubmit="event.preventDefault(); window.location.href='dashboard.html';">
+      <div class="field">
+        <label for="em">Work Email</label>
+        <input class="input" id="em" type="email" value="nadia@turfchai.com" placeholder="admin@turfchai.com" required autocomplete="username">
+      </div>
+
+      <div class="field" style="margin-bottom:18px">
+        <label for="pw">Password</label>
+        <input class="input" id="pw" type="password" value="••••••••••" placeholder="Enter password" required autocomplete="current-password">
+      </div>
+
+      <div class="between" style="margin-bottom:20px">
+        <label class="checkline" style="margin:0;cursor:pointer">
+          <input type="checkbox" checked>
+          <span class="small">Remember device (30 days)</span>
+        </label>
+        <a class="small subtle" href="#" onclick="showToast('Password reset link sent to work email ✉️'); return false;">Forgot password?</a>
+      </div>
+
+      <button class="btn btn-primary btn-lg btn-block" type="submit" style="font-weight:700">
+        Sign In to Dashboard →
+      </button>
+    </form>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
+      <p class="tiny subtle" style="margin:0">🔒 Protected by 2FA & Audit Logging</p>
+    </div>
   </div>
 
-  <div class="center" style="margin-top:14px"><button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button></div>
+  <div class="center" style="margin-top:20px">
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme" title="Toggle theme">🌙</button>
+  </div>
 </main>
 <script src="../js/turfchai.js"></script>
 </body>

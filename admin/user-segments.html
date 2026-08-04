@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User Segment Breakdown · TurfChai Admin</title>
+<meta name="description" content="Detailed breakdown of user types, engagement tiers, and geographic distribution across the TurfChai platform.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+
+<div class="liquid-bg-orbs">
+  <div class="liquid-orb liquid-orb-1"></div>
+  <div class="liquid-orb liquid-orb-2"></div>
+  <div class="liquid-orb liquid-orb-3"></div>
+</div>
+
+<header class="topbar glass">
+  <div class="topbar-inner" style="max-width:100%;padding:0 24px">
+    <a class="brand" href="dashboard.html">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>
+      TurfChai <span class="badge red nodot" style="margin-left:6px">Super Admin</span>
+    </a>
+    <div class="spacer"></div>
+    <button class="icon-btn notif-dot" data-open="#notifDrawer" aria-label="Notifications" title="View Alerts">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+    </button>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle Theme" title="Toggle Theme">
+      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
+    <a class="icon-btn" href="profile.html" style="background:var(--brand-soft);color:var(--brand-600);font-weight:700;border:1px solid var(--brand);text-decoration:none" aria-label="My Profile" title="My Profile">NA</a>
+  </div>
+</header>
+
+<main class="admin-page-wrap">
+
+  <div class="main-header" style="margin-bottom:24px">
+    <div>
+      <div class="row" style="gap:10px;align-items:center">
+        <a class="btn btn-sm btn-tertiary" href="dashboard.html" style="padding:4px 10px;font-weight:700">← Back</a>
+        <h1 style="font-size:26px;font-weight:800;margin:0">User Segment Breakdown</h1>
+      </div>
+      <span class="subtle small" style="margin-top:4px;display:block">Distribution across player roles, venue partners, and geographic regions</span>
+    </div>
+  </div>
+
+  <div class="grid4" style="gap:20px;margin-bottom:28px">
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Active Players</span>
+          <svg class="nav-icon" style="color:var(--brand)" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <b class="value num" style="color:var(--brand);font-size:36px;display:block;margin:6px 0 2px">34,200</b>
+        <span class="delta up" style="font-size:12px">Regular turf bookers</span>
+      </div>
+    </div>
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Verified Hosts</span>
+          <svg class="nav-icon" style="color:var(--info)" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        </div>
+        <b class="value num" style="color:var(--info);font-size:36px;display:block;margin:6px 0 2px">1,280</b>
+        <span class="delta nodot" style="color:var(--info);font-size:12px">Registered venue partners</span>
+      </div>
+    </div>
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Inactive Accounts</span>
+          <svg class="nav-icon" style="color:var(--warn)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <b class="value num" style="color:var(--warn);font-size:36px;display:block;margin:6px 0 2px">5,790</b>
+        <span class="delta down" style="font-size:12px">No activity in 30 days</span>
+      </div>
+    </div>
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Avg Lifetime Value</span>
+          <svg class="nav-icon" style="color:var(--brand-600)" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        </div>
+        <b class="value num" style="color:var(--brand-600);font-size:36px;display:block;margin:6px 0 2px">৳4,250</b>
+        <span class="delta nodot" style="color:var(--text-3);font-size:12px">Per registered cohort</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="gap:24px;margin-bottom:28px">
+
+    <div class="liquid-glass" style="padding:24px;border-radius:20px">
+      <div class="between" style="margin-bottom:16px">
+        <div>
+          <div class="row" style="gap:8px">
+            <svg class="nav-icon" style="color:var(--brand)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+            <h3 style="margin:0;font-size:16px;font-weight:800">Share Distribution</h3>
+          </div>
+          <span class="subtle small">User base composition</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:170px 1fr;gap:20px;align-items:center;min-height:200px">
+        <div style="position:relative;width:170px;height:170px;margin:0 auto">
+          <canvas id="segDonut" width="170" height="170" role="img" aria-label="User distribution: 83% Players, 3% Hosts, 14% Inactive"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+            <span style="font-size:20px;font-weight:800;display:block;line-height:1;font-family:var(--font-display)">41.2K</span>
+            <span style="font-size:10px;color:var(--text-3);font-weight:700;letter-spacing:0.07em">TOTAL</span>
+          </div>
+        </div>
+
+        <div class="user-breakdown-legend">
+          <div class="legend-item">
+            <div>
+              <span class="legend-dot" style="background:var(--brand)"></span>
+              <b style="font-size:14px">Players</b>
+              <span class="tiny subtle" style="display:block">Regular turf bookers</span>
+            </div>
+            <div style="text-align:right">
+              <b style="font-size:15px;display:block">34,200</b>
+              <span class="tiny badge green nodot">83%</span>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div>
+              <span class="legend-dot" style="background:var(--info)"></span>
+              <b style="font-size:14px">Hosts</b>
+              <span class="tiny subtle" style="display:block">Venue &amp; pitch managers</span>
+            </div>
+            <div style="text-align:right">
+              <b style="font-size:15px;display:block">1,280</b>
+              <span class="tiny badge blue nodot">3%</span>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div>
+              <span class="legend-dot" style="background:var(--warn)"></span>
+              <b style="font-size:14px">Inactive</b>
+              <span class="tiny subtle" style="display:block">No activity in 30 days</span>
+            </div>
+            <div style="text-align:right">
+              <b style="font-size:15px;display:block">5,790</b>
+              <span class="tiny badge amber nodot">14%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="liquid-glass" style="padding:24px;border-radius:20px">
+      <div class="stack-sm" style="gap:14px;margin-bottom:20px">
+        <div class="row" style="gap:8px">
+          <svg class="nav-icon" style="color:var(--mint)" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          <h3 style="margin:0;font-size:16px;font-weight:800">Player Classification</h3>
+        </div>
+        <span class="subtle small">Usage tiers among active players</span>
+      </div>
+
+      <div class="stack-sm" style="gap:6px">
+        <div class="history-item between" style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+          <div>
+            <b class="small" style="display:block;font-weight:700">Power Players</b>
+            <span class="tiny subtle">3+ bookings per week · League &amp; tournament regulars</span>
+          </div>
+          <div style="text-align:right">
+            <b style="font-size:15px;display:block">6,840</b>
+            <span class="tiny subtle">20% of players</span>
+          </div>
+        </div>
+        <div class="history-item between" style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+          <div>
+            <b class="small" style="display:block;font-weight:700">Regular Players</b>
+            <span class="tiny subtle">1–2 bookings per month · Weekend casual matches</span>
+          </div>
+          <div style="text-align:right">
+            <b style="font-size:15px;display:block">18,810</b>
+            <span class="tiny subtle">55% of players</span>
+          </div>
+        </div>
+        <div class="history-item between" style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+          <div>
+            <b class="small" style="display:block;font-weight:700">New Signups</b>
+            <span class="tiny subtle">Registered within the last 14 days, no bookings yet</span>
+          </div>
+          <div style="text-align:right">
+            <b style="font-size:15px;display:block">8,550</b>
+            <span class="tiny subtle">25% of players</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border-soft)">
+        <div class="row" style="gap:8px;margin-bottom:14px">
+          <svg class="nav-icon" style="color:var(--info)" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <h3 style="margin:0;font-size:16px;font-weight:800">Host Status Breakdown</h3>
+        </div>
+        <div class="table-wrap" style="padding:0;background:transparent;border:0;box-shadow:none">
+          <table class="table" aria-label="Host status breakdown">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th class="num">Count</th>
+                <th class="num">Avg Revenue/mo</th>
+                <th class="num">% of Hosts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge green nodot" style="font-size:11px">Active</span></td>
+                <td class="num">1,140</td>
+                <td class="num">৳38,400</td>
+                <td class="num">89%</td>
+              </tr>
+              <tr>
+                <td><span class="badge amber nodot" style="font-size:11px">Pending</span></td>
+                <td class="num">92</td>
+                <td class="num">—</td>
+                <td class="num">7%</td>
+              </tr>
+              <tr>
+                <td><span class="badge red nodot" style="font-size:11px">Suspended</span></td>
+                <td class="num">48</td>
+                <td class="num">৳0</td>
+                <td class="num">4%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regional Distribution -->
+  <div class="liquid-glass" style="padding:24px;border-radius:20px;margin-bottom:28px">
+    <div class="row" style="gap:8px;margin-bottom:18px">
+      <svg class="nav-icon" style="color:var(--mint)" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+      <h3 style="margin:0;font-size:16px;font-weight:800">Regional Distribution</h3>
+    </div>
+    <div class="stack-sm">
+      <div class="history-item between" style="padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+        <span style="font-size:13px;font-weight:600;min-width:120px">Dhanmondi</span>
+        <div style="flex:1;height:6px;background:var(--surface-3);border-radius:4px;overflow:hidden">
+          <div style="width:30%;height:100%;border-radius:4px;background:var(--brand);transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <span class="num" style="font-size:12px;font-weight:600;min-width:100px;text-align:right;color:var(--text-2)">12,450 · 30%</span>
+      </div>
+      <div class="history-item between" style="padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+        <span style="font-size:13px;font-weight:600;min-width:120px">Uttara</span>
+        <div style="flex:1;height:6px;background:var(--surface-3);border-radius:4px;overflow:hidden">
+          <div style="width:24%;height:100%;border-radius:4px;background:var(--info);transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <span class="num" style="font-size:12px;font-weight:600;min-width:100px;text-align:right;color:var(--text-2)">9,890 · 24%</span>
+      </div>
+      <div class="history-item between" style="padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+        <span style="font-size:13px;font-weight:600;min-width:120px">Mirpur</span>
+        <div style="flex:1;height:6px;background:var(--surface-3);border-radius:4px;overflow:hidden">
+          <div style="width:20%;height:100%;border-radius:4px;background:var(--info);transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <span class="num" style="font-size:12px;font-weight:600;min-width:100px;text-align:right;color:var(--text-2)">8,240 · 20%</span>
+      </div>
+      <div class="history-item between" style="padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+        <span style="font-size:13px;font-weight:600;min-width:120px">Khilgaon</span>
+        <div style="flex:1;height:6px;background:var(--surface-3);border-radius:4px;overflow:hidden">
+          <div style="width:14%;height:100%;border-radius:4px;background:var(--warn);transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <span class="num" style="font-size:12px;font-weight:600;min-width:100px;text-align:right;color:var(--text-2)">5,780 · 14%</span>
+      </div>
+      <div class="history-item between" style="padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft)">
+        <span style="font-size:13px;font-weight:600;min-width:120px">Mohammadpur</span>
+        <div style="flex:1;height:6px;background:var(--surface-3);border-radius:4px;overflow:hidden">
+          <div style="width:12%;height:100%;border-radius:4px;background:var(--warn);transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <span class="num" style="font-size:12px;font-weight:600;min-width:100px;text-align:right;color:var(--text-2)">4,910 · 12%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Engagement Cohort Overview -->
+  <div class="liquid-glass" style="padding:24px;border-radius:20px">
+    <div class="row" style="gap:8px;margin-bottom:16px">
+      <svg class="nav-icon" style="color:var(--brand)" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      <h3 style="margin:0;font-size:16px;font-weight:800">Engagement Cohort Overview</h3>
+    </div>
+    <div class="table-wrap" style="padding:0;background:transparent;border:0;box-shadow:none">
+      <table class="table" aria-label="Engagement cohort breakdown">
+        <thead>
+          <tr>
+            <th>Cohort</th>
+            <th class="num">Users</th>
+            <th class="num">Avg Bookings/mo</th>
+            <th class="num">Retention Rate</th>
+            <th class="num">Avg Spend</th>
+            <th class="num">LTV</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Power Players</b></td>
+            <td class="num">6,840</td>
+            <td class="num">12.4</td>
+            <td class="num" style="color:var(--brand);font-family:var(--font-display);font-weight:700">96%</td>
+            <td class="num">৳2,880</td>
+            <td class="num" style="font-weight:700">৳18,200</td>
+          </tr>
+          <tr>
+            <td><b>Regular Players</b></td>
+            <td class="num">18,810</td>
+            <td class="num">2.1</td>
+            <td class="num" style="color:var(--brand-600);font-family:var(--font-display);font-weight:700">82%</td>
+            <td class="num">৳540</td>
+            <td class="num" style="font-weight:700">৳3,800</td>
+          </tr>
+          <tr>
+            <td><b>New Signups</b></td>
+            <td class="num">8,550</td>
+            <td class="num">0.0</td>
+            <td class="num" style="color:var(--text-3);font-family:var(--font-display)">—</td>
+            <td class="num">৳0</td>
+            <td class="num" style="color:var(--text-3)">৳0</td>
+          </tr>
+          <tr>
+            <td><b>Active Hosts</b></td>
+            <td class="num">1,140</td>
+            <td class="num">—</td>
+            <td class="num" style="color:var(--brand);font-family:var(--font-display);font-weight:700">94%</td>
+            <td class="num">৳38,400</td>
+            <td class="num" style="font-weight:700">৳92,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Notifications Drawer -->
+<div class="overlay drawer-mode" id="notifDrawer" role="dialog" aria-modal="true" aria-labelledby="ndTitle">
+  <div class="modal" style="border-radius:24px;max-width:440px">
+    <div class="between" style="margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border-soft)">
+      <div>
+        <h3 id="ndTitle" style="margin:0;font-size:18px;font-weight:800">Alerts &amp; Notifications</h3>
+        <span class="subtle tiny" style="margin-top:2px;display:block">Platform status &amp; priority actions</span>
+      </div>
+      <button class="icon-btn" data-close aria-label="Close" style="width:32px;height:32px;border-radius:8px">✕</button>
+    </div>
+    <div class="stack-sm" style="gap:12px">
+      <div class="alert danger" style="margin:0;padding:14px;border-radius:14px;background:rgba(201,59,59,0.06);border:1px solid rgba(201,59,59,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">🚨</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge red nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">SLA CRITICAL</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">3d overdue</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">TR-1038 · Verification Overdue</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Banani Rooftop Futsal has been in queue for 72+ hours. Target SLA is 48 hours.</p>
+            <a class="btn btn-sm btn-secondary" href="request-review.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Review Request →</a>
+          </div>
+        </div>
+      </div>
+      <div class="alert warn" style="margin:0;padding:14px;border-radius:14px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">⚠️</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge amber nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">RISK WARNING</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">11:30 AM</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">Venue #77 Payout Anomaly</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Refund ratio spike detected (&gt; 4.2% threshold). Host payouts suspended automatically.</p>
+            <a class="btn btn-sm btn-secondary" href="activity.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Investigate Log →</a>
+          </div>
+        </div>
+      </div>
+      <div class="alert info" style="margin:0;padding:14px;border-radius:14px;background:rgba(38,96,216,0.06);border:1px solid rgba(38,96,216,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">ℹ️</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge blue nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">NEW REQUEST</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">4h ago</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">TR-1042 · Kick Off Arena</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Mahmudul Hasan submitted a new venue listing request with 3/3 verified documents.</p>
+            <a class="btn btn-sm btn-secondary" href="request-review.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Start Verification →</a>
+          </div>
+        </div>
+      </div>
+      <div class="alert ok" style="margin:0;padding:14px;border-radius:14px;background:rgba(14,122,74,0.06);border:1px solid rgba(14,122,74,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">✅</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge green nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">SUCCESS</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">9:00 AM</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">System Audit Log Sync</b>
+            <p class="small subtle" style="margin:0;line-height:1.4;font-size:12px">Database backup and administrative action logs synchronized successfully.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/turfchai.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  function drawDonut() {
+    const canvas = document.getElementById('segDonut');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const size = 170;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+
+    const cx = size / 2, cy = size / 2;
+    const outerR = 76, innerR = 54;
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const segments = [
+      { val: 83, color: isDark ? '#22C55E' : '#0E7A4A', label: 'Players' },
+      { val: 3,  color: isDark ? '#60A5FA' : '#2660D8', label: 'Hosts' },
+      { val: 14, color: isDark ? '#FBBF24' : '#D97706', label: 'Inactive' }
+    ];
+    let startAngle = -Math.PI / 2;
+
+    segments.forEach(seg => {
+      const sweep = (seg.val / 100) * Math.PI * 2;
+      const gapAngle = 0.025;
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR, startAngle + gapAngle, startAngle + sweep - gapAngle);
+      ctx.arc(cx, cy, innerR, startAngle + sweep - gapAngle, startAngle + gapAngle, true);
+      ctx.closePath();
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+      startAngle += sweep;
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', drawDonut);
+})();
+</script>
+</body>
+</html>
