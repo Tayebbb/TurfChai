@@ -16,7 +16,12 @@
       sync();
       btn.addEventListener('click', () => {
         const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
+        // crossfade colors while the palette swaps
+        const root = document.documentElement;
+        root.classList.add('theme-switching');
+        clearTimeout(root._themeFadeT);
+        root._themeFadeT = setTimeout(() => root.classList.remove('theme-switching'), 380);
+        root.setAttribute('data-theme', next);
         localStorage.setItem('tc-theme', next);
         document.querySelectorAll('[data-toggle-theme]').forEach(b => {
           b.textContent = next === 'dark' ? '☀️' : '🌙';
