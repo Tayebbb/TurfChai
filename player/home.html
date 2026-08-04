@@ -27,16 +27,26 @@
 </header>
 
 <main class="wrap" style="padding-top:24px">
-  <!-- Greeting + mode toggle -->
-  <div class="between" style="margin-bottom:14px;flex-wrap:wrap;gap:8px">
+  <!-- Greeting + workspace switcher -->
+  <div class="between" style="margin-bottom:18px;flex-wrap:wrap;gap:10px">
     <div><h1 style="font-size:24px;margin:0">Salam, Rafi</h1><span class="subtle">Dhanmondi, Dhaka</span></div>
-    <span class="badge green">Silver member · 1,240 pts</span>
+    <div class="row" style="gap:10px;flex-wrap:wrap">
+      <span class="badge green">Silver member · 1,240 pts</span>
+      <label class="glass" style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:4px 6px 4px 14px">
+        <span class="small subtle" style="font-weight:600">View as</span>
+        <select class="select" id="modeSelect" aria-label="Dashboard mode" style="width:auto;min-height:34px;padding:5px 32px 5px 10px;border:none;background:transparent;border-radius:999px;font-weight:700;color:var(--text);cursor:pointer">
+          <option value="player" selected>Player</option>
+          <option value="solo">Solo Player</option>
+          <option value="host">Tournament Host</option>
+        </select>
+      </label>
+    </div>
   </div>
 
-  <div class="seg glass lg" data-tabs="mode" role="tablist" aria-label="Dashboard mode" style="display:flex;width:max-content;max-width:100%;margin:0 auto 18px;overflow-x:auto">
-    <button class="on" data-tab="player" role="tab" aria-selected="true">Player</button>
-    <button data-tab="solo" role="tab" aria-selected="false">Solo Player</button>
-    <button data-tab="host" role="tab" aria-selected="false">Tournament Host</button>
+  <div class="seg" data-tabs="mode" hidden aria-hidden="true" style="display:none">
+    <button class="on" data-tab="player" tabindex="-1">Player</button>
+    <button data-tab="solo" tabindex="-1">Solo Player</button>
+    <button data-tab="host" tabindex="-1">Tournament Host</button>
   </div>
 
   <!-- ======== PLAYER MODE ======== -->
@@ -398,12 +408,18 @@
 (function () {
   // #player / #solo / #host deep-links select the matching dashboard mode;
   // #rewards lives in the player panel, so switch to it before scrolling
+  const modeSelect = document.getElementById('modeSelect');
+  const setMode = (mode) => {
+    document.querySelector(`.seg [data-tab="${mode}"]`)?.click();
+    if (modeSelect) modeSelect.value = mode;
+  };
+  modeSelect?.addEventListener('change', () => setMode(modeSelect.value));
   const applyHash = () => {
     const mode = location.hash.replace('#', '');
     if (['player', 'solo', 'host'].includes(mode)) {
-      document.querySelector(`.seg [data-tab="${mode}"]`)?.click();
+      setMode(mode);
     } else if (mode === 'rewards') {
-      document.querySelector('.seg [data-tab="player"]')?.click();
+      setMode('player');
       document.getElementById('rewards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
