@@ -3,102 +3,981 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin dashboard · TurfChai</title>
+<title>Platform Overview · TurfChai Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/turfchai.css">
+<style>
+  /* Page specific glass depth adjustments */
+  .admin-page-wrap {
+    max-width: 1340px;
+    margin: 0 auto;
+    padding: 24px 32px 64px;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1;
+  }
+
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  .kpi-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 22px;
+    border-radius: 20px;
+    min-height: 160px;
+  }
+  
+  .kpi-card .btn-link {
+    margin-top: 14px;
+    align-self: flex-start;
+  }
+
+  .spark-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 24px;
+    margin-top: 8px;
+  }
+  .spark-bar div {
+    flex: 1;
+    background: var(--brand);
+    opacity: 0.35;
+    border-radius: 2px;
+    transition: opacity 180ms ease, height 180ms ease;
+  }
+  .spark-bar div:hover {
+    opacity: 1;
+  }
+
+  .stat-chip {
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat-chip b {
+    font-size: 20px;
+    font-weight: 800;
+    font-family: var(--font-display);
+    line-height: 1.2;
+  }
+
+  .select-glass {
+    appearance: none;
+    background-color: rgba(255,255,255,0.06);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding: 6px 32px 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    transition: all 180ms ease;
+  }
+  .select-glass:hover, .select-glass:focus {
+    border-color: var(--brand);
+    background-color: rgba(255,255,255,0.12);
+  }
+
+  .chart-container {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    margin-top: 16px;
+  }
+
+  .chart-canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+
+  .user-breakdown-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-soft);
+    transition: background 180ms ease;
+  }
+  .legend-item:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  .history-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--brand) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+</style>
 </head>
 <body>
-<header class="topbar glass">
-  <div class="topbar-inner">
-    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge red nodot" style="margin-left:6px">Admin</span></a>
+
+<!-- Apple Liquid Glass Background Light Orbs -->
+<div class="liquid-bg-orbs">
+  <div class="liquid-orb liquid-orb-1"></div>
+  <div class="liquid-orb liquid-orb-2"></div>
+  <div class="liquid-orb liquid-orb-3"></div>
+</div>
+
+<header class="topbar glass" style="background: rgba(10, 15, 11, 0.75); backdrop-filter: blur(20px);">
+  <div class="topbar-inner" style="max-width:100%;padding:0 28px">
+    <a class="brand" href="dashboard.html">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>
+      TurfChai <span class="badge red nodot" style="margin-left:6px;background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.4)">Super Admin</span>
+    </a>
     <div class="spacer"></div>
-    <button class="icon-btn" data-toast="5 new alerts 🔔" aria-label="Notifications">🔔</button>
-    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
-    <a class="icon-btn" href="profile.html" style="background:var(--danger-soft);color:var(--danger);font-weight:700;border:none;text-decoration:none" aria-label="My profile">NA</a>
+    <button class="icon-btn notif-dot" data-open="#notifDrawer" aria-label="Notifications" title="View Alerts">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+    </button>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle Theme" title="Toggle Theme">
+      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
+    <a class="icon-btn" href="profile.html" style="background:var(--brand-soft);color:var(--brand-600);font-weight:700;border:1px solid var(--brand);text-decoration:none" aria-label="My Profile" title="My Profile">
+      NA
+    </a>
   </div>
 </header>
 
-<div class="shell wrap" style="max-width:1280px">
-  <aside class="sidebar">
-    <nav class="sidenav" aria-label="Admin console">
-      <a href="dashboard.html" class="active"><span class="ico">📊</span>Dashboard</a>
-      <a href="turf-requests.html"><span class="ico">📥</span>Turf Requests <span class="countpill" style="margin-left:auto">4</span></a>
-      <a href="turfs.html"><span class="ico">🏟️</span>Turfs</a>
-      <a href="users.html"><span class="ico">👥</span>Users &amp; Players</a>
-      <a href="admins.html"><span class="ico">🛡️</span>Admin Accounts</a>
-      <a href="activity.html"><span class="ico">🧾</span>Activity Log</a>
-      <a href="profile.html"><span class="ico">👤</span>My Profile</a>
-    </nav>
-  </aside>
+<main class="admin-page-wrap">
+  <div class="main-header" style="margin-bottom:24px">
+    <div>
+      <h1 style="font-size:28px;font-weight:800;margin:0;letter-spacing:-0.03em">Platform Overview</h1>
+      <span class="subtle small">Welcome back, Nadia Amin · Super Admin Executive Console</span>
+    </div>
+    <div class="row" style="gap:10px">
+      <button class="glass-pill" onclick="showToast('Executive PDF Report exported 📊');">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Export Report
+      </button>
+    </div>
+  </div>
 
-  <main class="main">
-    <div class="main-header">
-      <div><h1>Platform overview</h1><span class="subtle small">Friday 8 Aug 2026 · signed in as Nadia Amin (Super Admin)</span></div>
-      <a class="btn btn-primary" href="turf-requests.html">Review pending requests →</a>
+  <!-- KPI Summary Cards Grid (Liquid Glass) -->
+  <div class="grid4" style="gap:20px;margin-bottom:28px">
+    <!-- Pending Requests Card -->
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Pending Requests</span>
+          <svg class="nav-icon" style="color:var(--warn)" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        </div>
+        <b class="value num" style="color:var(--warn);font-size:36px;display:block;margin:6px 0 2px">4</b>
+        <span class="delta down" style="font-size:12px">Oldest request: 3 days ago</span>
+        <div class="spark-bar">
+          <div style="height:40%"></div><div style="height:60%"></div><div style="height:30%"></div><div style="height:90%"></div><div style="height:75%"></div><div style="height:100%"></div>
+        </div>
+      </div>
+      <a class="btn btn-sm btn-primary btn-link" href="turf-requests.html">Review Requests →</a>
     </div>
 
-    <div class="grid4" style="margin-bottom:16px">
-      <div class="kpi"><span class="label">Pending turf requests</span><b class="value num">4</b><span class="delta down">Oldest waiting 3 days</span></div>
-      <div class="kpi"><span class="label">Active turfs</span><b class="value num">128</b><span class="delta up">▲ 6 this month</span></div>
-      <div class="kpi"><span class="label">Registered users</span><b class="value num">41,270</b><span class="delta up">▲ 1,140 this week</span></div>
-      <div class="kpi"><span class="label">Bookings today</span><b class="value num">1,862</b><span class="delta up">GMV ৳38.4 lakh</span></div>
+    <!-- Active Turfs Card -->
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Active Turfs</span>
+          <svg class="nav-icon" style="color:var(--brand)" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        </div>
+        <b class="value num" style="font-size:36px;display:block;margin:6px 0 2px">128</b>
+        <span class="delta up" style="font-size:12px">▲ 6 venues added this month</span>
+        <div class="spark-bar">
+          <div style="height:35%"></div><div style="height:45%"></div><div style="height:60%"></div><div style="height:70%"></div><div style="height:85%"></div><div style="height:100%"></div>
+        </div>
+      </div>
+      <a class="btn btn-sm btn-secondary btn-link" href="turfs.html">Manage Turfs →</a>
     </div>
 
-    <div class="grid2" style="align-items:start">
-      <div class="stack">
-        <section class="card">
-          <div class="between"><h3 style="margin:0">Turf requests queue</h3><a class="btn btn-sm btn-tertiary" href="turf-requests.html">All →</a></div>
-          <div class="stack-sm" style="margin-top:10px">
-            <div class="panel between"><div><b class="small num">TR-1042 · Kick Off Arena</b><div class="tiny subtle">Mahmudul Hasan · Dhanmondi · submitted today</div></div><a class="btn btn-sm btn-primary" href="request-review.html">Review</a></div>
-            <div class="panel between"><div><b class="small num">TR-1041 · Uttara Champions Field</b><div class="tiny subtle">Salma Khatun · Uttara 11 · waiting 1 day</div></div><a class="btn btn-sm btn-secondary" href="request-review.html">Review</a></div>
-            <div class="panel between" style="border-left:3px solid var(--warn)"><div><b class="small num">TR-1038 · Banani Rooftop Futsal</b><div class="tiny subtle">Imran Chowdhury · waiting <b style="color:var(--warn)">3 days</b></div></div><a class="btn btn-sm btn-secondary" href="request-review.html">Review</a></div>
-          </div>
-        </section>
+    <!-- Registered Users Card -->
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Registered Users</span>
+          <svg class="nav-icon" style="color:var(--info)" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <b class="value num" style="font-size:36px;display:block;margin:6px 0 2px">41,270</b>
+        <span class="delta up" style="font-size:12px">▲ 1,140 registered this week</span>
+        <div class="spark-bar">
+          <div style="height:50%"></div><div style="height:65%"></div><div style="height:70%"></div><div style="height:80%"></div><div style="height:90%"></div><div style="height:100%"></div>
+        </div>
+      </div>
+      <a class="btn btn-sm btn-secondary btn-link" href="users.html">Manage Users →</a>
+    </div>
 
-        <section class="card">
-          <div class="between"><h3 style="margin:0">Recent activity</h3><a class="btn btn-sm btn-tertiary" href="activity.html">Full log →</a></div>
-          <ul class="tline" style="margin-top:10px">
-            <li><b class="small">Farid approved TR-1039 · GreenTurf Annex</b><p class="tiny muted" style="margin:0">6:24 PM · listing created as pending venue</p></li>
-            <li><b class="small">Nadia suspended user #38112</b><p class="tiny muted" style="margin:0">4:02 PM · repeated no-shows + abusive chat reports</p></li>
-            <li><b class="small">Farid rejected TR-1037 · reason logged</b><p class="tiny muted" style="margin:0">1:15 PM · "Expired trade license"</p></li>
-            <li><b class="small">System flagged payout anomaly · Venue #77</b><p class="tiny muted" style="margin:0">11:30 AM · refund ratio spike — under review</p></li>
-          </ul>
-        </section>
+    <!-- Admin Accounts Card -->
+    <div class="liquid-glass kpi-card">
+      <div>
+        <div class="between">
+          <span class="label" style="font-weight:600;color:var(--text-2)">Admin Accounts</span>
+          <svg class="nav-icon" style="color:var(--mint)" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        </div>
+        <b class="value num" style="font-size:36px;display:block;margin:6px 0 2px">5</b>
+        <span class="delta nodot" style="color:var(--mint);font-size:12px">Super Admin privileges active</span>
+        <div class="spark-bar">
+          <div style="height:80%"></div><div style="height:80%"></div><div style="height:80%"></div><div style="height:100%"></div><div style="height:100%"></div><div style="height:100%"></div>
+        </div>
+      </div>
+      <a class="btn btn-sm btn-tertiary btn-link" href="admins.html">Manage Admins →</a>
+    </div>
+  </div>
+
+  <!-- SECTION 1: Earnings Analytics Visualizer (Apple Liquid Glass) -->
+  <div class="liquid-glass" style="padding:28px;margin-bottom:28px;border-radius:24px">
+    <!-- Header with Title & Interactive Filters -->
+    <div class="between" style="margin-bottom:20px;flex-wrap:wrap;gap:16px;align-items:center">
+      <div>
+        <div class="row" style="gap:10px;align-items:center">
+          <svg class="nav-icon" style="color:var(--brand);width:22px;height:22px" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          <h2 style="margin:0;font-size:20px;font-weight:800;letter-spacing:-0.02em">Earnings &amp; Financial Analytics</h2>
+        </div>
+        <p class="subtle small" style="margin:4px 0 0">Real-time gross merchandise volume, platform commissions (10%), and payouts</p>
       </div>
 
-      <div class="stack">
-        <section class="glass glass-card">
-          <h3>Quick actions</h3>
-          <div class="grid2" style="gap:8px;margin-top:10px">
-            <a class="btn btn-secondary" href="turf-requests.html">📥 Review queue</a>
-            <a class="btn btn-secondary" href="users.html">👥 Find a user</a>
-            <a class="btn btn-secondary" href="turfs.html">🏟️ Manage turfs</a>
-            <a class="btn btn-secondary" href="admins.html">🛡️ Add admin</a>
-          </div>
-        </section>
+      <!-- Controls & Filters -->
+      <div class="row-wrap" style="gap:12px">
+        <!-- Timeframe Pill Tabs -->
+        <div class="glass-pill-group" id="tfPills">
+          <button class="glass-pill" data-tf="weekly">Weekly</button>
+          <button class="glass-pill active" data-tf="monthly">Monthly</button>
+          <button class="glass-pill" data-tf="quarterly">Quarterly</button>
+          <button class="glass-pill" data-tf="yearly">Yearly</button>
+        </div>
 
-        <section class="card">
-          <div class="between"><h3 style="margin:0">Alerts</h3><span class="countpill">3</span></div>
-          <div class="stack-sm" style="margin-top:10px">
-            <div class="alert warn" style="margin:0"><span class="ico">⏳</span><div><b>SLA risk</b>TR-1038 has waited 3 days — target is 2 business days. <a href="request-review.html">Review now</a></div></div>
-            <div class="alert danger" style="margin:0"><span class="ico">🚩</span><div><b>Payout anomaly · Venue #77</b>Refund ratio 4× baseline this week. <a href="activity.html">Investigate</a></div></div>
-            <div class="alert info" style="margin:0"><span class="ico">⭐</span><div><b>6 reported reviews</b>await moderation decisions. <a href="turfs.html">Open queue</a></div></div>
-          </div>
-        </section>
+        <!-- Year Selector -->
+        <select class="select-glass" id="yearSelect">
+          <option value="2026" selected>Year: 2026</option>
+          <option value="2025">Year: 2025</option>
+          <option value="2024">Year: 2024</option>
+        </select>
 
-        <section class="card">
-          <h3>Platform health · 7 days</h3>
-          <div class="stack-sm" style="margin-top:10px">
-            <div><div class="between small"><span class="muted">Booking success rate</span><b class="num">97.8%</b></div><div class="progress"><i style="width:97.8%"></i></div></div>
-            <div><div class="between small"><span class="muted">Payment success (bKash/Nagad)</span><b class="num">94.1%</b></div><div class="progress"><i style="width:94.1%"></i></div></div>
-            <div><div class="between small"><span class="muted">Disputes resolved &lt; 48h</span><b class="num">89%</b></div><div class="progress"><i style="width:89%;background:var(--warn)"></i></div></div>
-          </div>
-        </section>
+        <!-- Metric View Selector -->
+        <select class="select-glass" id="metricSelect">
+          <option value="gmv" selected>Gross Revenue (GMV)</option>
+          <option value="fee">Net Commission (10%)</option>
+          <option value="payouts">Owner Payouts (90%)</option>
+        </select>
       </div>
     </div>
-  </main>
+
+    <!-- Live Revenue Summary Strip -->
+    <div class="grid4" style="gap:14px;margin-bottom:20px">
+      <div class="stat-chip">
+        <span class="subtle tiny" style="font-weight:700">TOTAL REVENUE (GMV)</span>
+        <b id="statGmv" style="color:var(--brand-600)">৳4,825,000</b>
+        <span class="tiny delta up" id="statGrowth">▲ +24.6% vs prev period</span>
+      </div>
+      <div class="stat-chip">
+        <span class="subtle tiny" style="font-weight:700">NET PLATFORM COMMISSION</span>
+        <b id="statFee" style="color:var(--mint)">৳482,500</b>
+        <span class="tiny subtle">10% Take Rate</span>
+      </div>
+      <div class="stat-chip">
+        <span class="subtle tiny" style="font-weight:700">COMPLETED BOOKINGS</span>
+        <b id="statBookings" style="color:var(--info)">18,420</b>
+        <span class="tiny subtle" id="statAov">Avg ৳262 / booking</span>
+      </div>
+      <div class="stat-chip">
+        <span class="subtle tiny" style="font-weight:700">DISBURSED PAYOUTS</span>
+        <b id="statPayouts" style="color:var(--text)">৳4,342,500</b>
+        <span class="tiny subtle">Automated BKash/Nagad</span>
+      </div>
+    </div>
+
+    <!-- Canvas Chart Container -->
+    <div class="chart-container" id="earningsChartWrap">
+      <canvas class="chart-canvas" id="earningsChart"></canvas>
+      <div class="chart-tooltip" id="earningsTooltip">
+        <div class="title" id="tooltipTitle">Aug 2026</div>
+        <div class="val" id="tooltipVal">৳5,920,000</div>
+        <div class="sub" id="tooltipSub">21,900 Bookings · Net: ৳592,000</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: User Base Analytics Visualizer (Apple Liquid Glass) -->
+  <div class="grid2" style="gap:24px;margin-bottom:28px">
+    <!-- Left Card: User Acquisition & Growth Trend -->
+    <div class="liquid-glass" style="padding:24px;border-radius:24px">
+      <div class="between" style="margin-bottom:16px">
+        <div>
+          <div class="row" style="gap:8px">
+            <svg class="nav-icon" style="color:var(--info)" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <h3 style="margin:0;font-size:18px;font-weight:800">User Growth &amp; Acquisition</h3>
+          </div>
+          <span class="subtle small">Monthly new user registrations vs active users</span>
+        </div>
+        <div class="glass-pill-group" id="userSegPills">
+          <button class="glass-pill active" data-userseg="all">All</button>
+          <button class="glass-pill" data-userseg="players">Players</button>
+          <button class="glass-pill" data-userseg="hosts">Hosts</button>
+        </div>
+      </div>
+
+      <div class="row" style="gap:16px;margin-bottom:14px">
+        <div>
+          <span class="tiny subtle">Total User Base</span>
+          <b style="display:block;font-size:22px;font-weight:800">41,270</b>
+        </div>
+        <div style="border-left:1px solid var(--border-soft);padding-left:16px">
+          <span class="tiny subtle">Active Ratio</span>
+          <b style="display:block;font-size:22px;font-weight:800;color:var(--mint)">89.4%</b>
+        </div>
+        <div style="border-left:1px solid var(--border-soft);padding-left:16px">
+          <span class="tiny subtle">Monthly Growth</span>
+          <b style="display:block;font-size:22px;font-weight:800;color:var(--brand-600)">+14.8%</b>
+        </div>
+      </div>
+
+      <div class="chart-container" style="height:230px">
+        <canvas class="chart-canvas" id="userGrowthChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Right Card: User Demographics & Type Breakdown -->
+    <div class="liquid-glass" style="padding:24px;border-radius:24px">
+      <div class="between" style="margin-bottom:16px">
+        <div>
+          <div class="row" style="gap:8px">
+            <svg class="nav-icon" style="color:var(--mint)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+            <h3 style="margin:0;font-size:18px;font-weight:800">User Segment Breakdown</h3>
+          </div>
+          <span class="subtle small">Distribution across player roles &amp; venue partners</span>
+        </div>
+        <span class="badge green nodot">41,270 Verified</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:180px 1fr;gap:20px;align-items:center;min-height:230px">
+        <div style="position:relative;width:170px;height:170px;margin:0 auto">
+          <canvas id="userBreakdownChart" width="170" height="170"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+            <span style="font-size:20px;font-weight:800;display:block;line-height:1">41.2K</span>
+            <span style="font-size:10px;color:var(--text-3);font-weight:700">USERS</span>
+          </div>
+        </div>
+
+        <div class="user-breakdown-legend">
+          <div class="legend-item">
+            <div>
+              <span class="legend-dot" style="background:#22c55e"></span>
+              <b style="font-size:14px">Players</b>
+              <span class="tiny subtle" style="display:block">Regular turf bookers</span>
+            </div>
+            <div style="text-align:right">
+              <b style="font-size:15px;display:block">34,200</b>
+              <span class="tiny badge green nodot">82.9%</span>
+            </div>
+          </div>
+
+          <div class="legend-item">
+            <div>
+              <span class="legend-dot" style="background:#3b82f6"></span>
+              <b style="font-size:14px">Turf Hosts</b>
+              <span class="tiny subtle" style="display:block">Venue &amp; pitch managers</span>
+            </div>
+            <div style="text-align:right">
+              <b style="font-size:15px;display:block">4,850</b>
+              <span class="tiny badge blue nodot">11.8%</span>
+            </div>
+          </div>
+
+          <div class="legend-item">
+            <div>
+              <span class="legend-dot" style="background:#a855f7"></span>
+              <b style="font-size:14px">Solo Players</b>
+              <span class="tiny subtle" style="display:block">Looking for game (LFG)</span>
+            </div>
+            <div style="text-align:right">
+              <b style="font-size:15px;display:block">2,220</b>
+              <span class="tiny badge yellow nodot">5.3%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: System Audit Log & SLA Risk Panel -->
+  <div class="liquid-glass" style="border-radius:24px;padding:24px 28px">
+    <div class="between" style="margin-bottom:18px;align-items:center">
+      <div class="row" style="gap:10px;align-items:center">
+        <svg class="nav-icon" style="color:var(--brand);width:20px;height:20px" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        <h3 style="margin:0;font-size:18px;font-weight:800">Recent Platform Audit Log</h3>
+        <span class="subtle small" style="margin-left:8px">1,862 Bookings Today · GMV ৳38.4L</span>
+      </div>
+      <a class="btn btn-sm btn-tertiary" href="activity.html" style="font-weight:700">View Full System Log →</a>
+    </div>
+
+    <div class="stack-sm" style="gap:10px">
+      <div class="history-item between" style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft);align-items:center">
+        <div class="row" style="gap:14px;align-items:center">
+          <span class="badge blue nodot" style="font-size:11px;padding:4px 10px;min-width:110px;text-align:center">APPROVAL</span>
+          <div>
+            <b class="small" style="display:block;color:var(--text-1);font-weight:700">TR-1039 · GreenTurf Annex Approved</b>
+            <span class="tiny muted">Verified venue ownership documents · By Farid Hasan</span>
+          </div>
+        </div>
+        <span class="tiny subtle">Today 6:24 PM</span>
+      </div>
+
+      <div class="history-item between" style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft);align-items:center">
+        <div class="row" style="gap:14px;align-items:center">
+          <span class="badge red nodot" style="font-size:11px;padding:4px 10px;min-width:110px;text-align:center">MODERATION</span>
+          <div>
+            <b class="small" style="display:block;color:var(--text-1);font-weight:700">Player #38112 Suspended (No-Show Repeat)</b>
+            <span class="tiny muted">Automated temporary ban policy applied · By Nadia Amin</span>
+          </div>
+        </div>
+        <span class="tiny subtle">Today 4:02 PM</span>
+      </div>
+
+      <div class="history-item between" style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft);align-items:center">
+        <div class="row" style="gap:14px;align-items:center">
+          <span class="badge yellow nodot" style="font-size:11px;padding:4px 10px;min-width:110px;text-align:center">AUTOMATION</span>
+          <div>
+            <b class="small" style="display:block;color:var(--text-1);font-weight:700">Venue #77 Payout Flagged for Review</b>
+            <span class="tiny muted">Refund ratio spike detected (> 4.2% threshold)</span>
+          </div>
+        </div>
+        <span class="tiny subtle">Today 11:30 AM</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Notifications Drawer -->
+<div class="overlay drawer-mode" id="notifDrawer" role="dialog" aria-modal="true" aria-labelledby="ndTitle">
+  <div class="modal" style="border-radius:24px">
+    <div class="between" style="margin-bottom:16px">
+      <h3 id="ndTitle" style="margin:0">Alerts &amp; Notifications</h3>
+      <button class="icon-btn" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="stack-sm">
+      <div class="alert warn" style="margin:0;padding:12px;border-radius:12px">
+        <div>
+          <b style="display:block;margin-bottom:2px">SLA Risk: TR-1038</b>
+          <span class="small">Waiting for 3 days (Target SLA: 48h).</span>
+          <a href="request-review.html" style="display:block;margin-top:6px;font-weight:700">Review Request →</a>
+        </div>
+      </div>
+      <div class="alert danger" style="margin:0;padding:12px;border-radius:12px">
+        <div>
+          <b style="display:block;margin-bottom:2px">Payout Anomaly: Venue #77</b>
+          <span class="small">Refund ratio 4× baseline this week.</span>
+          <a href="activity.html" style="display:block;margin-top:6px;font-weight:700">Investigate Log →</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
 <script src="../js/turfchai.js"></script>
+
+<!-- Interactive Canvas Analytics Engine -->
+<script>
+(function() {
+  'use strict';
+
+  /* --- Datasets for Dynamic Filtering --- */
+  const earningsData = {
+    monthly: {
+      '2026': {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+        gmv: [3820000, 4150000, 4400000, 4780000, 5100000, 5350000, 5600000, 5920000],
+        bookings: [14200, 15400, 16100, 17500, 18900, 19800, 20700, 21900],
+        growth: '+24.6%',
+      },
+      '2025': {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        gmv: [2400000, 2650000, 2900000, 3100000, 3350000, 3500000, 3680000, 3800000, 3950000, 4100000, 4300000, 4600000],
+        bookings: [9100, 10200, 11000, 11800, 12600, 13100, 13800, 14200, 14900, 15500, 16300, 17400],
+        growth: '+31.2%',
+      },
+      '2024': {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        gmv: [1200000, 1350000, 1500000, 1650000, 1800000, 1950000, 2100000, 2200000, 2300000, 2450000, 2600000, 2800000],
+        bookings: [4500, 5100, 5700, 6300, 6900, 7400, 8000, 8400, 8800, 9300, 9900, 10600],
+        growth: '+45.0%',
+      }
+    },
+    yearly: {
+      '2026': {
+        labels: ['2022', '2023', '2024', '2025', '2026 (YTD)'],
+        gmv: [8500000, 18200000, 23900000, 42280000, 39120000],
+        bookings: [32000, 68000, 89800, 159100, 144800],
+        growth: '+38.4%',
+      },
+      '2025': {
+        labels: ['2021', '2022', '2023', '2024', '2025'],
+        gmv: [3100000, 8500000, 18200000, 23900000, 42280000],
+        bookings: [12000, 32000, 68000, 89800, 159100],
+        growth: '+76.9%',
+      },
+      '2024': {
+        labels: ['2020', '2021', '2022', '2023', '2024'],
+        gmv: [900000, 3100000, 8500000, 18200000, 23900000],
+        bookings: [3500, 12000, 32000, 68000, 89800],
+        growth: '+31.3%',
+      }
+    },
+    weekly: {
+      '2026': {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        gmv: [680000, 720000, 790000, 840000, 1150000, 1420000, 1320000],
+        bookings: [2500, 2700, 2950, 3100, 4300, 5400, 4900],
+        growth: '+18.2%',
+      },
+      '2025': {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        gmv: [480000, 520000, 590000, 640000, 850000, 1020000, 950000],
+        bookings: [1800, 1950, 2200, 2400, 3200, 3900, 3600],
+        growth: '+14.5%',
+      },
+      '2024': {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        gmv: [280000, 310000, 340000, 380000, 510000, 650000, 600000],
+        bookings: [1100, 1200, 1300, 1450, 1900, 2400, 2250],
+        growth: '+22.0%',
+      }
+    },
+    quarterly: {
+      '2026': {
+        labels: ['Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025', 'Q1 2026', 'Q2 2026', 'Q3 2026 (YTD)'],
+        gmv: [7950000, 9950000, 11430000, 13000000, 12370000, 15230000, 11520000],
+        bookings: [30300, 37500, 42900, 49200, 45700, 56200, 42600],
+        growth: '+22.8%',
+      },
+      '2025': {
+        labels: ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025'],
+        gmv: [4050000, 5400000, 6400000, 8050000, 7950000, 9950000, 11430000, 13000000],
+        bookings: [15300, 20600, 24400, 30500, 30300, 37500, 42900, 49200],
+        growth: '+61.5%',
+      },
+      '2024': {
+        labels: ['Q1 2023', 'Q2 2023', 'Q3 2023', 'Q4 2023', 'Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024'],
+        gmv: [3100000, 4200000, 5100000, 5800000, 4050000, 5400000, 6400000, 8050000],
+        bookings: [11500, 15800, 19100, 21600, 15300, 20600, 24400, 30500],
+        growth: '+38.8%',
+      }
+    }
+  };
+
+  /* State */
+  let currentTF = 'monthly';
+  let currentYear = '2026';
+  let currentMetric = 'gmv';
+  let activePoints = [];
+
+  /* DOM references */
+  const canvas = document.getElementById('earningsChart');
+  const ctx = canvas.getContext('2d');
+  const tooltip = document.getElementById('earningsTooltip');
+  const tooltipTitle = document.getElementById('tooltipTitle');
+  const tooltipVal = document.getElementById('tooltipVal');
+  const tooltipSub = document.getElementById('tooltipSub');
+
+  /* Formatter helper */
+  function formatBDT(amount) {
+    return '৳' + amount.toLocaleString('en-IN');
+  }
+
+  /* Render Function for Earnings Line Chart */
+  function renderEarningsChart() {
+    if (!canvas) return;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const width = rect.width;
+    const height = rect.height;
+    ctx.clearRect(0, 0, width, height);
+
+    // Fetch dataset
+    const tfGroup = earningsData[currentTF] || earningsData.monthly;
+    const ds = tfGroup[currentYear] || tfGroup['2026'] || Object.values(tfGroup)[0];
+
+    // Calculate dynamic values depending on metric
+    const rawGmv = ds.gmv;
+    let values = rawGmv;
+    if (currentMetric === 'fee') {
+      values = rawGmv.map(v => Math.round(v * 0.10));
+    } else if (currentMetric === 'payouts') {
+      values = rawGmv.map(v => Math.round(v * 0.90));
+    }
+
+    // Update Stat Strip Badges
+    const totalRawGmv = rawGmv.reduce((a, b) => a + b, 0);
+    const totalBookings = ds.bookings.reduce((a, b) => a + b, 0);
+    const avgAov = Math.round(totalRawGmv / totalBookings);
+
+    document.getElementById('statGmv').textContent = formatBDT(totalRawGmv);
+    document.getElementById('statFee').textContent = formatBDT(Math.round(totalRawGmv * 0.10));
+    document.getElementById('statBookings').textContent = totalBookings.toLocaleString();
+    document.getElementById('statAov').textContent = `Avg ${formatBDT(avgAov)} / booking`;
+    document.getElementById('statPayouts').textContent = formatBDT(Math.round(totalRawGmv * 0.90));
+    document.getElementById('statGrowth').textContent = `▲ ${ds.growth} vs prev period`;
+
+    // Canvas layout margins
+    const paddingLeft = 55;
+    const paddingRight = 20;
+    const paddingTop = 25;
+    const paddingBottom = 40;
+
+    const chartW = width - paddingLeft - paddingRight;
+    const chartH = height - paddingTop - paddingBottom;
+
+    const maxVal = Math.max(...values) * 1.15;
+    const minVal = 0;
+
+    // Draw horizontal grid lines
+    const gridRows = 4;
+    ctx.strokeStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 1;
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+
+    for (let i = 0; i <= gridRows; i++) {
+      const y = paddingTop + (chartH / gridRows) * i;
+      const v = maxVal - (maxVal / gridRows) * i;
+
+      ctx.beginPath();
+      ctx.moveTo(paddingLeft, y);
+      ctx.lineTo(width - paddingRight, y);
+      ctx.stroke();
+
+      let labelText = Math.round(v / 1000) + 'k';
+      if (v >= 1000000) labelText = (v / 1000000).toFixed(1) + 'M';
+      ctx.fillText(labelText, 10, y + 4);
+    }
+
+    // Points calculation
+    activePoints = [];
+    const count = values.length;
+    const stepX = chartW / (count - 1 || 1);
+
+    for (let i = 0; i < count; i++) {
+      const x = paddingLeft + i * stepX;
+      const y = paddingTop + chartH - ((values[i] - minVal) / (maxVal - minVal)) * chartH;
+      activePoints.push({
+        x, y,
+        label: ds.labels[i],
+        val: values[i],
+        gmv: rawGmv[i],
+        bookings: ds.bookings[i]
+      });
+
+      // Draw X axis labels
+      ctx.textAlign = 'center';
+      ctx.fillText(ds.labels[i], x, height - 12);
+    }
+
+    // Draw Smooth Gradient Bézier Curve
+    if (activePoints.length > 0) {
+      // Area Fill Gradient
+      const fillGradient = ctx.createLinearGradient(0, paddingTop, 0, height - paddingBottom);
+      fillGradient.addColorStop(0, 'rgba(34, 197, 94, 0.38)');
+      fillGradient.addColorStop(0.6, 'rgba(34, 197, 94, 0.08)');
+      fillGradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+
+      ctx.beginPath();
+      ctx.moveTo(activePoints[0].x, activePoints[0].y);
+
+      for (let i = 0; i < activePoints.length - 1; i++) {
+        const p0 = activePoints[i];
+        const p1 = activePoints[i + 1];
+        const cpX = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cpX, p0.y, cpX, p1.y, p1.x, p1.y);
+      }
+
+      // Complete line loop down to baseline for gradient fill
+      ctx.lineTo(activePoints[activePoints.length - 1].x, paddingTop + chartH);
+      ctx.lineTo(activePoints[0].x, paddingTop + chartH);
+      ctx.closePath();
+      ctx.fillStyle = fillGradient;
+      ctx.fill();
+
+      // Stroke Line
+      const strokeGradient = ctx.createLinearGradient(paddingLeft, 0, width - paddingRight, 0);
+      strokeGradient.addColorStop(0, '#16a34a');
+      strokeGradient.addColorStop(0.5, '#22c55e');
+      strokeGradient.addColorStop(1, '#4ade80');
+
+      ctx.beginPath();
+      ctx.moveTo(activePoints[0].x, activePoints[0].y);
+      for (let i = 0; i < activePoints.length - 1; i++) {
+        const p0 = activePoints[i];
+        const p1 = activePoints[i + 1];
+        const cpX = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cpX, p0.y, cpX, p1.y, p1.x, p1.y);
+      }
+      ctx.strokeStyle = strokeGradient;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      // Draw Data Node Circles
+      for (let i = 0; i < activePoints.length; i++) {
+        const pt = activePoints[i];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#22c55e';
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* Interactive Hover Tooltip Handler */
+  function setupEarningsInteractivity() {
+    const wrap = document.getElementById('earningsChartWrap');
+    if (!wrap) return;
+
+    wrap.addEventListener('mousemove', function(e) {
+      const rect = wrap.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      let closest = null;
+      let minDist = Infinity;
+
+      for (let i = 0; i < activePoints.length; i++) {
+        const pt = activePoints[i];
+        const dist = Math.hypot(pt.x - mouseX, pt.y - mouseY);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = pt;
+        }
+      }
+
+      if (closest && minDist < 45) {
+        tooltipTitle.textContent = `${closest.label} ${currentYear}`;
+        tooltipVal.textContent = formatBDT(closest.val);
+        tooltipSub.textContent = `${closest.bookings.toLocaleString()} Bookings · GMV: ${formatBDT(closest.gmv)}`;
+        
+        tooltip.style.left = closest.x + 'px';
+        tooltip.style.top = closest.y + 'px';
+        tooltip.classList.add('show');
+      } else {
+        tooltip.classList.remove('show');
+      }
+    });
+
+    wrap.addEventListener('mouseleave', function() {
+      tooltip.classList.remove('show');
+    });
+  }
+
+  /* Render User Growth Bar/Line Chart */
+  function renderUserGrowthChart() {
+    const c = document.getElementById('userGrowthChart');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const rect = c.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    c.width = rect.width * dpr;
+    c.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const months = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
+    const playersData = [2400, 2900, 3400, 3900, 4200, 4800];
+    const hostsData = [320, 410, 490, 560, 620, 710];
+
+    const paddingLeft = 40;
+    const paddingRight = 15;
+    const paddingTop = 20;
+    const paddingBottom = 30;
+    const chartW = w - paddingLeft - paddingRight;
+    const chartH = h - paddingTop - paddingBottom;
+
+    const maxVal = 5500;
+    const barWidth = 14;
+    const stepX = chartW / months.length;
+
+    // Draw baseline
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(paddingLeft, h - paddingBottom);
+    ctx.lineTo(w - paddingRight, h - paddingBottom);
+    ctx.stroke();
+
+    for (let i = 0; i < months.length; i++) {
+      const centerX = paddingLeft + i * stepX + stepX / 2;
+
+      // Player Bar
+      const pVal = playersData[i];
+      const pHeight = (pVal / maxVal) * chartH;
+      const pY = h - paddingBottom - pHeight;
+
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.roundRect(centerX - barWidth - 2, pY, barWidth, pHeight, [4, 4, 0, 0]);
+      ctx.fill();
+
+      // Host Bar
+      const hVal = hostsData[i];
+      const hHeight = (hVal / maxVal) * chartH;
+      const hY = h - paddingBottom - hHeight;
+
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath();
+      ctx.roundRect(centerX + 2, hY, barWidth, hHeight, [4, 4, 0, 0]);
+      ctx.fill();
+
+      // X Labels
+      ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(months[i], centerX, h - 10);
+    }
+  }
+
+  /* Render Segmented Donut Chart for User Breakdown */
+  function renderUserBreakdownChart() {
+    const c = document.getElementById('userBreakdownChart');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const width = 170;
+    const height = 170;
+
+    c.width = width * (window.devicePixelRatio || 1);
+    c.height = height * (window.devicePixelRatio || 1);
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const outerRadius = 75;
+    const innerRadius = 54;
+
+    const segments = [
+      { percentage: 0.829, color: '#22c55e' }, // Players
+      { percentage: 0.118, color: '#3b82f6' }, // Hosts
+      { percentage: 0.053, color: '#a855f7' }  // Solo Matchmakers
+    ];
+
+    let startAngle = -Math.PI / 2;
+
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      const sliceAngle = seg.percentage * Math.PI * 2;
+      const endAngle = startAngle + sliceAngle;
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, outerRadius, startAngle + 0.03, endAngle - 0.03);
+      ctx.arc(centerX, centerY, innerRadius, endAngle - 0.03, startAngle + 0.03, true);
+      ctx.closePath();
+
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+
+      startAngle = endAngle;
+    }
+  }
+
+  /* Bind Controls & Filters */
+  function bindAnalyticsControls() {
+    // Timeframe Pills
+    const tfPills = document.querySelectorAll('#tfPills button');
+    tfPills.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tfPills.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTF = btn.getAttribute('data-tf');
+        renderEarningsChart();
+      });
+    });
+
+    // Year Dropdown
+    const yearSel = document.getElementById('yearSelect');
+    if (yearSel) {
+      yearSel.addEventListener('change', (e) => {
+        currentYear = e.target.value;
+        renderEarningsChart();
+      });
+    }
+
+    // Metric Dropdown
+    const metricSel = document.getElementById('metricSelect');
+    if (metricSel) {
+      metricSel.addEventListener('change', (e) => {
+        currentMetric = e.target.value;
+        renderEarningsChart();
+      });
+    }
+
+    // User Segment Filter Pills
+    const userSegPills = document.querySelectorAll('#userSegPills button');
+    userSegPills.forEach(btn => {
+      btn.addEventListener('click', () => {
+        userSegPills.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderUserGrowthChart();
+      });
+    });
+  }
+
+  /* Initialize all charts */
+  function initCharts() {
+    renderEarningsChart();
+    setupEarningsInteractivity();
+    renderUserGrowthChart();
+    renderUserBreakdownChart();
+    bindAnalyticsControls();
+
+    window.addEventListener('resize', () => {
+      renderEarningsChart();
+      renderUserGrowthChart();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCharts);
+  } else {
+    initCharts();
+  }
+})();
+</script>
 </body>
 </html>

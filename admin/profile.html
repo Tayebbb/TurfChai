@@ -3,79 +3,190 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My profile · TurfChai Admin</title>
+<title>My Admin Account &amp; Settings · TurfChai Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/turfchai.css">
+<style>
+  /* Glassmorphism & Shadow Depth Enhancements */
+  .card, .glass-card, .kpi {
+    background: var(--glass-bg-strong) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease) !important;
+  }
+  .card:hover, .kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.36), 0 4px 10px rgba(0, 0, 0, 0.16) !important;
+  }
+
+  /* Centered Container layout with side margins */
+  .admin-page-wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 32px;
+    box-sizing: border-box;
+  }
+
+  /* Animated Select Inputs */
+  .select, select.input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371847A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .select:focus, select.input:focus {
+    transform: scale(1.01);
+  }
+  
+  /* SVG Icon Sizing & Professional Alignment */
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+</style>
 </head>
 <body>
 <header class="topbar glass">
-  <div class="topbar-inner">
-    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge red nodot" style="margin-left:6px">Admin</span></a>
+  <div class="topbar-inner" style="max-width:100%;padding:0 24px">
+    <a class="brand" href="dashboard.html">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>
+      TurfChai <span class="badge red nodot" style="margin-left:6px">Super Admin</span>
+    </a>
     <div class="spacer"></div>
-    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
-    <span class="icon-btn" style="background:var(--danger-soft);color:var(--danger);font-weight:700;border:none">NA</span>
+    <button class="icon-btn notif-dot" data-open="#notifDrawer" aria-label="Notifications" title="View Alerts">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+    </button>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle Theme" title="Toggle Theme">
+      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
+    <a class="icon-btn" href="profile.html" style="background:var(--brand-soft);color:var(--brand-600);font-weight:700;border:1px solid var(--brand);text-decoration:none" aria-label="My Profile" title="My Profile">
+      NA
+    </a>
   </div>
 </header>
 
-<div class="shell wrap" style="max-width:1280px">
-  <aside class="sidebar">
-    <nav class="sidenav" aria-label="Admin console">
-      <a href="dashboard.html"><span class="ico">📊</span>Dashboard</a>
-      <a href="turf-requests.html"><span class="ico">📥</span>Turf Requests <span class="countpill" style="margin-left:auto">4</span></a>
-      <a href="turfs.html"><span class="ico">🏟️</span>Turfs</a>
-      <a href="users.html"><span class="ico">👥</span>Users &amp; Players</a>
-      <a href="admins.html"><span class="ico">🛡️</span>Admin Accounts</a>
-      <a href="activity.html"><span class="ico">🧾</span>Activity Log</a>
-      <a href="profile.html" class="active"><span class="ico">👤</span>My Profile</a>
-    </nav>
-  </aside>
-
-  <main class="main">
-    <div class="main-header">
-      <div><h1>My profile</h1><span class="subtle small">Changes to your own account are also written to the activity log</span></div>
+<main class="admin-page-wrap">
+  <div class="main-header" style="margin-bottom:24px">
+    <div>
+      <div class="row" style="gap:10px;align-items:center">
+        <a class="btn btn-sm btn-tertiary" href="dashboard.html" style="padding:4px 10px;font-weight:700">← Back</a>
+        <h1 style="font-size:26px;font-weight:800;margin:0">My Account &amp; Security Settings</h1>
+      </div>
+      <span class="subtle small" style="margin-top:4px;display:block">Personal Settings · Account changes are recorded in the audit trail</span>
     </div>
+  </div>
 
-    <div class="grid2" style="align-items:start">
+  <div class="grid2" style="align-items:start">
+    <!-- Profile Information -->
+    <section class="card">
+      <div class="row" style="margin-bottom:18px;gap:12px">
+        <span class="avatar lg" style="background:var(--danger-soft);color:var(--danger)">NA</span>
+        <div>
+          <b style="font-size:18px;display:block">Nadia Amin</b>
+          <span class="badge red nodot">Super Admin</span>
+          <div class="tiny subtle" style="margin-top:2px">Admin since Feb 2024 · 1,204 Logged Actions</div>
+        </div>
+      </div>
+
+      <form onsubmit="event.preventDefault(); document.querySelector('#profileSaved').classList.add('open');">
+        <div class="field"><label for="pfName">Full Name</label><input class="input" id="pfName" value="Nadia Amin" required></div>
+        <div class="field"><label for="pfEmail">Work Email</label><input class="input" id="pfEmail" type="email" value="nadia@turfchai.com" required></div>
+        <div class="field"><label for="pfPhone">Phone Contact</label><input class="input num" id="pfPhone" value="+880 1700 112 233" required></div>
+        <button class="btn btn-primary" type="submit" style="margin-top:14px;font-weight:700">Save Profile Updates</button>
+      </form>
+    </section>
+
+    <!-- Security & Recent Activity -->
+    <div class="stack">
       <section class="card">
-        <div class="row" style="margin-bottom:14px"><span class="avatar lg" style="background:var(--danger-soft);color:var(--danger)">NA</span><div><b>Nadia Amin</b> <span class="badge red nodot">Super Admin</span><div class="tiny subtle">Admin since Feb 2024 · 1,204 actions logged</div></div></div>
-        <div class="field"><label for="pfName">Full name</label><input class="input" id="pfName" value="Nadia Amin"></div>
-        <div class="field"><label for="pfEmail">Work email</label><input class="input" id="pfEmail" type="email" value="nadia@turfchai.com"></div>
-        <div class="field"><label for="pfPhone">Phone</label><input class="input num" id="pfPhone" value="+880 1700 112 233"></div>
-        <button class="btn btn-primary" data-open="#profileSaved">Save changes</button>
+        <h3 style="margin-bottom:12px">Security Credentials</h3>
+        <div class="stack-sm">
+          <div class="panel between">
+            <div>
+              <b class="small">Password</b>
+              <div class="tiny subtle">Last changed 42 days ago</div>
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="showToast('Password change flow initiated 🔒')">Change Password</button>
+          </div>
+          <div class="panel between">
+            <div>
+              <b class="small">Two-Factor Authentication (2FA)</b>
+              <div class="tiny subtle">Authenticator App (Required)</div>
+            </div>
+            <span class="badge green">Enabled ✓</span>
+          </div>
+          <div class="panel between">
+            <div>
+              <b class="small">Active Admin Sessions</b>
+              <div class="tiny subtle">2 Devices (Chrome on Windows, Mobile)</div>
+            </div>
+            <button class="btn btn-sm btn-ghost-danger" onclick="showToast('Other sessions terminated')">Revoke Others</button>
+          </div>
+        </div>
       </section>
 
-      <div class="stack">
-        <section class="card">
-          <h3>Security</h3>
-          <div class="stack-sm" style="margin-top:10px">
-            <div class="panel between"><div><b class="small">Password</b><div class="tiny subtle">Last changed 34 days ago</div></div><button class="btn btn-sm btn-secondary" data-toast="Password change flow — current password required first">Change</button></div>
-            <div class="panel between"><div><b class="small">Two-factor authentication</b><div class="tiny subtle">Authenticator app · required for admins</div></div><span class="badge green">Enabled</span></div>
-            <div class="panel between"><div><b class="small">Active sessions</b><div class="tiny subtle">2 devices · Chrome (this device), Android</div></div><button class="btn btn-sm btn-ghost-danger" data-toast="All other sessions signed out — logged">Sign out others</button></div>
-          </div>
-        </section>
-        <section class="card">
-          <h3>My recent actions</h3>
-          <ul class="tline" style="margin-top:10px">
-            <li><b class="small">Suspended user #38112</b><p class="tiny muted" style="margin:0">Today 4:02 PM</p></li>
-            <li><b class="small">Updated turf V-0044</b><p class="tiny muted" style="margin:0">Yesterday</p></li>
-            <li><b class="small">Approved TR-1033 · Mirpur Sports City annex</b><p class="tiny muted" style="margin:0">2 days ago</p></li>
-          </ul>
-          <a class="btn btn-sm btn-tertiary" href="activity.html" style="margin-top:8px">Full history →</a>
-        </section>
-      </div>
+      <section class="card">
+        <div class="between" style="margin-bottom:12px">
+          <h3 style="margin:0">My Recent Activity</h3>
+          <a class="btn btn-sm btn-tertiary" href="activity.html">Full History →</a>
+        </div>
+        <ul class="tline" style="margin:0">
+          <li><b class="small">Suspended user #38112</b><p class="tiny muted" style="margin:0">Today 4:02 PM</p></li>
+          <li><b class="small">Updated turf venue V-0044</b><p class="tiny muted" style="margin:0">Yesterday</p></li>
+          <li><b class="small">Approved TR-1033 · Mirpur Annex</b><p class="tiny muted" style="margin:0">2 days ago</p></li>
+        </ul>
+      </section>
     </div>
-  </main>
-</div>
+  </div>
+</main>
 
+<!-- Saved Confirmation Modal -->
 <div class="overlay" id="profileSaved" role="dialog" aria-modal="true" aria-labelledby="psvTitle">
-  <div class="modal center">
+  <div class="modal center" style="border-radius:24px">
     <div class="check-anim" aria-hidden="true">✓</div>
-    <h3 id="psvTitle">Profile updated</h3>
-    <p class="muted small">Your changes are saved and recorded in the activity log with timestamp and IP.</p>
-    <button class="btn btn-primary btn-block" data-close style="margin-top:10px">Done</button>
+    <h3 id="psvTitle" style="margin-bottom:8px">Profile Updated</h3>
+    <p class="muted small" style="margin-bottom:16px">Your personal administrative profile settings have been updated.</p>
+    <button class="btn btn-primary btn-block" data-close>Done</button>
   </div>
 </div>
+
+<!-- Notification Panel Drawer -->
+<div class="overlay drawer-mode" id="notifDrawer" role="dialog" aria-modal="true" aria-labelledby="ndTitle">
+  <div class="modal" style="border-radius:24px">
+    <div class="between" style="margin-bottom:16px">
+      <h3 id="ndTitle" style="margin:0">Alerts &amp; Notifications</h3>
+      <button class="icon-btn" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="stack-sm">
+      <div class="alert warn" style="margin:0;padding:12px;border-radius:12px">
+        <div>
+          <b style="display:block;margin-bottom:2px">SLA Risk: TR-1038</b>
+          <span class="small">Waiting for 3 days (Target SLA: 48h).</span>
+          <a href="request-review.html" style="display:block;margin-top:6px;font-weight:700">Review Request →</a>
+        </div>
+      </div>
+      <div class="alert danger" style="margin:0;padding:12px;border-radius:12px">
+        <div>
+          <b style="display:block;margin-bottom:2px">Payout Anomaly: Venue #77</b>
+          <span class="small">Refund ratio 4× baseline this week.</span>
+          <a href="activity.html" style="display:block;margin-top:6px;font-weight:700">Investigate Log →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="../js/turfchai.js"></script>
 </body>
 </html>
