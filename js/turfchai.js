@@ -253,5 +253,13 @@
     bindToasts();
     bindSlots();
     bindCountdowns();
+    
+    // Responsive sidebar drawer
+    document.querySelectorAll('[data-toggle-sidebar]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.body.classList.toggle('sidebar-open');
+      });
+    });
   });
 })();
