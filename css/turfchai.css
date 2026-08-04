@@ -694,14 +694,18 @@ textarea.input{min-height:88px;resize:vertical}
 
 /* ---------- Site navigator (injected by turfchai.js) ---------- */
 .global-back-btn{
-  position:fixed;top:14px;left:14px;z-index:120;display:inline-flex;align-items:center;justify-content:center;
-  width:40px;height:40px;border-radius:999px;cursor:pointer;
+  position:fixed;left:18px;bottom:18px;z-index:90;display:inline-flex;align-items:center;gap:8px;
+  min-height:44px;padding:0 18px 0 14px;border-radius:999px;cursor:pointer;
   border:1px solid var(--glass-border);background:var(--glass-bg-strong);
-  -webkit-backdrop-filter:blur(12px) saturate(140%);backdrop-filter:blur(12px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%);
   box-shadow:var(--shadow-md);color:var(--text);font-family:var(--font-body);
-  font-size:18px;font-weight:600;transition:border-color var(--dur),transform var(--dur);
+  font-size:13px;font-weight:600;transition:border-color var(--dur),transform var(--dur);
 }
+.global-back-btn .arr{font-size:16px;line-height:1;color:var(--brand-600);transition:transform var(--dur) var(--ease)}
+[data-theme="dark"] .global-back-btn .arr{color:var(--brand)}
 .global-back-btn:hover{border-color:var(--brand);transform:translateY(-1px)}
+.global-back-btn:hover .arr{transform:translateX(-2px)}
+.has-bottomnav .global-back-btn{bottom:86px}
 .sitenav-fab{
   position:fixed;right:18px;bottom:18px;z-index:90;display:inline-flex;align-items:center;gap:8px;
   min-height:44px;padding:0 16px;border-radius:999px;cursor:pointer;
@@ -712,7 +716,7 @@ textarea.input{min-height:88px;resize:vertical}
 }
 .sitenav-fab:hover{border-color:var(--brand);transform:translateY(-1px)}
 .has-bottomnav .sitenav-fab{bottom:86px}
-@media (max-width:480px){.global-back-btn{top:10px;left:10px;width:36px;height:36px;font-size:16px}.sitenav-fab{right:12px;bottom:14px;padding:0 13px}.has-bottomnav .sitenav-fab{bottom:80px}}
+@media (max-width:480px){.global-back-btn{left:12px;bottom:14px;padding:0 14px 0 11px}.has-bottomnav .global-back-btn{bottom:80px}.sitenav-fab{right:12px;bottom:14px;padding:0 13px}.has-bottomnav .sitenav-fab{bottom:80px}}
 .sitenav-panel{max-width:860px}
 .sitenav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 28px;margin-top:16px}
 @media (max-width:760px){.sitenav-grid{grid-template-columns:repeat(2,1fr)}}
@@ -797,6 +801,20 @@ textarea.input{min-height:88px;resize:vertical}
 .card.center{display:flex;flex-direction:column;align-items:center;text-align:center}
 .cta-band{text-align:center;padding:46px 28px;border-radius:var(--r-hero)}
 .footer .row-wrap a{display:inline-block;padding:3px 8px}
+
+/* ---------- Back button (glass pill) ---------- */
+.btn-back{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 16px 8px 12px;border-radius:999px;
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%);
+  color:var(--text-2);font-size:13.5px;font-weight:600;text-decoration:none;
+  margin-bottom:16px;
+  transition:color var(--dur) var(--ease),border-color var(--dur) var(--ease),transform var(--dur) var(--ease);
+}
+.btn-back:hover{color:var(--text);border-color:var(--border-strong);text-decoration:none;transform:translateX(-2px)}
+.btn-back .arr{font-size:15px;line-height:1;color:var(--brand-600)}
+[data-theme="dark"] .btn-back .arr{color:var(--brand)}
 
 /* ---------- Green-on-black accents (dark) ---------- */
 .navlinks a{border-radius:999px}

@@ -246,13 +246,14 @@
 
   /* ---------- Global back button ---------- */
   function injectBackButton() {
-    if (document.querySelector('.global-back-btn')) return;
+    // Pages with their own contextual back pill (.btn-back) skip the global one
+    if (document.querySelector('.global-back-btn, .btn-back')) return;
 
     const btn = document.createElement('button');
     btn.className = 'global-back-btn';
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Go back');
-    btn.innerHTML = '<span aria-hidden="true">←</span>';
+    btn.innerHTML = '<span class="arr" aria-hidden="true">←</span> Back';
     btn.addEventListener('click', () => {
       if (window.history.length > 1) {
         history.back();
