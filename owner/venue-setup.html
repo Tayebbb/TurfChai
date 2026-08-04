@@ -34,27 +34,66 @@
       </section>
 
       <section class="card">
-        <div class="between"><h3 style="margin:0">🥅 Pitches</h3><span class="badge green nodot">3 added</span></div>
-        <div class="stack-sm" style="margin-top:10px">
-          <div class="panel between"><div><b class="small">Pitch 1 · 7-a-side</b><div class="tiny subtle">Artificial grass · floodlit · 30×50 m</div></div><button class="btn btn-sm btn-tertiary" data-toast="Edit Pitch 1">Edit</button></div>
-          <div class="panel between"><div><b class="small">Pitch 2 · 7-a-side</b><div class="tiny subtle">Artificial grass · floodlit · 30×50 m</div></div><button class="btn btn-sm btn-tertiary" data-toast="Edit Pitch 2">Edit</button></div>
-          <div class="panel between"><div><b class="small">Pitch 3 · 5-a-side futsal</b><div class="tiny subtle">Indoor · rubber court</div></div><button class="btn btn-sm btn-tertiary" data-toast="Edit Pitch 3">Edit</button></div>
+        <div class="between"><h3 style="margin:0">🥅 Pitches &amp; Sport Assignment</h3><span class="badge green nodot" id="pitchCountBadge">3 added</span></div>
+        <p class="subtle small" style="margin:6px 0 10px">Assign specific pitches to one or multiple sports</p>
+        <div class="stack-sm" style="margin-top:10px" id="pitchList">
+          <div class="panel between" data-pitch-id="1">
+            <div>
+              <b class="small">Pitch 1 · 7-a-side</b>
+              <div class="tiny subtle">Artificial grass · floodlit · 30×50 m</div>
+              <div class="row-wrap sports-tags" style="gap:4px;margin-top:6px">
+                <span class="badge blue nodot">⚽ Football</span>
+                <span class="badge amber nodot">🏏 Cricket</span>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-tertiary edit-pitch-btn" data-open="#pitchModal" data-pitch-name="Pitch 1 · 7-a-side" data-pitch-desc="Artificial grass · floodlit · 30×50 m" data-pitch-sports="Football,Cricket">Edit</button>
+          </div>
+          <div class="panel between" data-pitch-id="2">
+            <div>
+              <b class="small">Pitch 2 · 7-a-side</b>
+              <div class="tiny subtle">Artificial grass · floodlit · 30×50 m</div>
+              <div class="row-wrap sports-tags" style="gap:4px;margin-top:6px">
+                <span class="badge blue nodot">⚽ Football</span>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-tertiary edit-pitch-btn" data-open="#pitchModal" data-pitch-name="Pitch 2 · 7-a-side" data-pitch-desc="Artificial grass · floodlit · 30×50 m" data-pitch-sports="Football">Edit</button>
+          </div>
+          <div class="panel between" data-pitch-id="3">
+            <div>
+              <b class="small">Pitch 3 · 5-a-side futsal</b>
+              <div class="tiny subtle">Indoor · rubber court</div>
+              <div class="row-wrap sports-tags" style="gap:4px;margin-top:6px">
+                <span class="badge green nodot">🥅 Futsal</span>
+                <span class="badge nodot" style="background:var(--info-soft);color:var(--info)">🏸 Badminton</span>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-tertiary edit-pitch-btn" data-open="#pitchModal" data-pitch-name="Pitch 3 · 5-a-side futsal" data-pitch-desc="Indoor · rubber court" data-pitch-sports="Futsal,Badminton">Edit</button>
+          </div>
         </div>
-        <button class="btn btn-sm btn-secondary" style="margin-top:10px" data-toast="Add pitch form opened">+ Add pitch</button>
+        <button class="btn btn-sm btn-secondary" style="margin-top:10px" id="addPitchBtn" data-open="#pitchModal">+ Add pitch</button>
       </section>
 
       <section class="card">
-        <div class="between"><h3 style="margin:0">💰 Pricing &amp; slots</h3><span class="badge green nodot">Done</span></div>
-        <p class="subtle small" style="margin:6px 0 10px">90-minute slots · 10-min handover buffer between bookings</p>
+        <div class="between"><h3 style="margin:0">💰 Pricing &amp; Slot Durations by Sport</h3><span class="badge green nodot">Configured</span></div>
+        <p class="subtle small" style="margin:6px 0 10px">Different sports have different slot times &amp; pricing rules</p>
+        
+        <div class="grid2" style="gap:8px;margin-bottom:12px" id="sportSlotSummary">
+          <div class="panel between"><div><b class="small">⚽ Football</b><div class="tiny subtle">90 min slots · 10m buffer</div></div><span class="badge blue nodot">৳2,200/slot</span></div>
+          <div class="panel between"><div><b class="small">🥅 Futsal</b><div class="tiny subtle">60 min slots · 10m buffer</div></div><span class="badge green nodot">৳1,500/slot</span></div>
+          <div class="panel between"><div><b class="small">🏏 Cricket</b><div class="tiny subtle">120 min slots · 15m buffer</div></div><span class="badge amber nodot">৳3,000/slot</span></div>
+          <div class="panel between"><div><b class="small">🏸 Badminton</b><div class="tiny subtle">40 min slots · 5m buffer</div></div><span class="badge nodot" style="background:var(--info-soft);color:var(--info)">৳1,000/slot</span></div>
+        </div>
+
         <div class="table-wrap"><table class="table">
-          <thead><tr><th>Window</th><th>Days</th><th class="num">Price / slot</th></tr></thead>
-          <tbody>
-            <tr><td>6:00 AM – 4:00 PM <span class="badge blue nodot">Off-peak</span></td><td>Every day</td><td class="num">৳1,700</td></tr>
-            <tr><td>4:00 PM – 11:00 PM <span class="badge amber nodot">Peak</span></td><td>Sun–Thu</td><td class="num">৳2,200</td></tr>
-            <tr><td>4:00 PM – 11:00 PM <span class="badge amber nodot">Peak</span></td><td>Fri–Sat</td><td class="num">৳2,500</td></tr>
+          <thead><tr><th>Sport</th><th>Window</th><th>Days</th><th class="num">Slot duration &amp; price</th></tr></thead>
+          <tbody id="pricingTableBody">
+            <tr><td>⚽ Football</td><td>6:00 AM – 4:00 PM <span class="badge blue nodot">Off-peak</span></td><td>Every day</td><td class="num">90m · ৳1,700</td></tr>
+            <tr><td>⚽ Football</td><td>4:00 PM – 11:00 PM <span class="badge amber nodot">Peak</span></td><td>Sun–Thu</td><td class="num">90m · ৳2,200</td></tr>
+            <tr><td>🥅 Futsal</td><td>4:00 PM – 11:00 PM <span class="badge amber nodot">Peak</span></td><td>Fri–Sat</td><td class="num">60m · ৳1,500</td></tr>
+            <tr><td>🏏 Cricket</td><td>6:00 AM – 11:00 PM <span class="badge amber nodot">Full day</span></td><td>Fri–Sat</td><td class="num">120m · ৳3,000</td></tr>
           </tbody>
         </table></div>
-        <button class="btn btn-sm btn-secondary" style="margin-top:10px" data-toast="Pricing rule editor opened">Edit pricing rules</button>
+        <button class="btn btn-sm btn-secondary" style="margin-top:10px" data-open="#slotPricingModal">Edit slot durations &amp; pricing rules</button>
       </section>
 
       <section class="card">
@@ -105,6 +144,198 @@
     <a class="btn btn-primary btn-block" href="dashboard.html">Open owner dashboard →</a>
   </div>
 </div>
+<!-- Modal: Pitch Add/Edit & Sport Assignment -->
+<div class="overlay" id="pitchModal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+  <div class="modal" style="max-width:480px">
+    <div class="between"><h3 id="pmTitle">Pitch &amp; Sport Control</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <p class="subtle small" style="margin:4px 0 12px">Define pitch specifications and assign allowed sports for this pitch.</p>
+    
+    <div class="field"><label for="pName">Pitch Name</label><input class="input" id="pName" placeholder="e.g. Pitch 4 · 7-a-side"></div>
+    <div class="field"><label for="pDesc">Surface &amp; Details</label><input class="input" id="pDesc" placeholder="e.g. Artificial grass · floodlit · 30×50 m"></div>
+    
+    <div class="field">
+      <label>Assign to Sports <span class="subtle tiny">(Choose all sports playable on this pitch)</span></label>
+      <div class="row-wrap" style="gap:8px;margin-top:6px" id="sportCheckboxGroup">
+        <label class="chip on" style="cursor:pointer"><input type="checkbox" value="Football" checked style="display:none"> ⚽ Football</label>
+        <label class="chip on" style="cursor:pointer"><input type="checkbox" value="Cricket" checked style="display:none"> 🏏 Cricket</label>
+        <label class="chip" style="cursor:pointer"><input type="checkbox" value="Futsal" style="display:none"> 🥅 Futsal</label>
+        <label class="chip" style="cursor:pointer"><input type="checkbox" value="Badminton" style="display:none"> 🏸 Badminton</label>
+        <label class="chip" style="cursor:pointer"><input type="checkbox" value="Volleyball" style="display:none"> 🏐 Volleyball</label>
+      </div>
+    </div>
+
+    <div class="stack-sm" style="margin-top:16px">
+      <button class="btn btn-primary btn-block" id="savePitchBtn">Save pitch assignment ✓</button>
+      <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Slot Durations & Pricing Manager -->
+<div class="overlay" id="slotPricingModal" role="dialog" aria-modal="true" aria-labelledby="spTitle">
+  <div class="modal" style="max-width:520px">
+    <div class="between"><h3 id="spTitle">Configure Slot Times &amp; Rates by Sport</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <p class="subtle small" style="margin:4px 0 12px">Set custom slot duration and buffer times for each sport offered at your venue.</p>
+    
+    <div class="field">
+      <label for="spSportSelect">Select Sport</label>
+      <select class="select" id="spSportSelect">
+        <option value="Football">⚽ Football</option>
+        <option value="Futsal">🥅 Futsal</option>
+        <option value="Cricket">🏏 Cricket</option>
+        <option value="Badminton">🏸 Badminton</option>
+      </select>
+    </div>
+
+    <div class="grid2" style="gap:10px">
+      <div class="field">
+        <label for="spDuration">Slot Duration</label>
+        <select class="select" id="spDuration">
+          <option value="30">30 minutes</option>
+          <option value="40">40 minutes</option>
+          <option value="60">60 minutes (1 hr)</option>
+          <option value="90" selected>90 minutes (1.5 hrs)</option>
+          <option value="120">120 minutes (2 hrs)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="spBuffer">Handover Buffer</label>
+        <select class="select" id="spBuffer">
+          <option value="5">5 minutes</option>
+          <option value="10" selected>10 minutes</option>
+          <option value="15">15 minutes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:8px">
+      <label>Slot Pricing Rates</label>
+      <div class="grid2" style="gap:10px">
+        <div><span class="tiny subtle">Off-Peak Rate (6 AM – 4 PM)</span><input class="input num" id="spOffpeak" value="৳1,700"></div>
+        <div><span class="tiny subtle">Peak Rate (4 PM – 11 PM)</span><input class="input num" id="spPeak" value="৳2,200"></div>
+      </div>
+    </div>
+
+    <div class="stack-sm" style="margin-top:16px">
+      <button class="btn btn-primary btn-block" id="saveSlotSettingsBtn">Save sport slot settings ✓</button>
+      <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script src="../js/turfchai.js"></script>
+<script>
+// Interactive Pitch & Sport Management logic
+(function() {
+  const sportBadgesMap = {
+    'Football': '<span class="badge blue nodot">⚽ Football</span>',
+    'Cricket': '<span class="badge amber nodot">🏏 Cricket</span>',
+    'Futsal': '<span class="badge green nodot">🥅 Futsal</span>',
+    'Badminton': '<span class="badge nodot" style="background:var(--info-soft);color:var(--info)">🏸 Badminton</span>',
+    'Volleyball': '<span class="badge nodot">🏐 Volleyball</span>'
+  };
+
+  let editingPitchElement = null;
+
+  // Toggle chips inside sportCheckboxGroup
+  document.querySelectorAll('#sportCheckboxGroup .chip').forEach(chip => {
+    chip.addEventListener('click', function(e) {
+      e.preventDefault();
+      const cb = this.querySelector('input');
+      cb.checked = !cb.checked;
+      this.classList.toggle('on', cb.checked);
+    });
+  });
+
+  // Handle opening pitch modal for Add vs Edit
+  document.getElementById('addPitchBtn')?.addEventListener('click', function() {
+    editingPitchElement = null;
+    document.getElementById('pmTitle').textContent = 'Add New Pitch & Assign Sports';
+    document.getElementById('pName').value = '';
+    document.getElementById('pDesc').value = '';
+    document.querySelectorAll('#sportCheckboxGroup .chip').forEach(chip => {
+      const cb = chip.querySelector('input');
+      cb.checked = (cb.value === 'Football');
+      chip.classList.toggle('on', cb.checked);
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    const editBtn = e.target.closest('.edit-pitch-btn');
+    if (editBtn) {
+      editingPitchElement = editBtn.closest('.panel');
+      document.getElementById('pmTitle').textContent = 'Edit Pitch & Sport Assignment';
+      document.getElementById('pName').value = editBtn.getAttribute('data-pitch-name') || '';
+      document.getElementById('pDesc').value = editBtn.getAttribute('data-pitch-desc') || '';
+      const sports = (editBtn.getAttribute('data-pitch-sports') || '').split(',');
+      document.querySelectorAll('#sportCheckboxGroup .chip').forEach(chip => {
+        const cb = chip.querySelector('input');
+        cb.checked = sports.includes(cb.value);
+        chip.classList.toggle('on', cb.checked);
+      });
+    }
+  });
+
+  // Save pitch
+  document.getElementById('savePitchBtn')?.addEventListener('click', function() {
+    const name = document.getElementById('pName').value.trim() || 'New Pitch';
+    const desc = document.getElementById('pDesc').value.trim() || 'Standard turf court';
+    const selectedSports = [];
+    document.querySelectorAll('#sportCheckboxGroup .chip input:checked').forEach(cb => {
+      selectedSports.push(cb.value);
+    });
+
+    const badgeHTML = selectedSports.map(s => sportBadgesMap[s] || `<span class="badge nodot">${s}</span>`).join(' ');
+
+    if (editingPitchElement) {
+      editingPitchElement.querySelector('b').textContent = name;
+      editingPitchElement.querySelector('.tiny.subtle').textContent = desc;
+      editingPitchElement.querySelector('.sports-tags').innerHTML = badgeHTML || '<span class="badge gray nodot">No sports assigned</span>';
+      const btn = editingPitchElement.querySelector('.edit-pitch-btn');
+      btn.setAttribute('data-pitch-name', name);
+      btn.setAttribute('data-pitch-desc', desc);
+      btn.setAttribute('data-pitch-sports', selectedSports.join(','));
+      if (window.showToast) showToast('Pitch details updated ✓');
+    } else {
+      const newId = Date.now();
+      const newPitchHTML = `
+        <div class="panel between" data-pitch-id="${newId}">
+          <div>
+            <b class="small">${name}</b>
+            <div class="tiny subtle">${desc}</div>
+            <div class="row-wrap sports-tags" style="gap:4px;margin-top:6px">
+              ${badgeHTML || '<span class="badge gray nodot">No sports assigned</span>'}
+            </div>
+          </div>
+          <button class="btn btn-sm btn-tertiary edit-pitch-btn" data-open="#pitchModal" data-pitch-name="${name}" data-pitch-desc="${desc}" data-pitch-sports="${selectedSports.join(',')}">Edit</button>
+        </div>
+      `;
+      document.getElementById('pitchList')?.insertAdjacentHTML('beforeend', newPitchHTML);
+      const countEl = document.getElementById('pitchCountBadge');
+      if (countEl) {
+        const total = document.querySelectorAll('#pitchList .panel').length;
+        countEl.textContent = total + ' added';
+      }
+      if (window.showToast) showToast('New pitch added with sport assignments ✓');
+    }
+
+    document.querySelector('#pitchModal [data-close]')?.click();
+  });
+
+  // Save Slot & Pricing Settings
+  document.getElementById('saveSlotSettingsBtn')?.addEventListener('click', function() {
+    const sport = document.getElementById('spSportSelect').value;
+    const duration = document.getElementById('spDuration').value;
+    const buffer = document.getElementById('spBuffer').value;
+    const peak = document.getElementById('spPeak').value;
+    const offpeak = document.getElementById('spOffpeak').value;
+
+    if (window.showToast) {
+      showToast(`${sport} slots set to ${duration} min with ${buffer} min buffer ✓`);
+    }
+    document.querySelector('#slotPricingModal [data-close]')?.click();
+  });
+})();
+</script>
 </body>
 </html>

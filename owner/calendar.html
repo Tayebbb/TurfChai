@@ -59,10 +59,10 @@
 
     <div class="cal card" style="padding:0;overflow-x:auto">
       <div class="cal-grid" style="min-width:720px">
-        <div class="cal-head"></div>
-        <div class="cal-head">Pitch 1 · 7-a-side</div>
-        <div class="cal-head">Pitch 2 · 7-a-side</div>
-        <div class="cal-head">Pitch 3 · Futsal</div>
+        <div class="cal-head">Time</div>
+        <div class="cal-head">Pitch 1 · 7-a-side<br><span class="badge blue nodot" style="font-size:10px;padding:2px 6px">⚽ Football</span> <span class="badge amber nodot" style="font-size:10px;padding:2px 6px">🏏 Cricket</span></div>
+        <div class="cal-head">Pitch 2 · 7-a-side<br><span class="badge blue nodot" style="font-size:10px;padding:2px 6px">⚽ Football</span></div>
+        <div class="cal-head">Pitch 3 · Futsal<br><span class="badge green nodot" style="font-size:10px;padding:2px 6px">🥅 Futsal</span> <span class="badge nodot" style="background:var(--info-soft);color:var(--info);font-size:10px;padding:2px 6px">🏸 Badminton</span></div>
 
         <div class="cal-time num">4:00 PM</div>
         <div class="cal-cell"><div class="cal-ev online" data-open="#evDetail">Tanvir A. · paid ✓</div></div>
@@ -101,8 +101,8 @@
     <div class="between"><h3 id="mbTitle">Manual booking</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
     <p class="subtle small">Phone or walk-in — this slot is removed from online sale immediately.</p>
     <div class="grid2" style="gap:10px;margin-top:8px">
-      <div class="field"><label for="mbPitch">Pitch</label><select class="select" id="mbPitch"><option>Pitch 1 · 7-a-side</option><option selected>Pitch 3 · Futsal</option></select></div>
-      <div class="field"><label for="mbSlot">Slot</label><select class="select" id="mbSlot"><option selected>Tonight 9:00–10:30 PM</option><option>Tonight 10:30 PM</option></select></div>
+      <div class="field"><label for="mbPitch">Pitch &amp; Sport</label><select class="select" id="mbPitch"><option>Pitch 1 · Football (90m slot)</option><option>Pitch 1 · Cricket (120m slot)</option><option selected>Pitch 3 · Futsal (60m slot)</option><option>Pitch 3 · Badminton (40m slot)</option></select></div>
+      <div class="field"><label for="mbSlot">Slot Time</label><select class="select" id="mbSlot"><option selected>Tonight 9:00–10:00 PM (60 min)</option><option>Tonight 10:00–11:00 PM (60 min)</option></select></div>
     </div>
     <div class="field"><label for="mbName">Customer name</label><input class="input" id="mbName" placeholder="e.g. Salam Bhai" value="Hasan Uddin"></div>
     <div class="field"><label for="mbPhone">Phone</label><input class="input num" id="mbPhone" value="+880 1912 556 677"></div>
@@ -111,7 +111,7 @@
       <div class="field"><label for="mbPay">Payment status</label><select class="select" id="mbPay"><option>Paid in full (cash)</option><option selected>Deposit ৳510 · rest at venue</option><option>Unpaid — collect on arrival</option></select></div>
     </div>
     <div class="field"><label for="mbNote">Notes (optional)</label><input class="input" id="mbNote" placeholder="e.g. regular customer, wants bibs"></div>
-    <div class="pricerow total"><span>Slot price</span><span class="num">৳1,700</span></div>
+    <div class="pricerow total"><span>Slot price</span><span class="num">৳1,500</span></div>
     <button class="btn btn-primary btn-lg btn-block" style="margin-top:12px" data-close data-toast="Booking added — slot closed online, logged to your shift ✓">Confirm booking</button>
   </div>
 </div>
