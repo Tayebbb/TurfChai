@@ -31,7 +31,6 @@
       <a href="promotions.html"><span class="ico">🎁</span>Promotions</a>
       <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
       <a href="staff.html" class="active"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
-      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
     </nav>
   </aside>
 
@@ -124,10 +123,10 @@
 <div class="overlay" id="inviteStaffModal" role="dialog" aria-modal="true" aria-labelledby="isTitle">
   <div class="modal" style="max-width:480px">
     <div class="between"><h3 id="isTitle">Invite team member or co-owner</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
-    <p class="subtle small" style="margin:4px 0 12px">An invitation SMS with entry credentials will be sent to the phone number below.</p>
+    <p class="subtle small" style="margin:4px 0 12px">An invitation link with setup credentials will be sent to the email address below.</p>
     
     <div class="field"><label for="stName">Full Name</label><input class="input" id="stName" placeholder="e.g. Tariqul Islam"></div>
-    <div class="field"><label for="stPhone">Phone Number</label><input class="input num" id="stPhone" placeholder="+880 1711 000 111"></div>
+    <div class="field"><label for="stEmail">Email Address</label><input class="input" type="email" id="stEmail" placeholder="e.g. tariqul@example.com"></div>
     
     <div class="field">
       <label for="stRole">Role &amp; Access Level</label>
@@ -140,7 +139,7 @@
     </div>
 
     <div class="stack-sm" style="margin-top:16px">
-      <button class="btn btn-primary btn-block" id="sendInviteBtn">Send SMS Invitation ✉️</button>
+      <button class="btn btn-primary btn-block" id="sendInviteBtn">Send Email Invitation Link 📧</button>
       <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
     </div>
   </div>
@@ -150,7 +149,7 @@
 <script>
 document.getElementById('sendInviteBtn')?.addEventListener('click', function() {
   const name = document.getElementById('stName').value.trim() || 'Invited Member';
-  const phone = document.getElementById('stPhone').value.trim() || '+880 1800 000 000';
+  const email = document.getElementById('stEmail').value.trim() || 'member@example.com';
   const role = document.getElementById('stRole').value;
 
   let badgeClass = 'green';
@@ -174,7 +173,7 @@ document.getElementById('sendInviteBtn')?.addEventListener('click', function() {
         <span class="avatar" style="background:var(--brand-soft);color:var(--brand)">${initials}</span>
         <div>
           <b class="small">${name}</b> <span class="badge ${badgeClass} nodot">${role}</span> <span class="badge amber nodot">Invite sent</span>
-          <div class="tiny subtle">${subtitle} · ${phone}</div>
+          <div class="tiny subtle">${subtitle} · ${email}</div>
         </div>
       </div>
       <button class="btn btn-sm btn-secondary" data-open="#perm">Permissions</button>
@@ -183,11 +182,11 @@ document.getElementById('sendInviteBtn')?.addEventListener('click', function() {
 
   document.getElementById('teamList')?.insertAdjacentHTML('beforeend', newMemberHTML);
   if (window.showToast) {
-    showToast(`Invitation sent to ${name} (${role}) via SMS ✉️`);
+    showToast(`Invitation link sent to ${email} (${role}) via Email 📧`);
   }
   document.querySelector('#inviteStaffModal [data-close]')?.click();
   document.getElementById('stName').value = '';
-  document.getElementById('stPhone').value = '';
+  document.getElementById('stEmail').value = '';
 });
 </script>
 </body>

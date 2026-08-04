@@ -189,6 +189,7 @@
       ]],
       ['Tournament hosts', [
         ['player/home.html#host', 'Tournament hub'],
+        ['host/tournament.html', 'Tournament details'],
         ['host/multi-pitch.html', 'Multi-pitch booking'],
         ['host/reserve.html', 'Reserve & pay'],
       ]],
@@ -243,8 +244,30 @@
     document.head.appendChild(l);
   }
 
+  /* ---------- Global back button ---------- */
+  function injectBackButton() {
+    // Pages with their own contextual back pill (.btn-back) skip the global one
+    if (document.querySelector('.global-back-btn, .btn-back')) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'global-back-btn';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Go back');
+    btn.innerHTML = '<span class="arr" aria-hidden="true">←</span> Back';
+    btn.addEventListener('click', () => {
+      if (window.history.length > 1) {
+        history.back();
+      } else if (document.referrer) {
+        window.location.href = document.referrer;
+      }
+    });
+
+    document.body.appendChild(btn);
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     injectFavicon();
+    injectBackButton();
     injectSiteNav();
     bindThemeToggles();
     bindTabs();
