@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turf Details &amp; Analytics · TurfChai Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+<style>
+  /* Custom styles for details page */
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 900px) {
+    .details-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+
+  .stat-card-simple {
+    padding: 16px 20px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-soft);
+  }
+
+  .doc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border-soft);
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Apple Liquid Glass Background Light Orbs -->
+<div class="liquid-bg-orbs">
+  <div class="liquid-orb liquid-orb-1"></div>
+  <div class="liquid-orb liquid-orb-2"></div>
+  <div class="liquid-orb liquid-orb-3"></div>
+</div>
+
+<header class="topbar glass">
+  <div class="topbar-inner" style="max-width:100%;padding:0 24px">
+    <a class="brand" href="dashboard.html">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>
+      TurfChai <span class="badge red nodot" style="margin-left:6px">Super Admin</span>
+    </a>
+    <div class="spacer"></div>
+    <!-- Notifications Drawer Button -->
+    <button class="icon-btn notif-dot" data-open="#notifDrawer" aria-label="Notifications" title="View Alerts">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+    </button>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle Theme" title="Toggle Theme">
+      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
+    <a class="icon-btn" href="profile.html" style="background:var(--brand-soft);color:var(--brand-600);font-weight:700;border:1px solid var(--brand);text-decoration:none" aria-label="My Profile" title="My Profile">
+      NA
+    </a>
+  </div>
+</header>
+
+<main class="admin-page-wrap">
+  <!-- Page Header -->
+  <div class="main-header" style="margin-bottom:24px">
+    <div>
+      <div class="row" style="gap:10px;align-items:center">
+        <a class="btn btn-sm btn-tertiary" href="turfs.html" style="padding:4px 10px;font-weight:700">← Back to List</a>
+        <h1 style="font-size:26px;font-weight:800;margin:0" id="venueName">Venue Details</h1>
+      </div>
+      <span class="subtle small" style="margin-top:4px;display:block" id="venueSubHeader">Loading turf profile information...</span>
+    </div>
+    <div class="row" style="gap:10px" id="actionHeaderBtns">
+      <!-- Dynamic status action buttons -->
+    </div>
+  </div>
+
+  <!-- Row 1: KPI Cards + Interactive Analytics Chart -->
+  <div style="display:grid;grid-template-columns:320px 1fr;gap:28px;margin-bottom:28px">
+    <!-- Left KPI Column -->
+    <div style="display:flex;flex-direction:column;gap:14px;justify-content:center">
+      <!-- 30d Revenue -->
+      <div class="stat-card-simple">
+        <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:2px">30-DAY REVENUE</span>
+        <b id="kpiRevenue" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--brand-600);line-height:1.2;display:block">৳0</b>
+        <span class="tiny subtle" style="display:inline-block;margin-top:4px;color:var(--text-3)">Gross booking fees</span>
+      </div>
+
+      <!-- Occupancy Rate -->
+      <div class="stat-card-simple">
+        <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:2px">PITCH OCCUPANCY</span>
+        <b id="kpiOccupancy" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--mint);line-height:1.2;display:block">0%</b>
+        <span class="tiny subtle" style="display:inline-block;margin-top:4px;color:var(--text-3)">Slot utilization ratio</span>
+      </div>
+
+      <!-- Total Bookings -->
+      <div class="stat-card-simple">
+        <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:2px">30-DAY BOOKINGS</span>
+        <b id="kpiBookings" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--info);line-height:1.2;display:block">0</b>
+        <span class="tiny subtle" style="display:inline-block;margin-top:4px;color:var(--text-3)">Completed games</span>
+      </div>
+
+      <!-- Avg Rating -->
+      <div class="stat-card-simple">
+        <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:2px">AVERAGE RATING</span>
+        <b id="kpiRating" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--warn);line-height:1.2;display:block">—</b>
+        <span class="tiny subtle" style="display:inline-block;margin-top:4px;color:var(--text-3)">Player reviews</span>
+      </div>
+    </div>
+
+    <!-- Right Analytics Line Chart Card -->
+    <div class="liquid-glass" style="padding:24px;border-radius:20px">
+      <div class="between" style="margin-bottom:16px">
+        <div>
+          <h3 style="margin:0;font-size:16px;font-weight:800">Booking Demand Trend</h3>
+          <span class="subtle small">Daily slot booking counts over the past week</span>
+        </div>
+        <span class="badge blue nodot">Active Analytics</span>
+      </div>
+      <div class="chart-container" style="height:250px;margin-top:0">
+        <canvas class="chart-canvas" id="demandChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Info details columns -->
+  <div class="details-grid">
+    <!-- Left Column: Profile & Documents -->
+    <div class="liquid-glass" style="padding:24px;border-radius:20px;display:flex;flex-direction:column;gap:20px">
+      <!-- Owner details -->
+      <div>
+        <h3 style="margin:0 0 12px;font-size:16px;font-weight:800">Owner Profile &amp; Contact</h3>
+        <div class="stack-sm" style="gap:10px">
+          <div class="between">
+            <span class="subtle small">Owner Name</span>
+            <b id="profileOwner" style="color:var(--text)">—</b>
+          </div>
+          <div class="between">
+            <span class="subtle small">Phone Number</span>
+            <span class="num font-semibold" id="profilePhone">—</span>
+          </div>
+          <div class="between">
+            <span class="subtle small">Email Address</span>
+            <span class="font-semibold" id="profileEmail">—</span>
+          </div>
+          <div class="between">
+            <span class="subtle small">Registration Area</span>
+            <b id="profileArea">—</b>
+          </div>
+          <div class="between">
+            <span class="subtle small">Date Joined</span>
+            <span class="num subtle" id="profileDateAdded">—</span>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--border-soft);margin:4px 0">
+
+      <!-- Documents Checklist -->
+      <div>
+        <h3 style="margin:0 0 12px;font-size:16px;font-weight:800">Compliance &amp; Verification</h3>
+        <div class="doc-row">
+          <div>
+            <b style="font-size:13px;display:block">Trade License</b>
+            <span class="subtle tiny">Issued by City Corporation</span>
+          </div>
+          <span class="badge green nodot" id="docTrade">Verified</span>
+        </div>
+        <div class="doc-row">
+          <div>
+            <b style="font-size:13px;display:block">Owner NID / Passport</b>
+            <span class="subtle tiny">National ID biometric check</span>
+          </div>
+          <span class="badge green nodot" id="docNid">Verified</span>
+        </div>
+        <div class="doc-row">
+          <div>
+            <b style="font-size:13px;display:block">Commercial Utility Bill</b>
+            <span class="subtle tiny">Electricity/gas venue proof</span>
+          </div>
+          <span class="badge green nodot" id="docUtility">Verified</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Pitches configuration -->
+    <div class="liquid-glass" style="padding:24px;border-radius:20px">
+      <h3 style="margin:0 0 12px;font-size:16px;font-weight:800">Court Configurations (<span id="pitchesCount">0</span> Pitches)</h3>
+      <div class="table-wrap" style="padding:0;border-radius:12px;background:transparent;border:0;box-shadow:none">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Pitch Name</th>
+              <th>Surface Type</th>
+              <th style="text-align:right">Hourly Rate</th>
+            </tr>
+          </thead>
+          <tbody id="pitchesTableBody">
+            <!-- Dynamic pitches rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: Recent Bookings Log -->
+  <div class="liquid-glass" style="padding:24px;border-radius:20px;margin-bottom:28px">
+    <h3 style="margin:0 0 14px;font-size:16px;font-weight:800">Recent Booking Log</h3>
+    <div class="table-wrap" style="padding:0;border-radius:12px;background:transparent;border:0;box-shadow:none">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Date &amp; Time</th>
+            <th>Player / Customer</th>
+            <th>Pitch Booked</th>
+            <th class="num">Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="bookingsTableBody">
+          <!-- Dynamic bookings rows -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Dialog overlays for administrative status adjustments -->
+<!-- Suspend Modal -->
+<div class="overlay" id="suspendModal" role="dialog" aria-modal="true" aria-labelledby="smTitle">
+  <div class="modal" style="border-radius:24px">
+    <div class="fail-anim" aria-hidden="true">!</div>
+    <h3 id="smTitle" class="center" style="margin-bottom:8px">Suspend Turf Listing?</h3>
+    <p class="muted small center" style="margin-bottom:12px">This will freeze slot listings, reject immediate bookings, and pause payouts.</p>
+    <div class="field">
+      <label for="suspendReason">Suspension Reason</label>
+      <select class="select" id="suspendReason">
+        <option>Host payout anomaly flagged</option>
+        <option>Multiple user reports of poor court state</option>
+        <option>Failure to renew compliance/trade license</option>
+        <option>Policy violation</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="suspendNote">Additional Context Note</label>
+      <input class="input" id="suspendNote" placeholder="e.g. Refund spike detected over 24 hours">
+    </div>
+    <div class="stack-sm" style="margin-top:14px">
+      <button class="btn btn-danger btn-block" data-close onclick="suspendTurf()">Suspend Venue</button>
+      <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reinstate Modal -->
+<div class="overlay" id="reinstateModal" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
+  <div class="modal" style="border-radius:24px">
+    <div class="check-anim" style="background:var(--brand)" aria-hidden="true">✓</div>
+    <h3 id="rmTitle" class="center" style="margin-bottom:8px">Reinstate Turf Venue?</h3>
+    <p class="muted small center" style="margin-bottom:16px">This will restore the venue to Live status, allowing users to discover and book pitches immediately.</p>
+    <div class="stack-sm">
+      <button class="btn btn-primary btn-block" data-close onclick="reinstateTurf()">Confirm Reinstatement</button>
+      <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications Drawer -->
+<div class="overlay drawer-mode" id="notifDrawer" role="dialog" aria-modal="true" aria-labelledby="ndTitle">
+  <div class="modal" style="border-radius:24px; max-width:440px">
+    <div class="between" style="margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border-soft)">
+      <div>
+        <h3 id="ndTitle" style="margin:0; font-size:18px; font-weight:800">Alerts &amp; Notifications</h3>
+        <span class="subtle tiny" style="margin-top:2px; display:block">Platform status &amp; priority actions</span>
+      </div>
+      <button class="icon-btn" data-close aria-label="Close" style="width:32px; height:32px; border-radius:8px">✕</button>
+    </div>
+    <div class="stack-sm" style="gap:12px">
+      <!-- Alert 1: SLA Overdue -->
+      <div class="alert danger" style="margin:0;padding:14px;border-radius:14px;background:rgba(201,59,59,0.06);border:1px solid rgba(201,59,59,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">🚨</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge red nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">SLA CRITICAL</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">3d overdue</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">TR-1038 · Verification Overdue</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Banani Rooftop Futsal has been in queue for 72+ hours. Target SLA is 48 hours.</p>
+            <a class="btn btn-sm btn-secondary" href="request-review.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Review Request →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert 2: Payout Anomaly -->
+      <div class="alert warn" style="margin:0;padding:14px;border-radius:14px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">⚠️</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge amber nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">RISK WARNING</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">11:30 AM</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">Venue #77 Payout Anomaly</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Refund ratio spike detected (> 4.2% threshold). Host payouts suspended automatically.</p>
+            <a class="btn btn-sm btn-secondary" href="activity.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Investigate Log →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert 3: New Verification Submission -->
+      <div class="alert info" style="margin:0;padding:14px;border-radius:14px;background:rgba(38,96,216,0.06);border:1px solid rgba(38,96,216,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">ℹ️</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge blue nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">NEW REQUEST</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">4h ago</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">TR-1042 · Kick Off Arena</b>
+            <p class="small subtle" style="margin:0 0 10px;line-height:1.4;font-size:12px">Mahmudul Hasan submitted a new venue listing request with 3/3 verified documents.</p>
+            <a class="btn btn-sm btn-secondary" href="request-review.html" style="font-size:11.5px;min-height:28px;padding:0 12px;border-radius:8px">Start Verification →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert 4: Backup -->
+      <div class="alert ok" style="margin:0;padding:14px;border-radius:14px;background:rgba(14,122,74,0.06);border:1px solid rgba(14,122,74,0.12)">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span style="font-size:18px;line-height:1;margin-top:2px">✅</span>
+          <div style="flex:1">
+            <div class="between" style="margin-bottom:4px;align-items:baseline">
+              <span class="badge green nodot" style="font-size:9.5px;padding:1px 6px;line-height:1">SUCCESS</span>
+              <span class="subtle tiny" style="font-weight:600;font-size:10px">9:00 AM</span>
+            </div>
+            <b style="font-size:13.5px;color:var(--text);margin-bottom:3px;font-weight:700">System Audit Log Sync</b>
+            <p class="small subtle" style="margin:0;line-height:1.4;font-size:12px">Database backup and administrative action logs synchronized successfully.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/turfchai.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // Dataset of Venues
+  const turfData = {
+    'V-0128': {
+      id: 'V-0128',
+      name: 'Kick Off Arena',
+      owner: 'Mahmudul Hasan',
+      phone: '+880 1811 344 123',
+      email: 'mahmudul@kickoff.com',
+      area: 'Dhanmondi',
+      pitches: 3,
+      rating: 'New',
+      revenue30d: '৳0',
+      bookings30d: 0,
+      occupancy: '0%',
+      status: 'Pending Setup',
+      badgeClass: 'amber',
+      dateAdded: 'Today',
+      documents: {
+        tradeLicense: 'Verified',
+        ownerNid: 'Verified',
+        utilityBill: 'Verified'
+      },
+      pitchesList: [
+        { name: 'Pitch A (Futsal, 5v5)', rate: '৳1,500/hr', type: 'Indoor Synthetic' },
+        { name: 'Pitch B (Futsal, 5v5)', rate: '৳1,500/hr', type: 'Indoor Synthetic' },
+        { name: 'Pitch C (Football, 7v7)', rate: '৳2,500/hr', type: 'Outdoor Turf' }
+      ],
+      recentBookings: [],
+      chartData: [0, 0, 0, 0, 0, 0, 0]
+    },
+    'V-0067': {
+      id: 'V-0067',
+      name: 'GreenTurf Mohammadpur',
+      owner: 'Nusrat Jahan',
+      phone: '+880 1717 505 456',
+      email: 'nusrat@greenturf.com',
+      area: 'Mohammadpur',
+      pitches: 2,
+      rating: '4.6 ★',
+      revenue30d: '৳3,42,000',
+      bookings30d: 142,
+      occupancy: '72%',
+      status: 'Live',
+      badgeClass: 'green',
+      dateAdded: 'Mar 12, 2026',
+      documents: {
+        tradeLicense: 'Verified',
+        ownerNid: 'Verified',
+        utilityBill: 'Verified'
+      },
+      pitchesList: [
+        { name: 'Pitch A (Futsal, 5v5)', rate: '৳1,400/hr', type: 'Outdoor Synthetic' },
+        { name: 'Pitch B (Futsal, 5v5)', rate: '৳1,400/hr', type: 'Outdoor Synthetic' }
+      ],
+      recentBookings: [
+        { id: 'BK-8901', time: 'Today 4:00 PM', player: 'Tanvir Rahman', pitch: 'Pitch A', amount: '৳2,800', status: 'Completed' },
+        { id: 'BK-8894', time: 'Today 1:00 PM', player: 'Imtiaz Ahmed', pitch: 'Pitch B', amount: '৳1,400', status: 'Completed' },
+        { id: 'BK-8862', time: 'Yesterday 8:00 PM', player: 'Zeeshan Ali', pitch: 'Pitch A', amount: '৳2,800', status: 'Completed' }
+      ],
+      chartData: [18, 22, 19, 24, 28, 32, 25]
+    },
+    'V-0044': {
+      id: 'V-0044',
+      name: 'Lalmatia Play Zone',
+      owner: 'Arif Rahman',
+      phone: '+880 1610 883 789',
+      email: 'arif@playzone.com',
+      area: 'Lalmatia',
+      pitches: 1,
+      rating: '4.4 ★',
+      revenue30d: '৳1,88,500',
+      bookings30d: 79,
+      occupancy: '61%',
+      status: 'Live',
+      badgeClass: 'green',
+      dateAdded: 'Jan 22, 2026',
+      documents: {
+        tradeLicense: 'Verified',
+        ownerNid: 'Verified',
+        utilityBill: 'Verified'
+      },
+      pitchesList: [
+        { name: 'Main Pitch (Futsal, 6v6)', rate: '৳1,600/hr', type: 'Outdoor Futsal' }
+      ],
+      recentBookings: [
+        { id: 'BK-8851', time: 'Yesterday 6:00 PM', player: 'Samiul Islam', pitch: 'Main Pitch', amount: '৳1,600', status: 'Completed' },
+        { id: 'BK-8812', time: '2 days ago', player: 'Rashedul Bari', pitch: 'Main Pitch', amount: '৳3,200', status: 'Completed' }
+      ],
+      chartData: [8, 12, 10, 11, 14, 15, 9]
+    },
+    'V-0031': {
+      id: 'V-0031',
+      name: 'Mirpur Sports City',
+      owner: 'Jashim Uddin',
+      phone: '+880 1811 123 999',
+      email: 'jashim@sportscity.com',
+      area: 'Mirpur 10',
+      pitches: 4,
+      rating: '4.7 ★',
+      revenue30d: '৳6,10,200',
+      bookings30d: 254,
+      occupancy: '81%',
+      status: 'Live',
+      badgeClass: 'green',
+      dateAdded: 'Nov 05, 2025',
+      documents: {
+        tradeLicense: 'Verified',
+        ownerNid: 'Verified',
+        utilityBill: 'Verified'
+      },
+      pitchesList: [
+        { name: 'Pitch A (Futsal, 5v5)', rate: '৳1,200/hr', type: 'Indoor' },
+        { name: 'Pitch B (Futsal, 5v5)', rate: '৳1,200/hr', type: 'Indoor' },
+        { name: 'Pitch C (Cricket Pitch)', rate: '৳1,800/hr', type: 'Indoor Net' },
+        { name: 'Pitch D (Football, 9v9)', rate: '৳3,500/hr', type: 'Large Outdoor' }
+      ],
+      recentBookings: [
+        { id: 'BK-8904', time: 'Today 5:00 PM', player: 'Farhan Masud', pitch: 'Pitch D', amount: '৳7,000', status: 'Completed' },
+        { id: 'BK-8898', time: 'Today 2:00 PM', player: 'Naimur Rahman', pitch: 'Pitch A', amount: '৳2,400', status: 'Completed' },
+        { id: 'BK-8874', time: 'Yesterday 9:00 PM', player: 'Asif Zaman', pitch: 'Pitch C', amount: '৳3,600', status: 'Completed' }
+      ],
+      chartData: [32, 38, 35, 42, 45, 52, 48]
+    },
+    'V-0077': {
+      id: 'V-0077',
+      name: 'Venue #77 · Badda Kickers',
+      owner: 'S. Molla',
+      phone: '+880 1913 227 888',
+      email: 'smolla@kickers.com',
+      area: 'Badda',
+      pitches: 2,
+      rating: '3.9 ★',
+      revenue30d: '৳95,400',
+      bookings30d: 41,
+      occupancy: '38%',
+      status: 'Suspended · Payout Anomaly',
+      badgeClass: 'red',
+      dateAdded: 'Feb 10, 2026',
+      documents: {
+        tradeLicense: 'Verified',
+        ownerNid: 'Verified',
+        utilityBill: 'Pending Audit ⚠'
+      },
+      pitchesList: [
+        { name: 'Pitch A (Futsal)', rate: '৳1,200/hr', type: 'Outdoor' },
+        { name: 'Pitch B (Futsal)', rate: '৳1,200/hr', type: 'Outdoor' }
+      ],
+      recentBookings: [
+        { id: 'BK-8702', time: '3 days ago', player: 'Rezaul Karim', pitch: 'Pitch A', amount: '৳1,200', status: 'Refunded (Anomaly)' },
+        { id: 'BK-8695', time: '4 days ago', player: 'Rony Hassan', pitch: 'Pitch A', amount: '৳1,200', status: 'Refunded (Anomaly)' },
+        { id: 'BK-8681', time: '5 days ago', player: 'Mehedi Hasan', pitch: 'Pitch B', amount: '৳2,400', status: 'Refunded (Anomaly)' }
+      ],
+      chartData: [6, 8, 5, 7, 3, 2, 4]
+    }
+  };
+
+  // Get selected venue from URL search params, fallback to GreenTurf
+  const params = new URLSearchParams(window.location.search);
+  const selectedId = params.get('id') || 'V-0067';
+  const venue = turfData[selectedId] || turfData['V-0067'];
+
+  // Render Venue Details dynamically
+  document.getElementById('venueName').textContent = `${venue.name} (${venue.id})`;
+  document.getElementById('venueSubHeader').textContent = `${venue.area} · Registered on ${venue.dateAdded}`;
+
+  // KPI fields
+  document.getElementById('kpiRevenue').textContent = venue.revenue30d;
+  document.getElementById('kpiOccupancy').textContent = venue.occupancy;
+  document.getElementById('kpiBookings').textContent = venue.bookings30d.toLocaleString();
+  document.getElementById('kpiRating').textContent = venue.rating;
+
+  // Profile fields
+  document.getElementById('profileOwner').textContent = venue.owner;
+  document.getElementById('profilePhone').textContent = venue.phone;
+  document.getElementById('profileEmail').textContent = venue.email;
+  document.getElementById('profileArea').textContent = venue.area;
+  document.getElementById('profileDateAdded').textContent = venue.dateAdded;
+
+  // Documents
+  setDocStatus('docTrade', venue.documents.tradeLicense);
+  setDocStatus('docNid', venue.documents.ownerNid);
+  setDocStatus('docUtility', venue.documents.utilityBill);
+
+  function setDocStatus(elId, val) {
+    const el = document.getElementById(elId);
+    el.textContent = val;
+    el.className = 'badge';
+    if (val.includes('Verified')) {
+      el.classList.add('green');
+    } else if (val.includes('Pending') || val.includes('Anomaly')) {
+      el.classList.add('amber');
+    } else {
+      el.classList.add('red');
+    }
+  }
+
+  // Action Buttons
+  const actionContainer = document.getElementById('actionHeaderBtns');
+  if (venue.status.includes('Suspended')) {
+    actionContainer.innerHTML = `
+      <button class="btn btn-secondary" data-open="#reinstateModal">Reinstate Venue</button>
+      <button class="btn btn-ghost-danger" onclick="deleteVenue()">Delete Venue</button>
+    `;
+  } else if (venue.status.includes('Pending')) {
+    actionContainer.innerHTML = `
+      <button class="btn btn-primary" onclick="approveVenue()">Approve &amp; Make Live</button>
+      <button class="btn btn-ghost-danger" onclick="deleteVenue()">Reject listing</button>
+    `;
+  } else {
+    actionContainer.innerHTML = `
+      <button class="btn btn-secondary" data-open="#suspendModal">Suspend Venue</button>
+      <button class="btn btn-ghost-danger" onclick="deleteVenue()">Delete Venue</button>
+    `;
+  }
+
+  // Pitches List Table
+  document.getElementById('pitchesCount').textContent = venue.pitches;
+  const pitchesBody = document.getElementById('pitchesTableBody');
+  pitchesBody.innerHTML = venue.pitchesList.map(pitch => `
+    <tr>
+      <td><b>${pitch.name}</b></td>
+      <td><span class="badge gray nodot">${pitch.type}</span></td>
+      <td style="text-align:right" class="num font-semibold">${pitch.rate}</td>
+    </tr>
+  `).join('');
+
+  // Bookings List Table
+  const bookingsBody = document.getElementById('bookingsTableBody');
+  if (venue.recentBookings.length === 0) {
+    bookingsBody.innerHTML = `<tr><td colspan="6" class="center subtle small" style="padding:24px 0">No recent bookings logged for this venue.</td></tr>`;
+  } else {
+    bookingsBody.innerHTML = venue.recentBookings.map(bk => `
+      <tr>
+        <td class="num"><b>${bk.id}</b></td>
+        <td class="num">${bk.time}</td>
+        <td>${bk.player}</td>
+        <td>${bk.pitch}</td>
+        <td class="num font-semibold">${bk.amount}</td>
+        <td><span class="badge ${bk.status.includes('Completed') ? 'green' : 'red'}">${bk.status}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  // Action handlers triggered by Modal Confirmations
+  window.suspendTurf = function() {
+    showToast('Venue suspended and status updated to audit trail ✓');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+  };
+
+  window.reinstateTurf = function() {
+    showToast('Venue reinstated successfully! Live status restored ✓');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+  };
+
+  window.approveVenue = function() {
+    showToast('Venue approved! Now active on search index ✓');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+  };
+
+  window.deleteVenue = function() {
+    if (confirm('Are you sure you want to delete this venue? This action is permanent.')) {
+      showToast('Venue successfully deleted from platform database.');
+      setTimeout(() => {
+        window.location.href = 'turfs.html';
+      }, 1200);
+    }
+  };
+
+  // Render Visual Analytics Chart
+  const canvas = document.getElementById('demandChart');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.parentElement.clientWidth;
+    const height = 250;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const chartW = width - 50 - 20;
+    const chartH = height - 25 - 40;
+
+    const data = venue.chartData;
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const maxVal = Math.max(...data, 10) * 1.15;
+
+    // Draw Grid Lines
+    ctx.strokeStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 1;
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+
+    const rows = 4;
+    for (let i = 0; i <= rows; i++) {
+      const y = 25 + (chartH / rows) * i;
+      const v = maxVal - (maxVal / rows) * i;
+      ctx.beginPath();
+      ctx.moveTo(50, y);
+      ctx.lineTo(width - 20, y);
+      ctx.stroke();
+      ctx.fillText(Math.round(v), 12, y + 4);
+    }
+
+    // Points calculation
+    const points = [];
+    const stepX = chartW / (labels.length - 1);
+    for (let i = 0; i < labels.length; i++) {
+      const x = 50 + i * stepX;
+      const y = 25 + chartH - (data[i] / maxVal) * chartH;
+      points.push({ x, y });
+      ctx.fillText(labels[i], x, height - 12);
+    }
+
+    // Draw Area Gradient
+    if (points.length > 0) {
+      const fillGradient = ctx.createLinearGradient(0, 25, 0, height - 40);
+      fillGradient.addColorStop(0, 'rgba(59, 130, 246, 0.35)');
+      fillGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i+1];
+        const cpX = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cpX, p0.y, cpX, p1.y, p1.x, p1.y);
+      }
+      ctx.lineTo(points[points.length - 1].x, 25 + chartH);
+      ctx.lineTo(points[0].x, 25 + chartH);
+      ctx.closePath();
+      ctx.fillStyle = fillGradient;
+      ctx.fill();
+
+      // Draw Stroke Curve
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i+1];
+        const cpX = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cpX, p0.y, cpX, p1.y, p1.x, p1.y);
+      }
+      ctx.stroke();
+
+      // Draw Nodes
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2.5;
+      for (let i = 0; i < points.length; i++) {
+        ctx.beginPath();
+        ctx.arc(points[i].x, points[i].y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Handle window resizing
+  window.addEventListener('resize', () => {
+    window.location.reload();
+  });
+})();
+</script>
+</body>
+</html>
