@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kick Off Arena · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+<style>
+  .gallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:150px 150px;gap:8px}
+  .gallery .photo:first-child{grid-row:1/3;font-size:44px}
+  @media (max-width:700px){.gallery{grid-template-columns:2fr 1fr;grid-template-rows:120px 120px}}
+  .detail-grid{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
+  @media (max-width:1000px){.detail-grid{grid-template-columns:1fr}}
+  .amen{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text-2)}
+</style>
+</head>
+<body class="has-bottomnav">
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="home.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
+    <nav class="navlinks">
+      <a href="explore.html" class="active">Explore Venues</a>
+      <a href="../solo/open-games.html">Open Games</a>
+      <a href="bookings.html">My Bookings</a>
+      <a href="home.html#rewards">Rewards</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <a class="icon-btn" href="home.html" aria-label="Profile" style="background:var(--brand-soft);color:var(--brand-600);font-weight:700;border:none;text-decoration:none">RK</a>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:16px">
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="explore.html">Explore</a><span class="sep">/</span><a href="explore.html">Dhanmondi</a><span class="sep">/</span><span>Kick Off Arena</span></nav>
+
+  <div class="gallery" aria-label="Venue photos">
+    <div class="photo">⚽</div><div class="photo alt1">🥅</div><div class="photo alt2">💡</div>
+    <div class="photo alt3">🅿️</div><div class="photo court" style="font-size:14px;font-weight:700">+9 photos</div>
+  </div>
+
+  <div class="between" style="margin-top:16px;flex-wrap:wrap;gap:10px">
+    <div>
+      <h1 style="font-size:26px;margin-bottom:2px">Kick Off Arena <span class="verified" style="vertical-align:4px">✓ Verified venue</span></h1>
+      <div class="row-wrap muted small">House 12, Road 27, Dhanmondi, Dhaka · 1.2 km away
+        <span class="rating">4.8</span> <span class="subtle">(214 reviews)</span>
+      </div>
+    </div>
+    <div class="row"><button class="icon-btn" data-toast="Saved to favourites ♥">♡</button><button class="icon-btn" data-toast="Link copied — share with your team">↗</button></div>
+  </div>
+
+  <div class="detail-grid" style="margin-top:20px">
+    <!-- LEFT -->
+    <div class="stack">
+      <!-- Slots — solid surface -->
+      <section class="card" id="slots">
+        <div class="between" style="margin-bottom:10px"><h3 style="margin:0">Live availability</h3><span class="badge green">Real-time</span></div>
+        <div class="datestrip" style="margin-bottom:14px" aria-label="Pick a date">
+          <button class="datebox on"><span>Mon</span><b>4</b></button>
+          <button class="datebox"><span>Tue</span><b>5</b></button>
+          <button class="datebox"><span>Wed</span><b>6</b></button>
+          <button class="datebox"><span>Thu</span><b>7</b></button>
+          <button class="datebox"><span>Fri</span><b>8</b></button>
+          <button class="datebox"><span>Sat</span><b>9</b></button>
+          <button class="datebox"><span>Sun</span><b>10</b></button>
+        </div>
+        <div class="between" style="margin-bottom:8px"><b class="small">Pitch 2 · 7-a-side · 90-min slots</b><span class="subtle tiny">10-min handover buffer between slots</span></div>
+        <div class="slotgrid" aria-label="Available time slots">
+          <button class="slot booked"><b>4:00 PM</b><span>Booked</span></button>
+          <button class="slot booked"><b>5:40 PM</b><span>Booked</span></button>
+          <button class="slot available"><b>7:30 PM</b><span>ends 9:00 · ৳2,500</span></button>
+          <button class="slot held"><b>9:10 PM</b><span>Held by another player</span></button>
+          <button class="slot available"><b>10:50 PM</b><span>ends 12:20 · ৳2,000</span></button>
+        </div>
+        <p class="subtle tiny" style="margin:10px 0 0">Times shown are exact play times. Arrive 10 minutes early for handover. Off-peak price applies after 10:30 PM.</p>
+      </section>
+
+      <!-- Surface & amenities -->
+      <section class="card">
+        <h3>Surface, lighting &amp; amenities</h3>
+        <div class="grid2" style="margin-top:8px">
+          <div class="panel"><b class="small">Surface</b><p class="small muted" style="margin:2px 0 0">FIFA-grade artificial grass · relaid Jan 2026 · shock pad underlay</p></div>
+          <div class="panel"><b class="small">Lighting</b><p class="small muted" style="margin:2px 0 0">200-lux LED floodlights · excellent for night games</p></div>
+        </div>
+        <div class="grid3" style="margin-top:12px;gap:10px">
+          <span class="amen">🅿️ Free parking (12 cars)</span>
+          <span class="amen">🚿 Changing room + shower</span>
+          <span class="amen">🚰 Drinking water</span>
+          <span class="amen">🧤 Bibs &amp; balls provided</span>
+          <span class="amen">🪑 Spectator seating</span>
+          <span class="amen">🧒 Youth-friendly ✓</span>
+        </div>
+      </section>
+
+      <!-- Rules & policy -->
+      <section class="card">
+        <h3>Venue rules &amp; cancellation</h3>
+        <ul class="small muted" style="margin:6px 0 12px;padding-left:18px;line-height:1.9">
+          <li>Metal studs not allowed — turf shoes or mouldies only</li>
+          <li>Max 16 people per 7-a-side booking · no outside food on pitch</li>
+          <li>Pitch handover is strict: play ends exactly at slot end time</li>
+        </ul>
+        <div class="alert info"><span class="ico">ℹ️</span><div><b>Cancellation policy</b>Free cancellation until 24h before kickoff · 50% refund until 6h before · no refund after that. Shown again before you pay.</div></div>
+      </section>
+
+      <!-- Map -->
+      <section class="card">
+        <h3>Location</h3>
+        <div class="photo map" style="height:180px;margin-top:8px" role="img" aria-label="Map showing Kick Off Arena at Road 27 Dhanmondi"><span>📍 Road 27, Dhanmondi</span></div>
+        <div class="row" style="margin-top:10px"><a class="btn btn-sm btn-secondary" href="#" data-toast="Opening directions in Maps 🗺️">Get directions</a><span class="subtle small">12 min by rickshaw from Dhanmondi 32</span></div>
+      </section>
+
+      <!-- Reviews -->
+      <section class="card" id="reviews">
+        <div class="between"><h3 style="margin:0">Reviews · <span class="rating" style="font-size:16px">4.8</span> <span class="subtle small">(214)</span></h3>
+          <div class="seg" role="group" aria-label="Review filter"><button class="on">All</button><button>Parents 🧒 (18)</button></div>
+        </div>
+        <div class="stack" style="margin-top:14px">
+          <div class="panel">
+            <div class="between"><div class="row"><span class="avatar sm">TA</span><b class="small">Tanvir Ahmed</b><span class="badge blue nodot">Verified booking</span></div><span class="stars" aria-label="5 out of 5">★★★★★</span></div>
+            <p class="small muted" style="margin:8px 0 0">Best turf in Dhanmondi. Grass is genuinely new, floodlights are bright, and the handover was on time. Shower water pressure could be better.</p>
+            <span class="tiny subtle">28 Jul 2026 · Surface 5 · Lighting 5 · Cleanliness 4</span>
+          </div>
+          <div class="panel">
+            <div class="between"><div class="row"><span class="avatar sm c">SN</span><b class="small">Shahana Nasrin</b><span class="badge blue nodot">Verified booking</span><span class="badge gray nodot">🧒 Parent review</span></div><span class="stars" aria-label="4 out of 5">★★★★<span class="off">★</span></span></div>
+            <p class="small muted" style="margin:8px 0 0">Took my 11-year-old's team for Friday practice. Staff were patient with the kids, seating for parents, and the pitch edges are properly padded. Parking fills up by 5 PM.</p>
+            <span class="tiny subtle">21 Jul 2026 · Safety 5 · Youth-friendliness 5</span>
+            <div class="panel" style="margin-top:8px;background:var(--surface)"><b class="tiny">↳ Response from Kick Off Arena</b><p class="tiny muted" style="margin:2px 0 0">Thank you Shahana! Weekend mornings have the most parking free — see you again.</p></div>
+          </div>
+          <a class="btn btn-tertiary" href="#" data-toast="Loading 212 more reviews…">Show all 214 reviews</a>
+        </div>
+      </section>
+
+      <!-- Similar -->
+      <section>
+        <div class="section-title"><h2>Similar venues nearby</h2></div>
+        <div class="grid3">
+          <a class="venue-card" href="venue.html" style="text-decoration:none;color:var(--text)"><div class="photo alt1" style="height:100px">⚽</div><div class="body"><div class="name small">GreenTurf</div><div class="between subtle small"><span>2.8 km</span><b class="num" style="color:var(--text)">৳1,800</b></div></div></a>
+          <a class="venue-card" href="venue.html" style="text-decoration:none;color:var(--text)"><div class="photo alt2" style="height:100px">⚽</div><div class="body"><div class="name small">Lalmatia Play Zone</div><div class="between subtle small"><span>1.9 km</span><b class="num" style="color:var(--text)">৳1,500</b></div></div></a>
+          <a class="venue-card" href="venue.html" style="text-decoration:none;color:var(--text)"><div class="photo alt3" style="height:100px">⚽</div><div class="body"><div class="name small">Mirpur Sports City</div><div class="between subtle small"><span>5.1 km</span><b class="num" style="color:var(--text)">৳2,200</b></div></div></a>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: sticky booking panel (desktop) -->
+    <aside class="glass glass-card" style="position:sticky;top:84px">
+      <div class="between"><span><b class="num" style="font-size:20px">৳2,500</b> <span class="subtle">/90 min</span></span><span class="badge green">Instant booking</span></div>
+      <hr>
+      <div class="stack-sm">
+        <div class="between small"><span class="muted">Date</span><b>Mon 4 Aug</b></div>
+        <div class="between small"><span class="muted">Selected slot</span><b data-slot-out>Tap a slot ←</b></div>
+        <div class="between small"><span class="muted">Pitch</span><b>Pitch 2 · 7-a-side</b></div>
+        <div class="between small"><span class="muted">Handover</span><b>Arrive 10 min early</b></div>
+      </div>
+      <a class="btn btn-primary btn-lg btn-block" style="margin-top:14px" href="checkout.html" data-slot-cta>Book this slot</a>
+      <p class="tiny subtle center" style="margin-top:8px">Slot is locked for 5 minutes while you pay. Free cancellation until 24h before.</p>
+    </aside>
+  </div>
+</main>
+
+<!-- Mobile sticky booking bar -->
+<div class="stickybar glass" style="display:none" id="mobileBar">
+  <div class="stickybar-inner">
+    <div><b class="num">৳2,500</b> <span class="subtle small">/90 min</span><div class="tiny subtle">Mon 4 Aug · <span data-slot-out>select a slot</span></div></div>
+    <a class="btn btn-primary" href="checkout.html">Book slot</a>
+  </div>
+</div>
+<style>@media (max-width:1000px){#mobileBar{display:block}aside{display:none}}</style>
+
+<nav class="bottomnav glass" aria-label="Primary">
+  <div class="bottomnav-inner">
+    <a href="home.html"><span class="ico">🏠</span>Home</a>
+    <a href="explore.html" class="active"><span class="ico">🔍</span>Explore</a>
+    <a href="../solo/open-games.html"><span class="ico">⚽</span>Open Games</a>
+    <a href="bookings.html"><span class="ico">📅</span>Bookings</a>
+    <a href="home.html"><span class="ico">👤</span>Profile</a>
+  </div>
+</nav>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reserve for tournament · TurfChai Host</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge nodot" style="margin-left:6px;background:#EDE4FF;color:#6D3FC4">Host</span></a>
+    <div class="spacer"></div>
+    <span class="lock-timer num" data-countdown="600">⏱ Slots held · 10:00</span>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <span class="icon-btn" style="background:#EDE4FF;color:#6D3FC4;font-weight:700;border:none">SL</span>
+  </div>
+</header>
+
+<main class="wrap wrap-narrow" style="padding-top:20px;padding-bottom:40px;max-width:960px">
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="search.html">Find venue</a><span class="sep">/</span><a href="multi-pitch.html">Pitch timeline</a><span class="sep">/</span><span>Reserve</span></nav>
+  <h1 style="font-size:22px;margin-bottom:14px">Reserve for your tournament</h1>
+
+  <div class="grid2" style="align-items:start">
+    <div class="stack">
+      <section class="card">
+        <h3>1 · Tournament details</h3>
+        <div class="field" style="margin-top:8px"><label for="tName">Tournament name</label><input class="input" id="tName" value="Ramadan Cup 2027"></div>
+        <div class="grid2">
+          <div class="field"><label for="tFmt">Format</label><select class="select" id="tFmt"><option selected>Knockout · 16 teams</option><option>Group + knockout</option><option>League</option></select></div>
+          <div class="field"><label for="tTeams">Teams</label><select class="select" id="tTeams"><option>8</option><option selected>16</option><option>24</option></select></div>
+        </div>
+        <div class="field"><label for="tOrg">Organizer contact</label><input class="input" id="tOrg" value="Shakil Ahmed Liton · +880 1552 887 990"></div>
+        <label class="checkline"><input type="checkbox" checked><span>List this tournament publicly so teams can find it on TurfChai</span></label>
+      </section>
+
+      <section class="card">
+        <h3>2 · Policy &amp; terms</h3>
+        <ul class="small muted" style="margin:8px 0 0;padding-left:16px;line-height:1.9">
+          <li><b>Deposit:</b> 40% now (৳17,120) secures all 14 slots · balance due 3 days before event</li>
+          <li><b>Free cancellation</b> up to 7 days before · 50% refund up to 72h · none after</li>
+          <li><b>Rain policy:</b> covered pitches unaffected; open pitches reschedule free within 30 days</li>
+          <li>Venue provides: floodlights, changing rooms, parking for 40, first-aid kit</li>
+        </ul>
+        <label class="checkline" style="margin-top:10px"><input type="checkbox" checked><span>I agree to the reservation terms and venue rules</span></label>
+      </section>
+
+      <section class="card">
+        <h3>3 · Pay deposit</h3>
+        <div class="row-wrap" style="margin-top:8px">
+          <button class="chip on" data-filter>bKash</button>
+          <button class="chip" data-filter>Nagad</button>
+          <button class="chip" data-filter>Card</button>
+          <button class="chip" data-filter>Bank transfer</button>
+        </div>
+        <div class="field" style="margin-top:10px"><label for="bkNum">bKash number</label><input class="input num" id="bkNum" value="+880 1552 887 990"></div>
+        <button class="btn btn-primary btn-lg btn-block" data-open="#reserved">Pay ৳17,120 deposit &amp; reserve</button>
+        <p class="tiny subtle center" style="margin-top:8px">🔒 Held for you while you pay · balance ৳25,680 due Wed 20 Aug</p>
+      </section>
+    </div>
+
+    <aside class="glass glass-card" style="position:sticky;top:84px">
+      <b style="font-family:var(--font-display)">Reservation summary</b>
+      <div class="panel" style="margin:10px 0">
+        <b class="small">Mirpur Sports City <span class="verified">✓</span></b>
+        <div class="tiny subtle">Mirpur 10 · Sat 23 Aug 2026 · 8:00 AM – 6:00 PM</div>
+        <div class="tiny subtle" style="margin-top:4px">14 slots · Pitches A, B, D (+ C partial)</div>
+      </div>
+      <div class="pricerow"><span>14 pitch-slots</span><span class="num">৳44,600</span></div>
+      <div class="pricerow neg"><span>Multi-pitch discount</span><span class="num">−৳1,800</span></div>
+      <div class="pricerow total"><span>Total</span><span class="num">৳42,800</span></div>
+      <div class="pricerow"><span>Deposit due now (40%)</span><span class="num"><b>৳17,120</b></span></div>
+      <div class="pricerow"><span>Balance · by 20 Aug</span><span class="num">৳25,680</span></div>
+      <div class="alert info" style="margin-top:10px"><span class="ico">💡</span><div class="tiny">One reservation covers everything — the venue blocks all 14 slots the moment your deposit clears.</div></div>
+    </aside>
+  </div>
+</main>
+
+<div class="overlay" id="reserved" role="dialog" aria-modal="true" aria-labelledby="rsvTitle">
+  <div class="modal center">
+    <div class="check-anim" aria-hidden="true">🏆</div>
+    <h3 id="rsvTitle">Ramadan Cup is booked!</h3>
+    <p class="muted small">Deposit ৳17,120 received via bKash (TXN 7R2M88). Reservation <b class="num">TR-CUP-0091</b> confirmed — venue contact and schedule tools are on your dashboard.</p>
+    <div class="stack-sm" style="margin-top:12px">
+      <a class="btn btn-primary btn-block" href="dashboard.html">Go to tournament dashboard →</a>
+      <button class="btn btn-tertiary btn-block" data-close data-toast="Receipt emailed &amp; SMS sent 📩">Send receipt</button>
+    </div>
+  </div>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

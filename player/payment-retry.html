@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment failed · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="home.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
+    <div class="spacer"></div>
+    <div class="lock-timer" role="timer" aria-label="Slot hold expires in">🔒 Hold expires in <span data-countdown="147">2:27</span></div>
+  </div>
+</header>
+
+<main class="wrap-form" style="padding-top:48px;padding-bottom:64px">
+  <div class="card center" style="padding:32px 24px">
+    <div class="fail-anim" aria-hidden="true">✕</div>
+    <span class="badge red">Payment failed</span>
+    <h1 style="font-size:22px;margin-top:10px">Your bKash payment didn't go through</h1>
+    <p class="muted small" style="max-width:340px;margin:0 auto 4px">bKash reported <b>insufficient balance</b> for ৳2,550. You have not been charged.</p>
+    <p class="subtle small" style="max-width:340px;margin:0 auto">Your slot — <b>Kick Off Arena, Fri 8 Aug, 7:30 PM</b> — is still held. If you don't retry before the timer ends, the hold is released and the slot becomes available to others.</p>
+
+    <div class="stack-sm" style="margin-top:20px">
+      <a class="btn btn-primary btn-lg btn-block" href="checkout.html">Retry payment</a>
+      <a class="btn btn-secondary btn-block" href="checkout.html">Choose another payment method</a>
+      <a class="btn btn-tertiary btn-block" href="explore.html">Give up the slot &amp; see alternatives</a>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h4>If the hold expires</h4>
+    <ul class="tline" style="margin-top:10px">
+      <li class="fail"><b class="small">Held slot released</b><p class="tiny muted" style="margin:0">The 7:30 PM slot returns to live availability for everyone.</p></li>
+      <li class="pending"><b class="small">No charge, no booking</b><p class="tiny muted" style="margin:0">Nothing is recorded against your account or reliability score.</p></li>
+      <li><b class="small">We'll help you rebook</b><p class="tiny muted" style="margin:0">You'll be returned to search with the nearest alternative slots highlighted.</p></li>
+    </ul>
+  </div>
+</main>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

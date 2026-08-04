@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+<style>
+  .co-grid{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
+  @media (max-width:900px){.co-grid{grid-template-columns:1fr}}
+  .payopt{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--border-strong);border-radius:14px;cursor:pointer;background:var(--surface)}
+  .payopt input{width:18px;height:18px;margin-top:2px;accent-color:var(--brand)}
+  .payopt.sel{border-color:var(--brand);background:var(--brand-soft)}
+  .method{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border-strong);border-radius:12px;cursor:pointer;background:var(--surface);font-weight:700;font-size:14px}
+  .method.sel{border-color:var(--brand);background:var(--brand-soft)}
+  .mlogo{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;flex:none}
+</style>
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="home.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
+    <div class="spacer"></div>
+    <div class="lock-timer" role="timer" aria-label="Slot locked, time remaining">🔒 Slot locked · <span data-countdown="293">4:53</span></div>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:24px;max-width:1000px">
+  <a class="btn btn-tertiary btn-sm" href="venue.html">← Back to venue</a>
+  <h1 style="font-size:24px;margin-top:8px">Confirm and pay</h1>
+  <p class="subtle" style="margin-bottom:20px">Your slot is held for 5 minutes — no one else can take it while you pay.</p>
+
+  <div class="co-grid">
+    <!-- LEFT: payment -->
+    <div class="stack">
+      <section class="card">
+        <h3>1 · Payment option</h3>
+        <div class="stack-sm" style="margin-top:10px" role="radiogroup" aria-label="Payment option">
+          <label class="payopt sel"><input type="radio" name="opt" checked>
+            <span><b>Pay full amount — ৳2,550</b><br><span class="subtle small">Done in one go. Best for solo captains.</span></span></label>
+          <label class="payopt"><input type="radio" name="opt">
+            <span><b>Pay 30% deposit — ৳765</b><br><span class="subtle small">Rest due at the venue before kickoff. Deposit is non-refundable within 6h.</span></span></label>
+          <label class="payopt"><input type="radio" name="opt">
+            <span><b>Split with my team</b> <span class="badge green nodot">Popular</span><br><span class="subtle small">Pay your share now, invite teammates to pay theirs. You stay in control.</span></span></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>2 · Payment method</h3>
+        <div class="grid2" style="margin-top:10px;gap:10px" role="radiogroup" aria-label="Payment method">
+          <button class="method sel"><span class="mlogo" style="background:#D12053">bK</span> bKash <span class="badge green nodot" style="margin-left:auto">Selected</span></button>
+          <button class="method"><span class="mlogo" style="background:#F26522">N</span> Nagad</button>
+          <button class="method"><span class="mlogo" style="background:#2660D8">💳</span> Card</button>
+          <button class="method"><span class="mlogo" style="background:#5B6B76">🏦</span> Bank transfer</button>
+        </div>
+        <p class="subtle tiny" style="margin:10px 0 0">You'll approve the payment in your bKash app. TurfChai never sees your PIN.</p>
+      </section>
+
+      <section class="card">
+        <h3>3 · Policy</h3>
+        <div class="alert info" style="margin-top:8px"><span class="ico">ℹ️</span><div><b>Cancellation &amp; refund</b>Free cancellation until Thu 7 Aug, 7:30 PM (24h before) · 50% refund until Fri 1:30 PM · no refund after. Refunds return to your bKash within 3–5 days.</div></div>
+        <label class="checkline" style="margin-top:12px"><input type="checkbox" checked><span>I understand the cancellation policy and the exact slot time (7:30–9:00 PM, arrive 7:20 for handover).</span></label>
+      </section>
+    </div>
+
+    <!-- RIGHT: summary -->
+    <aside class="glass glass-card" style="position:sticky;top:84px">
+      <div class="row">
+        <div class="photo" style="width:52px;height:52px;font-size:20px;flex:none">⚽</div>
+        <div><b>Kick Off Arena</b><div class="subtle small">Pitch 2 · 7-a-side · Dhanmondi 27</div></div>
+      </div>
+      <div class="panel" style="margin:12px 0">
+        <div class="between small"><span class="muted">Date</span><b>Fri 8 Aug 2026</b></div>
+        <div class="between small"><span class="muted">Play time</span><b class="num">7:30 – 9:00 PM</b></div>
+        <div class="between small"><span class="muted">Handover</span><b>Arrive 7:20 PM</b></div>
+      </div>
+      <div class="pricerow"><span>Slot (90 min)</span><span class="num">৳2,500</span></div>
+      <div class="pricerow"><span>Service fee</span><span class="num">৳150</span></div>
+      <div class="pricerow"><span class="neg">Off-peak discount</span><span class="num neg">−৳0</span></div>
+      <div class="pricerow"><span class="neg">Rewards (100 pts) <button class="btn btn-sm btn-tertiary" data-toast="100 points applied ✓" style="min-height:24px;padding:0 8px">apply</button></span><span class="num neg">−৳100</span></div>
+      <div class="pricerow total"><span>Due now</span><span class="num">৳2,550</span></div>
+      <p class="subtle tiny" style="margin:4px 0 12px">Remaining after payment: ৳0</p>
+      <a class="btn btn-primary btn-lg btn-block" href="booking-success.html">Pay ৳2,550 with bKash</a>
+      <a class="btn btn-tertiary btn-block" href="payment-retry.html" style="margin-top:6px">Simulate failed payment →</a>
+    </aside>
+  </div>
+</main>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

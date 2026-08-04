@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin dashboard · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge red nodot" style="margin-left:6px">Admin</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toast="5 new alerts 🔔" aria-label="Notifications">🔔</button>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <a class="icon-btn" href="profile.html" style="background:var(--danger-soft);color:var(--danger);font-weight:700;border:none;text-decoration:none" aria-label="My profile">NA</a>
+  </div>
+</header>
+
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Admin console">
+      <a href="dashboard.html" class="active"><span class="ico">📊</span>Dashboard</a>
+      <a href="turf-requests.html"><span class="ico">📥</span>Turf Requests <span class="countpill" style="margin-left:auto">4</span></a>
+      <a href="turfs.html"><span class="ico">🏟️</span>Turfs</a>
+      <a href="users.html"><span class="ico">👥</span>Users &amp; Players</a>
+      <a href="admins.html"><span class="ico">🛡️</span>Admin Accounts</a>
+      <a href="activity.html"><span class="ico">🧾</span>Activity Log</a>
+      <a href="profile.html"><span class="ico">👤</span>My Profile</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div><h1>Platform overview</h1><span class="subtle small">Friday 8 Aug 2026 · signed in as Nadia Amin (Super Admin)</span></div>
+      <a class="btn btn-primary" href="turf-requests.html">Review pending requests →</a>
+    </div>
+
+    <div class="grid4" style="margin-bottom:16px">
+      <div class="kpi"><span class="label">Pending turf requests</span><b class="value num">4</b><span class="delta down">Oldest waiting 3 days</span></div>
+      <div class="kpi"><span class="label">Active turfs</span><b class="value num">128</b><span class="delta up">▲ 6 this month</span></div>
+      <div class="kpi"><span class="label">Registered users</span><b class="value num">41,270</b><span class="delta up">▲ 1,140 this week</span></div>
+      <div class="kpi"><span class="label">Bookings today</span><b class="value num">1,862</b><span class="delta up">GMV ৳38.4 lakh</span></div>
+    </div>
+
+    <div class="grid2" style="align-items:start">
+      <div class="stack">
+        <section class="card">
+          <div class="between"><h3 style="margin:0">Turf requests queue</h3><a class="btn btn-sm btn-tertiary" href="turf-requests.html">All →</a></div>
+          <div class="stack-sm" style="margin-top:10px">
+            <div class="panel between"><div><b class="small num">TR-1042 · Kick Off Arena</b><div class="tiny subtle">Mahmudul Hasan · Dhanmondi · submitted today</div></div><a class="btn btn-sm btn-primary" href="request-review.html">Review</a></div>
+            <div class="panel between"><div><b class="small num">TR-1041 · Uttara Champions Field</b><div class="tiny subtle">Salma Khatun · Uttara 11 · waiting 1 day</div></div><a class="btn btn-sm btn-secondary" href="request-review.html">Review</a></div>
+            <div class="panel between" style="border-left:3px solid var(--warn)"><div><b class="small num">TR-1038 · Banani Rooftop Futsal</b><div class="tiny subtle">Imran Chowdhury · waiting <b style="color:var(--warn)">3 days</b></div></div><a class="btn btn-sm btn-secondary" href="request-review.html">Review</a></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="between"><h3 style="margin:0">Recent activity</h3><a class="btn btn-sm btn-tertiary" href="activity.html">Full log →</a></div>
+          <ul class="tline" style="margin-top:10px">
+            <li><b class="small">Farid approved TR-1039 · GreenTurf Annex</b><p class="tiny muted" style="margin:0">6:24 PM · listing created as pending venue</p></li>
+            <li><b class="small">Nadia suspended user #38112</b><p class="tiny muted" style="margin:0">4:02 PM · repeated no-shows + abusive chat reports</p></li>
+            <li><b class="small">Farid rejected TR-1037 · reason logged</b><p class="tiny muted" style="margin:0">1:15 PM · "Expired trade license"</p></li>
+            <li><b class="small">System flagged payout anomaly · Venue #77</b><p class="tiny muted" style="margin:0">11:30 AM · refund ratio spike — under review</p></li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="glass glass-card">
+          <h3>Quick actions</h3>
+          <div class="grid2" style="gap:8px;margin-top:10px">
+            <a class="btn btn-secondary" href="turf-requests.html">📥 Review queue</a>
+            <a class="btn btn-secondary" href="users.html">👥 Find a user</a>
+            <a class="btn btn-secondary" href="turfs.html">🏟️ Manage turfs</a>
+            <a class="btn btn-secondary" href="admins.html">🛡️ Add admin</a>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="between"><h3 style="margin:0">Alerts</h3><span class="countpill">3</span></div>
+          <div class="stack-sm" style="margin-top:10px">
+            <div class="alert warn" style="margin:0"><span class="ico">⏳</span><div><b>SLA risk</b>TR-1038 has waited 3 days — target is 2 business days. <a href="request-review.html">Review now</a></div></div>
+            <div class="alert danger" style="margin:0"><span class="ico">🚩</span><div><b>Payout anomaly · Venue #77</b>Refund ratio 4× baseline this week. <a href="activity.html">Investigate</a></div></div>
+            <div class="alert info" style="margin:0"><span class="ico">⭐</span><div><b>6 reported reviews</b>await moderation decisions. <a href="turfs.html">Open queue</a></div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Platform health · 7 days</h3>
+          <div class="stack-sm" style="margin-top:10px">
+            <div><div class="between small"><span class="muted">Booking success rate</span><b class="num">97.8%</b></div><div class="progress"><i style="width:97.8%"></i></div></div>
+            <div><div class="between small"><span class="muted">Payment success (bKash/Nagad)</span><b class="num">94.1%</b></div><div class="progress"><i style="width:94.1%"></i></div></div>
+            <div><div class="between small"><span class="muted">Disputes resolved &lt; 48h</span><b class="num">89%</b></div><div class="progress"><i style="width:89%;background:var(--warn)"></i></div></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

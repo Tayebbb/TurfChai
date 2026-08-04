@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payments · TurfChai Owner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge blue nodot" style="margin-left:6px">Owner</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <span class="icon-btn" style="background:var(--info-soft);color:var(--info);font-weight:700;border:none">MH</span>
+  </div>
+</header>
+
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Owner workspace">
+      <a href="dashboard.html"><span class="ico">📊</span>Overview</a>
+      <a href="calendar.html"><span class="ico">🗓️</span>Calendar</a>
+      <a href="bookings.html"><span class="ico">📅</span>Bookings</a>
+      <a href="payments.html" class="active"><span class="ico">💰</span>Payments</a>
+      <a href="venue-setup.html"><span class="ico">🏟️</span>Venues</a>
+      <a href="customers.html"><span class="ico">👥</span>Customers</a>
+      <a href="promotions.html"><span class="ico">🎁</span>Promotions</a>
+      <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
+      <a href="payments.html#reports"><span class="ico">📈</span>Reports</a>
+      <a href="staff.html"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
+      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div><h1>Payments &amp; reconciliation</h1><span class="subtle small">Friday 8 Aug · every taka accounted for</span></div>
+      <div class="row"><button class="btn btn-secondary" data-toast="Exported payments-2026-08-08.csv 📄">⬇ Export CSV</button><button class="btn btn-primary" data-toast="Evening shift closing — see Staff & Shifts">💵 Close shift</button></div>
+    </div>
+
+    <div class="grid4" style="margin-bottom:16px">
+      <div class="kpi"><span class="label">Gross today</span><b class="value num">৳19,750</b><span class="delta">14 transactions</span></div>
+      <div class="kpi"><span class="label">Platform fees</span><b class="value num">−৳1,185</b><span class="delta">6% on online only</span></div>
+      <div class="kpi"><span class="label">Refunds</span><b class="value num">−৳2,200</b><span class="delta down">1 cancellation</span></div>
+      <div class="kpi"><span class="label">Net to you</span><b class="value num" style="color:var(--brand-600)">৳16,365</b><span class="delta up">Settles Mon 11 Aug</span></div>
+    </div>
+
+    <div class="row-wrap" style="margin-bottom:12px">
+      <button class="chip on" data-filter>Today</button>
+      <button class="chip" data-filter>bKash</button>
+      <button class="chip" data-filter>Nagad</button>
+      <button class="chip" data-filter>Cash</button>
+      <button class="chip" data-filter>Card</button>
+      <button class="chip" data-filter>Refunds</button>
+      <button class="chip" data-filter>Unmatched</button>
+    </div>
+
+    <div class="card table-wrap" style="padding:0;margin-bottom:16px">
+      <table class="table">
+        <thead><tr><th>Time</th><th>Booking</th><th>Customer</th><th>Method</th><th class="num">Gross</th><th class="num">Fee</th><th class="num">Net</th><th>Status</th><th>Shift · Source</th></tr></thead>
+        <tbody>
+          <tr><td class="num">6:12 PM</td><td class="num">TC-48291</td><td>Rafiul Karim</td><td>bKash · <span class="num">8H2K19</span></td><td class="num">৳2,550</td><td class="num">−৳153</td><td class="num">৳2,397</td><td><span class="badge green">Reconciled ✓</span></td><td>Evening · Online</td></tr>
+          <tr><td class="num">5:47 PM</td><td class="num">OG-7734</td><td>Open game (10 shares)</td><td>bKash / Nagad mix</td><td class="num">৳2,800</td><td class="num">−৳168</td><td class="num">৳2,632</td><td><span class="badge green">Reconciled ✓</span></td><td>Evening · Online</td></tr>
+          <tr><td class="num">4:02 PM</td><td class="num">TC-48277</td><td>Tanvir Ahmed</td><td>Card · Visa •••4412</td><td class="num">৳2,500</td><td class="num">−৳150</td><td class="num">৳2,350</td><td><span class="badge green">Reconciled ✓</span></td><td>Evening · Online</td></tr>
+          <tr><td class="num">3:05 PM</td><td class="num">TC-48288</td><td>Walk-in customer</td><td>Cash</td><td class="num">৳1,700</td><td class="num">—</td><td class="num">৳1,700</td><td><span class="badge green">Logged by Sumon</span></td><td>Afternoon · Walk-in</td></tr>
+          <tr><td class="num">1:22 PM</td><td class="num">TC-48285</td><td>Karim Traders XI</td><td>Nagad · <span class="num">N7761</span></td><td class="num">৳765</td><td class="num">−৳46</td><td class="num">৳719</td><td><span class="badge amber">Deposit · ৳1,785 due</span></td><td>Afternoon · Phone</td></tr>
+          <tr><td class="num">11:40 AM</td><td class="num">TC-48102</td><td>Sadia Rahman</td><td>bKash refund · <span class="num">R-2210</span></td><td class="num" style="color:var(--danger)">−৳2,200</td><td class="num">+৳132</td><td class="num" style="color:var(--danger)">−৳2,068</td><td><span class="badge blue">Refund sent</span></td><td>Morning · Online</td></tr>
+          <tr style="background:var(--warn-soft)"><td class="num">10:15 AM</td><td class="num">—</td><td>Unknown sender</td><td>bKash · <span class="num">5T9Q02</span></td><td class="num">৳1,700</td><td class="num">—</td><td class="num">৳1,700</td><td><span class="badge amber">Unmatched</span></td><td><button class="btn btn-sm btn-secondary" data-toast="Matched to TC-48293 deposit ✓">Match…</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid2" style="align-items:start" id="reports">
+      <section class="card">
+        <h3>Reconciliation summary</h3>
+        <div class="stack-sm" style="margin-top:10px">
+          <div class="between small"><span class="muted">Online (bKash · Nagad · card)</span><b class="num">৳7,850 · auto-matched ✓</b></div>
+          <div class="between small"><span class="muted">Cash collected (staff-logged)</span><b class="num">৳1,700</b></div>
+          <div class="between small"><span class="muted">Deposits outstanding</span><b class="num" style="color:var(--warn)">৳4,300</b></div>
+          <div class="between small"><span class="muted">Unmatched incoming</span><b class="num" style="color:var(--warn)">৳1,700 (1)</b></div>
+        </div>
+        <div class="alert ok" style="margin-top:12px"><span class="ico">🧾</span><div><b>Cash drawer vs ledger</b>Afternoon shift closed by Sumon: expected ৳1,700, counted ৳1,700 — <b>balanced ✓</b></div></div>
+      </section>
+
+      <section class="card">
+        <h3>Reports · this month</h3>
+        <div class="stack-sm" style="margin-top:10px">
+          <div><div class="between small"><span class="muted">bKash</span><b class="num">54% · ৳2,41,300</b></div><div class="progress"><i style="width:54%"></i></div></div>
+          <div><div class="between small"><span class="muted">Cash</span><b class="num">21% · ৳93,800</b></div><div class="progress"><i style="width:21%;background:var(--info)"></i></div></div>
+          <div><div class="between small"><span class="muted">Nagad</span><b class="num">15% · ৳67,000</b></div><div class="progress"><i style="width:15%;background:var(--warn)"></i></div></div>
+          <div><div class="between small"><span class="muted">Card</span><b class="num">10% · ৳44,700</b></div><div class="progress"><i style="width:10%;background:#8B5CF6"></i></div></div>
+        </div>
+        <div class="panel between" style="margin-top:12px"><div><b class="small">Next settlement</b><div class="tiny subtle">Online net → City Bank •••2214</div></div><b class="num">৳48,220 · Mon 11 Aug</b></div>
+        <button class="btn btn-sm btn-secondary" style="margin-top:10px" data-toast="Monthly report generated 📈">Generate monthly report</button>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

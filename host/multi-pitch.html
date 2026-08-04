@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-pitch booking · TurfChai Host</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+<style>
+  .selcell{border:1.5px solid var(--brand);background:var(--brand-soft);color:var(--brand-600);border-radius:var(--r-sm);padding:6px 8px;font-size:12px;font-weight:700;width:100%;min-height:44px;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge nodot" style="margin-left:6px;background:#EDE4FF;color:#6D3FC4">Host</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <span class="icon-btn" style="background:#EDE4FF;color:#6D3FC4;font-weight:700;border:none">SL</span>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:20px;max-width:1100px;padding-bottom:110px">
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="search.html">Find venue</a><span class="sep">/</span><span>Mirpur Sports City · pitch timeline</span></nav>
+
+  <div class="between" style="flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div><h1 style="font-size:22px;margin-bottom:2px">Mirpur Sports City · Sat 23 Aug</h1><span class="subtle small">Select slots across pitches — or grab the full-day bundle</span></div>
+    <button class="btn btn-secondary" data-toast="Full day selected: all 4 pitches, 8 AM–10 PM — ৳52,000 (bundle saves ৳9,200) ✓">⚡ Select full day · ৳52,000</button>
+  </div>
+
+  <div class="cal card" style="padding:0;overflow-x:auto;margin-bottom:14px">
+    <div class="cal-grid p4" style="min-width:860px">
+      <div class="cal-head"></div>
+      <div class="cal-head">Pitch A · 7-a-side</div>
+      <div class="cal-head">Pitch B · 7-a-side</div>
+      <div class="cal-head">Pitch C · 7-a-side</div>
+      <div class="cal-head">Pitch D · 9-a-side</div>
+
+      <div class="cal-time num">8:00 AM</div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed Pitch A 8 AM from selection">Selected ✓</button></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed Pitch B 8 AM">Selected ✓</button></div>
+      <div class="cal-cell"><button class="addcell" data-toast="Added Pitch C 8 AM — total now ৳27,400">+ ৳3,000</button></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed Pitch D 8 AM">Selected ✓</button></div>
+
+      <div class="cal-time num">10:00 AM</div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+      <div class="cal-cell"><div class="cal-ev online">Booked · league team</div></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+
+      <div class="cal-time num">12:00 PM</div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+      <div class="cal-cell"><button class="addcell" data-toast="Added — conflict check passed ✓">+ ৳3,000</button></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+
+      <div class="cal-time num">2:00 PM</div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+      <div class="cal-cell"><div class="cal-ev held">Held · another checkout</div></div>
+      <div class="cal-cell"><button class="addcell" data-toast="Added">+ ৳3,200</button></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓</button></div>
+
+      <div class="cal-time num">4:00 PM</div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓ · final</button></div>
+      <div class="cal-cell"><button class="addcell" data-toast="Added">+ ৳3,600</button></div>
+      <div class="cal-cell"><button class="addcell" data-toast="Added">+ ৳3,600</button></div>
+      <div class="cal-cell"><button class="selcell" data-toast="Removed">Selected ✓ · final</button></div>
+    </div>
+  </div>
+
+  <div class="alert warn" style="margin-bottom:14px"><span class="ico">⚠️</span><div><b>Conflict detected &amp; resolved</b>Pitch C 10 AM is taken by a league booking and Pitch B 2 PM is held by another checkout — both were excluded from your selection automatically.</div></div>
+
+  <div class="legend"><span><i style="background:var(--brand)"></i>Your selection</span><span><i style="background:var(--info)"></i>Existing booking</span><span><i style="background:repeating-linear-gradient(45deg,var(--warn),var(--warn) 3px,transparent 3px,transparent 6px)"></i>Held by others</span></div>
+</main>
+
+<div class="stickybar glass">
+  <div class="stickybar-inner">
+    <div><b class="num" style="font-size:18px">৳42,800</b><span class="subtle small"> · 14 slots across 3 pitches · 8 AM–6 PM</span><div class="tiny subtle">Live total updates as you select · full-day bundle would save ৳9,200</div></div>
+    <a class="btn btn-primary btn-lg" href="reserve.html">Continue to reserve →</a>
+  </div>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

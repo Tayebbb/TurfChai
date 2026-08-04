@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design system · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/turfchai.css">
+<style>
+  .swatch{display:flex;flex-direction:column;gap:6px;font-size:12px}
+  .swatch i{display:block;height:56px;border-radius:var(--r-sm);border:1px solid var(--border)}
+  .ds-sec{margin-bottom:34px}
+  .ds-sec h2{font-family:var(--font-display);font-size:19px;margin-bottom:4px}
+  .ds-sec>.subtle{display:block;margin-bottom:14px}
+</style>
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge gray nodot" style="margin-left:6px">Design System</span></a>
+    <div class="spacer"></div>
+    <button class="btn btn-sm btn-secondary" data-toggle-theme>🌙 Toggle light / dark</button>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:26px;max-width:1100px;padding-bottom:60px">
+  <h1 style="font-size:26px">TurfChai design system</h1>
+  <p class="subtle" style="margin-bottom:26px">Refined glassmorphism · Inter + Manrope · every token has a light &amp; dark value — flip the theme above to verify.</p>
+
+  <section class="ds-sec">
+    <h2>Color tokens</h2>
+    <span class="subtle small">Brand green is the action color; semantic colors carry meaning consistently across all five roles.</span>
+    <div class="grid4" style="gap:12px">
+      <div class="swatch"><i style="background:var(--brand)"></i><b>--brand</b> action / selected</div>
+      <div class="swatch"><i style="background:var(--brand-soft)"></i><b>--brand-soft</b> tint fills</div>
+      <div class="swatch"><i style="background:var(--ok)"></i><b>--ok</b> success / paid</div>
+      <div class="swatch"><i style="background:var(--warn)"></i><b>--warn</b> pending / SLA</div>
+      <div class="swatch"><i style="background:var(--danger)"></i><b>--danger</b> destructive / errors</div>
+      <div class="swatch"><i style="background:var(--info)"></i><b>--info</b> owner / neutral info</div>
+      <div class="swatch"><i style="background:var(--surface-2);border-style:dashed"></i><b>--surface-2</b> panels</div>
+      <div class="swatch"><i style="background:var(--text)"></i><b>--text</b> primary text</div>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Typography</h2>
+    <span class="subtle small">Manrope for display, Inter for UI. Tabular numerals (.num) for prices, times &amp; IDs.</span>
+    <div class="card stack-sm">
+      <span style="font-family:var(--font-display);font-size:28px;font-weight:800">Display / Manrope 800 — Book your pitch</span>
+      <span style="font-size:19px;font-weight:700;font-family:var(--font-display)">Heading / Manrope 700</span>
+      <span>Body / Inter 400 — Kick Off Arena, Dhanmondi · floodlit 7-a-side turf.</span>
+      <span class="small muted">Small muted / Inter — helper text and metadata</span>
+      <span class="num" style="font-weight:700">Numeric / ৳2,550 · 7:30 PM · TC-48291</span>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Buttons &amp; actions</h2>
+    <span class="subtle small">One primary action per view. 44px minimum touch targets.</span>
+    <div class="card">
+      <div class="row-wrap">
+        <button class="btn btn-primary">Primary</button>
+        <button class="btn btn-secondary">Secondary</button>
+        <button class="btn btn-tertiary">Tertiary</button>
+        <button class="btn btn-danger">Danger</button>
+        <button class="btn btn-ghost-danger">Ghost danger</button>
+        <button class="btn btn-primary btn-sm">Small</button>
+        <button class="btn btn-primary btn-lg">Large</button>
+        <button class="icon-btn" aria-label="icon">🔔</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Badges, chips &amp; status</h2>
+    <span class="subtle small">Badges show state (with dot); chips filter &amp; select (toggle .on).</span>
+    <div class="card stack-sm">
+      <div class="row-wrap"><span class="badge green">Confirmed</span><span class="badge amber">Pending</span><span class="badge red">Cancelled</span><span class="badge blue">Deposit paid</span><span class="badge gray">Draft</span><span class="verified">✓ Verified</span><span class="skill">Intermediate</span></div>
+      <div class="row-wrap"><button class="chip on" data-filter>Tonight</button><button class="chip" data-filter>7-a-side</button><button class="chip" data-filter>Under ৳2,000</button><button class="chip" data-filter>Floodlit</button></div>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Glass surfaces &amp; cards</h2>
+    <span class="subtle small">Glass is reserved for elevated moments — nav, summaries, key panels. Regular cards do the everyday work.</span>
+    <div class="grid2">
+      <div class="glass glass-card"><b style="font-family:var(--font-display)">Glass card</b><p class="small muted" style="margin-top:4px">Backdrop blur + translucent fill + 1px inner border. Sits above the ambient background.</p></div>
+      <div class="card"><b style="font-family:var(--font-display)">Standard card</b><p class="small muted" style="margin-top:4px">Opaque surface for dense content: tables, forms, lists.</p></div>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Forms</h2>
+    <div class="card grid2">
+      <div>
+        <div class="field"><label for="dsIn">Text input</label><input class="input" id="dsIn" placeholder="e.g. Kick Off Arena"></div>
+        <div class="field"><label for="dsSel">Select</label><select class="select" id="dsSel"><option>Dhanmondi</option><option>Mirpur</option></select></div>
+        <div class="field"><label for="dsErr">Error state</label><input class="input" id="dsErr" value="017" aria-invalid="true" style="border-color:var(--danger)"><span class="tiny" style="color:var(--danger)">Enter a valid 11-digit number</span></div>
+      </div>
+      <div>
+        <label class="checkline"><input type="checkbox" checked><span>Checkbox line</span></label>
+        <label class="switch" style="margin-top:10px"><input type="checkbox" checked><span class="track"></span><span class="small">Toggle switch</span></label>
+        <div class="field" style="margin-top:12px"><label>OTP</label><div class="row"><input class="otp" value="4"><input class="otp" value="8"><input class="otp"><input class="otp"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Slots, dates &amp; booking primitives</h2>
+    <div class="card stack">
+      <div class="datestrip">
+        <button class="datebox on"><span class="tiny">SAT</span><b class="num">9</b></button>
+        <button class="datebox"><span class="tiny">SUN</span><b class="num">10</b></button>
+        <button class="datebox"><span class="tiny">MON</span><b class="num">11</b></button>
+        <button class="datebox off"><span class="tiny">TUE</span><b class="num">12</b></button>
+      </div>
+      <div class="slotgrid">
+        <button class="slot on"><b class="num">7:30 PM</b><span class="tiny num">৳2,550</span></button>
+        <button class="slot"><b class="num">9:00 PM</b><span class="tiny num">৳2,550</span></button>
+        <button class="slot off" disabled><b class="num">6:00 PM</b><span class="tiny">Booked</span></button>
+        <button class="slot"><b class="num">10:30 PM</b><span class="tiny num">৳2,200</span></button>
+      </div>
+      <div class="stepper">
+        <div class="step done"><span class="dot">✓</span>Slot</div><div class="step-line done"></div>
+        <div class="step active"><span class="dot">2</span>Pay</div><div class="step-line"></div>
+        <div class="step"><span class="dot">3</span>Done</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Data display</h2>
+    <div class="grid2">
+      <div class="kpi card"><div class="label">Today's revenue</div><div class="value num">৳18,400</div><div class="delta up">▲ 12% vs last Sat</div></div>
+      <div class="card"><div class="between small"><span>Occupancy</span><b class="num">72%</b></div><div class="progress" style="margin-top:8px"><i style="width:72%"></i></div></div>
+    </div>
+    <div class="card table-wrap" style="padding:0;margin-top:12px">
+      <table class="table">
+        <thead><tr><th>Booking</th><th class="num">Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="num">TC-48291</td><td class="num">৳2,550</td><td><span class="badge green">Paid</span></td></tr>
+          <tr><td class="num">TC-48293</td><td class="num">৳1,700</td><td><span class="badge amber">Deposit</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Feedback</h2>
+    <div class="stack-sm">
+      <div class="alert ok"><span class="ico">✅</span><div><b>Success</b>Booking confirmed — ticket sent by SMS.</div></div>
+      <div class="alert info"><span class="ico">💡</span><div><b>Info</b>Off-peak slots are 30% cheaper on weekdays.</div></div>
+      <div class="alert warn"><span class="ico">⚠️</span><div><b>Warning</b>Deposit of ৳510 due before kickoff.</div></div>
+      <div class="alert danger"><span class="ico">⛔</span><div><b>Error</b>Payment failed — no money was taken.</div></div>
+      <div class="row-wrap"><button class="btn btn-secondary" data-toast="This is a toast — auto-dismisses ✓">Show toast</button><button class="btn btn-secondary" data-open="#dsModal">Open modal</button></div>
+    </div>
+  </section>
+
+  <section class="ds-sec">
+    <h2>Accessibility commitments</h2>
+    <div class="card">
+      <ul class="small muted" style="padding-left:16px;line-height:2">
+        <li>WCAG AA contrast in both themes — brand-on-white and all text tokens pass 4.5:1</li>
+        <li>44px minimum touch targets; visible focus rings on all interactive elements</li>
+        <li>Status never relies on color alone — badges pair dot + label, alerts pair icon + text</li>
+        <li>Dialogs use role="dialog", aria-modal, labelled headings, and Escape-to-close</li>
+        <li>Tabular numerals for scanning prices and times; skeletons announce loading</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="dsModal" role="dialog" aria-modal="true" aria-labelledby="dsmTitle">
+  <div class="modal center">
+    <div class="check-anim" aria-hidden="true">✓</div>
+    <h3 id="dsmTitle">Modal pattern</h3>
+    <p class="muted small">Centered dialog with backdrop, Escape-to-close, and a single primary action.</p>
+    <button class="btn btn-primary btn-block" data-close style="margin-top:10px">Got it</button>
+  </div>
+</div>
+<script src="js/turfchai.js"></script>
+</body>
+</html>

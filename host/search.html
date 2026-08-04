@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find a tournament venue · TurfChai Host</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+<style>
+  @media (max-width:620px){.venue-card > .photo{width:100%!important;min-height:110px}}
+</style>
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge nodot" style="margin-left:6px;background:#EDE4FF;color:#6D3FC4">Host</span></a>
+    <nav class="navlinks">
+      <a href="dashboard.html">Overview</a>
+      <a href="search.html" class="active">Find Venue</a>
+      <a href="dashboard.html">Reservations</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <span class="icon-btn" style="background:#EDE4FF;color:#6D3FC4;font-weight:700;border:none">SL</span>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:24px;max-width:1100px">
+  <h1 style="font-size:24px;margin-bottom:2px">Find a tournament venue</h1>
+  <p class="subtle" style="margin-bottom:18px">Multi-pitch, multi-hour and full-day reservations for organized events</p>
+
+  <div class="glass glass-card" style="margin-bottom:18px">
+    <div class="grid4" style="gap:10px">
+      <div class="field" style="margin:0"><label for="hLoc">Location</label><select class="select" id="hLoc"><option selected>Dhaka · any area</option><option>Dhanmondi</option><option>Mirpur</option><option>Uttara</option></select></div>
+      <div class="field" style="margin:0"><label for="hDate">Date</label><input class="input" id="hDate" value="Sat 23 Aug 2026"></div>
+      <div class="field" style="margin:0"><label for="hDur">Duration</label><select class="select" id="hDur"><option>Half day (5h)</option><option selected>Full day (8 AM – 10 PM)</option><option>Multi-day</option></select></div>
+      <div class="field" style="margin:0"><label for="hPitch">Pitches needed</label><select class="select" id="hPitch"><option>1</option><option>2</option><option selected>3+</option></select></div>
+    </div>
+    <div class="between" style="flex-wrap:wrap;gap:10px;margin-top:10px">
+      <div class="row-wrap">
+        <button class="chip on" data-filter>Parking 20+ cars</button>
+        <button class="chip on" data-filter>Changing rooms</button>
+        <button class="chip" data-filter>Spectator space</button>
+        <button class="chip" data-filter>PA system</button>
+        <button class="chip" data-filter>Under ৳60,000/day</button>
+      </div>
+      <button class="btn btn-primary" data-toast="3 venues match your tournament needs">Search venues</button>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="venue-card" style="flex-direction:row;display:flex;gap:14px;align-items:stretch;flex-wrap:wrap">
+      <div class="photo" style="width:180px;min-height:130px;flex:0 0 auto">🏟️</div>
+      <div style="flex:1;min-width:240px;padding:12px 4px">
+        <div class="between"><b style="font-family:var(--font-display);font-size:17px">Mirpur Sports City <span class="verified">✓ Verified</span></b><span class="rating">4.7</span></div>
+        <div class="subtle small">Mirpur 10 · 4 pitches (7-a-side ×3, 9-a-side ×1)</div>
+        <div class="row-wrap" style="margin:8px 0"><span class="chip on">4 pitches</span><span class="chip on">Parking 40</span><span class="chip on">PA system</span><span class="chip on">Spectator stand</span></div>
+        <div class="between" style="flex-wrap:wrap;gap:8px">
+          <span><b class="num" style="font-size:17px">৳52,000</b> <span class="subtle small">full day · all 4 pitches</span> <span class="badge green nodot">Sat 23 Aug available</span></span>
+          <a class="btn btn-primary" href="multi-pitch.html">Check pitch timeline →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="venue-card" style="flex-direction:row;display:flex;gap:14px;align-items:stretch;flex-wrap:wrap">
+      <div class="photo alt1" style="width:180px;min-height:130px;flex:0 0 auto">🌙</div>
+      <div style="flex:1;min-width:240px;padding:12px 4px">
+        <div class="between"><b style="font-family:var(--font-display);font-size:17px">Kick Off Arena <span class="verified">✓ Verified</span></b><span class="rating">4.8</span></div>
+        <div class="subtle small">Dhanmondi 27 · 3 pitches (7-a-side ×2, futsal ×1)</div>
+        <div class="row-wrap" style="margin:8px 0"><span class="chip on">3 pitches</span><span class="chip on">Parking 20</span><span class="chip on">Changing rooms</span><span class="chip">No PA</span></div>
+        <div class="between" style="flex-wrap:wrap;gap:8px">
+          <span><b class="num" style="font-size:17px">৳41,500</b> <span class="subtle small">full day · all 3 pitches</span> <span class="badge amber nodot">Partial — futsal booked 4–6 PM</span></span>
+          <a class="btn btn-secondary" href="multi-pitch.html">Check pitch timeline →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="venue-card" style="flex-direction:row;display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;opacity:.75">
+      <div class="photo alt2" style="width:180px;min-height:130px;flex:0 0 auto">🥅</div>
+      <div style="flex:1;min-width:240px;padding:12px 4px">
+        <div class="between"><b style="font-family:var(--font-display);font-size:17px">Uttara Champions Field <span class="verified">✓ Verified</span></b><span class="rating">4.5</span></div>
+        <div class="subtle small">Uttara 11 · 2 pitches</div>
+        <div class="between" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+          <span class="badge red">Fully booked Sat 23 Aug</span>
+          <button class="btn btn-sm btn-secondary" data-toast="We'll alert you if Sat 23 Aug opens up 🔔">Notify if free</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

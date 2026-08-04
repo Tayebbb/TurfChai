@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity log · TurfChai Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge red nodot" style="margin-left:6px">Admin</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <a class="icon-btn" href="profile.html" style="background:var(--danger-soft);color:var(--danger);font-weight:700;border:none;text-decoration:none">NA</a>
+  </div>
+</header>
+
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Admin console">
+      <a href="dashboard.html"><span class="ico">📊</span>Dashboard</a>
+      <a href="turf-requests.html"><span class="ico">📥</span>Turf Requests <span class="countpill" style="margin-left:auto">4</span></a>
+      <a href="turfs.html"><span class="ico">🏟️</span>Turfs</a>
+      <a href="users.html"><span class="ico">👥</span>Users &amp; Players</a>
+      <a href="admins.html"><span class="ico">🛡️</span>Admin Accounts</a>
+      <a href="activity.html" class="active"><span class="ico">🧾</span>Activity Log</a>
+      <a href="profile.html"><span class="ico">👤</span>My Profile</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div><h1>Activity log</h1><span class="subtle small">Immutable audit trail of every admin action</span></div>
+      <button class="btn btn-secondary" data-toast="Exported activity-log.csv 📄">⬇ Export</button>
+    </div>
+
+    <div class="row-wrap" style="margin-bottom:14px">
+      <input class="input" style="max-width:240px" placeholder="🔍 Search action, target, ID…">
+      <button class="chip on" data-filter>All</button>
+      <button class="chip" data-filter>Approvals</button>
+      <button class="chip" data-filter>Rejections</button>
+      <button class="chip" data-filter>User actions</button>
+      <button class="chip" data-filter>Sign-ins</button>
+      <button class="chip" data-filter>Nadia</button>
+      <button class="chip" data-filter>Farid</button>
+    </div>
+
+    <div class="card table-wrap" style="padding:0">
+      <table class="table">
+        <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td class="num">6:24 PM</td><td><span class="avatar sm b">FH</span> Farid</td><td><span class="badge green nodot">Approved</span></td><td class="num">TR-1039</td><td class="small muted">GreenTurf Annex → pending listing created for Nusrat Jahan</td></tr>
+          <tr><td class="num">4:02 PM</td><td><span class="avatar sm" style="background:var(--danger-soft);color:var(--danger)">NA</span> Nadia</td><td><span class="badge red nodot">Suspended user</span></td><td class="num">#38112</td><td class="small muted">Reason: repeated no-shows + abusive chat · auto-lift 22 Aug</td></tr>
+          <tr><td class="num">1:15 PM</td><td><span class="avatar sm b">FH</span> Farid</td><td><span class="badge red nodot">Rejected</span></td><td class="num">TR-1037</td><td class="small muted">"Trade license expired March 2026 — reapply with renewal" · owner notified</td></tr>
+          <tr><td class="num">11:41 AM</td><td><span class="avatar sm c">TS</span> Tania</td><td><span class="badge blue nodot">Refund approved</span></td><td class="num">TC-48102</td><td class="small muted">৳2,200 refund to Sadia Rahman · policy: free cancel 24h+</td></tr>
+          <tr><td class="num">11:30 AM</td><td>⚙️ System</td><td><span class="badge amber nodot">Flag raised</span></td><td class="num">V-0077</td><td class="small muted">Payout anomaly: refund ratio 4× baseline · venue auto-suspended pending review</td></tr>
+          <tr><td class="num">9:02 AM</td><td><span class="avatar sm" style="background:var(--danger-soft);color:var(--danger)">NA</span> Nadia</td><td><span class="badge gray nodot">Signed in</span></td><td>—</td><td class="small muted">2FA passed · Chrome on Windows · Dhaka IP</td></tr>
+          <tr><td class="num">Yesterday</td><td><span class="avatar sm" style="background:var(--danger-soft);color:var(--danger)">NA</span> Nadia</td><td><span class="badge blue nodot">Updated turf</span></td><td class="num">V-0044</td><td class="small muted">Lalmatia Play Zone — corrected area tag · note logged</td></tr>
+          <tr><td class="num">Yesterday</td><td><span class="avatar sm b">FH</span> Farid</td><td><span class="badge amber nodot">Requested changes</span></td><td class="num">TR-1036</td><td class="small muted">"Please re-upload NID — photo unreadable" · owner notified</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="between small" style="margin-top:10px"><span class="subtle">Showing 8 of 3,412 entries</span><div class="row"><button class="btn btn-sm btn-tertiary" data-toast="Previous page">‹ Prev</button><button class="btn btn-sm btn-tertiary" data-toast="Next page">Next ›</button></div></div>
+  </main>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

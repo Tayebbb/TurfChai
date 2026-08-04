@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin sign in · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<main class="wrap-form" style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:32px;padding-bottom:32px">
+  <div class="center" style="margin-bottom:20px">
+    <a class="brand" href="../index.html" style="justify-content:center"><svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
+    <h1 style="font-size:22px;margin-top:10px">Admin Console</h1>
+    <p class="subtle small">Restricted area · authorized administrators only</p>
+  </div>
+
+  <div class="glass glass-card">
+    <!-- Invalid credentials state -->
+    <div class="alert danger" style="margin-bottom:14px"><span class="ico">⚠️</span><div><b>Invalid credentials</b>Email or password is incorrect. 2 attempts remaining before a 15-minute lockout.</div></div>
+
+    <div class="field"><label for="em">Work email</label><input class="input" id="em" type="email" value="nadia@turfchai.com" autocomplete="username"></div>
+    <div class="field"><label for="pw">Password</label><input class="input" id="pw" type="password" value="••••••••••" autocomplete="current-password" aria-invalid="true" style="border-color:var(--danger)"></div>
+    <div class="between" style="margin-bottom:14px">
+      <label class="checkline" style="margin:0"><input type="checkbox"><span class="small">Trust this device 30 days</span></label>
+      <a class="small" href="#" data-toast="Reset link sent to your work email 📩">Forgot password?</a>
+    </div>
+    <a class="btn btn-primary btn-lg btn-block" href="dashboard.html">Retry sign in</a>
+    <p class="tiny subtle center" style="margin-top:10px">🔐 Protected by 2FA — you'll confirm a code after sign-in. All sessions are logged in the <b>activity trail</b>.</p>
+  </div>
+
+  <div class="center" style="margin-top:14px"><button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button></div>
+</main>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

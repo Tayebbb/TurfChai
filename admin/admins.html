@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin accounts · TurfChai Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge red nodot" style="margin-left:6px">Admin</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <a class="icon-btn" href="profile.html" style="background:var(--danger-soft);color:var(--danger);font-weight:700;border:none;text-decoration:none">NA</a>
+  </div>
+</header>
+
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Admin console">
+      <a href="dashboard.html"><span class="ico">📊</span>Dashboard</a>
+      <a href="turf-requests.html"><span class="ico">📥</span>Turf Requests <span class="countpill" style="margin-left:auto">4</span></a>
+      <a href="turfs.html"><span class="ico">🏟️</span>Turfs</a>
+      <a href="users.html"><span class="ico">👥</span>Users &amp; Players</a>
+      <a href="admins.html" class="active"><span class="ico">🛡️</span>Admin Accounts</a>
+      <a href="activity.html"><span class="ico">🧾</span>Activity Log</a>
+      <a href="profile.html"><span class="ico">👤</span>My Profile</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div><h1>Admin accounts</h1><span class="subtle small">Only Super Admins can create or modify admin accounts</span></div>
+    </div>
+
+    <div class="grid2" style="align-items:start">
+      <section class="card">
+        <h3>Current admins</h3>
+        <div class="stack-sm" style="margin-top:10px">
+          <div class="panel between">
+            <div class="row" style="gap:8px"><span class="avatar" style="background:var(--danger-soft);color:var(--danger)">NA</span><div><b class="small">Nadia Amin (you)</b> <span class="badge red nodot">Super Admin</span><div class="tiny subtle">nadia@turfchai.com · last active now</div></div></div>
+            <a class="btn btn-sm btn-tertiary" href="profile.html">Profile</a>
+          </div>
+          <div class="panel between">
+            <div class="row" style="gap:8px"><span class="avatar b">FH</span><div><b class="small">Farid Hasan</b> <span class="badge blue nodot">Verification Admin</span><div class="tiny subtle">farid@turfchai.com · last active 2h ago</div></div></div>
+            <div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-toast="Edit admin drawer — role &amp; permissions">Edit</button><button class="btn btn-sm btn-ghost-danger" data-toast="Deactivation requires a second Super Admin approval">Deactivate</button></div>
+          </div>
+          <div class="panel between">
+            <div class="row" style="gap:8px"><span class="avatar c">TS</span><div><b class="small">Tania Sultana</b> <span class="badge green nodot">Support Admin</span><div class="tiny subtle">tania@turfchai.com · last active 20m ago</div></div></div>
+            <div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-toast="Edit admin drawer">Edit</button><button class="btn btn-sm btn-ghost-danger" data-toast="Deactivation requires a second Super Admin approval">Deactivate</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Create admin account</h3>
+        <div class="field" style="margin-top:8px"><label for="naName">Full name</label><input class="input" id="naName" placeholder="e.g. Sajid Rahman"></div>
+        <div class="field"><label for="naEmail">Work email</label><input class="input" id="naEmail" type="email" placeholder="name@turfchai.com"></div>
+        <div class="field"><label for="naRole">Role</label>
+          <select class="select" id="naRole">
+            <option selected>Verification Admin — turf requests &amp; documents</option>
+            <option>Support Admin — users, bookings &amp; disputes</option>
+            <option>Finance Admin — payouts &amp; reconciliation</option>
+            <option>Super Admin — full access (requires approval)</option>
+          </select>
+        </div>
+        <div class="field"><label>Permissions</label>
+          <div class="stack-sm">
+            <label class="checkline"><input type="checkbox" checked><span>Review &amp; approve turf requests</span></label>
+            <label class="checkline"><input type="checkbox" checked><span>Manage turf listings</span></label>
+            <label class="checkline"><input type="checkbox"><span>Manage users (suspend / delete)</span></label>
+            <label class="checkline"><input type="checkbox"><span>View financial reports</span></label>
+            <label class="checkline"><input type="checkbox"><span>Manage admin accounts</span></label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" data-open="#adminMade">Create account &amp; send invite</button>
+        <p class="tiny subtle center" style="margin-top:8px">Invite link expires in 48h · new admin must enable 2FA on first sign-in</p>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="adminMade" role="dialog" aria-modal="true" aria-labelledby="amTitle">
+  <div class="modal center">
+    <div class="check-anim" aria-hidden="true">🛡️</div>
+    <h3 id="amTitle">Admin account created</h3>
+    <p class="muted small">An invite was emailed. The account stays <b>inactive</b> until they set a password and enable 2FA. This action is recorded in the activity log.</p>
+    <div class="stack-sm" style="margin-top:12px">
+      <a class="btn btn-primary btn-block" href="activity.html">View in activity log</a>
+      <button class="btn btn-tertiary btn-block" data-close>Done</button>
+    </div>
+  </div>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

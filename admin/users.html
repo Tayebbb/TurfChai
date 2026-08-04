@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Users &amp; players · TurfChai Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge red nodot" style="margin-left:6px">Admin</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <a class="icon-btn" href="profile.html" style="background:var(--danger-soft);color:var(--danger);font-weight:700;border:none;text-decoration:none">NA</a>
+  </div>
+</header>
+
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Admin console">
+      <a href="dashboard.html"><span class="ico">📊</span>Dashboard</a>
+      <a href="turf-requests.html"><span class="ico">📥</span>Turf Requests <span class="countpill" style="margin-left:auto">4</span></a>
+      <a href="turfs.html"><span class="ico">🏟️</span>Turfs</a>
+      <a href="users.html" class="active"><span class="ico">👥</span>Users &amp; Players</a>
+      <a href="admins.html"><span class="ico">🛡️</span>Admin Accounts</a>
+      <a href="activity.html"><span class="ico">🧾</span>Activity Log</a>
+      <a href="profile.html"><span class="ico">👤</span>My Profile</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div><h1>Users &amp; players</h1><span class="subtle small">41,270 registered · 12,400 active this month</span></div>
+    </div>
+
+    <div class="row-wrap" style="margin-bottom:14px">
+      <input class="input" style="max-width:260px" placeholder="🔍 Search name, phone, ID…">
+      <button class="chip on" data-filter>All</button>
+      <button class="chip" data-filter>Players</button>
+      <button class="chip" data-filter>Owners</button>
+      <button class="chip" data-filter>Hosts</button>
+      <button class="chip" data-filter>Suspended</button>
+      <button class="chip" data-filter>Reported</button>
+    </div>
+
+    <div class="card table-wrap" style="padding:0">
+      <table class="table">
+        <thead><tr><th>User</th><th>Phone</th><th>Roles</th><th class="num">Bookings</th><th class="num">Reliability</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div class="row" style="gap:8px"><span class="avatar sm">RK</span><div><b>Rafiul Karim</b><br><span class="tiny subtle num">#40221</span></div></div></td>
+            <td class="num small">+880 1712 ••• 890</td><td><span class="badge green nodot">Player</span></td><td class="num">12</td><td class="num">98%</td><td>Mar 2025</td><td><span class="badge green">Active</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-open="#editUser">Update</button><button class="btn btn-sm btn-ghost-danger" data-open="#delUser">Delete</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="row" style="gap:8px"><span class="avatar sm" style="background:var(--info-soft);color:var(--info)">MH</span><div><b>Mahmudul Hasan</b><br><span class="tiny subtle num">#28810</span></div></div></td>
+            <td class="num small">+880 1811 ••• 344</td><td><span class="badge blue nodot">Owner</span> <span class="badge green nodot">Player</span></td><td class="num">31</td><td class="num">100%</td><td>Jan 2024</td><td><span class="badge green">Active</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-open="#editUser">Update</button><button class="btn btn-sm btn-ghost-danger" data-open="#delUser">Delete</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="row" style="gap:8px"><span class="avatar sm c">RH</span><div><b>Rifat Hossain</b><br><span class="tiny subtle num">#33107</span></div></div></td>
+            <td class="num small">+880 1616 ••• 771</td><td><span class="badge green nodot">Player</span> <span class="badge blue nodot">Game host</span></td><td class="num">68</td><td class="num">97%</td><td>Aug 2024</td><td><span class="badge green">Active</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-open="#editUser">Update</button><button class="btn btn-sm btn-ghost-danger" data-open="#delUser">Delete</button></div></td>
+          </tr>
+          <tr style="background:var(--danger-soft)">
+            <td><div class="row" style="gap:8px"><span class="avatar sm d">MB</span><div><b>M. Babul</b><br><span class="tiny subtle num">#38112</span></div></div></td>
+            <td class="num small">+880 1999 ••• 402</td><td><span class="badge green nodot">Player</span></td><td class="num">9</td><td class="num" style="color:var(--danger)">61%</td><td>Nov 2025</td><td><span class="badge red">Suspended</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-tertiary" data-toast="Suspension: repeated no-shows + abusive chat · lifted 22 Aug unless appealed">Reason</button><button class="btn btn-sm btn-secondary" data-toast="Suspension lifted early — logged with your admin ID">Reinstate</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="row" style="gap:8px"><span class="avatar sm b">SK</span><div><b>Salma Khatun</b><br><span class="tiny subtle num">#41055</span></div></div></td>
+            <td class="num small">+880 1717 ••• 505</td><td><span class="badge amber nodot">Owner (pending)</span></td><td class="num">2</td><td class="num">100%</td><td>Jul 2026</td><td><span class="badge amber">Awaiting TR-1041</span></td>
+            <td><div class="row" style="gap:6px"><a class="btn btn-sm btn-secondary" href="request-review.html">Request</a><button class="btn btn-sm btn-ghost-danger" data-open="#delUser">Delete</button></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Update user drawer -->
+<div class="overlay drawer-mode" id="editUser" role="dialog" aria-modal="true" aria-labelledby="euTitle">
+  <div class="modal">
+    <div class="between"><h3 id="euTitle">Update user · Rafiul Karim</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="field" style="margin-top:8px"><label for="euName">Name</label><input class="input" id="euName" value="Rafiul Karim"></div>
+    <div class="field"><label for="euPhone">Phone</label><input class="input num" id="euPhone" value="+880 1712 345 890"></div>
+    <div class="field"><label for="euStatus">Account status</label><select class="select" id="euStatus"><option selected>Active</option><option>Restricted (no open games)</option><option>Suspended</option></select></div>
+    <div class="field"><label>Roles</label>
+      <div class="row-wrap"><button class="chip on" data-filter>Player</button><button class="chip" data-filter>Owner</button><button class="chip" data-filter>Host</button></div>
+    </div>
+    <div class="field"><label for="euNote">Admin note (required for status changes)</label><input class="input" id="euNote" placeholder="Why is this change being made?"></div>
+    <button class="btn btn-primary btn-block" data-close data-toast="User updated — change logged ✓">Save changes</button>
+  </div>
+</div>
+
+<!-- Delete user modal -->
+<div class="overlay" id="delUser" role="dialog" aria-modal="true" aria-labelledby="duTitle">
+  <div class="modal">
+    <div class="fail-anim" aria-hidden="true">!</div>
+    <h3 id="duTitle" class="center">Delete this account?</h3>
+    <div class="alert danger" style="margin:12px 0"><span class="ico">⚠️</span><div><b>Impact of deletion</b>
+      <ul class="tiny" style="margin:6px 0 0;padding-left:16px;line-height:1.8">
+        <li><b>1 upcoming booking</b> (TC-48291, ৳2,550) is cancelled &amp; refunded</li>
+        <li>User exits 1 open game — the spot reopens to others</li>
+        <li>1,240 loyalty points are forfeited</li>
+        <li>Personal data is erased in 30 days per policy · transactions kept for audit</li>
+      </ul></div>
+    </div>
+    <div class="stack-sm">
+      <button class="btn btn-danger btn-block" data-close data-toast="Account deleted — confirmation SMS sent, action logged">Delete account</button>
+      <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

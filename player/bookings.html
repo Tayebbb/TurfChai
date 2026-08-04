@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My bookings · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body class="has-bottomnav">
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="home.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
+    <nav class="navlinks">
+      <a href="explore.html">Explore Venues</a>
+      <a href="../solo/open-games.html">Open Games</a>
+      <a href="bookings.html" class="active">My Bookings</a>
+      <a href="home.html#rewards">Rewards</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <a class="icon-btn" href="home.html" aria-label="Profile" style="background:var(--brand-soft);color:var(--brand-600);font-weight:700;border:none;text-decoration:none">RK</a>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:24px;max-width:860px">
+  <h1 style="font-size:24px">My bookings</h1>
+
+  <div class="tabs" data-tabs="bk">
+    <button class="tab on" data-tab="up">Upcoming (2)</button>
+    <button class="tab" data-tab="pend">Pending payment (1)</button>
+    <button class="tab" data-tab="done">Completed</button>
+    <button class="tab" data-tab="canc">Cancelled</button>
+  </div>
+
+  <!-- UPCOMING -->
+  <div class="tabpanel on" data-panel="up" data-panel-group="bk">
+    <div class="stack">
+      <div class="card">
+        <div class="between" style="flex-wrap:wrap;gap:10px">
+          <div class="row">
+            <div class="photo" style="width:56px;height:56px;font-size:22px;flex:none">⚽</div>
+            <div><b>Kick Off Arena · Pitch 2</b>
+              <div class="subtle small">Fri 8 Aug · 7:30–9:00 PM · Ref TC-48291</div>
+              <div class="row-wrap" style="margin-top:4px"><span class="badge green">Confirmed</span><span class="badge amber">6/10 paid</span></div>
+            </div>
+          </div>
+          <div class="row-wrap">
+            <a class="btn btn-sm btn-secondary" href="split-payment.html">Invite players</a>
+            <button class="btn btn-sm btn-secondary" data-toast="Directions opened 🗺️">Directions</button>
+            <a class="btn btn-sm btn-primary" href="booking-detail.html">Details</a>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="between" style="flex-wrap:wrap;gap:10px">
+          <div class="row">
+            <div class="photo alt2" style="width:56px;height:56px;font-size:22px;flex:none">🏸</div>
+            <div><b>ShuttleZone Lalmatia · Court 1</b>
+              <div class="subtle small">Sun 10 Aug · 9:00–10:00 PM · Ref TC-48307</div>
+              <div class="row-wrap" style="margin-top:4px"><span class="badge green">Confirmed</span><span class="badge green">Paid</span></div>
+            </div>
+          </div>
+          <div class="row-wrap">
+            <button class="btn btn-sm btn-secondary" data-open="#resched">Reschedule</button>
+            <a class="btn btn-sm btn-ghost-danger" href="cancel.html">Cancel</a>
+            <a class="btn btn-sm btn-primary" href="booking-detail.html">Details</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PENDING -->
+  <div class="tabpanel" data-panel="pend" data-panel-group="bk">
+    <div class="card">
+      <div class="between" style="flex-wrap:wrap;gap:10px">
+        <div class="row">
+          <div class="photo alt1" style="width:56px;height:56px;font-size:22px;flex:none">⚽</div>
+          <div><b>GreenTurf Mohammadpur · Pitch A</b>
+            <div class="subtle small">Tue 12 Aug · 8:30–9:30 PM · Ref TC-48312</div>
+            <div class="row-wrap" style="margin-top:4px"><span class="badge amber">Pending payment</span><span class="badge amber">Deposit paid · ৳1,260 due</span></div>
+          </div>
+        </div>
+        <div class="row-wrap">
+          <a class="btn btn-sm btn-primary" href="checkout.html">Pay balance ৳1,260</a>
+          <a class="btn btn-sm btn-ghost-danger" href="cancel.html">Cancel</a>
+        </div>
+      </div>
+      <div class="alert warn" style="margin-top:12px"><span class="ico">⏳</span><div>Balance due by <b>Tue 12 Aug, 2:30 PM</b> or the booking auto-cancels and the deposit is refunded per policy.</div></div>
+    </div>
+  </div>
+
+  <!-- COMPLETED -->
+  <div class="tabpanel" data-panel="done" data-panel-group="bk">
+    <div class="stack">
+      <div class="card">
+        <div class="between" style="flex-wrap:wrap;gap:10px">
+          <div class="row">
+            <div class="photo alt1" style="width:56px;height:56px;font-size:22px;flex:none">⚽</div>
+            <div><b>GreenTurf Mohammadpur · Pitch B</b>
+              <div class="subtle small">Fri 1 Aug · 7:00–8:00 PM · Ref TC-47950</div>
+              <div class="row-wrap" style="margin-top:4px"><span class="badge green">Completed</span><span class="badge blue nodot">+150 pts earned</span></div>
+            </div>
+          </div>
+          <div class="row-wrap">
+            <button class="btn btn-sm btn-secondary" data-toast="Receipt downloaded 🧾">Receipt</button>
+            <a class="btn btn-sm btn-primary" href="review.html">Leave review</a>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="between" style="flex-wrap:wrap;gap:10px">
+          <div class="row">
+            <div class="photo" style="width:56px;height:56px;font-size:22px;flex:none">⚽</div>
+            <div><b>Kick Off Arena · Pitch 1</b>
+              <div class="subtle small">Fri 25 Jul · 9:10–10:40 PM · Ref TC-47701</div>
+              <div class="row-wrap" style="margin-top:4px"><span class="badge green">Completed</span><span class="badge gray nodot">Reviewed ★5</span></div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-secondary" data-toast="Receipt downloaded 🧾">Receipt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANCELLED -->
+  <div class="tabpanel" data-panel="canc" data-panel-group="bk">
+    <div class="card">
+      <div class="between" style="flex-wrap:wrap;gap:10px">
+        <div class="row">
+          <div class="photo alt3" style="width:56px;height:56px;font-size:22px;flex:none">⚽</div>
+          <div><b>Mirpur Sports City · Pitch 3</b>
+            <div class="subtle small">Sat 19 Jul · 10:00–11:30 PM · Ref TC-47512</div>
+            <div class="row-wrap" style="margin-top:4px"><span class="badge gray">Cancelled by you</span><span class="badge blue">Refunded ৳2,200 → bKash</span></div>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-secondary" data-toast="Refund receipt downloaded 🧾">Refund receipt</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Reschedule sheet -->
+<div class="overlay sheet-mode" id="resched" role="dialog" aria-modal="true" aria-label="Reschedule booking">
+  <div class="modal">
+    <div class="grabber"></div>
+    <h3>Reschedule · ShuttleZone Court 1</h3>
+    <p class="subtle small">Free reschedule until 24h before. Pick a new slot:</p>
+    <div class="datestrip" style="margin:12px 0">
+      <button class="datebox on"><span>Sun</span><b>10</b></button>
+      <button class="datebox"><span>Mon</span><b>11</b></button>
+      <button class="datebox"><span>Tue</span><b>12</b></button>
+      <button class="datebox"><span>Wed</span><b>13</b></button>
+    </div>
+    <div class="slotgrid">
+      <button class="slot available"><b>8:00 PM</b><span>৳600</span></button>
+      <button class="slot booked"><b>9:00 PM</b><span>Booked</span></button>
+      <button class="slot available"><b>10:00 PM</b><span>৳500</span></button>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-tertiary" data-close>Keep current slot</button>
+      <button class="btn btn-primary btn-block" data-close data-toast="Rescheduled to Sun 10 Aug, 8:00 PM ✓ (undo available for 30s)">Confirm reschedule</button>
+    </div>
+  </div>
+</div>
+
+<nav class="bottomnav glass" aria-label="Primary">
+  <div class="bottomnav-inner">
+    <a href="home.html"><span class="ico">🏠</span>Home</a>
+    <a href="explore.html"><span class="ico">🔍</span>Explore</a>
+    <a href="../solo/open-games.html"><span class="ico">⚽</span>Open Games</a>
+    <a href="bookings.html" class="active"><span class="ico">📅</span>Bookings</a>
+    <a href="home.html"><span class="ico">👤</span>Profile</a>
+  </div>
+</nav>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

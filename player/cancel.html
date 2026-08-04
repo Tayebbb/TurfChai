@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cancel booking · TurfChai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="home.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai</a>
+    <div class="spacer"></div>
+    <a class="btn btn-tertiary" href="booking-detail.html">← Keep my booking</a>
+  </div>
+</header>
+
+<main class="wrap-form" style="padding-top:32px;padding-bottom:64px">
+  <h1 style="font-size:22px">Cancel booking TC-48291?</h1>
+  <p class="subtle" style="margin-bottom:16px">Kick Off Arena · Fri 8 Aug, 7:30–9:00 PM</p>
+
+  <div class="card">
+    <div class="field">
+      <label for="reason">Why are you cancelling?</label>
+      <select class="select" id="reason">
+        <option>Not enough players</option>
+        <option>Weather concerns</option>
+        <option>Found another venue</option>
+        <option>Schedule conflict</option>
+        <option>Other</option>
+      </select>
+      <span class="hint">Tip: post a <a href="../solo/open-games.html">replacement request</a> instead — most vacancies fill within 2 hours.</span>
+    </div>
+
+    <div class="panel">
+      <b class="small">Refund calculation</b>
+      <div class="pricerow"><span>Amount paid</span><span class="num">৳2,550</span></div>
+      <div class="pricerow"><span>Cancellation window</span><span><span class="badge green">Free — 24h+ before kickoff</span></span></div>
+      <div class="pricerow"><span>Cancellation fee</span><span class="num">−৳0</span></div>
+      <div class="pricerow total"><span>Refund to bKash ••• 678</span><span class="num" style="color:var(--brand-600)">৳2,550</span></div>
+    </div>
+    <p class="subtle tiny" style="margin:8px 0 0">Refund is processed immediately and typically lands in 3–5 business days. Teammates who repaid you are refunded their shares automatically. If you cancel after Thu 7:30 PM, only 50% is refundable.</p>
+  </div>
+
+  <div class="alert warn" style="margin-top:14px"><span class="ico">⚠️</span><div><b>This releases your slot</b>The Friday 7:30 PM slot returns to live availability and your 9 invited teammates are notified.</div></div>
+
+  <div class="stack-sm" style="margin-top:16px">
+    <button class="btn btn-danger btn-lg btn-block" data-open="#confirmCancel">Cancel booking &amp; refund ৳2,550</button>
+    <a class="btn btn-secondary btn-block" href="booking-detail.html">Keep my booking</a>
+  </div>
+</main>
+
+<div class="overlay" id="confirmCancel" role="dialog" aria-modal="true" aria-labelledby="ccTitle">
+  <div class="modal center">
+    <div class="check-anim" style="background:var(--info)" aria-hidden="true">↩</div>
+    <h3 id="ccTitle">Booking cancelled</h3>
+    <p class="muted small">Refund of <b class="num">৳2,550</b> is on its way to bKash ••• 678.</p>
+    <span class="badge blue" style="margin:6px 0 14px">Refund pending · 3–5 days</span>
+    <div class="stack-sm">
+      <a class="btn btn-primary btn-block" href="explore.html">Find another slot</a>
+      <a class="btn btn-tertiary btn-block" href="bookings.html">Back to my bookings</a>
+    </div>
+  </div>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

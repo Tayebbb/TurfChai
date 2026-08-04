@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Promotions · TurfChai Owner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge blue nodot" style="margin-left:6px">Owner</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <span class="icon-btn" style="background:var(--info-soft);color:var(--info);font-weight:700;border:none">MH</span>
+  </div>
+</header>
+
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Owner workspace">
+      <a href="dashboard.html"><span class="ico">📊</span>Overview</a>
+      <a href="calendar.html"><span class="ico">🗓️</span>Calendar</a>
+      <a href="bookings.html"><span class="ico">📅</span>Bookings</a>
+      <a href="payments.html"><span class="ico">💰</span>Payments</a>
+      <a href="venue-setup.html"><span class="ico">🏟️</span>Venues</a>
+      <a href="customers.html"><span class="ico">👥</span>Customers</a>
+      <a href="promotions.html" class="active"><span class="ico">🎁</span>Promotions</a>
+      <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
+      <a href="payments.html#reports"><span class="ico">📈</span>Reports</a>
+      <a href="staff.html"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
+      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div><h1>Promotions</h1><span class="subtle small">Fill empty slots and reward loyal teams</span></div>
+      <button class="btn btn-primary" data-open="#newPromo">+ New promotion</button>
+    </div>
+
+    <div class="grid2" style="align-items:start">
+      <div class="stack">
+        <div class="card" style="border-left:3px solid var(--brand)">
+          <div class="between"><h3 style="margin:0">Weekday Off-Peak −30%</h3><span class="badge green">Active</span></div>
+          <p class="subtle small" style="margin:4px 0 10px">Mon–Thu · 12:00–5:00 PM · all pitches · ৳2,200 → <b class="num">৳1,540</b></p>
+          <div class="grid3" style="gap:8px">
+            <div class="panel center"><b class="num">42</b><div class="tiny subtle">bookings</div></div>
+            <div class="panel center"><b class="num">৳64,700</b><div class="tiny subtle">revenue</div></div>
+            <div class="panel center"><b class="num">+31%</b><div class="tiny subtle">occupancy lift</div></div>
+          </div>
+          <div class="row" style="margin-top:10px"><button class="btn btn-sm btn-secondary" data-open="#newPromo">Edit</button><button class="btn btn-sm btn-tertiary" data-toast="Promotion paused ⏸️">Pause</button></div>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--brand)">
+          <div class="between"><h3 style="margin:0">Every 10th booking −20%</h3><span class="badge green">Active · venue loyalty</span></div>
+          <p class="subtle small" style="margin:4px 0 10px">Automatic repeat-customer reward · applies at checkout for enrolled regulars</p>
+          <div class="row-wrap"><span class="badge blue nodot">23 members enrolled</span><span class="badge green nodot">7 rewards redeemed</span></div>
+          <div class="row" style="margin-top:10px"><button class="btn btn-sm btn-secondary" data-open="#newPromo">Edit</button><a class="btn btn-sm btn-tertiary" href="customers.html">View members</a></div>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--warn)">
+          <div class="between"><h3 style="margin:0">Eid Week Special −৳500</h3><span class="badge amber">Scheduled</span></div>
+          <p class="subtle small" style="margin:4px 0 10px">Fixed ৳500 off evening slots · 15–22 Aug · limited to first 40 bookings</p>
+          <div class="row"><button class="btn btn-sm btn-secondary" data-open="#newPromo">Edit</button><button class="btn btn-sm btn-ghost-danger" data-toast="Campaign deleted — undo? (30s)">Delete</button></div>
+        </div>
+
+        <div class="card" style="opacity:.7">
+          <div class="between"><h3 style="margin:0">Ramadan Midnight −25%</h3><span class="badge gray">Ended 30 Apr</span></div>
+          <p class="subtle small" style="margin:4px 0 0">96 bookings · ৳1,58,300 revenue · <button class="btn btn-sm btn-tertiary" data-toast="Duplicated as a new draft ✓">Duplicate</button></p>
+        </div>
+      </div>
+
+      <div class="glass glass-card">
+        <h3>💡 Suggested for you</h3>
+        <div class="stack-sm" style="margin-top:10px">
+          <div class="panel"><b class="small">Tue–Wed 2–4 PM is 71% empty</b><p class="tiny muted" style="margin:2px 0 6px">A 25–35% off-peak discount typically fills 60% of these slots.</p><button class="btn btn-sm btn-primary" data-open="#newPromo">Create off-peak promo</button></div>
+          <div class="panel"><b class="small">3 regulars near loyalty milestone</b><p class="tiny muted" style="margin:2px 0 6px">Rafiul K. (9/10), Karim Traders (15 visits), Tanvir A. (8 visits).</p><a class="btn btn-sm btn-secondary" href="customers.html">Review customers</a></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- New promotion drawer -->
+<div class="overlay drawer-mode" id="newPromo" role="dialog" aria-modal="true" aria-labelledby="npTitle">
+  <div class="modal">
+    <div class="between"><h3 id="npTitle">New promotion</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="field" style="margin-top:8px"><label>Type</label>
+      <div class="row-wrap">
+        <button class="chip on" data-filter>Off-peak discount</button>
+        <button class="chip" data-filter>Repeat-customer reward</button>
+        <button class="chip" data-filter>Limited-time deal</button>
+        <button class="chip" data-filter>Venue loyalty</button>
+      </div>
+    </div>
+    <div class="field"><label for="npName">Name</label><input class="input" id="npName" value="Weekday Off-Peak −30%"></div>
+    <div class="grid2" style="gap:10px">
+      <div class="field"><label for="npDisc">Discount</label>
+        <div class="row"><select class="select" id="npDisc" style="max-width:100px"><option selected>%</option><option>৳ fixed</option></select><input class="input num" value="30" aria-label="Discount amount"></div>
+      </div>
+      <div class="field"><label for="npCap">Usage cap (optional)</label><input class="input num" id="npCap" placeholder="e.g. 40 bookings"></div>
+    </div>
+    <div class="field"><label>Days &amp; window</label>
+      <div class="row-wrap"><button class="chip on" data-filter>Mon</button><button class="chip on" data-filter>Tue</button><button class="chip on" data-filter>Wed</button><button class="chip on" data-filter>Thu</button><button class="chip" data-filter>Fri</button><button class="chip" data-filter>Sat</button><button class="chip" data-filter>Sun</button></div>
+      <div class="grid2" style="gap:10px;margin-top:8px">
+        <select class="select" aria-label="From time"><option selected>12:00 PM</option></select>
+        <select class="select" aria-label="To time"><option selected>5:00 PM</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Pitches</label>
+      <div class="row-wrap"><button class="chip on" data-filter>All pitches</button><button class="chip" data-filter>Pitch 1</button><button class="chip" data-filter>Pitch 2</button><button class="chip" data-filter>Pitch 3</button></div>
+    </div>
+    <div class="panel between"><span class="small muted">Preview price (peak ৳2,200)</span><b class="num">৳1,540 <span class="tiny subtle">−30%</span></b></div>
+    <button class="btn btn-primary btn-lg btn-block" style="margin-top:12px" data-close data-toast="Promotion live — discounted slots now shown to players ✓">Launch promotion</button>
+  </div>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>

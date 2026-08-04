@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookings · TurfChai Owner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/turfchai.css">
+</head>
+<body>
+<header class="topbar glass">
+  <div class="topbar-inner">
+    <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge blue nodot" style="margin-left:6px">Owner</span></a>
+    <div class="spacer"></div>
+    <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
+    <span class="icon-btn" style="background:var(--info-soft);color:var(--info);font-weight:700;border:none">MH</span>
+  </div>
+</header>
+
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Owner workspace">
+      <a href="dashboard.html"><span class="ico">📊</span>Overview</a>
+      <a href="calendar.html"><span class="ico">🗓️</span>Calendar</a>
+      <a href="bookings.html" class="active"><span class="ico">📅</span>Bookings</a>
+      <a href="payments.html"><span class="ico">💰</span>Payments</a>
+      <a href="venue-setup.html"><span class="ico">🏟️</span>Venues</a>
+      <a href="customers.html"><span class="ico">👥</span>Customers</a>
+      <a href="promotions.html"><span class="ico">🎁</span>Promotions</a>
+      <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
+      <a href="payments.html#reports"><span class="ico">📈</span>Reports</a>
+      <a href="staff.html"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
+      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div><h1>Bookings</h1><span class="subtle small">All sources · searchable &amp; filterable</span></div>
+      <button class="btn btn-primary" data-toast="Manual booking drawer — see Calendar page">+ Manual booking</button>
+    </div>
+
+    <div class="row-wrap" style="margin-bottom:14px">
+      <input class="input" style="max-width:260px" placeholder="🔍 Search name, phone, ref…">
+      <button class="chip on" data-filter>Today</button>
+      <button class="chip" data-filter>This week</button>
+      <button class="chip" data-filter>Pitch 2</button>
+      <button class="chip" data-filter>Online</button>
+      <button class="chip" data-filter>Phone</button>
+      <button class="chip" data-filter>Walk-in</button>
+      <button class="chip" data-filter>Payment pending</button>
+    </div>
+
+    <div class="card table-wrap" style="padding:0">
+      <table class="table">
+        <thead><tr><th>Time</th><th>Ref</th><th>Customer</th><th>Pitch</th><th>Source</th><th class="num">Amount</th><th>Payment</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="num">4:00 PM</td><td class="num">TC-48277</td><td>Tanvir Ahmed<br><span class="tiny subtle num">+880 1615 ••• 234</span></td><td>Pitch 1</td><td><span class="badge green nodot">Online</span></td><td class="num">৳2,500</td><td><span class="badge green">Paid</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-toast="Checked in ✓">Check in</button><button class="btn btn-sm btn-tertiary" data-toast="Detail drawer — see Calendar page">⋯</button></div></td>
+          </tr>
+          <tr>
+            <td class="num">7:30 PM</td><td class="num">TC-48291</td><td>Rafiul Karim<br><span class="tiny subtle num">+880 1712 ••• 890</span></td><td>Pitch 2</td><td><span class="badge green nodot">Online</span></td><td class="num">৳2,550</td><td><span class="badge green">Paid · split 10/10</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-toast="Checked in ✓">Check in</button><button class="btn btn-sm btn-tertiary" data-toast="Detail drawer — see Calendar page">⋯</button></div></td>
+          </tr>
+          <tr>
+            <td class="num">7:30 PM</td><td class="num">TC-48285</td><td>Karim Traders XI<br><span class="tiny subtle num">+880 1911 ••• 456</span></td><td>Pitch 1</td><td><span class="badge amber nodot">Phone</span></td><td class="num">৳2,550</td><td><span class="badge amber">৳1,785 due at venue</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-primary" data-toast="৳1,785 cash collected — logged to evening shift ✓">Collect</button><button class="btn btn-sm btn-tertiary" data-toast="Detail drawer">⋯</button></div></td>
+          </tr>
+          <tr>
+            <td class="num">9:00 PM</td><td class="num">OG-7734</td><td>Open game · Rifat H.<br><span class="tiny subtle">10 players · all paid</span></td><td>Pitch 2</td><td><span class="badge blue nodot">Open game</span></td><td class="num">৳2,800</td><td><span class="badge green">Paid</span></td>
+            <td><button class="btn btn-sm btn-tertiary" data-toast="Detail drawer">⋯</button></td>
+          </tr>
+          <tr>
+            <td class="num">9:00 PM</td><td class="num">TC-48293</td><td>Hasan Uddin<br><span class="tiny subtle num">+880 1912 ••• 677</span></td><td>Pitch 3</td><td><span class="badge amber nodot">Phone</span></td><td class="num">৳1,700</td><td><span class="badge amber">Deposit ৳510</span></td>
+            <td><div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-toast="Reminder SMS sent 📩">Remind</button><button class="btn btn-sm btn-tertiary" data-toast="Detail drawer">⋯</button></div></td>
+          </tr>
+          <tr style="opacity:.65">
+            <td class="num">11:00 AM</td><td class="num">TC-48102</td><td>Sadia Rahman<br><span class="tiny subtle num">+880 1710 ••• 118</span></td><td>Pitch 2</td><td><span class="badge green nodot">Online</span></td><td class="num">৳2,200</td><td><span class="badge red">Cancelled · refunded</span></td>
+            <td><button class="btn btn-sm btn-tertiary" data-toast="Refund detail — ৳2,200 to bKash, TXN R-2210">⋯</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="between small" style="margin-top:10px"><span class="subtle">Showing 6 of 14 bookings today</span><div class="row"><button class="btn btn-sm btn-tertiary" data-toast="Previous page">‹ Prev</button><button class="btn btn-sm btn-tertiary" data-toast="Next page">Next ›</button></div></div>
+  </main>
+</div>
+<script src="../js/turfchai.js"></script>
+</body>
+</html>
