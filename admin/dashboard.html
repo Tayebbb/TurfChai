@@ -23,6 +23,38 @@
     margin-top: 14px;
     align-self: flex-start;
   }
+
+  .earnings-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 32px;
+    margin-top: 24px;
+  }
+  @media (max-width: 900px) {
+    .earnings-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+
+  .earnings-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    justify-content: center;
+  }
+  @media (max-width: 900px) {
+    .earnings-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+  }
+  @media (max-width: 480px) {
+    .earnings-stats {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 </head>
 <body>
@@ -129,19 +161,17 @@
       <div>
         <div class="row" style="gap:10px;align-items:center">
           <svg class="nav-icon" style="color:var(--brand);width:22px;height:22px" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-          <h2 style="margin:0;font-size:20px;font-weight:800;letter-spacing:-0.02em">Earnings &amp; Financial Analytics</h2>
+          <h2 style="margin:0;font-size:20px;font-weight:800;letter-spacing:-0.02em">Platform Earnings &amp; Volume</h2>
         </div>
-        <p class="subtle small" style="margin:4px 0 0">Real-time gross merchandise volume, platform commissions (10%), and payouts</p>
+        <p class="subtle small" style="margin:4px 0 0">Real-time tracking of platform transactions, take-rate commission, and payout activity</p>
       </div>
 
       <!-- Controls & Filters -->
       <div class="row-wrap" style="gap:12px">
         <!-- Timeframe Pill Tabs -->
         <div class="glass-pill-group" id="tfPills">
-          <button class="glass-pill" data-tf="weekly">Weekly</button>
-          <button class="glass-pill active" data-tf="monthly">Monthly</button>
-          <button class="glass-pill" data-tf="quarterly">Quarterly</button>
-          <button class="glass-pill" data-tf="yearly">Yearly</button>
+          <button class="glass-pill active" data-tf="monthly">Monthly View</button>
+          <button class="glass-pill" data-tf="weekly">Weekly View</button>
         </div>
 
         <!-- Year Selector -->
@@ -150,47 +180,50 @@
           <option value="2025">Year: 2025</option>
           <option value="2024">Year: 2024</option>
         </select>
-
-        <!-- Metric View Selector -->
-        <select class="select-glass" id="metricSelect">
-          <option value="gmv" selected>Gross Revenue (GMV)</option>
-          <option value="fee">Net Commission (10%)</option>
-          <option value="payouts">Owner Payouts (90%)</option>
-        </select>
       </div>
     </div>
 
-    <!-- Live Revenue Summary Strip -->
-    <div class="grid4" style="gap:14px;margin-bottom:20px">
-      <div class="stat-chip">
-        <span class="subtle tiny" style="font-weight:700">TOTAL REVENUE (GMV)</span>
-        <b id="statGmv" style="color:var(--brand-600)">৳4,825,000</b>
-        <span class="tiny delta up" id="statGrowth">▲ +24.6% vs prev period</span>
-      </div>
-      <div class="stat-chip">
-        <span class="subtle tiny" style="font-weight:700">NET PLATFORM COMMISSION</span>
-        <b id="statFee" style="color:var(--mint)">৳482,500</b>
-        <span class="tiny subtle">10% Take Rate</span>
-      </div>
-      <div class="stat-chip">
-        <span class="subtle tiny" style="font-weight:700">COMPLETED BOOKINGS</span>
-        <b id="statBookings" style="color:var(--info)">18,420</b>
-        <span class="tiny subtle" id="statAov">Avg ৳262 / booking</span>
-      </div>
-      <div class="stat-chip">
-        <span class="subtle tiny" style="font-weight:700">DISBURSED PAYOUTS</span>
-        <b id="statPayouts" style="color:var(--text)">৳4,342,500</b>
-        <span class="tiny subtle">Automated BKash/Nagad</span>
-      </div>
-    </div>
+    <!-- Unified Analytics Layout Grid -->
+    <div class="earnings-grid">
+      <!-- Left side: Clean stats column -->
+      <div class="earnings-stats">
+        <!-- Stat 1: GMV -->
+        <div style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.02);border:1px solid var(--border-soft)">
+          <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:4px">TOTAL REVENUE (GMV)</span>
+          <b id="statGmv" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--brand-600);line-height:1.2;display:block">৳4,825,000</b>
+          <span class="tiny delta up" id="statGrowth" style="display:inline-block;margin-top:4px">▲ +24.6% vs prev period</span>
+        </div>
 
-    <!-- Canvas Chart Container -->
-    <div class="chart-container" id="earningsChartWrap">
-      <canvas class="chart-canvas" id="earningsChart"></canvas>
-      <div class="chart-tooltip" id="earningsTooltip">
-        <div class="title" id="tooltipTitle">Aug 2026</div>
-        <div class="val" id="tooltipVal">৳5,920,000</div>
-        <div class="sub" id="tooltipSub">21,900 Bookings · Net: ৳592,000</div>
+        <!-- Stat 2: Net Commission -->
+        <div style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.02);border:1px solid var(--border-soft)">
+          <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:4px">NET PLATFORM COMMISSION</span>
+          <b id="statFee" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--mint);line-height:1.2;display:block">৳482,500</b>
+          <span class="tiny subtle" style="display:inline-block;margin-top:4px;color:var(--text-3)">10% Take-Rate Commission</span>
+        </div>
+
+        <!-- Stat 3: Bookings count -->
+        <div style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.02);border:1px solid var(--border-soft)">
+          <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:4px">COMPLETED BOOKINGS</span>
+          <b id="statBookings" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--info);line-height:1.2;display:block">18,420</b>
+          <span class="tiny subtle" id="statAov" style="display:inline-block;margin-top:4px;color:var(--text-3)">Avg ৳262 / booking</span>
+        </div>
+
+        <!-- Stat 4: Payouts -->
+        <div style="padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.02);border:1px solid var(--border-soft)">
+          <span class="subtle tiny" style="font-weight:700;letter-spacing:0.04em;color:var(--text-3);display:block;margin-bottom:4px">DISBURSED PAYOUTS</span>
+          <b id="statPayouts" style="font-size:22px;font-weight:800;font-family:var(--font-display);color:var(--text);line-height:1.2;display:block">৳4,342,500</b>
+          <span class="tiny subtle" style="display:inline-block;margin-top:4px;color:var(--text-3)">Automated bKash &amp; Nagad</span>
+        </div>
+      </div>
+
+      <!-- Right side: Beautiful visual chart area -->
+      <div class="chart-container" id="earningsChartWrap" style="margin-top:0;height:340px">
+        <canvas class="chart-canvas" id="earningsChart"></canvas>
+        <div class="chart-tooltip" id="earningsTooltip">
+          <div class="title" id="tooltipTitle">Aug 2026</div>
+          <div class="val" id="tooltipVal">৳5,920,000</div>
+          <div class="sub" id="tooltipSub">21,900 Bookings · Net: ৳592,000</div>
+        </div>
       </div>
     </div>
   </div>
