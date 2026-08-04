@@ -38,14 +38,14 @@
   <main class="main">
     <div class="main-header">
       <div><h1>Staff &amp; Shifts</h1><span class="subtle small">Who can do what — and where every taka went</span></div>
-      <button class="btn btn-primary" data-toast="Invite sent by SMS ✉️">+ Invite staff</button>
+      <button class="btn btn-primary" data-open="#inviteStaffModal">+ Invite staff / owner</button>
     </div>
 
     <div class="grid2" style="align-items:start">
       <div class="stack">
         <section class="card">
           <h3>Team</h3>
-          <div class="stack-sm" style="margin-top:10px">
+          <div class="stack-sm" style="margin-top:10px" id="teamList">
             <div class="panel between">
               <div class="row" style="gap:8px"><span class="avatar" style="background:var(--info-soft);color:var(--info)">MH</span><div><b class="small">Mahmudul Hasan</b> <span class="badge blue nodot">Owner</span><div class="tiny subtle">Full access · payouts · staff management</div></div></div>
             </div>
@@ -119,6 +119,76 @@
     <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
   </div>
 </div>
+
+<!-- Modal: Invite Staff / Owner -->
+<div class="overlay" id="inviteStaffModal" role="dialog" aria-modal="true" aria-labelledby="isTitle">
+  <div class="modal" style="max-width:480px">
+    <div class="between"><h3 id="isTitle">Invite team member or co-owner</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <p class="subtle small" style="margin:4px 0 12px">An invitation SMS with entry credentials will be sent to the phone number below.</p>
+    
+    <div class="field"><label for="stName">Full Name</label><input class="input" id="stName" placeholder="e.g. Tariqul Islam"></div>
+    <div class="field"><label for="stPhone">Phone Number</label><input class="input num" id="stPhone" placeholder="+880 1711 000 111"></div>
+    
+    <div class="field">
+      <label for="stRole">Role &amp; Access Level</label>
+      <select class="select" id="stRole">
+        <option value="Co-owner">Co-owner · Full access, payouts &amp; staff management</option>
+        <option value="Manager">Manager · Calendar, bookings, cash &amp; promotions</option>
+        <option value="Front desk" selected>Front desk / Staff · Check-ins, walk-ins, cash logging only</option>
+        <option value="Accountant">Accountant · View ledger, settlements &amp; financial reports</option>
+      </select>
+    </div>
+
+    <div class="stack-sm" style="margin-top:16px">
+      <button class="btn btn-primary btn-block" id="sendInviteBtn">Send SMS Invitation ✉️</button>
+      <button class="btn btn-tertiary btn-block" data-close>Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script src="../js/turfchai.js"></script>
+<script>
+document.getElementById('sendInviteBtn')?.addEventListener('click', function() {
+  const name = document.getElementById('stName').value.trim() || 'Invited Member';
+  const phone = document.getElementById('stPhone').value.trim() || '+880 1800 000 000';
+  const role = document.getElementById('stRole').value;
+
+  let badgeClass = 'green';
+  let subtitle = 'Bookings · calendar · cash logging';
+  if (role === 'Co-owner') {
+    badgeClass = 'blue';
+    subtitle = 'Full access · payouts · staff management';
+  } else if (role === 'Front desk') {
+    badgeClass = 'gray';
+    subtitle = 'Check-ins · walk-in bookings · cash logging only';
+  } else if (role === 'Accountant') {
+    badgeClass = 'amber';
+    subtitle = 'View ledger, payouts & financial reports';
+  }
+
+  const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'TM';
+
+  const newMemberHTML = `
+    <div class="panel between">
+      <div class="row" style="gap:8px">
+        <span class="avatar" style="background:var(--brand-soft);color:var(--brand)">${initials}</span>
+        <div>
+          <b class="small">${name}</b> <span class="badge ${badgeClass} nodot">${role}</span> <span class="badge amber nodot">Invite sent</span>
+          <div class="tiny subtle">${subtitle} · ${phone}</div>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-secondary" data-open="#perm">Permissions</button>
+    </div>
+  `;
+
+  document.getElementById('teamList')?.insertAdjacentHTML('beforeend', newMemberHTML);
+  if (window.showToast) {
+    showToast(`Invitation sent to ${name} (${role}) via SMS ✉️`);
+  }
+  document.querySelector('#inviteStaffModal [data-close]')?.click();
+  document.getElementById('stName').value = '';
+  document.getElementById('stPhone').value = '';
+});
+</script>
 </body>
 </html>
