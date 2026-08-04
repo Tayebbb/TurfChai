@@ -17,7 +17,7 @@
       <a href="explore.html">Explore Venues</a>
       <a href="../solo/open-games.html">Open Games</a>
       <a href="bookings.html">My Bookings</a>
-      <a href="#rewards">Rewards</a>
+      <a href="rewards.html">Rewards</a>
     </nav>
     <div class="spacer"></div>
     <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
@@ -27,16 +27,28 @@
 </header>
 
 <main class="wrap" style="padding-top:24px">
-  <!-- Greeting + mode toggle -->
-  <div class="between" style="margin-bottom:14px;flex-wrap:wrap;gap:8px">
-    <div><h1 style="font-size:24px;margin:0">Salam, Rafi 👋</h1><span class="subtle">📍 Dhanmondi, Dhaka</span></div>
-    <span class="badge green">Silver member · 1,240 pts</span>
+  <!-- Greeting + workspace switcher -->
+  <div class="between" style="margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div><h1 style="font-size:24px;margin:0">Salam, Rafi</h1><span class="subtle">Dhanmondi, Dhaka</span></div>
+    <div class="row" style="gap:10px;flex-wrap:wrap">
+      <span class="badge green">Silver member · 1,240 pts</span>
+      <div class="viewas" id="viewAs">
+        <button class="viewas-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+          View as <b id="viewAsLabel">Player</b> <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="viewas-menu" role="listbox" aria-label="Dashboard mode">
+          <button type="button" data-mode="player" class="on" role="option" aria-selected="true"><span>Player<span class="desc">Book turfs &amp; manage matches</span></span><span class="check">✓</span></button>
+          <button type="button" data-mode="solo" role="option" aria-selected="false"><span>Solo Player<span class="desc">Join open games near you</span></span><span class="check"></span></button>
+          <button type="button" data-mode="host" role="option" aria-selected="false"><span>Tournament Host<span class="desc">Run your own tournament</span></span><span class="check"></span></button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="seg glass lg" data-tabs="mode" role="tablist" aria-label="Dashboard mode" style="margin-bottom:18px;max-width:100%;overflow-x:auto">
-    <button class="on" data-tab="player" role="tab" aria-selected="true">⚽ Player</button>
-    <button data-tab="solo" role="tab" aria-selected="false">🎯 Solo Player</button>
-    <button data-tab="host" role="tab" aria-selected="false">🏆 Tournament Host</button>
+  <div class="seg" data-tabs="mode" hidden aria-hidden="true" style="display:none">
+    <button class="on" data-tab="player" tabindex="-1">Player</button>
+    <button data-tab="solo" tabindex="-1">Solo Player</button>
+    <button data-tab="host" tabindex="-1">Tournament Host</button>
   </div>
 
   <!-- ======== PLAYER MODE ======== -->
@@ -120,26 +132,12 @@
     </div>
   </section>
 
-  <!-- Off-peak + loyalty -->
-  <section class="section" id="rewards">
-    <div class="grid2">
-      <div class="glass glass-card">
-        <span class="badge amber">Off-peak deal</span>
-        <h3 style="margin-top:8px">20% off before 5 PM</h3>
-        <p class="subtle">Weekday afternoon slots at Baridhara Sports Hub and 12 more venues. Auto-applied at checkout.</p>
-        <a class="btn btn-sm btn-secondary" href="explore.html">Browse off-peak slots</a>
-      </div>
-      <div class="glass glass-card">
-        <div class="between">
-          <div><span class="badge green">TurfChai Rewards</span><h3 style="margin-top:8px">1,240 points</h3>
-          <p class="subtle">760 to Gold. Next: free 30-min extension.</p>
-          <a class="btn btn-sm btn-secondary" href="checkout.html" data-toast="Points can be redeemed at checkout">Redeem at checkout</a></div>
-          <div class="ring" role="img" aria-label="62 percent progress to Gold tier">
-            <svg viewBox="0 0 96 96"><circle class="track" cx="48" cy="48" r="40"/><circle class="bar" cx="48" cy="48" r="40" stroke-dasharray="251" stroke-dashoffset="95"/></svg>
-            <div class="mid">62%<span>to Gold</span></div>
-          </div>
-        </div>
-      </div>
+  <!-- Off-peak -->
+  <section class="section">
+    <div class="glass glass-card" style="max-width:560px;margin:0 auto;text-align:center">
+      <span class="badge amber">Off-peak deal</span>
+      <h3 style="margin-top:8px">20% off before 5 PM</h3>
+      <p class="subtle">Weekday afternoon slots at Baridhara Sports Hub and 12 more venues. Auto-applied at checkout.</p>
     </div>
   </section>
 
@@ -234,98 +232,21 @@
   </div>
 
   <section class="section">
-    <div class="section-title"><h2>Your tournament</h2><span class="subtle small num">TR-CUP-0091</span></div>
+    <div class="section-title"><h2>Your tournament</h2></div>
 
-    <div class="glass glass-card" style="margin-bottom:14px">
+    <a class="glass glass-card" href="../host/tournament.html" style="display:block;text-decoration:none;color:var(--text)">
       <div class="between" style="flex-wrap:wrap;gap:10px">
         <div class="row">
           <div class="photo alt2" style="width:56px;height:56px;font-size:22px;flex:none">🏆</div>
           <div>
             <b>Ramadan Cup 2027 · Mirpur Sports City</b>
-            <div class="subtle">Sat 23 Aug · 8 AM–6 PM · 3 pitches · knockout · 16 teams</div>
-            <div class="row-wrap" style="margin-top:4px"><span class="badge green">Venue confirmed · deposit paid</span><span class="badge amber">13/16 teams</span><span class="badge gray nodot">🔒 Invite-only</span></div>
+            <div class="subtle">Sat 23 Aug · in 12 days · 3 pitches · knockout</div>
+            <div class="row-wrap" style="margin-top:4px"><span class="badge green">Venue confirmed</span><span class="badge amber">13/16 teams · balance due 20 Aug</span></div>
           </div>
         </div>
-        <button class="btn btn-sm btn-primary" data-toast="Balance paid ৳25,680 via bKash ✓ — reservation fully paid">Pay balance · ৳25,680</button>
+        <span class="btn btn-sm btn-secondary">Enter tournament →</span>
       </div>
-    </div>
-
-    <div class="grid4" style="margin-bottom:14px">
-      <div class="kpi"><span class="label">Days to kickoff</span><b class="value num">12</b><span class="delta up">On track</span></div>
-      <div class="kpi"><span class="label">Entry fees collected</span><b class="value num">40%</b><span class="delta">৳17,120 / ৳42,800</span></div>
-      <div class="kpi"><span class="label">Teams registered</span><b class="value num">13 / 16</b><span class="delta up">▲ 4 this week</span></div>
-      <div class="kpi"><span class="label">Slots reserved</span><b class="value num">14</b><span class="delta">3 pitches · 8 AM–6 PM</span></div>
-    </div>
-
-    <div class="grid2" style="align-items:start">
-      <div class="stack">
-        <div class="card">
-          <div class="between"><h3 style="margin:0">Venue payment</h3><span class="badge amber">Balance due 20 Aug</span></div>
-          <div class="progress" style="margin:10px 0"><i style="width:40%"></i></div>
-          <div class="between small"><span class="muted">Deposit paid · bKash TXN 7R2M88</span><b class="num">৳17,120 ✓</b></div>
-          <div class="between small" style="margin-top:4px"><span class="muted">Balance · due Wed 20 Aug</span><b class="num">৳25,680</b></div>
-          <p class="tiny subtle" style="margin:8px 0 0">Team entry fees auto-remind Thu 9 AM · 3 teams still due.</p>
-        </div>
-
-        <div class="card">
-          <h3>Match schedule · Sat 23 Aug</h3>
-          <div class="table-wrap" style="margin-top:8px"><table class="table" style="min-width:420px">
-            <thead><tr><th>Time</th><th>Pitch</th><th>Fixture</th></tr></thead>
-            <tbody>
-              <tr><td class="num">8:00 AM</td><td>A</td><td>R16 · Dhanmondi Strikers vs Uttara FC</td></tr>
-              <tr><td class="num">8:00 AM</td><td>B</td><td>R16 · Mirpur Kings vs Banani Blues</td></tr>
-              <tr><td class="num">2:00 PM</td><td>A</td><td>Quarterfinals begin</td></tr>
-              <tr><td class="num">5:00 PM</td><td>D</td><td>🏆 Final · 9-a-side pitch</td></tr>
-            </tbody>
-          </table></div>
-          <button class="btn btn-sm btn-secondary" style="margin-top:8px" data-toast="Schedule editor — drag fixtures between pitches &amp; times">Edit schedule</button>
-        </div>
-
-        <div class="card">
-          <div class="between"><h3 style="margin:0">Teams · 13 of 16</h3><span class="badge gray nodot">Joined via invite link</span></div>
-          <div class="row-wrap" style="margin-top:10px">
-            <span class="chip on">Dhanmondi Strikers</span><span class="chip on">Mirpur Kings</span><span class="chip on">Uttara FC</span><span class="chip on">Banani Blues</span><span class="chip on">+9 more</span><span class="chip">3 spots left</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stack">
-        <div class="card">
-          <div class="between"><h3 style="margin:0">Registration &amp; privacy</h3><span class="badge gray nodot">🔒 Invite-only</span></div>
-          <div class="seg" id="privacySeg" style="display:flex;margin-top:12px">
-            <button type="button" data-privacy="open" style="flex:1">🌐 Open</button>
-            <button type="button" class="on" data-privacy="invite" style="flex:1">🔒 Invite-only</button>
-          </div>
-          <p class="tiny subtle" id="privacyHint" style="margin:8px 0 0">Hidden from search — teams can only join through your invite link. 13 teams joined this way.</p>
-          <div class="panel" id="inviteLinkWrap" style="margin-top:10px">
-            <b class="small">Invite link</b>
-            <div class="row" style="margin-top:6px">
-              <input class="input" id="inviteLink" readonly value="turfchai.app/t/ramadan-cup-0091" aria-label="Invite link" style="flex:1">
-              <button class="btn btn-secondary" id="copyInvite">Copy</button>
-            </div>
-            <button class="btn btn-sm btn-tertiary" style="margin-top:8px" data-toast="🔄 Old link disabled — new invite link generated">Regenerate link</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <b style="font-family:var(--font-display)">Venue contact</b>
-          <div class="panel between" style="margin-top:10px">
-            <div class="row" style="gap:8px"><span class="avatar b">JU</span><div><b class="small">Jashim Uddin</b><div class="tiny subtle">Owner · Mirpur Sports City</div></div></div>
-            <div class="row" style="gap:6px"><button class="btn btn-sm btn-secondary" data-toast="Calling +880 1713 442 210 📞">Call</button><button class="btn btn-sm btn-tertiary" data-toast="Chat opened 💬">Chat</button></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Cancellation terms</h3>
-          <ul class="tline" style="margin-top:8px">
-            <li><b class="small">Until 16 Aug</b><p class="tiny muted" style="margin:0">Full refund of deposit</p></li>
-            <li class="pending"><b class="small">17 – 20 Aug</b><p class="tiny muted" style="margin:0">50% refund</p></li>
-            <li class="pending"><b class="small">After 20 Aug</b><p class="tiny muted" style="margin:0">No refund · reschedule credit only</p></li>
-          </ul>
-          <button class="btn btn-sm btn-ghost-danger" style="margin-top:8px" data-toast="Cancellation flow — refund preview shown before you confirm">Cancel reservation…</button>
-        </div>
-      </div>
-    </div>
+    </a>
   </section>
 
   <section class="section">
@@ -363,35 +284,13 @@
 
   <section class="section">
     <div class="section-title"><h2>Host tools</h2></div>
-    <div class="grid3">
-      <a class="card" href="../host/search.html" style="text-decoration:none;color:var(--text)">
-        <span style="font-size:24px">🔍</span><h3 style="margin-top:8px">Find a venue</h3>
-        <p class="muted small" style="margin:0">Filter by pitch count, full-day availability, and tournament amenities.</p>
-      </a>
-      <a class="card" href="../host/multi-pitch.html" style="text-decoration:none;color:var(--text)">
-        <span style="font-size:24px">🗓️</span><h3 style="margin-top:8px">Multi-pitch booking</h3>
-        <p class="muted small" style="margin:0">Block several pitches across a full day in one reservation.</p>
-      </a>
-      <a class="card" href="../host/reserve.html" style="text-decoration:none;color:var(--text)">
-        <span style="font-size:24px">💳</span><h3 style="margin-top:8px">Reserve &amp; pay</h3>
-        <p class="muted small" style="margin:0">Deposit now, balance later — with a written cancellation policy.</p>
-      </a>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="grid2">
-      <div class="glass glass-card">
-        <span class="badge nodot" style="background:#EDE4FF;color:#6D3FC4">Host your own</span>
-        <h3 style="margin-top:8px">Create a tournament in minutes</h3>
-        <p class="subtle">Pick a venue, set the format and entry fee, then keep it open to everyone or share a private invite link.</p>
-        <button class="btn btn-sm btn-primary" data-open="#createTournament">＋ Create a tournament</button>
+    <div class="panel">
+      <div class="row-wrap" style="gap:8px">
+        <a class="btn btn-sm btn-secondary" href="explore.html">🔍 Find a venue</a>
+        <a class="btn btn-sm btn-secondary" href="../host/multi-pitch.html">🗓️ Multi-pitch booking</a>
+        <a class="btn btn-sm btn-secondary" href="../host/reserve.html">💳 Reserve &amp; pay</a>
       </div>
-      <div class="card">
-        <div class="between"><h3 style="margin:0">Event-day notes</h3><span class="badge gray nodot">Private to you</span></div>
-        <textarea class="input" rows="3" style="margin-top:10px;resize:vertical">Referees arrive 7:30 AM. PA system check 7:45. Trophy table near Pitch D.</textarea>
-        <button class="btn btn-sm btn-secondary" style="margin-top:8px" data-toast="Notes saved ✓">Save notes</button>
-      </div>
+      <p class="tiny subtle" style="margin:8px 0 0">Tournament-worthy venues carry a 🏆 Tournament-ready badge in Explore.</p>
     </div>
   </section>
   </div><!-- /host mode -->
@@ -462,7 +361,7 @@
       </div>
       <div class="field"><label for="ctVenue">Venue</label>
         <select class="select" id="ctVenue"><option>Kick Off Arena · Dhanmondi · 3 pitches</option><option>Mirpur Sports City · 4 pitches</option><option>Baridhara Sports Hub · 2 pitches</option></select>
-        <span class="hint">Need options? <a href="../host/search.html">Search tournament-ready venues →</a></span>
+        <span class="hint">Need options? <a href="explore.html">Browse 🏆 Tournament-ready venues →</a></span>
       </div>
       <div class="field"><label>Who can join?</label>
         <div class="seg" id="ctPrivacy" style="display:flex">
@@ -497,12 +396,36 @@
 (function () {
   // #player / #solo / #host deep-links select the matching dashboard mode;
   // #rewards lives in the player panel, so switch to it before scrolling
+  const viewAs = document.getElementById('viewAs');
+  const viewAsBtn = viewAs.querySelector('.viewas-btn');
+  const modeNames = { player: 'Player', solo: 'Solo Player', host: 'Tournament Host' };
+  const closeViewAs = () => { viewAs.classList.remove('open'); viewAsBtn.setAttribute('aria-expanded', 'false'); };
+  const setMode = (mode) => {
+    document.querySelector(`.seg [data-tab="${mode}"]`)?.click();
+    document.getElementById('viewAsLabel').textContent = modeNames[mode];
+    viewAs.querySelectorAll('[data-mode]').forEach(b => {
+      const on = b.getAttribute('data-mode') === mode;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+      b.querySelector('.check').textContent = on ? '✓' : '';
+    });
+  };
+  viewAsBtn.addEventListener('click', () => {
+    const open = viewAs.classList.toggle('open');
+    viewAsBtn.setAttribute('aria-expanded', open);
+  });
+  viewAs.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+    setMode(b.getAttribute('data-mode'));
+    closeViewAs();
+  }));
+  document.addEventListener('click', (e) => { if (!viewAs.contains(e.target)) closeViewAs(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeViewAs(); });
   const applyHash = () => {
     const mode = location.hash.replace('#', '');
     if (['player', 'solo', 'host'].includes(mode)) {
-      document.querySelector(`.seg [data-tab="${mode}"]`)?.click();
+      setMode(mode);
     } else if (mode === 'rewards') {
-      document.querySelector('.seg [data-tab="player"]')?.click();
+      setMode('player');
       document.getElementById('rewards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
@@ -535,18 +458,6 @@
     const v = document.getElementById('inviteCode').value.trim();
     showToast(v ? '✅ Invite accepted — you\'ve joined Gulshan Premier Cup' : 'Paste an invite link or code first');
   });
-  document.getElementById('copyInvite')?.addEventListener('click', () => {
-    navigator.clipboard?.writeText(document.getElementById('inviteLink').value);
-    showToast('🔗 Invite link copied — share it with team captains');
-  });
-  document.querySelectorAll('#privacySeg [data-privacy]').forEach(b => b.addEventListener('click', () => {
-    const invite = b.getAttribute('data-privacy') === 'invite';
-    document.getElementById('inviteLinkWrap').hidden = !invite;
-    document.getElementById('privacyHint').textContent = invite
-      ? 'Hidden from search — teams can only join through your invite link. 13 teams joined this way.'
-      : 'Listed publicly — any team on TurfChai can find this tournament and request to join.';
-    showToast(invite ? '🔒 Tournament is now invite-only' : '🌐 Tournament is now open to everyone');
-  }));
 })();
 </script>
 </body>

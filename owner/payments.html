@@ -7,10 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/turfchai.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <header class="topbar glass">
   <div class="topbar-inner">
+    <button class="icon-btn mobile-menu-btn" data-toggle-sidebar aria-label="Toggle menu">☰</button>
     <a class="brand" href="dashboard.html"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z" fill="var(--brand)"/><rect x="10" y="8.5" width="12" height="11" rx="2" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="16" y1="8.5" x2="16" y2="19.5" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="14" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>TurfChai <span class="badge blue nodot" style="margin-left:6px">Owner</span></a>
     <div class="spacer"></div>
     <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
@@ -24,14 +26,12 @@
       <a href="dashboard.html"><span class="ico">📊</span>Overview</a>
       <a href="calendar.html"><span class="ico">🗓️</span>Calendar</a>
       <a href="bookings.html"><span class="ico">📅</span>Bookings</a>
-      <a href="payments.html" class="active"><span class="ico">💰</span>Payments</a>
+      <a href="payments.html" class="active"><span class="ico">📈</span>Reports</a>
       <a href="venue-setup.html"><span class="ico">🏟️</span>Venues</a>
       <a href="customers.html"><span class="ico">👥</span>Customers</a>
       <a href="promotions.html"><span class="ico">🎁</span>Promotions</a>
       <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
-      <a href="payments.html#reports"><span class="ico">📈</span>Reports</a>
       <a href="staff.html"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
-      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
     </nav>
   </aside>
 
@@ -39,6 +39,38 @@
     <div class="main-header">
       <div><h1>Payments &amp; reconciliation</h1><span class="subtle small">Friday 8 Aug · every taka accounted for</span></div>
       <div class="row"><button class="btn btn-secondary" data-toast="Exported payments-2026-08-08.csv 📄">⬇ Export CSV</button><button class="btn btn-primary" data-toast="Evening shift closing — see Staff & Shifts">💵 Close shift</button></div>
+    </div>
+
+    <!-- ═══════ Net Income Over Time Chart ═══════ -->
+    <div class="card income-chart-card" style="margin-bottom:16px;padding:20px 24px 16px">
+      <div class="income-chart-header">
+        <div class="income-chart-title-row">
+          <h3 style="margin:0;font-size:18px">Net Income Over Time</h3>
+          <div class="sport-picker" id="sportPicker">
+            <div class="sport-picker-trigger" tabindex="0" aria-haspopup="listbox" aria-label="Select sports to compare">
+              <span class="sport-picker-placeholder">Select sports…</span>
+            </div>
+            <div class="sport-picker-dropdown" role="listbox">
+              <label><input type="checkbox" value="__all__" checked> Select All</label>
+              <div class="sp-divider"></div>
+              <label><input type="checkbox" value="football" checked><span class="sp-color-dot" style="background:#06B6D4"></span>⚽ Football</label>
+              <label><input type="checkbox" value="cricket" checked><span class="sp-color-dot" style="background:#E879F9"></span>🏐 Cricket</label>
+              <label><input type="checkbox" value="badminton" checked><span class="sp-color-dot" style="background:#FB923C"></span>🏸 Badminton</label>
+              <label><input type="checkbox" value="futsal" checked><span class="sp-color-dot" style="background:#A3E635"></span>🥅 Futsal</label>
+              <label><input type="checkbox" value="volleyball" checked><span class="sp-color-dot" style="background:#F472B6"></span>🏐 Volleyball</label>
+            </div>
+          </div>
+        </div>
+        <div class="income-chart-filters" role="group" aria-label="Time range">
+          <button class="income-tf-btn active" data-timeframe="daily">Daily (7 Days)</button>
+          <button class="income-tf-btn" data-timeframe="weekly">Weekly (14 Weeks)</button>
+          <button class="income-tf-btn" data-timeframe="monthly">Monthly (12 Months)</button>
+          <button class="income-tf-btn" data-timeframe="yearly">Yearly (5 Years)</button>
+        </div>
+      </div>
+      <div style="position:relative;height:280px;margin-top:14px">
+        <canvas id="incomeChart" aria-label="Net income chart"></canvas>
+      </div>
     </div>
 
     <div class="grid4" style="margin-bottom:16px">
@@ -97,8 +129,433 @@
         <button class="btn btn-sm btn-secondary" style="margin-top:10px" data-toast="Monthly report generated 📈">Generate monthly report</button>
       </section>
     </div>
+
+    <section class="card" style="margin-top:16px">
+      <div class="between" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <h3 style="margin:0">🏆 Sport Performance &amp; Missed Slots Report</h3>
+          <p class="subtle small" style="margin:2px 0 0">Detailed breakdown of revenue, occupancy, and missed/unbooked slots for each sport</p>
+        </div>
+        <div class="row-wrap" style="gap:6px" id="sportFilterGroup">
+          <button class="chip on" data-sport-filter="all">All Sports</button>
+          <button class="chip" data-sport-filter="Football">⚽ Football</button>
+          <button class="chip" data-sport-filter="Cricket">🏏 Cricket</button>
+          <button class="chip" data-sport-filter="Futsal">🥅 Futsal</button>
+          <button class="chip" data-sport-filter="Badminton">🏸 Badminton</button>
+        </div>
+      </div>
+
+      <div class="grid4" style="margin-top:14px;gap:10px" id="sportCardsGrid">
+        <!-- Football -->
+        <div class="panel stack-sm sport-card" data-sport="Football" style="padding:12px">
+          <div class="between">
+            <b class="small">⚽ Football</b>
+            <span class="badge blue nodot">88% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">42 slots · ৳92,400</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">5 slots · −৳11,000</b></div>
+          <div class="progress"><i style="width:88%"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Football" data-missed-count="5 slots" data-missed-loss="৳11,000" data-missed-items="Tue 2:00–3:30 PM (Off-peak unbooked)|Wed 10:00–11:30 AM (Rainy morning)|Thu 4:00–5:30 PM (Late cancellation)|Fri 1:00–2:30 PM (Jumma time window)|Sun 2:00–3:30 PM (Off-peak unbooked)">View 5 missed slots →</button>
+        </div>
+
+        <!-- Cricket -->
+        <div class="panel stack-sm sport-card" data-sport="Cricket" style="padding:12px">
+          <div class="between">
+            <b class="small">🏏 Cricket</b>
+            <span class="badge amber nodot">94% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">16 slots · ৳48,000</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">1 slot · −৳3,000</b></div>
+          <div class="progress"><i style="width:94%;background:var(--warn)"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Cricket" data-missed-count="1 slot" data-missed-loss="৳3,000" data-missed-items="Monday 10:00 AM–12:00 PM (Off-peak weekday)">View 1 missed slot →</button>
+        </div>
+
+        <!-- Futsal -->
+        <div class="panel stack-sm sport-card" data-sport="Futsal" style="padding:12px">
+          <div class="between">
+            <b class="small">🥅 Futsal</b>
+            <span class="badge green nodot">76% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">35 slots · ৳52,500</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">8 slots · −৳12,000</b></div>
+          <div class="progress"><i style="width:76%;background:var(--success)"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Futsal" data-missed-count="8 slots" data-missed-loss="৳12,000" data-missed-items="Mon 2:00 PM (Unfilled)|Mon 3:00 PM (Unfilled)|Tue 1:00 PM (Off-peak)|Tue 2:00 PM (Off-peak)|Wed 11:00 AM (Unfilled)|Wed 12:00 PM (Unfilled)|Thu 2:00 PM (Off-peak)|Sun 1:00 PM (Unfilled)">View 8 missed slots →</button>
+        </div>
+
+        <!-- Badminton -->
+        <div class="panel stack-sm sport-card" data-sport="Badminton" style="padding:12px">
+          <div class="between">
+            <b class="small">🏸 Badminton</b>
+            <span class="badge nodot" style="background:var(--info-soft);color:var(--info)">82% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">24 slots · ৳24,000</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">4 slots · −৳4,000</b></div>
+          <div class="progress"><i style="width:82%;background:var(--info)"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Badminton" data-missed-count="4 slots" data-missed-loss="৳4,000" data-missed-items="Tue 11:00 AM (Unbooked)|Wed 10:00 AM (Unbooked)|Thu 11:20 AM (No-show)|Sat 1:00 PM (Off-peak)">View 4 missed slots →</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
+
+<!-- Modal: Missed Slots Detail Report -->
+<div class="overlay" id="missedSlotModal" role="dialog" aria-modal="true" aria-labelledby="msTitle">
+  <div class="modal" style="max-width:520px">
+    <div class="between"><h3 id="msTitle">Missed Slots Detail</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <p class="subtle small" style="margin:4px 0 12px">Analysis of unbooked, canceled, or missed slots to optimize your pricing &amp; promotions.</p>
+    
+    <div class="grid2" style="gap:10px;margin-bottom:12px">
+      <div class="panel"><span class="tiny subtle">MISSED SLOTS</span><br><b class="num" id="msCount" style="color:var(--danger)">5 slots</b></div>
+      <div class="panel"><span class="tiny subtle">ESTIMATED REVENUE LOSS</span><br><b class="num" id="msLoss" style="color:var(--danger)">৳11,000</b></div>
+    </div>
+
+    <h4 style="margin:10px 0 6px">Missed Slot Log &amp; Reasons</h4>
+    <div class="stack-sm" id="msList" style="max-height:220px;overflow-y:auto">
+    </div>
+
+    <div class="alert info" style="margin-top:14px"><span class="ico">💡</span><div><b>Optimization Tip</b>Create an off-peak promo for these unbooked times to boost occupancy.</div></div>
+    
+    <div class="stack-sm" style="margin-top:14px">
+      <a class="btn btn-primary btn-block" href="promotions.html">Create promo for this sport →</a>
+      <button class="btn btn-tertiary btn-block" data-close>Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="../js/turfchai.js"></script>
+<script>
+(function() {
+  // Sport filter logic
+  document.querySelectorAll('#sportFilterGroup .chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      document.querySelectorAll('#sportFilterGroup .chip').forEach(c => c.classList.remove('on'));
+      this.classList.add('on');
+      const filter = this.getAttribute('data-sport-filter');
+      document.querySelectorAll('.sport-card').forEach(card => {
+        if (filter === 'all' || card.getAttribute('data-sport') === filter) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // Populate Missed Slot Modal
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.view-missed-btn');
+    if (btn) {
+      const sport = btn.getAttribute('data-sport-name');
+      const count = btn.getAttribute('data-missed-count');
+      const loss = btn.getAttribute('data-missed-loss');
+      const items = (btn.getAttribute('data-missed-items') || '').split('|');
+
+      document.getElementById('msTitle').textContent = `Missed Slots Detail · ${sport}`;
+      document.getElementById('msCount').textContent = count;
+      document.getElementById('msLoss').textContent = loss;
+
+      const listContainer = document.getElementById('msList');
+      if (listContainer) {
+        listContainer.innerHTML = items.map(item => `
+          <div class="panel between">
+            <span class="small">${item}</span>
+            <span class="badge red nodot">Missed</span>
+          </div>
+        `).join('');
+      }
+    }
+  });
+})();
+</script>
+
+<!-- ═══════ Income Chart Logic (Multi-sport) ═══════ -->
+<script>
+(function() {
+  'use strict';
+
+  /* ═══ Sport registry with distinct accessible colors ═══ */
+  const SPORTS = [
+    { key: 'football',   label: '⚽ Football',   color: '#06B6D4', tagBg: 'rgba(6,182,212,.15)' },
+    { key: 'cricket',    label: '🏐 Cricket',    color: '#E879F9', tagBg: 'rgba(232,121,249,.15)' },
+    { key: 'badminton',  label: '🏸 Badminton',  color: '#FB923C', tagBg: 'rgba(251,146,60,.15)' },
+    { key: 'futsal',     label: '🥅 Futsal',     color: '#A3E635', tagBg: 'rgba(163,230,53,.15)' },
+    { key: 'volleyball', label: '🏐 Volleyball', color: '#F472B6', tagBg: 'rgba(244,114,182,.15)' }
+  ];
+
+  /* ═══ API-Ready mock data: sport × timeframe ═══ */
+  const tfLabels = {
+    daily:   ['2 Aug','3 Aug','4 Aug','5 Aug','6 Aug','7 Aug','8 Aug'],
+    weekly:  ['W22','W23','W24','W25','W26','W27','W28','W29','W30','W31','W32','W33','W34','W35'],
+    monthly: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+    yearly:  ['2022','2023','2024','2025','2026']
+  };
+
+  const chartData = {
+    football: {
+      daily:  [6200,8400,4100,10200,9800,7600,8900],
+      weekly: [42000,49800,45600,54200,51800,47400,56700,60300,53500,50600,58300,61800,55000,59400],
+      monthly:[156000,171000,163000,189000,170000,157000,195000,207000,187000,216000,229000,245000],
+      yearly: [980000,1240000,1650000,2060000,2368000]
+    },
+    cricket: {
+      daily:  [3800,4200,3100,5000,4800,3900,4500],
+      weekly: [22000,25600,23800,28400,26900,24800,29400,31200,27800,26200,30100,32000,28500,30800],
+      monthly:[78000,85600,81400,94200,84600,78200,97000,103000,93300,107800,114000,121800],
+      yearly: [520000,658000,876000,1094000,1218000]
+    },
+    badminton: {
+      daily:  [2400,3200,2000,3400,3200,2700,2965],
+      weekly: [14500,16900,15700,18600,17700,16500,19500,20900,18500,17500,20300,21400,19000,20600],
+      monthly:[51000,55400,53600,61800,55400,51800,64000,68000,61700,71200,75000,80000],
+      yearly: [350000,442000,594000,736000,882000]
+    },
+    futsal: {
+      daily:  [1800,2100,1400,2600,2400,1900,2200],
+      weekly: [11200,13400,12200,14800,14100,12900,15300,16500,14600,13800,15900,16800,14900,16200],
+      monthly:[38000,41200,39800,46000,41200,38600,47600,50600,45900,53000,55800,59500],
+      yearly: [260000,328000,441000,547000,595000]
+    },
+    volleyball: {
+      daily:  [1200,1500,900,1800,1700,1300,1600],
+      weekly: [8400,9900,9100,10800,10300,9400,11200,11900,10600,10000,11500,12200,10800,11700],
+      monthly:[28500,31200,29700,34400,30900,28600,35500,37700,34200,39500,41800,44600],
+      yearly: [195000,246000,327000,409000,468000]
+    }
+  };
+
+  /* ═══ State ═══ */
+  let selectedSports = SPORTS.map(s => s.key); // all selected initially
+  let currentTimeframe = 'daily';
+
+  /* ═══ Theme helpers ═══ */
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+  function themeColors() {
+    const dark = isDark();
+    return {
+      gridLine:      dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+      tickText:      dark ? '#A6B8AA'  : '#4C5F55',
+      tooltip:       dark ? '#1C291E'  : '#FFFFFF',
+      tooltipText:   dark ? '#F2F6F2' : '#122019',
+      tooltipBorder: dark ? '#2C3C2F' : '#E4EAE6'
+    };
+  }
+  function makeGradient(ctx, color) {
+    const grad = ctx.createLinearGradient(0, 0, 0, ctx.canvas.clientHeight);
+    grad.addColorStop(0, color + '28');
+    grad.addColorStop(1, color + '00');
+    return grad;
+  }
+
+  /* ═══ Build datasets from selected sports ═══ */
+  function buildDatasets() {
+    const dark = isDark();
+    return selectedSports.map(key => {
+      const sport = SPORTS.find(s => s.key === key);
+      const data = chartData[key][currentTimeframe];
+      return {
+        label: sport.label,
+        data: data,
+        borderColor: sport.color,
+        backgroundColor: makeGradient(ctx, sport.color),
+        borderWidth: 2.5,
+        tension: 0.4,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: sport.color,
+        pointBorderColor: dark ? '#10170F' : '#FFFFFF',
+        pointBorderWidth: 2
+      };
+    });
+  }
+
+  /* ═══ Create chart ═══ */
+  const canvas = document.getElementById('incomeChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const tc = themeColors();
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: tfLabels[currentTimeframe],
+      datasets: buildDatasets()
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: tc.tooltip,
+          borderColor: tc.tooltipBorder,
+          borderWidth: 1,
+          cornerRadius: 10,
+          padding: { top: 10, right: 14, bottom: 10, left: 14 },
+          titleFont: { family: 'Inter, system-ui, sans-serif', weight: 600, size: 13 },
+          bodyFont: { family: 'Inter, system-ui, sans-serif', weight: 600, size: 13 },
+          titleColor: tc.tooltipText,
+          usePointStyle: true,
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ' ' + item.dataset.label + ':  ৳' + item.parsed.y.toLocaleString('en-IN'),
+            labelColor: (item) => ({
+              borderColor: item.dataset.borderColor,
+              backgroundColor: item.dataset.borderColor,
+              borderWidth: 2,
+              borderRadius: 4
+            })
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: tc.gridLine, drawBorder: false },
+          ticks: { color: tc.tickText, font: { family: 'Inter, system-ui, sans-serif', size: 12, weight: 500 } },
+          border: { display: false }
+        },
+        y: {
+          grid: { color: tc.gridLine, drawBorder: false },
+          ticks: {
+            color: tc.tickText,
+            font: { family: 'Inter, system-ui, sans-serif', size: 12, weight: 500 },
+            callback: (v) => '৳' + (v >= 100000 ? (v/100000).toFixed(1) + 'L' : v >= 1000 ? (v/1000).toFixed(0) + 'K' : v)
+          },
+          border: { display: false },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  /* ═══ Sync chart from state ═══ */
+  function syncChart() {
+    const tc = themeColors();
+    chart.data.labels = tfLabels[currentTimeframe];
+    chart.data.datasets = buildDatasets();
+    chart.options.scales.x.grid.color = tc.gridLine;
+    chart.options.scales.x.ticks.color = tc.tickText;
+    chart.options.scales.y.grid.color = tc.gridLine;
+    chart.options.scales.y.ticks.color = tc.tickText;
+    chart.options.plugins.tooltip.backgroundColor = tc.tooltip;
+    chart.options.plugins.tooltip.titleColor = tc.tooltipText;
+    chart.options.plugins.tooltip.borderColor = tc.tooltipBorder;
+    chart.update('active');
+  }
+
+  /* ═══ Timeframe buttons ═══ */
+  document.querySelectorAll('.income-tf-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.income-tf-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentTimeframe = this.getAttribute('data-timeframe');
+      syncChart();
+    });
+  });
+
+  /* ═══ Multi-select sport picker ═══ */
+  const picker = document.getElementById('sportPicker');
+  if (!picker) return;
+  const trigger = picker.querySelector('.sport-picker-trigger');
+  const dropdown = picker.querySelector('.sport-picker-dropdown');
+  const allCheckbox = dropdown.querySelector('input[value="__all__"]');
+  const sportCheckboxes = [...dropdown.querySelectorAll('input[type="checkbox"]')].filter(cb => cb.value !== '__all__');
+
+  // Toggle dropdown open/close
+  trigger.addEventListener('click', (e) => {
+    if (e.target.closest('.sport-tag-x')) return; // don't toggle when clicking X
+    picker.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!picker.contains(e.target)) picker.classList.remove('open');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') picker.classList.remove('open');
+  });
+
+  // Render tags inside trigger
+  function renderTags() {
+    const existing = trigger.querySelectorAll('.sport-tag, .sport-picker-placeholder');
+    existing.forEach(el => el.remove());
+
+    if (selectedSports.length === 0) {
+      const ph = document.createElement('span');
+      ph.className = 'sport-picker-placeholder';
+      ph.textContent = 'Select sports…';
+      trigger.prepend(ph);
+    } else {
+      selectedSports.forEach(key => {
+        const sport = SPORTS.find(s => s.key === key);
+        const tag = document.createElement('span');
+        tag.className = 'sport-tag';
+        tag.style.background = sport.tagBg;
+        tag.style.color = sport.color;
+        tag.innerHTML = `<span class="sport-tag-dot" style="background:${sport.color}"></span>${sport.label.split(' ')[1]}<span class="sport-tag-x" data-key="${key}">×</span>`;
+        trigger.prepend(tag);
+      });
+    }
+  }
+
+  // Sync "Select All" checkbox state
+  function syncAllCheckbox() {
+    allCheckbox.checked = selectedSports.length === SPORTS.length;
+    allCheckbox.indeterminate = selectedSports.length > 0 && selectedSports.length < SPORTS.length;
+  }
+
+  // Handle sport checkbox changes
+  sportCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        if (!selectedSports.includes(cb.value)) selectedSports.push(cb.value);
+      } else {
+        selectedSports = selectedSports.filter(k => k !== cb.value);
+      }
+      syncAllCheckbox();
+      renderTags();
+      syncChart();
+    });
+  });
+
+  // Handle "Select All"
+  allCheckbox.addEventListener('change', () => {
+    if (allCheckbox.checked) {
+      selectedSports = SPORTS.map(s => s.key);
+      sportCheckboxes.forEach(cb => cb.checked = true);
+    } else {
+      selectedSports = [];
+      sportCheckboxes.forEach(cb => cb.checked = false);
+    }
+    renderTags();
+    syncChart();
+  });
+
+  // Handle tag X click (remove sport)
+  trigger.addEventListener('click', (e) => {
+    const x = e.target.closest('.sport-tag-x');
+    if (!x) return;
+    e.stopPropagation();
+    const key = x.getAttribute('data-key');
+    selectedSports = selectedSports.filter(k => k !== key);
+    const cb = dropdown.querySelector(`input[value="${key}"]`);
+    if (cb) cb.checked = false;
+    syncAllCheckbox();
+    renderTags();
+    syncChart();
+  });
+
+  // Initial render
+  renderTags();
+  syncAllCheckbox();
+
+  /* ═══ Theme observer ═══ */
+  const observer = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      if (m.attributeName === 'data-theme') { syncChart(); break; }
+    }
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
 </body>
 </html>
