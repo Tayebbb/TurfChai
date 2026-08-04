@@ -43,8 +43,8 @@
   --ease:cubic-bezier(.4,0,.2,1);
 
   /* Type */
-  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --font-display:'Manrope','Inter',system-ui,sans-serif;
+  --font-body:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',system-ui,sans-serif;
+  --font-display:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Manrope',system-ui,sans-serif;
 }
 
 [data-theme="dark"]{
@@ -83,10 +83,12 @@ html{scroll-behavior:smooth}
 body{
   margin:0; background:var(--bg); color:var(--text);
   font-family:var(--font-body); font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
   -webkit-font-smoothing:antialiased;
 }
 ::selection{background:var(--brand-soft)}
-h1,h2,h3,h4{font-family:var(--font-display); line-height:1.2; margin:0 0 8px; letter-spacing:-.015em}
+h1,h2,h3,h4{font-family:var(--font-display); line-height:1.2; margin:0 0 8px; letter-spacing:-.022em}
 h1{font-size:31px; font-weight:800}
 h2{font-size:22px; font-weight:800}
 h3{font-size:17px; font-weight:700}
@@ -625,7 +627,7 @@ textarea.input{min-height:88px;resize:vertical}
     radial-gradient(900px 420px at 15% -10%,rgba(53,197,127,.18),transparent 60%),
     radial-gradient(700px 380px at 90% 10%,rgba(38,96,216,.10),transparent 60%);
 }
-.hero h1{font-size:clamp(30px,5vw,48px);letter-spacing:-.02em;max-width:640px}
+.hero h1{font-size:clamp(30px,5vw,48px);letter-spacing:-.03em;max-width:640px}
 .hero .lede{font-size:17px;color:var(--text-2);max-width:520px;margin-bottom:28px}
 .pitchlines{position:absolute;right:-60px;top:40px;width:420px;opacity:.14;pointer-events:none}
 @media (max-width:700px){.hero{padding:44px 0 56px}.pitchlines{display:none}}

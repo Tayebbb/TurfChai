@@ -18,6 +18,10 @@
 </header>
 
 <main class="wrap-form" style="padding-top:48px;padding-bottom:64px">
+  <div class="seg glass" id="roleSeg" role="tablist" aria-label="Account type" style="display:flex;margin-bottom:14px">
+    <button class="on" data-role="player" role="tab" aria-selected="true" style="flex:1">⚽ I'm a player</button>
+    <button data-role="owner" role="tab" aria-selected="false" style="flex:1">🏟️ I run a turf</button>
+  </div>
   <div class="card" style="padding:24px">
     <div class="tabs" data-tabs="auth" style="margin-bottom:18px">
       <button class="tab on" data-tab="signin">Sign in</button>
@@ -26,8 +30,8 @@
 
     <!-- SIGN IN -->
     <div class="tabpanel on" data-panel="signin" data-panel-group="auth">
-      <h2 style="font-size:20px">Welcome back</h2>
-      <p class="subtle" style="margin-bottom:16px">Sign in with your phone number — we'll text you a code.</p>
+      <h2 style="font-size:20px" id="siTitle">Welcome back</h2>
+      <p class="subtle" style="margin-bottom:16px" id="siSub">Sign in with your phone number — we'll text you a code.</p>
       <div class="field">
         <label for="ph">Phone number</label>
         <div class="input-row">
@@ -46,8 +50,8 @@
 
     <!-- SIGN UP -->
     <div class="tabpanel" data-panel="signup" data-panel-group="auth">
-      <h2 style="font-size:20px">Join TurfChai</h2>
-      <p class="subtle" style="margin-bottom:16px">One account for booking, open games, and rewards.</p>
+      <h2 style="font-size:20px" id="suTitle">Join TurfChai</h2>
+      <p class="subtle" style="margin-bottom:16px" id="suSub">One account for booking, open games, and rewards.</p>
       <div class="field"><label for="nm">Full name</label><input class="input" id="nm" placeholder="Rafiul Karim"></div>
       <div class="field">
         <label for="ph2">Phone number</label>
@@ -76,12 +80,39 @@
       <input class="otp" maxlength="1" value="1" aria-label="Digit 3">
       <input class="otp" maxlength="1" aria-label="Digit 4">
     </div>
-    <a class="btn btn-primary btn-block" href="onboarding.html">Verify</a>
+    <a class="btn btn-primary btn-block" href="onboarding.html" id="otpVerify">Verify</a>
     <p class="subtle" style="margin-top:12px">Didn't get it? <a href="#" data-toast="New code sent 📱">Resend code</a> · <span class="num">0:42</span></p>
     <button class="btn btn-tertiary" data-close>Cancel</button>
   </div>
 </div>
 
 <script src="../js/turfchai.js"></script>
+<script>
+(function () {
+  let role = 'player';
+  const copy = {
+    player: { siTitle: 'Welcome back', siSub: "Sign in with your phone number — we'll text you a code.",
+              suTitle: 'Join TurfChai', suSub: 'One account for booking, open games, and rewards.' },
+    owner:  { siTitle: 'Welcome back, owner', siSub: 'Sign in to your turf dashboard — calendar, payments, and the QR gate.',
+              suTitle: 'List your turf', suSub: "Create an owner account — we'll walk you through venue setup and verification." }
+  };
+  const verifyHref = () => {
+    const signup = document.querySelector('[data-tab="signup"]').classList.contains('on');
+    if (role === 'owner') return signup ? '../owner/onboarding.html' : '../owner/dashboard.html';
+    return 'onboarding.html';
+  };
+  const apply = () => {
+    const c = copy[role];
+    for (const id of ['siTitle', 'siSub', 'suTitle', 'suSub']) document.getElementById(id).textContent = c[id];
+    document.getElementById('otpVerify').setAttribute('href', verifyHref());
+  };
+  document.querySelectorAll('#roleSeg [data-role]').forEach(b => b.addEventListener('click', () => {
+    role = b.getAttribute('data-role');
+    apply();
+  }));
+  // defer: turfchai.js toggles the tab's .on class in a later-registered listener
+  document.querySelectorAll('[data-tabs="auth"] .tab').forEach(t => t.addEventListener('click', () => setTimeout(apply)));
+})();
+</script>
 </body>
 </html>
