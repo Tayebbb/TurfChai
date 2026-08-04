@@ -792,3 +792,23 @@ textarea.input{min-height:88px;resize:vertical}
 [data-theme="dark"] .navlinks a.active{background:var(--brand);color:#06130B}
 [data-theme="dark"] .seg button.on{background:var(--brand);color:#06130B;box-shadow:none}
 [data-theme="dark"] .seg.glass button.on{background:var(--brand);color:#06130B}
+
+/* ---------- Income chart card ---------- */
+.income-chart-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.income-chart-filters{display:flex;gap:6px;flex-wrap:wrap}
+.income-tf-btn{
+  display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;
+  font-size:13px;font-weight:600;cursor:pointer;
+  background:var(--surface-2);color:var(--text-2);
+  border:1px solid var(--border);
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease),border-color var(--dur) var(--ease);
+  font-family:var(--font-body);
+}
+.income-tf-btn:hover{background:var(--surface-3);color:var(--text);border-color:var(--border-strong)}
+.income-tf-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+[data-theme="dark"] .income-tf-btn.active{color:#04120A}
+@media (max-width:640px){
+  .income-chart-header{flex-direction:column;align-items:flex-start}
+  .income-chart-filters{gap:4px}
+  .income-tf-btn{padding:5px 10px;font-size:12px}
+}

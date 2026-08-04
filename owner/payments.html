@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/turfchai.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <header class="topbar glass">
@@ -39,6 +40,22 @@
     <div class="main-header">
       <div><h1>Payments &amp; reconciliation</h1><span class="subtle small">Friday 8 Aug · every taka accounted for</span></div>
       <div class="row"><button class="btn btn-secondary" data-toast="Exported payments-2026-08-08.csv 📄">⬇ Export CSV</button><button class="btn btn-primary" data-toast="Evening shift closing — see Staff & Shifts">💵 Close shift</button></div>
+    </div>
+
+    <!-- ═══════ Net Income Over Time Chart ═══════ -->
+    <div class="card income-chart-card" style="margin-bottom:16px;padding:20px 24px 16px">
+      <div class="income-chart-header">
+        <h3 style="margin:0;font-size:18px">Net Income Over Time</h3>
+        <div class="income-chart-filters" role="group" aria-label="Time range">
+          <button class="income-tf-btn active" data-timeframe="daily">Daily (7 Days)</button>
+          <button class="income-tf-btn" data-timeframe="weekly">Weekly (14 Weeks)</button>
+          <button class="income-tf-btn" data-timeframe="monthly">Monthly (12 Months)</button>
+          <button class="income-tf-btn" data-timeframe="yearly">Yearly (5 Years)</button>
+        </div>
+      </div>
+      <div style="position:relative;height:280px;margin-top:14px">
+        <canvas id="incomeChart" aria-label="Net income chart"></canvas>
+      </div>
     </div>
 
     <div class="grid4" style="margin-bottom:16px">
@@ -233,6 +250,169 @@
       }
     }
   });
+})();
+</script>
+
+<!-- ═══════ Income Chart Logic ═══════ -->
+<script>
+(function() {
+  'use strict';
+
+  /* ---- Sample data for all four time frames ---- */
+  const chartData = {
+    daily: {
+      labels: ['2 Aug','3 Aug','4 Aug','5 Aug','6 Aug','7 Aug','8 Aug'],
+      data:   [12400, 15800, 9200, 18600, 17800, 14200, 16365]
+    },
+    weekly: {
+      labels: ['W22','W23','W24','W25','W26','W27','W28','W29','W30','W31','W32','W33','W34','W35'],
+      data:   [78500,92300,85100,101200,96400,88700,105600,112400,99800,94300,108700,115200,102500,110800]
+    },
+    monthly: {
+      labels: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+      data:   [285000,312000,298000,345000,310000,287000,356000,378000,342000,395000,418000,446800]
+    },
+    yearly: {
+      labels: ['2022','2023','2024','2025','2026'],
+      data:   [1850000,2340000,3120000,3890000,4468000]
+    }
+  };
+
+  /* ---- Theme-aware color helpers ---- */
+  function isDark() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+  function themeColors() {
+    const dark = isDark();
+    return {
+      line:     dark ? '#22C55E' : '#0E7A4A',
+      gridLine: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+      tickText: dark ? '#A6B8AA'  : '#4C5F55',
+      tooltip:  dark ? '#1C291E'  : '#FFFFFF',
+      tooltipText: dark ? '#F2F6F2' : '#122019',
+      tooltipBorder: dark ? '#2C3C2F' : '#E4EAE6'
+    };
+  }
+
+  /* ---- Build gradient fill ---- */
+  function makeGradient(ctx, dark) {
+    const grad = ctx.createLinearGradient(0, 0, 0, ctx.canvas.clientHeight);
+    if (dark) {
+      grad.addColorStop(0, 'rgba(34,197,94,0.28)');
+      grad.addColorStop(1, 'rgba(34,197,94,0.00)');
+    } else {
+      grad.addColorStop(0, 'rgba(14,122,74,0.18)');
+      grad.addColorStop(1, 'rgba(14,122,74,0.00)');
+    }
+    return grad;
+  }
+
+  /* ---- Create chart ---- */
+  const canvas = document.getElementById('incomeChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const tc = themeColors();
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.daily.labels,
+      datasets: [{
+        label: 'Net Income',
+        data: chartData.daily.data,
+        borderColor: tc.line,
+        backgroundColor: makeGradient(ctx, isDark()),
+        borderWidth: 2.5,
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        pointBackgroundColor: tc.line,
+        pointBorderColor: isDark() ? '#10170F' : '#FFFFFF',
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: tc.tooltip,
+          titleColor: tc.tooltipText,
+          bodyColor: tc.tooltipText,
+          borderColor: tc.tooltipBorder,
+          borderWidth: 1,
+          cornerRadius: 10,
+          padding: { top: 10, right: 14, bottom: 10, left: 14 },
+          titleFont: { family: 'Inter, system-ui, sans-serif', weight: 600, size: 13 },
+          bodyFont: { family: 'Inter, system-ui, sans-serif', weight: 700, size: 15 },
+          displayColors: false,
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => '৳' + item.parsed.y.toLocaleString('en-IN')
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: tc.gridLine, drawBorder: false },
+          ticks: { color: tc.tickText, font: { family: 'Inter, system-ui, sans-serif', size: 12, weight: 500 } },
+          border: { display: false }
+        },
+        y: {
+          grid: { color: tc.gridLine, drawBorder: false },
+          ticks: {
+            color: tc.tickText,
+            font: { family: 'Inter, system-ui, sans-serif', size: 12, weight: 500 },
+            callback: (v) => '৳' + (v >= 100000 ? (v/100000).toFixed(1) + 'L' : v >= 1000 ? (v/1000).toFixed(0) + 'K' : v)
+          },
+          border: { display: false },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  /* ---- Timeframe switching ---- */
+  document.querySelectorAll('.income-tf-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.income-tf-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      const tf = this.getAttribute('data-timeframe');
+      const d = chartData[tf];
+      chart.data.labels = d.labels;
+      chart.data.datasets[0].data = d.data;
+      chart.update('active');
+    });
+  });
+
+  /* ---- Theme change observer ---- */
+  function refreshTheme() {
+    const tc = themeColors();
+    const dark = isDark();
+    chart.data.datasets[0].borderColor = tc.line;
+    chart.data.datasets[0].pointBackgroundColor = tc.line;
+    chart.data.datasets[0].pointBorderColor = dark ? '#10170F' : '#FFFFFF';
+    chart.data.datasets[0].backgroundColor = makeGradient(ctx, dark);
+    chart.options.scales.x.grid.color = tc.gridLine;
+    chart.options.scales.x.ticks.color = tc.tickText;
+    chart.options.scales.y.grid.color = tc.gridLine;
+    chart.options.scales.y.ticks.color = tc.tickText;
+    chart.options.plugins.tooltip.backgroundColor = tc.tooltip;
+    chart.options.plugins.tooltip.titleColor = tc.tooltipText;
+    chart.options.plugins.tooltip.bodyColor = tc.tooltipText;
+    chart.options.plugins.tooltip.borderColor = tc.tooltipBorder;
+    chart.update('none');
+  }
+
+  const observer = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      if (m.attributeName === 'data-theme') { refreshTheme(); break; }
+    }
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 })();
 </script>
 </body>
