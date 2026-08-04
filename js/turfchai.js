@@ -16,7 +16,12 @@
       sync();
       btn.addEventListener('click', () => {
         const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
+        // crossfade colors while the palette swaps
+        const root = document.documentElement;
+        root.classList.add('theme-switching');
+        clearTimeout(root._themeFadeT);
+        root._themeFadeT = setTimeout(() => root.classList.remove('theme-switching'), 380);
+        root.setAttribute('data-theme', next);
         localStorage.setItem('tc-theme', next);
         document.querySelectorAll('[data-toggle-theme]').forEach(b => {
           b.textContent = next === 'dark' ? '☀️' : '🌙';
@@ -276,11 +281,34 @@
     bindSlots();
     bindCountdowns();
     
-    // Responsive sidebar drawer
+    // Responsive sidebar drawer & desktop toggle
+    let backdrop = document.querySelector('.sidebar-backdrop');
+    if (!backdrop) {
+      backdrop = document.createElement('div');
+      backdrop.className = 'sidebar-backdrop';
+      document.body.appendChild(backdrop);
+    }
+    backdrop.addEventListener('click', () => {
+      document.body.classList.remove('sidebar-open');
+    });
+
     document.querySelectorAll('[data-toggle-sidebar]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        document.body.classList.toggle('sidebar-open');
+        e.stopPropagation();
+        if (window.innerWidth <= 900) {
+          document.body.classList.toggle('sidebar-open');
+        } else {
+          document.body.classList.toggle('sidebar-closed');
+        }
+      });
+    });
+
+    document.querySelectorAll('.sidebar .sidenav a').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 900) {
+          document.body.classList.remove('sidebar-open');
+        }
       });
     });
   });
