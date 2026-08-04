@@ -19,7 +19,23 @@
   </div>
 </header>
 
-<main class="wrap" style="padding-top:24px;max-width:1040px">
+<div class="shell wrap" style="max-width:1280px">
+  <aside class="sidebar">
+    <nav class="sidenav" aria-label="Owner workspace">
+      <a href="dashboard.html"><span class="ico">📊</span>Overview</a>
+      <a href="calendar.html"><span class="ico">🗓️</span>Calendar</a>
+      <a href="bookings.html"><span class="ico">📅</span>Bookings</a>
+      <a href="payments.html"><span class="ico">💰</span>Payments</a>
+      <a href="venue-setup.html" class="active"><span class="ico">🏟️</span>Venues</a>
+      <a href="customers.html"><span class="ico">👥</span>Customers</a>
+      <a href="promotions.html"><span class="ico">🎁</span>Promotions</a>
+      <a href="reviews.html"><span class="ico">⭐</span>Reviews</a>
+      <a href="payments.html#reports"><span class="ico">📈</span>Reports</a>
+      <a href="staff.html"><span class="ico">🧑‍🤝‍🧑</span>Staff &amp; Shifts</a>
+      <a href="venue-setup.html"><span class="ico">⚙️</span>Settings</a>
+    </nav>
+  </aside>
+  <main class="main" style="max-width:1040px">
   <div class="alert ok" style="margin-bottom:16px"><span class="ico">✓</span><div><b>Approved! Kick Off Arena is a pending listing.</b>Complete the profile below, then press <b>Go Live</b> to start taking bookings.</div></div>
 
   <div class="between" style="flex-wrap:wrap;gap:10px;margin-bottom:16px">
@@ -135,6 +151,7 @@
     </div>
   </div>
 </main>
+</div>
 
 <div class="overlay" id="live" role="dialog" aria-modal="true" aria-labelledby="lvTitle">
   <div class="modal center">
