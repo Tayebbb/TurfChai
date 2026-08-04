@@ -347,6 +347,8 @@ textarea.input{min-height:88px;resize:vertical}
 .badge.amber{background:var(--warn-soft);color:var(--warn)}
 .badge.red{background:var(--danger-soft);color:var(--danger)}
 .badge.blue{background:var(--info-soft);color:var(--info)}
+.badge.purple{background:#EDE4FF;color:#6D3FC4}
+[data-theme="dark"] .badge.purple{background:rgba(167,139,250,.16);color:#C4B5FD}
 .badge.gray{background:var(--surface-3);color:var(--text-2)}
 .badge.nodot::before{display:none}
 .verified{
