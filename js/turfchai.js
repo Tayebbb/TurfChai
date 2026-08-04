@@ -281,11 +281,34 @@
     bindSlots();
     bindCountdowns();
     
-    // Responsive sidebar drawer
+    // Responsive sidebar drawer & desktop toggle
+    let backdrop = document.querySelector('.sidebar-backdrop');
+    if (!backdrop) {
+      backdrop = document.createElement('div');
+      backdrop.className = 'sidebar-backdrop';
+      document.body.appendChild(backdrop);
+    }
+    backdrop.addEventListener('click', () => {
+      document.body.classList.remove('sidebar-open');
+    });
+
     document.querySelectorAll('[data-toggle-sidebar]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        document.body.classList.toggle('sidebar-open');
+        e.stopPropagation();
+        if (window.innerWidth <= 900) {
+          document.body.classList.toggle('sidebar-open');
+        } else {
+          document.body.classList.toggle('sidebar-closed');
+        }
+      });
+    });
+
+    document.querySelectorAll('.sidebar .sidenav a').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 900) {
+          document.body.classList.remove('sidebar-open');
+        }
       });
     });
   });
