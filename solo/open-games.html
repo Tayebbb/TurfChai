@@ -16,7 +16,7 @@
       <a href="../player/explore.html">Explore Venues</a>
       <a href="open-games.html" class="active">Open Games</a>
       <a href="../player/bookings.html">My Bookings</a>
-      <a href="../player/home.html#rewards">Rewards</a>
+      <a href="../player/rewards.html">Rewards</a>
     </nav>
     <div class="spacer"></div>
     <button class="icon-btn" data-toggle-theme aria-label="Toggle theme">🌙</button>
@@ -24,15 +24,25 @@
   </div>
 </header>
 
-<main class="wrap" style="padding-top:24px;max-width:900px">
-  <div class="between" style="flex-wrap:wrap;gap:10px">
-    <div><h1 style="font-size:24px;margin-bottom:2px">Open games</h1><span class="subtle">Free Agent feed · matched to your skill &amp; area</span></div>
-    <a class="btn btn-secondary" href="lfg-alert.html">🔔 My LFG alerts (1)</a>
-  </div>
+<main class="wrap" style="padding-top:24px;max-width:960px">
+  <section class="hero-panel">
+    <div class="hero-copy">
+      <p class="eyebrow">Free Agent feed</p>
+      <h1>Open games that fit your energy</h1>
+      <p class="hero-text">Discover nearby matches, jump into fast-moving slots, and find your next squad with less friction.</p>
+    </div>
+    <div class="hero-side">
+      <div class="hero-metric">
+        <strong>12</strong>
+        <span>matches today</span>
+      </div>
+      <a class="btn btn-primary" href="lfg-alert.html">My alerts</a>
+    </div>
+  </section>
 
-  <div class="chiprow" style="margin:16px 0">
-    <button class="chip on" data-filter>⚽ Football</button>
-    <button class="chip" data-filter>🏏 Cricket</button>
+  <div class="chiprow filter-band" style="margin:18px 0 12px">
+    <button class="chip on" data-filter>Football</button>
+    <button class="chip" data-filter>Cricket</button>
     <button class="chip on" data-filter>Dhanmondi + 3 km</button>
     <button class="chip on" data-filter>Tonight</button>
     <button class="chip" data-filter>Tomorrow</button>
@@ -44,7 +54,7 @@
 
   <div class="stack">
     <!-- Urgent -->
-    <a class="game-card" href="game-detail.html" style="text-decoration:none;color:var(--text);border-left:3px solid var(--danger)">
+    <a class="game-card featured-card" href="game-detail.html" style="text-decoration:none;color:var(--text);border-left:3px solid var(--danger)">
       <div class="between" style="flex-wrap:wrap;gap:8px">
         <span class="badge red">Urgent replacement · needs 1 player</span>
         <span class="row-wrap"><span class="skill">Intermediate</span><span class="badge green nodot">Instant join</span></span>
@@ -54,7 +64,7 @@
           <h3 style="margin:0">Friday Night Football</h3>
           <div class="subtle small">Kick Off Arena · Dhanmondi · 1.2 km · <b class="num" style="color:var(--text)">Tonight 9:00–10:30 PM</b></div>
         </div>
-        <div class="center"><b class="num" style="font-size:18px">৳280</b><div class="tiny subtle">your share</div></div>
+        <div class="center price-box"><b class="num" style="font-size:18px">৳280</b><div class="tiny subtle">your share</div></div>
       </div>
       <div class="between">
         <div class="row" style="gap:8px">
@@ -73,7 +83,7 @@
       <div class="between" style="flex-wrap:wrap;gap:10px">
         <div><h3 style="margin:0">Casual 6-a-side</h3>
         <div class="subtle small">GreenTurf Mohammadpur · 2.8 km · Tue 5 Aug, 7:00–8:00 PM</div></div>
-        <div class="center"><b class="num" style="font-size:18px">৳200</b><div class="tiny subtle">your share</div></div>
+        <div class="center price-box"><b class="num" style="font-size:18px">৳200</b><div class="tiny subtle">your share</div></div>
       </div>
       <div class="between">
         <div class="row" style="gap:8px"><div class="avatar-group"><span class="avatar sm">NH</span><span class="avatar sm b">JU</span><span class="avatar sm c">+7</span></div><span class="subtle small">9/12 joined · host <b>Nusrat J.</b> ★4.7</span></div>
@@ -89,7 +99,7 @@
       <div class="between" style="flex-wrap:wrap;gap:10px">
         <div><h3 style="margin:0">Sunday Cricket Nets</h3>
         <div class="subtle small">Baridhara Sports Hub · 6.4 km · Sun 10 Aug, 8:00–10:00 AM</div></div>
-        <div class="center"><b class="num" style="font-size:18px">৳350</b><div class="tiny subtle">your share</div></div>
+        <div class="center price-box"><b class="num" style="font-size:18px">৳350</b><div class="tiny subtle">your share</div></div>
       </div>
       <div class="between">
         <div class="row" style="gap:8px"><div class="avatar-group"><span class="avatar sm">AF</span><span class="avatar sm c">MI</span><span class="avatar sm b">+4</span></div><span class="subtle small">7/8 joined · host <b>Adnan F.</b> ★4.8</span></div>
@@ -97,7 +107,7 @@
       </div>
     </a>
 
-    <div class="game-card" style="opacity:.75">
+    <div class="game-card muted-card" style="opacity:.9">
       <div class="between"><span class="badge gray">Full · closed</span><span class="skill">Intermediate</span></div>
       <div class="between" style="flex-wrap:wrap;gap:10px">
         <div><h3 style="margin:0">Midnight Futsal</h3><div class="subtle small">Lalmatia Play Zone · Tonight 11:00 PM</div></div>
