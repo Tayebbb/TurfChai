@@ -188,7 +188,7 @@
         ['owner/onboarding.html', 'List your venue'],
       ]],
       ['Tournament hosts', [
-        ['host/dashboard.html', 'Tournament dashboard'],
+        ['player/home.html#host', 'Tournament hub'],
         ['host/search.html', 'Find a venue'],
         ['host/multi-pitch.html', 'Multi-pitch booking'],
         ['host/reserve.html', 'Reserve & pay'],
