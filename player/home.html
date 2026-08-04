@@ -32,14 +32,16 @@
     <div><h1 style="font-size:24px;margin:0">Salam, Rafi</h1><span class="subtle">Dhanmondi, Dhaka</span></div>
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <span class="badge green">Silver member · 1,240 pts</span>
-      <label class="glass" style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:4px 6px 4px 14px">
-        <span class="small subtle" style="font-weight:600">View as</span>
-        <select class="select" id="modeSelect" aria-label="Dashboard mode" style="width:auto;min-height:34px;padding:5px 32px 5px 10px;border:none;background:transparent;border-radius:999px;font-weight:700;color:var(--text);cursor:pointer">
-          <option value="player" selected>Player</option>
-          <option value="solo">Solo Player</option>
-          <option value="host">Tournament Host</option>
-        </select>
-      </label>
+      <div class="viewas" id="viewAs">
+        <button class="viewas-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+          View as <b id="viewAsLabel">Player</b> <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="viewas-menu" role="listbox" aria-label="Dashboard mode">
+          <button type="button" data-mode="player" class="on" role="option" aria-selected="true"><span>Player<span class="desc">Book turfs &amp; manage matches</span></span><span class="check">✓</span></button>
+          <button type="button" data-mode="solo" role="option" aria-selected="false"><span>Solo Player<span class="desc">Join open games near you</span></span><span class="check"></span></button>
+          <button type="button" data-mode="host" role="option" aria-selected="false"><span>Tournament Host<span class="desc">Run your own tournament</span></span><span class="check"></span></button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -408,12 +410,30 @@
 (function () {
   // #player / #solo / #host deep-links select the matching dashboard mode;
   // #rewards lives in the player panel, so switch to it before scrolling
-  const modeSelect = document.getElementById('modeSelect');
+  const viewAs = document.getElementById('viewAs');
+  const viewAsBtn = viewAs.querySelector('.viewas-btn');
+  const modeNames = { player: 'Player', solo: 'Solo Player', host: 'Tournament Host' };
+  const closeViewAs = () => { viewAs.classList.remove('open'); viewAsBtn.setAttribute('aria-expanded', 'false'); };
   const setMode = (mode) => {
     document.querySelector(`.seg [data-tab="${mode}"]`)?.click();
-    if (modeSelect) modeSelect.value = mode;
+    document.getElementById('viewAsLabel').textContent = modeNames[mode];
+    viewAs.querySelectorAll('[data-mode]').forEach(b => {
+      const on = b.getAttribute('data-mode') === mode;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+      b.querySelector('.check').textContent = on ? '✓' : '';
+    });
   };
-  modeSelect?.addEventListener('change', () => setMode(modeSelect.value));
+  viewAsBtn.addEventListener('click', () => {
+    const open = viewAs.classList.toggle('open');
+    viewAsBtn.setAttribute('aria-expanded', open);
+  });
+  viewAs.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+    setMode(b.getAttribute('data-mode'));
+    closeViewAs();
+  }));
+  document.addEventListener('click', (e) => { if (!viewAs.contains(e.target)) closeViewAs(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeViewAs(); });
   const applyHash = () => {
     const mode = location.hash.replace('#', '');
     if (['player', 'solo', 'host'].includes(mode)) {
