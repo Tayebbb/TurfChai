@@ -98,8 +98,143 @@
         <button class="btn btn-sm btn-secondary" style="margin-top:10px" data-toast="Monthly report generated 📈">Generate monthly report</button>
       </section>
     </div>
+
+    <section class="card" style="margin-top:16px">
+      <div class="between" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <h3 style="margin:0">🏆 Sport Performance &amp; Missed Slots Report</h3>
+          <p class="subtle small" style="margin:2px 0 0">Detailed breakdown of revenue, occupancy, and missed/unbooked slots for each sport</p>
+        </div>
+        <div class="row-wrap" style="gap:6px" id="sportFilterGroup">
+          <button class="chip on" data-sport-filter="all">All Sports</button>
+          <button class="chip" data-sport-filter="Football">⚽ Football</button>
+          <button class="chip" data-sport-filter="Cricket">🏏 Cricket</button>
+          <button class="chip" data-sport-filter="Futsal">🥅 Futsal</button>
+          <button class="chip" data-sport-filter="Badminton">🏸 Badminton</button>
+        </div>
+      </div>
+
+      <div class="grid4" style="margin-top:14px;gap:10px" id="sportCardsGrid">
+        <!-- Football -->
+        <div class="panel stack-sm sport-card" data-sport="Football" style="padding:12px">
+          <div class="between">
+            <b class="small">⚽ Football</b>
+            <span class="badge blue nodot">88% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">42 slots · ৳92,400</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">5 slots · −৳11,000</b></div>
+          <div class="progress"><i style="width:88%"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Football" data-missed-count="5 slots" data-missed-loss="৳11,000" data-missed-items="Tue 2:00–3:30 PM (Off-peak unbooked)|Wed 10:00–11:30 AM (Rainy morning)|Thu 4:00–5:30 PM (Late cancellation)|Fri 1:00–2:30 PM (Jumma time window)|Sun 2:00–3:30 PM (Off-peak unbooked)">View 5 missed slots →</button>
+        </div>
+
+        <!-- Cricket -->
+        <div class="panel stack-sm sport-card" data-sport="Cricket" style="padding:12px">
+          <div class="between">
+            <b class="small">🏏 Cricket</b>
+            <span class="badge amber nodot">94% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">16 slots · ৳48,000</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">1 slot · −৳3,000</b></div>
+          <div class="progress"><i style="width:94%;background:var(--warn)"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Cricket" data-missed-count="1 slot" data-missed-loss="৳3,000" data-missed-items="Monday 10:00 AM–12:00 PM (Off-peak weekday)">View 1 missed slot →</button>
+        </div>
+
+        <!-- Futsal -->
+        <div class="panel stack-sm sport-card" data-sport="Futsal" style="padding:12px">
+          <div class="between">
+            <b class="small">🥅 Futsal</b>
+            <span class="badge green nodot">76% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">35 slots · ৳52,500</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">8 slots · −৳12,000</b></div>
+          <div class="progress"><i style="width:76%;background:var(--success)"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Futsal" data-missed-count="8 slots" data-missed-loss="৳12,000" data-missed-items="Mon 2:00 PM (Unfilled)|Mon 3:00 PM (Unfilled)|Tue 1:00 PM (Off-peak)|Tue 2:00 PM (Off-peak)|Wed 11:00 AM (Unfilled)|Wed 12:00 PM (Unfilled)|Thu 2:00 PM (Off-peak)|Sun 1:00 PM (Unfilled)">View 8 missed slots →</button>
+        </div>
+
+        <!-- Badminton -->
+        <div class="panel stack-sm sport-card" data-sport="Badminton" style="padding:12px">
+          <div class="between">
+            <b class="small">🏸 Badminton</b>
+            <span class="badge nodot" style="background:var(--info-soft);color:var(--info)">82% Occ.</span>
+          </div>
+          <div class="between small"><span class="muted">Booked slots</span><b class="num">24 slots · ৳24,000</b></div>
+          <div class="between small"><span class="muted">Missed / empty slots</span><b class="num" style="color:var(--danger)">4 slots · −৳4,000</b></div>
+          <div class="progress"><i style="width:82%;background:var(--info)"></i></div>
+          <button class="btn btn-sm btn-tertiary view-missed-btn" style="margin-top:6px;width:100%" data-open="#missedSlotModal" data-sport-name="Badminton" data-missed-count="4 slots" data-missed-loss="৳4,000" data-missed-items="Tue 11:00 AM (Unbooked)|Wed 10:00 AM (Unbooked)|Thu 11:20 AM (No-show)|Sat 1:00 PM (Off-peak)">View 4 missed slots →</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
+
+<!-- Modal: Missed Slots Detail Report -->
+<div class="overlay" id="missedSlotModal" role="dialog" aria-modal="true" aria-labelledby="msTitle">
+  <div class="modal" style="max-width:520px">
+    <div class="between"><h3 id="msTitle">Missed Slots Detail</h3><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <p class="subtle small" style="margin:4px 0 12px">Analysis of unbooked, canceled, or missed slots to optimize your pricing &amp; promotions.</p>
+    
+    <div class="grid2" style="gap:10px;margin-bottom:12px">
+      <div class="panel"><span class="tiny subtle">MISSED SLOTS</span><br><b class="num" id="msCount" style="color:var(--danger)">5 slots</b></div>
+      <div class="panel"><span class="tiny subtle">ESTIMATED REVENUE LOSS</span><br><b class="num" id="msLoss" style="color:var(--danger)">৳11,000</b></div>
+    </div>
+
+    <h4 style="margin:10px 0 6px">Missed Slot Log &amp; Reasons</h4>
+    <div class="stack-sm" id="msList" style="max-height:220px;overflow-y:auto">
+    </div>
+
+    <div class="alert info" style="margin-top:14px"><span class="ico">💡</span><div><b>Optimization Tip</b>Create an off-peak promo for these unbooked times to boost occupancy.</div></div>
+    
+    <div class="stack-sm" style="margin-top:14px">
+      <a class="btn btn-primary btn-block" href="promotions.html">Create promo for this sport →</a>
+      <button class="btn btn-tertiary btn-block" data-close>Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="../js/turfchai.js"></script>
+<script>
+(function() {
+  // Sport filter logic
+  document.querySelectorAll('#sportFilterGroup .chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      document.querySelectorAll('#sportFilterGroup .chip').forEach(c => c.classList.remove('on'));
+      this.classList.add('on');
+      const filter = this.getAttribute('data-sport-filter');
+      document.querySelectorAll('.sport-card').forEach(card => {
+        if (filter === 'all' || card.getAttribute('data-sport') === filter) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // Populate Missed Slot Modal
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.view-missed-btn');
+    if (btn) {
+      const sport = btn.getAttribute('data-sport-name');
+      const count = btn.getAttribute('data-missed-count');
+      const loss = btn.getAttribute('data-missed-loss');
+      const items = (btn.getAttribute('data-missed-items') || '').split('|');
+
+      document.getElementById('msTitle').textContent = `Missed Slots Detail · ${sport}`;
+      document.getElementById('msCount').textContent = count;
+      document.getElementById('msLoss').textContent = loss;
+
+      const listContainer = document.getElementById('msList');
+      if (listContainer) {
+        listContainer.innerHTML = items.map(item => `
+          <div class="panel between">
+            <span class="small">${item}</span>
+            <span class="badge red nodot">Missed</span>
+          </div>
+        `).join('');
+      }
+    }
+  });
+})();
+</script>
 </body>
 </html>
