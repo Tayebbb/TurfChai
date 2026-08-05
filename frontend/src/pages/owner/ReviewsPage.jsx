@@ -35,4 +35,128 @@ const DEFAULT_REPLY =
 export default function ReviewsPage() {
   const { showToast } = useToast();
   const chips = useFilterChips(['All (214)']);
-  const [reply, setReply] = useState(DEFAULT_REPLY);
+  const [reply, setReply] = useState(DEFAULT_REPLY);
+
+  return (
+    <>
+      <PageTitle title="Reviews" />
+
+      <div className="main-header">
+        <div>
+          <h1>Reviews</h1>
+          <span className="subtle small">All reviews come from verified bookings only</span>
+        </div>
+        <Button to={paths.player.venue('kick-off-arena')}>View public page</Button>
+      </div>
+
+      <div className="grid2" style={{ alignItems: 'start' }}>
+        <div className="stack">
+          <div className="row-wrap">
+            {FILTERS.map((filter) => (
+              <Chip key={filter} active={chips.isActive(filter)} onToggle={() => chips.toggle(filter)}>
+                {filter}
+              </Chip>
+            ))}
+          </div>
+
+          <div className="card" style={{ borderLeft: '3px solid var(--warn)' }}>
+            <div className="between">
+              <div className="row" style={{ gap: 8 }}>
+                <Avatar size="sm" initials="RK" />
+                <div>
+                  <b className="small">Rafiul Karim</b>{' '}
+                  <Badge tone="green" dot={false}>
+                    Verified booking
+                  </Badge>
+                  <div className="tiny subtle">Tonight · Pitch 2</div>
+                </div>
+              </div>
+              <span className="rating">5.0</span>
+            </div>
+            <p className="small" style={{ margin: '10px 0' }}>
+              &quot;Grass is fresh and fast, floodlights excellent. Handover was exactly on time. Changing room a
+              bit small for 10 people.&quot;
+            </p>
+            <div className="field" style={{ marginBottom: 8 }}>
+              <label htmlFor="r1">Your response</label>
+              <Textarea
+                id="r1"
+                placeholder="Thank the player, address feedback…"
+                value={reply}
+                onChange={(event) => setReply(event.target.value)}
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => showToast('Response published — shown under the review ✓')}
+            >
+              Publish response
+            </Button>
+          </div>
+
+          <div className="card" style={{ borderLeft: '3px solid var(--warn)' }}>
+            <div className="between">
+              <div className="row" style={{ gap: 8 }}>
+                <Avatar size="sm" initials="SR" tone="c" />
+                <div>
+                  <b className="small">Sadia Rahman</b>{' '}
+                  <Badge tone="green" dot={false}>
+                    Verified
+                  </Badge>{' '}
+                  <Badge tone="blue" dot={false}>
+                    🧒 Parent review
+                  </Badge>
+                  <div className="tiny subtle">25 Jul · Pitch 3 futsal</div>
+                </div>
+              </div>
+              <span className="rating">3.5</span>
+            </div>
+            <p className="small" style={{ margin: '10px 0' }}>
+              &quot;Great indoor court for kids&apos; coaching, but the waiting area for parents needs more seating
+              and the washroom queue was long.&quot;
+            </p>
+            <div className="row">
+              <Button size="sm" variant="primary" onClick={() => showToast('Response editor opened')}>
+                Respond
+              </Button>
+              <Button
+                size="sm"
+                variant="ghostDanger"
+                onClick={() =>
+                  showToast(
+                    'Reported to TurfChai moderation — reviews are only removed if they violate guidelines',
+                  )
+                }
+              >
+                Report review
+              </Button>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="between">
+              <div className="row" style={{ gap: 8 }}>
+                <Avatar size="sm" initials="TA" tone="b" />
+                <div>
+                  <b className="small">Tanvir Ahmed</b>{' '}
+                  <Badge tone="green" dot={false}>
+                    Verified
+                  </Badge>
+                  <div className="tiny subtle">2 Aug · Pitch 1</div>
+                </div>
+              </div>
+              <span className="rating">4.5</span>
+            </div>
+            <p className="small" style={{ margin: '10px 0' }}>
+              &quot;Best evening lights in Dhanmondi. Parking fills up by 8 PM though.&quot;
+            </p>
+            <div className="panel small" style={{ borderLeft: '3px solid var(--brand)' }}>
+              <b className="tiny" style={{ color: 'var(--brand-600)' }}>
+                YOUR RESPONSE · 3 Aug
+              </b>
+              <p className="tiny muted" style={{ margin: '2px 0 0' }}>
+                &quot;Thanks Tanvir! Extra parking opens next month at the rear gate.&quot;
+              </p>
+            </div>
+          </div>
