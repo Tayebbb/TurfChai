@@ -121,4 +121,125 @@ export default function CalendarPage() {
 
     showToast(`Manual booking confirmed for ${name} (${form.pitch}) ✓`);
     manual.close();
-  }
+  }
+
+  return (
+    <>
+      <PageTitle title="Calendar" />
+
+      <div className="main-header">
+        <div>
+          <h1>Calendar</h1>
+          <span className="subtle small">Every booking — online, phone &amp; walk-in — in one place</span>
+        </div>
+        <div className="row">
+          <div className="seg" role="group" aria-label="View">
+            <button type="button" className="on">
+              Day
+            </button>
+            <button type="button" onClick={() => showToast('Week view (concept)')}>
+              Week
+            </button>
+          </div>
+          <Button onClick={() => showToast('Slot blocked for maintenance ⛔')}>⛔ Block slot</Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setTargetCell(null);
+              manual.open();
+            }}
+          >
+            + Manual booking
+          </Button>
+        </div>
+      </div>
+
+      <div className="between" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+        <div className="row">
+          <IconButton label="Previous day" onClick={() => showToast('Thu 7 Aug')}>
+            ‹
+          </IconButton>
+          <b>Friday 8 Aug 2026 · Today</b>
+          <IconButton label="Next day" onClick={() => showToast('Sat 9 Aug')}>
+            ›
+          </IconButton>
+        </div>
+        <div className="legend">
+          {LEGEND.map((item) => (
+            <span key={item.id}>
+              <i className="sw" style={{ background: item.swatch }} />
+              {item.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="cal card" style={{ padding: 0, overflowX: 'auto' }}>
+        <div className="cal-grid" style={{ minWidth: 720 }}>
+          <div className="cal-head">Time</div>
+          <div className="cal-head">
+            Pitch 1 · 7-a-side
+            <br />
+            <Badge tone="blue" dot={false} style={SMALL_BADGE}>
+              ⚽ Football
+            </Badge>{' '}
+            <Badge tone="amber" dot={false} style={SMALL_BADGE}>
+              🏏 Cricket
+            </Badge>
+          </div>
+          <div className="cal-head">
+            Pitch 2 · 7-a-side
+            <br />
+            <Badge tone="blue" dot={false} style={SMALL_BADGE}>
+              ⚽ Football
+            </Badge>
+          </div>
+          <div className="cal-head">
+            Pitch 3 · Futsal
+            <br />
+            <Badge tone="green" dot={false} style={SMALL_BADGE}>
+              🥅 Futsal
+            </Badge>{' '}
+            <Badge
+              dot={false}
+              style={{ background: 'var(--info-soft)', color: 'var(--info)', ...SMALL_BADGE }}
+            >
+              🏸 Badminton
+            </Badge>
+          </div>
+
+          {rows.map((row, rowIndex) => (
+            <Fragment key={row.time}>
+              <div className="cal-time num">{row.time}</div>
+              {row.cells.map((cell, cellIndex) => (
+                <div className="cal-cell" key={`${row.time}-${cellIndex}`}>
+                  {cell.kind === 'add' ? (
+                    <button type="button" className="addcell" onClick={() => openForCell(rowIndex, cellIndex)}>
+                      +
+                    </button>
+                  ) : (
+                    <div
+                      className={`cal-ev ${cell.variant}`}
+                      role={cell.openable ? 'button' : undefined}
+                      tabIndex={cell.openable ? 0 : undefined}
+                      onClick={cell.openable ? detail.open : undefined}
+                      onKeyDown={
+                        cell.openable
+                          ? (event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                detail.open();
+                              }
+                            }
+                          : undefined
+                      }
+                    >
+                      {cell.label}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Fragment>
+          ))}
+        </div>
+      </div>
