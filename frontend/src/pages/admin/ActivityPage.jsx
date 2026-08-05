@@ -120,3 +120,90 @@ export default function ActivityPage() {
           entry.target.toLowerCase().includes(term),
       )
     : AUDIT_ENTRIES;
+
+  return (
+    <>
+      <PageTitle title="System Audit Log" />
+
+      <div className="main-header" style={{ marginBottom: 24 }}>
+        <div>
+          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+            <Link
+              className="btn btn-sm btn-tertiary"
+              to={paths.admin.dashboard}
+              style={{ padding: '4px 10px', fontWeight: 700 }}
+            >
+              ← Back
+            </Link>
+            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
+              System Audit &amp; Activity Log
+            </h1>
+          </div>
+          <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
+            Immutable Record of Administrative &amp; Automated Actions
+          </span>
+        </div>
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={() => showToast('Exporting activity-log.csv 📄')}
+        >
+          ⬇ Export CSV
+        </button>
+      </div>
+
+      {/* Filter Chips & Search Bar */}
+      <div className="row-wrap" style={{ marginBottom: 16 }}>
+        <input
+          className="input"
+          style={{ maxWidth: 240 }}
+          placeholder="🔍 Search action, admin, ID…"
+          aria-label="Search action, admin, ID"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        {FILTERS.map((item) => (
+          <Chip key={item} active={filter === item} onToggle={() => setFilter(item)}>
+            {item}
+          </Chip>
+        ))}
+      </div>
+
+      {/* Audit Log Table */}
+      <div className="card table-wrap" style={{ padding: 0, borderRadius: 16 }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Administrator</th>
+              <th>Action Performed</th>
+              <th>Target Object</th>
+              <th>Details &amp; Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((entry) => (
+              <tr key={entry.id} style={entry.rowStyle}>
+                <td className="num">{entry.time}</td>
+                <td>
+                  {entry.avatarClass ? (
+                    <>
+                      <span className={entry.avatarClass} style={entry.avatarStyle}>
+                        {initialsOf(entry.admin)}
+                      </span>{' '}
+                      {entry.admin}
+                    </>
+                  ) : (
+                    entry.admin
+                  )}
+                </td>
+                <td>
+                  <span className={`badge ${entry.actionTone} nodot`}>{entry.action}</span>
+                </td>
+                <td className={entry.targetNum ? 'num' : undefined}>{entry.target}</td>
+                <td className="small muted">{entry.details}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
