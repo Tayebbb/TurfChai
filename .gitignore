@@ -40,3 +40,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local-only (Mugdho's personal journal/notes) ###
+Mugdho/
+
+### Runtime logs ###
+boot.log
