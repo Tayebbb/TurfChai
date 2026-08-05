@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { Icon } from '@/components/common/Icon';
@@ -9,7 +9,7 @@ import { Topbar } from '@/components/navigation/Topbar';
 import { Overlay } from '@/components/modals/Overlay';
 import { Badge } from '@/components/ui/Badge';
 import { adminAlerts } from '@/data/admin';
-import { currentAdmin } from '@/data/users';
+import { getUser } from '@/api/client';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { cn } from '@/utils/cn';
 import { paths } from '@/routes/paths';
@@ -17,8 +17,24 @@ import { ADMIN_NAV_LINKS } from '@/constants/navigation';
 
 const ALERT_ICONS = { amber: 'file', blue: 'money', red: 'alert', gray: 'activity' };
 
+const fallbackInitials = (name) => {
+  if (!name) return '??';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 /** Super-admin console shell: full-bleed glass topbar + alert drawer. */
 export function AdminLayout() {
+  const [, forceRender] = useReducer((x) => x + 1, 0);
+  useEffect(() => {
+    const handler = () => forceRender();
+    window.addEventListener('turfchai:session-change', handler);
+    return () => window.removeEventListener('turfchai:session-change', handler);
+  }, []);
+  const sessionAdmin = getUser();
+  const adminInitials =
+    sessionAdmin?.avatarInitials || fallbackInitials(sessionAdmin?.fullName);
   const alerts = useDisclosure(false);
   const [readIds, setReadIds] = useState(() => new Set());
   const unreadCount = adminAlerts.filter((alert) => !readIds.has(alert.id)).length;
@@ -37,7 +53,7 @@ export function AdminLayout() {
           </IconButton>
           <ThemeToggle className="admin-ico" />
           <IconButton className="admin-avatar" label="My profile" to={paths.admin.profile}>
-            {currentAdmin.initials}
+            {adminInitials}
             <span className="admin-online" aria-hidden="true" />
           </IconButton>
           <IconButton className="admin-ico admin-logout" label="Sign Out" to={paths.auth}>

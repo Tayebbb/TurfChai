@@ -14,6 +14,11 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/v1';
 
 const TOKEN_KEY = 'turfchai.auth.token';
 const USER_KEY = 'turfchai.auth.user';
+const SESSION_EVENT = 'turfchai:session-change';
+
+function notifySessionChange() {
+  window.dispatchEvent(new CustomEvent(SESSION_EVENT));
+}
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -22,6 +27,7 @@ export function getToken() {
 export function setSession({ token, user }) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  notifySessionChange();
 }
 
 export function getUser() {
@@ -36,6 +42,7 @@ export function getUser() {
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  notifySessionChange();
 }
 
 /**

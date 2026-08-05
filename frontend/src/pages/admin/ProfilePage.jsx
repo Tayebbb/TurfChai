@@ -1,8 +1,9 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Overlay } from '@/components/modals/Overlay';
-import { currentAdmin } from '@/data/users';
+import { getMe, updateMe } from '@/api/auth';
+import { getUser, setSession } from '@/api/client';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -10,30 +11,75 @@ import './ProfilePage.css';
 
 const TIMEZONES = ['Dhaka (GMT+6)', 'London (GMT+0)', 'New York (GMT-5)'];
 
-const PROFILE_STATS = [
-  { id: 'since', label: 'USER SINCE', value: 'Feb 2024', style: undefined },
-  { id: 'actions', label: 'LOGGED ACTIONS', value: '1,204 Actions', style: undefined },
-  { id: 'security', label: 'SECURITY LEVEL', value: 'High (2FA)', style: { color: 'var(--mint)' } },
-];
-
 const RECENT_ACTIVITY = [
   { id: 'act-1', title: 'Suspended user #38112', when: 'Today 4:02 PM' },
   { id: 'act-2', title: 'Updated turf venue V-0044', when: 'Yesterday' },
   { id: 'act-3', title: 'Approved TR-1033 · Mirpur Annex', when: '2 days ago' },
 ];
 
+const fallbackInitials = (fullName) => {
+  if (!fullName) return '??';
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export default function ProfilePage() {
   const { showToast } = useToast();
   const profileSaved = useDisclosure(false);
-  const [name, setName] = useState(currentAdmin.name);
-  const [email, setEmail] = useState('nadia@turfchai.com');
-  const [phone, setPhone] = useState('+880 1700 112 233');
-  const [timezone, setTimezone] = useState(TIMEZONES[0]);
+  const stored = getUser() ?? {};
+  const [user, setUser] = useState(stored);
+  const [name, setName] = useState(stored.fullName ?? '');
+  const [email, setEmail] = useState(stored.email ?? '');
+  const [phone, setPhone] = useState(stored.phone ?? '');
+  const [timezone, setTimezone] = useState(stored.timezone ?? TIMEZONES[0]);
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (event) => {
+  useEffect(() => {
+    getMe()
+      .then((fresh) => {
+        setUser(fresh);
+        setName(fresh.fullName ?? '');
+        setEmail(fresh.email ?? '');
+        setPhone(fresh.phone ?? '');
+        setSession({ user: fresh });
+      })
+      .catch(() => {
+        // Session lookup failed — keep showing the stored session user.
+      });
+  }, []);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    profileSaved.open();
+    setSaving(true);
+    try {
+      const updated = await updateMe({ fullName: name.trim(), email: email.trim(), phone: phone.trim() });
+      const current = getUser() ?? {};
+      setSession({ user: { ...current, ...updated, timezone } });
+      setUser(updated);
+      setEmail(updated.email);
+      setPhone(updated.phone);
+      profileSaved.open();
+    } catch (error) {
+      showToast(error.message || 'Failed to save your profile');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const initials = user.avatarInitials || fallbackInitials(user.fullName);
+  const role = user.role || 'ADMIN';
+
+  const profileStats = [
+    {
+      id: 'since',
+      label: 'USER SINCE',
+      value: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
+      style: undefined,
+    },
+    { id: 'actions', label: 'LOGGED ACTIONS', value: '1,204 Actions', style: undefined },
+    { id: 'security', label: 'SECURITY LEVEL', value: 'High (2FA)', style: { color: 'var(--mint)' } },
+  ];
 
   return (
     <>
@@ -60,20 +106,20 @@ export default function ProfilePage() {
       {/* Header Card (Summary) */}
       <div className="profile-header-card">
         <div className="profile-avatar-wrap">
-          {currentAdmin.initials}
+          {initials}
           <span className="status-indicator"></span>
         </div>
         <div style={{ flex: 1 }}>
           <div className="row-wrap" style={{ alignItems: 'center', gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>{currentAdmin.name}</h2>
-            <span className="badge red nodot">{currentAdmin.role}</span>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>{user.fullName || '—'}</h2>
+            <span className="badge red nodot">{role}</span>
           </div>
           <span className="subtle small" style={{ display: 'block', marginTop: 2 }}>
-            Primary workspace account
+            {user.email || 'Primary workspace account'}
           </span>
 
           <div className="stat-mini-row">
-            {PROFILE_STATS.map((stat, index) => (
+            {profileStats.map((stat, index) => (
               <Fragment key={stat.id}>
                 {index > 0 ? (
                   <div style={{ width: 1, background: 'var(--border-soft)' }}></div>
@@ -146,9 +192,10 @@ export default function ProfilePage() {
             <button
               className="btn btn-primary"
               type="submit"
+              disabled={saving}
               style={{ marginTop: 16, fontWeight: 700, minHeight: 42, padding: '0 24px' }}
             >
-              Save Settings Updates
+              {saving ? 'Saving…' : 'Save Settings Updates'}
             </button>
           </form>
         </section>
@@ -279,7 +326,7 @@ export default function ProfilePage() {
         </div>
         <h3 style={{ marginBottom: 8 }}>Profile Updated</h3>
         <p className="muted small" style={{ marginBottom: 16 }}>
-          Your personal administrative profile settings have been updated.
+          Your personal profile settings have been saved.
         </p>
         <button className="btn btn-primary btn-block" type="button" onClick={profileSaved.close}>
           Done
