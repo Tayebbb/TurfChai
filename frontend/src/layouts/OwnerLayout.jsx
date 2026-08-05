@@ -90,6 +90,9 @@ function OwnerChrome() {
           <Button block to={paths.player.home} onClick={account.close}>
             ⚽ Switch to player workspace
           </Button>
+          <Button variant="danger" block to={paths.auth} onClick={account.close} style={{ marginTop: 8 }}>
+            🚪 Sign Out / Change Role
+          </Button>
         </div>
         <Button variant="tertiary" block onClick={account.close} style={{ marginTop: 10 }}>
           Close
