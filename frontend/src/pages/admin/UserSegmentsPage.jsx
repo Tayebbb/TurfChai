@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
 import { PageTitle } from '@/components/common/PageTitle';
+import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
 
 const KPIS = [
@@ -255,7 +256,7 @@ export default function UserSegmentsPage() {
                 className="value num"
                 style={{ color: kpi.color, fontSize: 36, display: 'block', margin: '6px 0 2px' }}
               >
-                {kpi.value}
+                <CountUp to={Number(kpi.value.replace(/,/g, ''))} delay={index * 120} />
               </b>
               <span className={kpi.deltaClass} style={kpi.deltaStyle}>
                 {kpi.deltaText}
