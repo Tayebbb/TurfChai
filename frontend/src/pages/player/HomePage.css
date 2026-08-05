@@ -1,0 +1,1 @@
+.hscroll{display:flex;gap:12px;overflow-x:auto;padding:4px 2px;scrollbar-width:none}.hscroll::-webkit-scrollbar{display:none}.hscroll>*{min-width:250px;flex:none}
