@@ -1,0 +1,45 @@
+﻿/* ---------- Responsive refinements ---------- */
+@media (max-width:640px){
+  .main-header .btn{width:100%}
+  .stickybar-inner{flex-wrap:wrap}
+  .stickybar-inner .btn{flex:1 1 auto}
+  .overlay.drawer-mode .modal{max-width:100%}
+  .footer .cols{grid-template-columns:1fr 1fr}
+}
+@media (max-width:480px){
+  .wrap,.wrap-narrow,.wrap-form{padding:0 14px}
+  .topbar-inner{padding:0 14px;gap:10px}
+  .brand{font-size:17px}
+  h1{font-size:26px}
+  h2{font-size:21px}
+  .between{flex-wrap:wrap}
+  .main{padding:14px 12px 48px}
+  .card,.glass-card,.card-flat{padding:14px}
+  .overlay{padding:12px}
+  .modal{padding:18px 16px}
+  .kpi{padding:12px 14px}
+  .kpi .value{font-size:22px}
+  .otp{width:44px;height:50px;font-size:19px}
+  .btn-lg{min-height:48px;padding:0 18px}
+  .btn{padding:0 14px}
+  .step{font-size:12px;gap:6px}
+  .step-line{margin:0 6px;min-width:10px}
+  .stickybar-inner{padding:0 14px;gap:10px}
+  .lock-timer{font-size:12px;padding:6px 10px}
+  .searchbar{grid-template-columns:1fr}
+  .table{min-width:560px;font-size:13px}
+  .table th,.table td{padding:9px 10px}
+  .cal-grid{grid-template-columns:52px repeat(3,minmax(132px,1fr))}
+  .cal-grid.p4{grid-template-columns:52px repeat(4,minmax(126px,1fr))}
+  .footer .cols{grid-template-columns:1fr;gap:18px}
+  .qr{width:112px;height:112px}
+  .empty{padding:36px 16px}
+  .seg button{padding:7px 10px}
+  .avatar.lg{width:42px;height:42px;font-size:14px}
+}
+@media (max-width:360px){
+  .navlinks{display:none}
+  .chip{padding:0 11px;font-size:12px}
+  .datebox{min-width:56px}
+}
+
