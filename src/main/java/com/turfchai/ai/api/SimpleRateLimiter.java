@@ -12,7 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SimpleRateLimiter {
 
-    private record Window(long startMillis, AtomicInteger count) { }
+    private record Window(long startMillis, AtomicInteger count) {
+    }
 
     private final int maxRequests;
     private final long windowMillis;
@@ -27,8 +28,8 @@ public class SimpleRateLimiter {
 
     public boolean tryAcquire(String key) {
         long now = clock.millis();
-        Window window = windows.compute(key, (k, existing) ->
-                existing == null || now - existing.startMillis() >= windowMillis
+        Window window = windows.compute(key,
+                (k, existing) -> existing == null || now - existing.startMillis() >= windowMillis
                         ? new Window(now, new AtomicInteger(0))
                         : existing);
         if (windows.size() > 10_000) {

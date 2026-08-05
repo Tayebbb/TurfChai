@@ -10,20 +10,31 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FallbackLlmProviderTest {
 
-    private static final LlmRequest REQUEST =
-            new LlmRequest(List.of(ChatMessage.user("hi")), List.of());
+    private static final LlmRequest REQUEST = new LlmRequest(List.of(ChatMessage.user("hi")), List.of());
 
     private LlmProvider stub(String name, LlmResponse response) {
         return new LlmProvider() {
-            @Override public String name() { return name; }
-            @Override public LlmResponse chat(LlmRequest request) { return response; }
+            @Override
+            public String name() {
+                return name;
+            }
+
+            @Override
+            public LlmResponse chat(LlmRequest request) {
+                return response;
+            }
         };
     }
 
     private LlmProvider failing(String name, LlmException failure, AtomicInteger calls) {
         return new LlmProvider() {
-            @Override public String name() { return name; }
-            @Override public LlmResponse chat(LlmRequest request) {
+            @Override
+            public String name() {
+                return name;
+            }
+
+            @Override
+            public LlmResponse chat(LlmRequest request) {
                 calls.incrementAndGet();
                 throw failure;
             }

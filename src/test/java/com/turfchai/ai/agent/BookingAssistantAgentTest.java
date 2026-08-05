@@ -3,6 +3,7 @@ package com.turfchai.ai.agent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.turfchai.ai.llm.ChatMessage;
 import com.turfchai.ai.llm.ChatRole;
+import com.turfchai.ai.llm.LlmRequest;
 import com.turfchai.ai.llm.LlmResponse;
 import com.turfchai.ai.llm.ToolCall;
 import com.turfchai.ai.memory.InMemoryConversationMemory;
@@ -147,15 +148,23 @@ class BookingAssistantAgentTest {
     }
 
     @Test
-    void runawayToolLoopIsCapped() {
-        for (int i = 0; i < 5; i++) {
+    void runawayToolLoopForcesFinalTextAnswer() {
+        // maxToolIterations = 3; model keeps requesting tools
+        for (int i = 0; i < 3; i++) {
             llm.enqueue(LlmResponse.ofToolCalls(List.of(
                     new ToolCall("search_venues", Map.of()))));
         }
+        llm.enqueue(LlmResponse.ofText("Here is what I found so far."));
 
-        assertThatThrownBy(() -> agent.chat("s1", "u1", "book a turf"))
-                .isInstanceOf(AgentException.class)
-                .hasMessageContaining("max tool iterations");
+        AgentResponse response = agent.chat("s1", "u1", "book a turf");
+
+        assertThat(response.reply()).contains("found so far");
+        assertThat(response.toolsInvoked()).hasSize(3);
+        // the forced final request must offer no tools
+        LlmRequest finalRequest = llm.requests.get(llm.requests.size() - 1);
+        assertThat(finalRequest.tools()).isEmpty();
+        assertThat(finalRequest.messages())
+                .anySatisfy(m -> assertThat(m.content()).contains("Tool budget exhausted"));
     }
 
     @Test

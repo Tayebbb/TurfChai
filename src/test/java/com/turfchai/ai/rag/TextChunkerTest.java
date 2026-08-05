@@ -20,7 +20,7 @@ class TextChunkerTest {
 
     @Test
     void longDocumentIsSplitWithOverlap() {
-        String paragraph = "word ".repeat(100).strip();          // ~500 chars
+        String paragraph = "word ".repeat(100).strip(); // ~500 chars
         String text = paragraph + "\n\n" + paragraph + "\n\n" + paragraph;
         TextChunker chunker = new TextChunker(600, 100);
 
@@ -49,7 +49,7 @@ class TextChunkerTest {
 
         assertThat(chunks).hasSizeGreaterThanOrEqualTo(3);
         int totalLength = chunks.stream().mapToInt(c -> c.content().length()).sum();
-        assertThat(totalLength).isGreaterThanOrEqualTo(1500);   // full coverage incl. overlap
+        assertThat(totalLength).isGreaterThanOrEqualTo(1500); // full coverage incl. overlap
     }
 
     @Test

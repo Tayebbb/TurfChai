@@ -17,8 +17,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class HuggingFaceLlmProviderTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
-    private final HuggingFaceLlmProvider provider =
-            new HuggingFaceLlmProvider(null, mapper, new AiProperties.HuggingFace());
+    private final HuggingFaceLlmProvider provider = new HuggingFaceLlmProvider(null, mapper,
+            new AiProperties.HuggingFace());
 
     // ── request mapping ──────────────────────────────────────────────────
 

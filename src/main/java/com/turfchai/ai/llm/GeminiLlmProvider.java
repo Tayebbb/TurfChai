@@ -1,5 +1,6 @@
 package com.turfchai.ai.llm;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.turfchai.ai.config.AiProperties;
@@ -44,25 +45,34 @@ public class GeminiLlmProvider implements LlmProvider {
     @Override
     public LlmResponse chat(LlmRequest request) {
         Map<String, Object> body = buildRequestBody(request);
-        JsonNode root;
+        String raw;
         try {
-            root = restClient.post()
+            // Read as String and parse ourselves: Boot 4's converters use
+            // Jackson 3 and cannot produce Jackson 2 JsonNode instances.
+            raw = restClient.post()
                     .uri("/models/{model}:generateContent", config.getModel())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .body(JsonNode.class);
+                    .body(String.class);
         } catch (RestClientResponseException e) {
-            // 429 (quota) and 5xx are retryable -> eligible for provider fallback
-            boolean retryable = e.getStatusCode().value() == 429 || e.getStatusCode().is5xxServerError();
-            throw new LlmException("Gemini request failed with HTTP " + e.getStatusCode().value(), e, retryable);
+            // All HTTP failures (quota 429, auth, 5xx) are fallback-eligible.
+            throw new LlmException("Gemini request failed with HTTP " + e.getStatusCode().value(), e, true);
         } catch (RestClientException e) {
             throw new LlmException("Gemini request failed: " + e.getMessage(), e, true);
         }
-        if (root == null) {
-            throw new LlmException("Gemini returned an empty response");
+        if (raw == null || raw.isBlank()) {
+            throw new LlmException("Gemini returned an empty response", null, true);
         }
-        return parseResponse(root);
+        return parseResponse(readTree(raw));
+    }
+
+    private JsonNode readTree(String raw) {
+        try {
+            return objectMapper.readTree(raw);
+        } catch (JsonProcessingException e) {
+            throw new LlmException("Gemini returned malformed JSON", e, true);
+        }
     }
 
     // ── request mapping ──────────────────────────────────────────────────

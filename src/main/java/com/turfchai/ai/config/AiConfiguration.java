@@ -95,9 +95,9 @@ public class AiConfiguration {
      */
     @Bean
     LlmProvider llmProvider(AiProperties properties,
-                            RestClient geminiRestClient,
-                            RestClient huggingFaceRestClient,
-                            ObjectMapper objectMapper) {
+            RestClient geminiRestClient,
+            RestClient huggingFaceRestClient,
+            ObjectMapper objectMapper) {
         boolean hasGemini = !properties.getGemini().getApiKey().isBlank();
         boolean hasHuggingFace = !properties.getHuggingface().getApiKey().isBlank();
 
@@ -125,12 +125,12 @@ public class AiConfiguration {
     }
 
     @Bean
-    EmbeddingProvider embeddingProvider(AiProperties properties, RestClient geminiRestClient) {
+    EmbeddingProvider embeddingProvider(AiProperties properties, RestClient geminiRestClient, ObjectMapper objectMapper) {
         if (properties.getGemini().getApiKey().isBlank()) {
             log.warn("app.ai.gemini.api-key not set — using offline hashing embeddings for RAG");
             return new HashingEmbeddingProvider();
         }
-        return new GeminiEmbeddingProvider(geminiRestClient, properties.getGemini());
+        return new GeminiEmbeddingProvider(geminiRestClient, objectMapper, properties.getGemini());
     }
 
     @Bean

@@ -37,7 +37,7 @@ public class AiExceptionHandler {
                 .body(Map.of("error", "The AI assistant could not complete that request."));
     }
 
-    @ExceptionHandler({RagException.class, PromptException.class})
+    @ExceptionHandler({ RagException.class, PromptException.class })
     public ResponseEntity<Map<String, String>> handleInternal(RuntimeException e) {
         log.error("AI internal failure", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

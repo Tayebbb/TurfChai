@@ -11,7 +11,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class InMemoryVectorStore implements VectorStore {
 
-    private record Entry(DocumentChunk chunk, float[] embedding) { }
+    private record Entry(DocumentChunk chunk, float[] embedding) {
+    }
 
     private final List<Entry> entries = new CopyOnWriteArrayList<>();
 
@@ -34,20 +35,26 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     @Override
-    public int size() { return entries.size(); }
+    public int size() {
+        return entries.size();
+    }
 
     @Override
-    public void clear() { entries.clear(); }
+    public void clear() {
+        entries.clear();
+    }
 
     private double cosine(float[] a, float[] b) {
-        if (a.length != b.length) return 0;
+        if (a.length != b.length)
+            return 0;
         double dot = 0, normA = 0, normB = 0;
         for (int i = 0; i < a.length; i++) {
             dot += a[i] * b[i];
             normA += a[i] * a[i];
             normB += b[i] * b[i];
         }
-        if (normA == 0 || normB == 0) return 0;
+        if (normA == 0 || normB == 0)
+            return 0;
         return dot / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 }

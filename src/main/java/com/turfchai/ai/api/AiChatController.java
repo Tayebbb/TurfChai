@@ -55,7 +55,7 @@ public class AiChatController {
         // Bind the session to its first user so one caller cannot hijack
         // another caller's session transcript/state.
         if (sessionOwners.size() > 10_000) {
-            sessionOwners.clear();   // crude cap until auth + server-side sessions land
+            sessionOwners.clear(); // crude cap until auth + server-side sessions land
         }
         String owner = sessionOwners.computeIfAbsent(sessionId, k -> userId);
         if (!Objects.equals(owner, userId)) {

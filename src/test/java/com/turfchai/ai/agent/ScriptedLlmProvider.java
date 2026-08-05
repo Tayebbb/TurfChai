@@ -21,7 +21,9 @@ class ScriptedLlmProvider implements LlmProvider {
     }
 
     @Override
-    public String name() { return "scripted"; }
+    public String name() {
+        return "scripted";
+    }
 
     @Override
     public LlmResponse chat(LlmRequest request) {

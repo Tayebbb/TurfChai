@@ -33,7 +33,7 @@ public class HuggingFaceLlmProvider implements LlmProvider {
     private final AiProperties.HuggingFace config;
 
     public HuggingFaceLlmProvider(RestClient restClient, ObjectMapper objectMapper,
-                                  AiProperties.HuggingFace config) {
+            AiProperties.HuggingFace config) {
         this.restClient = restClient;
         this.objectMapper = objectMapper;
         this.config = config;
@@ -47,24 +47,30 @@ public class HuggingFaceLlmProvider implements LlmProvider {
     @Override
     public LlmResponse chat(LlmRequest request) {
         Map<String, Object> body = buildRequestBody(request);
-        JsonNode root;
+        String raw;
         try {
-            root = restClient.post()
+            // Read as String and parse ourselves: Boot 4's converters use
+            // Jackson 3 and cannot produce Jackson 2 JsonNode instances.
+            raw = restClient.post()
                     .uri("/chat/completions")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .body(JsonNode.class);
+                    .body(String.class);
         } catch (RestClientResponseException e) {
             boolean retryable = e.getStatusCode().value() == 429 || e.getStatusCode().is5xxServerError();
             throw new LlmException("Hugging Face request failed with HTTP " + e.getStatusCode().value(), e, retryable);
         } catch (RestClientException e) {
             throw new LlmException("Hugging Face request failed: " + e.getMessage(), e, true);
         }
-        if (root == null) {
+        if (raw == null || raw.isBlank()) {
             throw new LlmException("Hugging Face returned an empty response");
         }
-        return parseResponse(root);
+        try {
+            return parseResponse(objectMapper.readTree(raw));
+        } catch (JsonProcessingException e) {
+            throw new LlmException("Hugging Face returned malformed JSON", e, false);
+        }
     }
 
     // ── request mapping (OpenAI wire format) ─────────────────────────────

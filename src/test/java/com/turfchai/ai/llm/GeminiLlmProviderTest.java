@@ -17,8 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GeminiLlmProviderTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
-    private final GeminiLlmProvider provider =
-            new GeminiLlmProvider(null, mapper, new AiProperties.Gemini());
+    private final GeminiLlmProvider provider = new GeminiLlmProvider(null, mapper, new AiProperties.Gemini());
 
     // ── request mapping ──────────────────────────────────────────────────
 
@@ -35,7 +34,7 @@ class GeminiLlmProviderTest {
         assertThat(parts.get(0).get("text")).isEqualTo("base\n\nsafety");
 
         List<Map<String, Object>> contents = (List<Map<String, Object>>) body.get("contents");
-        assertThat(contents).hasSize(1);   // system messages excluded from contents
+        assertThat(contents).hasSize(1); // system messages excluded from contents
         assertThat(contents.get(0).get("role")).isEqualTo("user");
     }
 
@@ -55,15 +54,15 @@ class GeminiLlmProviderTest {
         // model turn must be a functionCall part, not text
         Map<String, Object> modelTurn = contents.get(1);
         assertThat(modelTurn.get("role")).isEqualTo("model");
-        Map<String, Object> fnCall = (Map<String, Object>)
-                ((List<Map<String, Object>>) modelTurn.get("parts")).get(0).get("functionCall");
+        Map<String, Object> fnCall = (Map<String, Object>) ((List<Map<String, Object>>) modelTurn.get("parts")).get(0)
+                .get("functionCall");
         assertThat(fnCall.get("name")).isEqualTo("search_venues");
         assertThat((Map<String, Object>) fnCall.get("args")).containsEntry("area", "Banani");
 
         // tool turn is a structured functionResponse (no double-encoded JSON string)
         Map<String, Object> toolTurn = contents.get(2);
-        Map<String, Object> fnResponse = (Map<String, Object>)
-                ((List<Map<String, Object>>) toolTurn.get("parts")).get(0).get("functionResponse");
+        Map<String, Object> fnResponse = (Map<String, Object>) ((List<Map<String, Object>>) toolTurn.get("parts"))
+                .get(0).get("functionResponse");
         assertThat(fnResponse.get("name")).isEqualTo("search_venues");
         Map<String, Object> response = (Map<String, Object>) fnResponse.get("response");
         assertThat(response.get("success")).isEqualTo(true);
@@ -79,8 +78,7 @@ class GeminiLlmProviderTest {
                 List.of(ChatMessage.user("x")), List.of(spec)));
 
         List<Map<String, Object>> tools = (List<Map<String, Object>>) body.get("tools");
-        List<Map<String, Object>> declarations =
-                (List<Map<String, Object>>) tools.get(0).get("functionDeclarations");
+        List<Map<String, Object>> declarations = (List<Map<String, Object>>) tools.get(0).get("functionDeclarations");
         Map<String, Object> declaration = declarations.get(0);
         assertThat(declaration.get("name")).isEqualTo("demo");
         Map<String, Object> params = (Map<String, Object>) declaration.get("parameters");

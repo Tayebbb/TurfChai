@@ -14,9 +14,20 @@ class SimpleRateLimiterTest {
     /** Mutable test clock. */
     private static Clock tickingClock(AtomicLong millis) {
         return new Clock() {
-            @Override public java.time.ZoneId getZone() { return ZoneOffset.UTC; }
-            @Override public Clock withZone(java.time.ZoneId zone) { return this; }
-            @Override public Instant instant() { return Instant.ofEpochMilli(millis.get()); }
+            @Override
+            public java.time.ZoneId getZone() {
+                return ZoneOffset.UTC;
+            }
+
+            @Override
+            public Clock withZone(java.time.ZoneId zone) {
+                return this;
+            }
+
+            @Override
+            public Instant instant() {
+                return Instant.ofEpochMilli(millis.get());
+            }
         };
     }
 

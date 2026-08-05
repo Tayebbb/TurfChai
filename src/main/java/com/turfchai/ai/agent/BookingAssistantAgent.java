@@ -95,14 +95,22 @@ public class BookingAssistantAgent {
 
         int iterations = 0;
         while (response.hasToolCalls()) {
-            if (++iterations > maxToolIterations) {
-                throw new AgentException("Exceeded max tool iterations (" + maxToolIterations + ")");
-            }
+            iterations++;
             for (ToolCall call : response.toolCalls()) {
                 toolsInvoked.add(call.name());
                 ToolResult result = toolRegistry.execute(call.name(), call.arguments(), toolContext);
                 messages.add(ChatMessage.assistantToolCall(call));
                 messages.add(ChatMessage.tool(call.name(), toJson(result)));
+            }
+            if (iterations >= maxToolIterations) {
+                // Force a final text answer: withhold tools so a tool-happy
+                // model must summarize what it has instead of looping.
+                log.warn("session={} hit max tool iterations ({}); forcing text answer", sessionId, maxToolIterations);
+                messages.add(ChatMessage.system(
+                        "Tool budget exhausted. Answer the user now using only the tool results above."));
+                response = llmProvider.chat(new LlmRequest(messages, List.of()));
+                totalTokens += response.usage().total();
+                break;
             }
             response = llmProvider.chat(new LlmRequest(messages, tools));
             totalTokens += response.usage().total();

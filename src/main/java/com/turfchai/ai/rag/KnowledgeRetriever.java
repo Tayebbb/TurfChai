@@ -24,11 +24,11 @@ public class KnowledgeRetriever {
     private volatile boolean indexed = false;
 
     public KnowledgeRetriever(ClasspathDocumentLoader documentLoader,
-                              TextChunker chunker,
-                              EmbeddingProvider embeddingProvider,
-                              VectorStore vectorStore,
-                              int topK,
-                              double minScore) {
+            TextChunker chunker,
+            EmbeddingProvider embeddingProvider,
+            VectorStore vectorStore,
+            int topK,
+            double minScore) {
         this.documentLoader = documentLoader;
         this.chunker = chunker;
         this.embeddingProvider = embeddingProvider;
@@ -50,9 +50,11 @@ public class KnowledgeRetriever {
     }
 
     private void ensureIndexed() {
-        if (indexed) return;
+        if (indexed)
+            return;
         synchronized (this) {
-            if (indexed) return;
+            if (indexed)
+                return;
             try {
                 List<Document> documents = documentLoader.loadAll();
                 int chunkCount = 0;

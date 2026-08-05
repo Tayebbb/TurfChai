@@ -30,8 +30,8 @@ class BookingContextToolTest {
     @Test
     void reportsReadyToBookWhenVenueDateTimeSet() {
         ToolResult result = tool.execute(Map.of(
-                        "venueId", "V-0044", "venueName", "GreenTurf Arena",
-                        "date", "2026-08-10", "time", "19:00-20:00"),
+                "venueId", "V-0044", "venueName", "GreenTurf Arena",
+                "date", "2026-08-10", "time", "19:00-20:00"),
                 new ToolContext("s2", "u1"));
 
         @SuppressWarnings("unchecked")
