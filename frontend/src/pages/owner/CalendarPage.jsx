@@ -243,3 +243,125 @@ export default function CalendarPage() {
           ))}
         </div>
       </div>
+
+      <Alert tone="info" icon="🔒" title="Conflict-proof" style={{ marginTop: 14 }}>
+        Online slots lock during checkout (striped = held), and manual entries instantly block online booking for
+        that slot — double-booking is impossible.
+      </Alert>
+
+      {/* Manual booking drawer */}
+      <Overlay isOpen={manual.isOpen} onClose={manual.close} title="Manual booking" mode="drawer">
+        <p className="subtle small">Phone or walk-in — this slot is removed from online sale immediately.</p>
+        <div className="grid2" style={{ gap: 10, marginTop: 8 }}>
+          <Field label="Pitch & Sport" htmlFor="mbPitch">
+            <Select id="mbPitch" value={form.pitch} onChange={(event) => setField('pitch', event.target.value)}>
+              <option>Pitch 1 · Football (90m slot)</option>
+              <option>Pitch 1 · Cricket (120m slot)</option>
+              <option>Pitch 3 · Futsal (60m slot)</option>
+              <option>Pitch 3 · Badminton (40m slot)</option>
+            </Select>
+          </Field>
+          <Field label="Slot Time" htmlFor="mbSlot">
+            <Select id="mbSlot" value={form.slot} onChange={(event) => setField('slot', event.target.value)}>
+              <option>Tonight 9:00–10:00 PM (60 min)</option>
+              <option>Tonight 10:00–11:00 PM (60 min)</option>
+            </Select>
+          </Field>
+        </div>
+        <Field label="Customer name" htmlFor="mbName">
+          <Input
+            id="mbName"
+            placeholder="e.g. Salam Bhai"
+            value={form.name}
+            onChange={(event) => setField('name', event.target.value)}
+          />
+        </Field>
+        <Field label="Phone" htmlFor="mbPhone">
+          <Input
+            className="num"
+            id="mbPhone"
+            value={form.phone}
+            onChange={(event) => setField('phone', event.target.value)}
+          />
+        </Field>
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Source" htmlFor="mbSrc">
+            <Select id="mbSrc" value={form.source} onChange={(event) => setField('source', event.target.value)}>
+              <option>Phone</option>
+              <option>Walk-in</option>
+            </Select>
+          </Field>
+          <Field label="Payment status" htmlFor="mbPay">
+            <Select id="mbPay" value={form.payment} onChange={(event) => setField('payment', event.target.value)}>
+              <option>Paid in full (cash)</option>
+              <option>Deposit ৳510 · rest at venue</option>
+              <option>Unpaid — collect on arrival</option>
+            </Select>
+          </Field>
+        </div>
+        <Field label="Notes (optional)" htmlFor="mbNote">
+          <Input
+            id="mbNote"
+            placeholder="e.g. regular customer, wants bibs"
+            value={form.note}
+            onChange={(event) => setField('note', event.target.value)}
+          />
+        </Field>
+        <div className="pricerow total">
+          <span>Slot price</span>
+          <span className="num">৳1,500</span>
+        </div>
+        <Button variant="primary" size="lg" block style={{ marginTop: 12 }} onClick={confirmManualBooking}>
+          Confirm booking
+        </Button>
+      </Overlay>
+
+      {/* Event detail drawer */}
+      <Overlay isOpen={detail.isOpen} onClose={detail.close} title="Booking · 7:30 PM · Pitch 2" mode="drawer">
+        <div className="row-wrap" style={{ margin: '6px 0 12px' }}>
+          <Badge tone="green">Online · paid in full</Badge>
+          <Badge tone="blue" dot={false}>
+            Split pay 10/10
+          </Badge>
+        </div>
+        <div className="stack-sm">
+          <div className="between small">
+            <span className="muted">Reference</span>
+            <b className="num">TC-48291</b>
+          </div>
+          <div className="between small">
+            <span className="muted">Customer</span>
+            <b>Rafiul Karim · +880 1712 ••• 890</b>
+          </div>
+          <div className="between small">
+            <span className="muted">Amount</span>
+            <b className="num">৳2,550 · bKash · TXN 8H2K19</b>
+          </div>
+          <div className="between small">
+            <span className="muted">Shift</span>
+            <b>Evening · auto-reconciled ✓</b>
+          </div>
+          <div className="between small">
+            <span className="muted">Handover</span>
+            <b className="num">7:20 PM gate check-in</b>
+          </div>
+        </div>
+        <div className="grid2" style={{ gap: 8, marginTop: 14 }}>
+          <Button
+            onClick={() => {
+              detail.close();
+              showToast('Checked in ✓');
+            }}
+          >
+            ✅ Check in
+          </Button>
+          <Button onClick={() => showToast('Calling customer 📞')}>📞 Call</Button>
+          <Button onClick={() => showToast('Reschedule offer sent')}>🔁 Reschedule</Button>
+          <Button variant="ghostDanger" onClick={() => showToast('Cancellation flow — refund per policy')}>
+            Cancel booking
+          </Button>
+        </div>
+      </Overlay>
+    </>
+  );
+}
