@@ -10,6 +10,7 @@ import com.turfchai.tournament.repository.TournamentPitchReservationRepository;
 import com.turfchai.tournament.repository.TournamentRepository;
 import com.turfchai.tournament.repository.TournamentTeamRepository;
 import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
+import com.turfchai.tournament.service.TournamentRequests.RegisterPlayerRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
 import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
 import com.turfchai.tournament.service.TournamentRequests.SlotRequest;
@@ -17,18 +18,23 @@ import com.turfchai.tournament.service.TournamentViews.CostSummary;
 import com.turfchai.tournament.service.TournamentViews.FixtureView;
 import com.turfchai.tournament.service.TournamentViews.ReservationView;
 import com.turfchai.tournament.service.TournamentViews.TeamView;
+import com.turfchai.tournament.service.TournamentViews.TournamentCard;
 import com.turfchai.tournament.service.TournamentViews.TournamentView;
+import com.turfchai.venue.dto.PagedResponse;
 import com.turfchai.venue.entity.Pitch;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.PitchRepository;
 import com.turfchai.venue.repository.VenueRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -147,6 +153,106 @@ public class TournamentService {
         team.setEntryFeeStatus("PAID");
         team.setEntryFeePaid(t.getEntryFeePerTeam());
         return toView(team);
+    }
+
+    // ------------------------------------------------------------------
+    // Player-facing browse + registration
+    // ------------------------------------------------------------------
+
+    /** Published/confirmed tournaments a player can discover. */
+    @Transactional(readOnly = true)
+    public PagedResponse<TournamentCard> browse(boolean openOnly, boolean upcomingOnly,
+                                                User viewer, int page, int size) {
+        Page<Tournament> results = tournaments.browse(
+                openOnly, upcomingOnly ? LocalDate.now() : null, PageRequest.of(page, size));
+        List<TournamentCard> items = results.getContent().stream()
+                .map(t -> toCard(t, viewer))
+                .toList();
+        return new PagedResponse<>(items, results.getNumber(), results.getSize(),
+                results.getTotalElements(), results.getTotalPages());
+    }
+
+    /** Tournaments the player has registered a team for, newest first. */
+    @Transactional(readOnly = true)
+    public List<TournamentCard> myTournaments(User player) {
+        return tournaments.findRegisteredBy(player.getId()).stream()
+                .map(t -> toCard(t, player))
+                .toList();
+    }
+
+    /**
+     * Registers the signed-in player's team. The entry fee is recorded as
+     * DUE — capture is the payments module's job, so nothing here pretends
+     * a payment succeeded.
+     */
+    @Transactional
+    public TeamView register(String code, User player, RegisterPlayerRequest request) {
+        Tournament t = require(code);
+        if (!"PUBLISHED".equals(t.getStatus()) && !"CONFIRMED".equals(t.getStatus())) {
+            throw new TournamentConflictException("Registration is not open for this tournament");
+        }
+        if (teams.countByTournamentId(t.getId()) >= t.getTeamCapacity()) {
+            throw new TournamentConflictException("Tournament is full (" + t.getTeamCapacity() + " teams)");
+        }
+        String teamName = request.teamName().trim();
+        if (teams.existsByTournamentIdAndNameIgnoreCase(t.getId(), teamName)) {
+            throw new TournamentConflictException("A team named '" + teamName + "' is already registered");
+        }
+
+        TournamentTeam team = new TournamentTeam();
+        team.setTournament(t);
+        team.setName(teamName);
+        team.setCaptainName(request.captainName() == null || request.captainName().isBlank()
+                ? player.getFullName() : request.captainName().trim());
+        team.setRegisteredBy(player);
+        team.setContactPhone(request.contactPhone() == null || request.contactPhone().isBlank()
+                ? player.getPhone() : request.contactPhone().trim());
+        team.setEmergencyContact(request.emergencyContact());
+        team.setJerseyNumber(request.jerseyNumber());
+        team.setSkillLevel(request.skillLevel() == null || request.skillLevel().isBlank()
+                ? null : request.skillLevel());
+        team.setMedicalNotes(request.medicalNotes());
+        team.setRegistrationCode(nextRegistrationCode());
+        try {
+            return toView(teams.saveAndFlush(team));
+        } catch (DataIntegrityViolationException e) {
+            throw new TournamentConflictException("A team named '" + teamName + "' is already registered");
+        }
+    }
+
+    /** Withdraws the player's own registration while the fee is still unpaid. */
+    @Transactional
+    public void withdraw(String code, User player) {
+        Tournament t = require(code);
+        TournamentTeam team = teams.findByTournamentIdOrderByJoinedAtAsc(t.getId()).stream()
+                .filter(x -> x.getRegisteredBy() != null && x.getRegisteredBy().getId().equals(player.getId()))
+                .findFirst()
+                .orElseThrow(() -> new TournamentNotFoundException("You are not registered for " + code));
+        if ("PAID".equals(team.getEntryFeeStatus())) {
+            throw new TournamentConflictException(
+                    "Entry fee already paid — contact the organiser for a refund");
+        }
+        teams.delete(team);
+    }
+
+    private String nextRegistrationCode() {
+        return "REG-" + Long.toString(Math.abs(RANDOM.nextLong()), 36).toUpperCase(Locale.ROOT)
+                .substring(0, 6);
+    }
+
+    private TournamentCard toCard(Tournament t, User viewer) {
+        List<TournamentTeam> registered = teams.findByTournamentIdOrderByJoinedAtAsc(t.getId());
+        TournamentTeam mine = viewer == null ? null : registered.stream()
+                .filter(x -> x.getRegisteredBy() != null && x.getRegisteredBy().getId().equals(viewer.getId()))
+                .findFirst().orElse(null);
+        return new TournamentCard(t.getCode(), t.getName(), t.getVenue().getSlug(), t.getVenue().getName(),
+                t.getTournamentDate(), t.getWindowStart(), t.getWindowEnd(),
+                t.getFormat(), t.getPrivacy(), t.getStatus(),
+                t.getTeamCapacity(), registered.size(),
+                Math.max(0, t.getTeamCapacity() - registered.size()),
+                t.getEntryFeePerTeam(), t.getPrizePool(),
+                mine == null ? null : mine.getRegistrationCode(),
+                mine == null ? null : mine.getEntryFeeStatus());
     }
 
     // ------------------------------------------------------------------
@@ -415,7 +521,7 @@ public class TournamentService {
 
     private TeamView toView(TournamentTeam x) {
         return new TeamView(x.getId(), x.getName(), x.getCaptainName(),
-                x.getEntryFeeStatus(), x.getEntryFeePaid());
+                x.getEntryFeeStatus(), x.getEntryFeePaid(), x.getRegistrationCode());
     }
 
     private FixtureView toView(TournamentFixture f) {
