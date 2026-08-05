@@ -132,7 +132,8 @@ public class UserProfileService {
                 UUID.fromString(user.getPublicId()), user.getFullName(), user.getEmail(), user.getPhone(),
                 user.getArea(), user.getBio(), user.getAvatarInitials(),
                 user.getPlayStyle() == null ? null : user.getPlayStyle().name().toLowerCase(Locale.ROOT),
-                user.getPlayerRole(), fromCsv(user.getPreferredSports()), fromCsv(user.getPreferredTimes()));
+                user.getPlayerRole(), fromCsv(user.getPreferredSports()), fromCsv(user.getPreferredTimes()),
+                user.getReliabilityScore(), user.getGamesAttended());
     }
 
     private VenueSummaryDto toVenueSummary(Venue venue) {
