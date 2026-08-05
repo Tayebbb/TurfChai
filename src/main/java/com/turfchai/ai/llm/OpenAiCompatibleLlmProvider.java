@@ -34,7 +34,7 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
     private final AiProperties.Endpoint config;
 
     public OpenAiCompatibleLlmProvider(String providerName, RestClient restClient,
-                                       ObjectMapper objectMapper, AiProperties.Endpoint config) {
+            ObjectMapper objectMapper, AiProperties.Endpoint config) {
         this.providerName = providerName;
         this.restClient = restClient;
         this.objectMapper = objectMapper;

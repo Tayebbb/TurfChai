@@ -13,7 +13,9 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Verifies the provider-agnostic ↔ OpenAI wire-format mapping (OpenRouter/HF). */
+/**
+ * Verifies the provider-agnostic ↔ OpenAI wire-format mapping (OpenRouter/HF).
+ */
 class OpenAiCompatibleLlmProviderTest {
 
     private final ObjectMapper mapper = new ObjectMapper();

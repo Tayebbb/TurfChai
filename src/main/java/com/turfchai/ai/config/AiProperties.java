@@ -65,9 +65,15 @@ public class AiProperties {
         /** API key; when blank the provider is not registered. */
         private String apiKey = "";
         private String model = "";
-        /** Alternate models tried in order when the primary is rate-limited (OpenRouter routing). */
+        /**
+         * Alternate models tried in order when the primary is rate-limited (OpenRouter
+         * routing).
+         */
         private java.util.List<String> fallbackModels = java.util.List.of();
-        /** When true, asks the gateway to route to the lowest-latency upstream (OpenRouter). */
+        /**
+         * When true, asks the gateway to route to the lowest-latency upstream
+         * (OpenRouter).
+         */
         private boolean latencyRouting = false;
         private String baseUrl = "";
         private int timeoutSeconds = 45;

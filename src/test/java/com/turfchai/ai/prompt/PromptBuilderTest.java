@@ -13,10 +13,10 @@ class PromptBuilderTest {
     void systemPromptContainsAllLayers() {
         String prompt = builder.buildSystemPrompt(null);
         assertThat(prompt)
-                .contains("TurfChai")               // system
-                .contains("Safety Rules")           // safety
-                .contains("Booking Assistant")      // role
-                .contains("Tool Usage");            // tool guidance
+                .contains("TurfChai") // system
+                .contains("Safety Rules") // safety
+                .contains("Booking Assistant") // role
+                .contains("Tool Usage"); // tool guidance
     }
 
     @Test

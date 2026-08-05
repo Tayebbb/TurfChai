@@ -50,9 +50,20 @@ class KnowledgeRetrieverTest {
     @Test
     void downgradesToFallbackWhenPrimaryEmbeddingFailsDuringIndexing() {
         EmbeddingProvider broken = new EmbeddingProvider() {
-            @Override public String name() { return "broken"; }
-            @Override public int dimension() { return 8; }
-            @Override public float[] embed(String text) { throw new RagException("quota exhausted"); }
+            @Override
+            public String name() {
+                return "broken";
+            }
+
+            @Override
+            public int dimension() {
+                return 8;
+            }
+
+            @Override
+            public float[] embed(String text) {
+                throw new RagException("quota exhausted");
+            }
         };
         InMemoryVectorStore store = new InMemoryVectorStore();
         KnowledgeRetriever fallbackRetriever = new KnowledgeRetriever(
@@ -61,7 +72,7 @@ class KnowledgeRetrieverTest {
 
         List<ScoredChunk> results = fallbackRetriever.retrieve("cancellation refund policy");
 
-        assertThat(results).isNotEmpty();          // served by fallback embeddings
+        assertThat(results).isNotEmpty(); // served by fallback embeddings
         assertThat(store.size()).isGreaterThan(0); // index rebuilt with fallback
     }
 
@@ -71,11 +82,22 @@ class KnowledgeRetrieverTest {
         EmbeddingProvider flaky = new EmbeddingProvider() {
             final HashingEmbeddingProvider delegate = new HashingEmbeddingProvider();
             int calls = 0;
-            @Override public String name() { return "flaky"; }
-            @Override public int dimension() { return delegate.dimension(); }
-            @Override public float[] embed(String text) {
+
+            @Override
+            public String name() {
+                return "flaky";
+            }
+
+            @Override
+            public int dimension() {
+                return delegate.dimension();
+            }
+
+            @Override
+            public float[] embed(String text) {
                 calls++;
-                if (calls > 30) throw new RagException("quota exhausted");   // fails after indexing
+                if (calls > 30)
+                    throw new RagException("quota exhausted"); // fails after indexing
                 return delegate.embed(text);
             }
         };
@@ -83,7 +105,7 @@ class KnowledgeRetrieverTest {
                 new ClasspathDocumentLoader(), new TextChunker(800, 120),
                 flaky, new HashingEmbeddingProvider(), new InMemoryVectorStore(), 4, 0.05);
 
-        flakyRetriever.retrieve("refund");                       // indexes + queries with primary
+        flakyRetriever.retrieve("refund"); // indexes + queries with primary
         List<ScoredChunk> results = flakyRetriever.retrieve("refund policy details please");
 
         assertThat(results).isNotEmpty();
@@ -92,9 +114,20 @@ class KnowledgeRetrieverTest {
     @Test
     void withoutFallbackPrimaryFailurePropagates() {
         EmbeddingProvider broken = new EmbeddingProvider() {
-            @Override public String name() { return "broken"; }
-            @Override public int dimension() { return 8; }
-            @Override public float[] embed(String text) { throw new RagException("down"); }
+            @Override
+            public String name() {
+                return "broken";
+            }
+
+            @Override
+            public int dimension() {
+                return 8;
+            }
+
+            @Override
+            public float[] embed(String text) {
+                throw new RagException("down");
+            }
         };
         KnowledgeRetriever noFallback = new KnowledgeRetriever(
                 new ClasspathDocumentLoader(), new TextChunker(800, 120),

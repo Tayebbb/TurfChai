@@ -13,7 +13,8 @@ import java.time.Duration;
  * safety-blocked prompt — propagate unchanged, since another provider
  * would not fix them.
  *
- * <p>A cooldown circuit breaker skips the primary entirely for a period
+ * <p>
+ * A cooldown circuit breaker skips the primary entirely for a period
  * after it fails, avoiding a slow doomed round trip on every request while
  * a quota is exhausted. If the secondary fails during cooldown, the primary
  * is still tried as a last resort.
@@ -30,7 +31,7 @@ public class FallbackLlmProvider implements LlmProvider {
     private volatile long skipPrimaryUntil = 0;
 
     public FallbackLlmProvider(LlmProvider primary, LlmProvider secondary,
-                               Duration cooldown, Clock clock) {
+            Duration cooldown, Clock clock) {
         this.primary = primary;
         this.secondary = secondary;
         this.cooldownMillis = cooldown.toMillis();

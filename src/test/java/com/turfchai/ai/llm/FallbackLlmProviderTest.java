@@ -20,9 +20,20 @@ class FallbackLlmProviderTest {
 
     private final AtomicLong nowMillis = new AtomicLong(0);
     private final Clock clock = new Clock() {
-        @Override public java.time.ZoneId getZone() { return ZoneOffset.UTC; }
-        @Override public Clock withZone(java.time.ZoneId zone) { return this; }
-        @Override public Instant instant() { return Instant.ofEpochMilli(nowMillis.get()); }
+        @Override
+        public java.time.ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(java.time.ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return Instant.ofEpochMilli(nowMillis.get());
+        }
     };
 
     private FallbackLlmProvider provider(LlmProvider primary, LlmProvider secondary) {
@@ -87,14 +98,14 @@ class FallbackLlmProviderTest {
                 failing("primary", new LlmException("quota exceeded", null, true), primaryCalls),
                 stub("secondary", LlmResponse.ofText("from fallback")));
 
-        provider.chat(REQUEST);                       // primary tried, fails, cooldown starts
-        provider.chat(REQUEST);                       // within cooldown -> primary skipped
+        provider.chat(REQUEST); // primary tried, fails, cooldown starts
+        provider.chat(REQUEST); // within cooldown -> primary skipped
         provider.chat(REQUEST);
         assertThat(primaryCalls.get()).isEqualTo(1);
 
-        nowMillis.set(COOLDOWN.toMillis() + 1);       // cooldown expired
+        nowMillis.set(COOLDOWN.toMillis() + 1); // cooldown expired
         provider.chat(REQUEST);
-        assertThat(primaryCalls.get()).isEqualTo(2);  // primary retried
+        assertThat(primaryCalls.get()).isEqualTo(2); // primary retried
     }
 
     @Test
@@ -102,23 +113,36 @@ class FallbackLlmProviderTest {
         AtomicInteger primaryCalls = new AtomicInteger();
         LlmProvider flakySecondary = new LlmProvider() {
             int calls = 0;
-            @Override public String name() { return "secondary"; }
-            @Override public LlmResponse chat(LlmRequest request) {
-                if (++calls > 1) throw new LlmException("secondary down", null, true);
+
+            @Override
+            public String name() {
+                return "secondary";
+            }
+
+            @Override
+            public LlmResponse chat(LlmRequest request) {
+                if (++calls > 1)
+                    throw new LlmException("secondary down", null, true);
                 return LlmResponse.ofText("ok");
             }
         };
         LlmProvider recoveringPrimary = new LlmProvider() {
-            @Override public String name() { return "primary"; }
-            @Override public LlmResponse chat(LlmRequest request) {
-                if (primaryCalls.incrementAndGet() == 1) throw new LlmException("quota", null, true);
+            @Override
+            public String name() {
+                return "primary";
+            }
+
+            @Override
+            public LlmResponse chat(LlmRequest request) {
+                if (primaryCalls.incrementAndGet() == 1)
+                    throw new LlmException("quota", null, true);
                 return LlmResponse.ofText("primary recovered");
             }
         };
         FallbackLlmProvider provider = provider(recoveringPrimary, flakySecondary);
 
-        provider.chat(REQUEST);                       // primary fails -> secondary ok, cooldown on
-        assertThat(provider.chat(REQUEST).text())     // secondary fails -> primary last resort
+        provider.chat(REQUEST); // primary fails -> secondary ok, cooldown on
+        assertThat(provider.chat(REQUEST).text()) // secondary fails -> primary last resort
                 .isEqualTo("primary recovered");
     }
 

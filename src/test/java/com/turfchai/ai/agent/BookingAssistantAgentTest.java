@@ -173,13 +173,13 @@ class BookingAssistantAgentTest {
         LlmResponse sameCall = LlmResponse.ofToolCalls(List.of(
                 new ToolCall("search_venues", Map.of("area", "Banani"))));
         llm.enqueue(sameCall);
-        llm.enqueue(sameCall);                       // identical repeat
+        llm.enqueue(sameCall); // identical repeat
         llm.enqueue(LlmResponse.ofText("GreenTurf Arena is your best option."));
 
         AgentResponse response = agent.chat("s1", "u1", "book a turf in banani");
 
         assertThat(response.reply()).contains("GreenTurf");
-        assertThat(response.toolsInvoked()).hasSize(1);   // executed only once
+        assertThat(response.toolsInvoked()).hasSize(1); // executed only once
         // duplicate was answered with a nudge instead of re-execution
         LlmRequest finalRequest = llm.requests.get(llm.requests.size() - 1);
         assertThat(finalRequest.messages())

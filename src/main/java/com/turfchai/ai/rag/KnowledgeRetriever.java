@@ -10,7 +10,8 @@ import java.util.stream.Collectors;
  * Retrieval facade: lazily indexes the static knowledge base on first use
  * (avoids network calls at application startup), then serves top-k lookups.
  *
- * <p>If the primary embedding provider fails (e.g. API quota exhausted),
+ * <p>
+ * If the primary embedding provider fails (e.g. API quota exhausted),
  * the retriever permanently downgrades to the offline fallback provider and
  * re-indexes, so policy/FAQ answers keep working without the network.
  * Index and query always use the same provider — vectors from different
@@ -76,7 +77,7 @@ public class KnowledgeRetriever {
         } catch (RuntimeException e) {
             vectorStore.clear();
             downgradeOrRethrow(e);
-            index();   // fallback is offline and deterministic — cannot fail
+            index(); // fallback is offline and deterministic — cannot fail
         }
     }
 
