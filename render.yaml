@@ -1,16 +1,12 @@
 services:
   - type: web
     name: turfchai-backend
-    env: java
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/turfchai-0.0.1-SNAPSHOT.jar
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/health
     autoDeploy: true
 
     envVars:
-      - key: JAVA_VERSION
-        value: 21
-
       - key: SPRING_PROFILES_ACTIVE
         value: prod
 
@@ -33,7 +29,7 @@ services:
         generateValue: true
 
       - key: FRONTEND_URL
-        sync: false
+        value: https://turf-chai.vercel.app
 
       - key: OPENROUTER_API_KEY
         sync: false
