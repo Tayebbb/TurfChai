@@ -1,0 +1,26 @@
+/* ============================================================
+   TurfChai Design System — entry point
+   Import order is load-bearing: later files intentionally
+   override earlier ones (dark accents, liquid-glass surfaces,
+   unified console theme).
+   ============================================================ */
+
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import './navigation.css';
+@import './buttons.css';
+@import './forms.css';
+@import './badges.css';
+@import './cards.css';
+@import './booking.css';
+@import './data-display.css';
+@import './overlays.css';
+@import './modules.css';
+@import './responsive.css';
+@import './landing.css';
+@import './viewas.css';
+@import './theme-accents.css';
+@import './liquid-glass.css';
+@import './console.css';
+@import './app.css';

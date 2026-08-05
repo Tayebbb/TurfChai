@@ -9,9 +9,9 @@ import { PlayerLayout } from '@/layouts/PlayerLayout';
 import { PublicLayout } from '@/layouts/PublicLayout';
 
 /* Every page is its own chunk so a first paint only ships one screen. */
-const Landing = lazy(() => import('@/pages/public/LandingPage'));
-const NotFound = lazy(() => import('@/pages/public/NotFoundPage'));
-const Auth = lazy(() => import('@/pages/auth/AuthPage'));
+const Landing = lazy(() => import('@/public/LandingPage'));
+const NotFound = lazy(() => import('@/public/NotFoundPage'));
+const Auth = lazy(() => import('@/auth/AuthPage'));
 const OwnerOnboarding = lazy(() => import('@/pages/owner/OwnerOnboardingPage'));
 const AdminLogin = lazy(() => import('@/pages/admin/AdminLoginPage'));
 
@@ -30,14 +30,14 @@ const Review = lazy(() => import('@/pages/player/ReviewPage'));
 const Cancel = lazy(() => import('@/pages/player/CancelPage'));
 const Rewards = lazy(() => import('@/pages/player/RewardsPage'));
 
-const OpenGames = lazy(() => import('@/pages/solo/OpenGamesPage'));
-const GameDetail = lazy(() => import('@/pages/solo/GameDetailPage'));
-const LfgAlerts = lazy(() => import('@/pages/solo/LfgAlertPage'));
-const Ticket = lazy(() => import('@/pages/solo/TicketPage'));
+const OpenGames = lazy(() => import('@/solo/OpenGamesPage'));
+const GameDetail = lazy(() => import('@/solo/GameDetailPage'));
+const LfgAlerts = lazy(() => import('@/solo/LfgAlertPage'));
+const Ticket = lazy(() => import('@/solo/TicketPage'));
 
-const Tournament = lazy(() => import('@/pages/host/TournamentPage'));
-const MultiPitch = lazy(() => import('@/pages/host/MultiPitchPage'));
-const Reserve = lazy(() => import('@/pages/host/ReservePage'));
+const Tournament = lazy(() => import('@/host/TournamentPage'));
+const MultiPitch = lazy(() => import('@/host/MultiPitchPage'));
+const Reserve = lazy(() => import('@/host/ReservePage'));
 
 const OwnerDashboard = lazy(() => import('@/pages/owner/DashboardPage'));
 const OwnerCalendar = lazy(() => import('@/pages/owner/CalendarPage'));

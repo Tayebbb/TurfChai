@@ -1,0 +1,47 @@
+/* Page specific glass depth adjustments */
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px;
+  border-radius: 20px;
+  min-height: 160px;
+}
+
+.kpi-card .btn-link {
+  margin-top: 14px;
+  align-self: flex-start;
+}
+
+.earnings-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 32px;
+  margin-top: 24px;
+}
+@media (max-width: 900px) {
+  .earnings-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.earnings-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+}
+@media (max-width: 900px) {
+  .earnings-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+@media (max-width: 480px) {
+  .earnings-stats {
+    grid-template-columns: 1fr;
+  }
+}
