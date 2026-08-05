@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
 import { ThemeToggle } from '@/components/buttons/ThemeToggle';
@@ -62,8 +63,10 @@ function OwnerChrome() {
 
       <div className="shell wrap" style={{ maxWidth: 1280 }}>
         <Sidebar links={OWNER_NAV_LINKS} label="Owner workspace" />
-        <main className="main" id="main">
-          <Outlet />
+        <main className="main" id="main" tabIndex={-1}>
+          <RouteErrorBoundary>
+            <Outlet />
+          </RouteErrorBoundary>
         </main>
       </div>
 

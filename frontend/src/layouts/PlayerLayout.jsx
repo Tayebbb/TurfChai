@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
 import { ThemeToggle } from '@/components/buttons/ThemeToggle';
@@ -51,7 +52,9 @@ export function PlayerLayout({ withFooter = false }) {
         </IconButton>
       </Topbar>
 
-      <Outlet />
+      <RouteErrorBoundary>
+        <Outlet />
+      </RouteErrorBoundary>
 
       {withFooter ? <SiteFooter /> : null}
 
