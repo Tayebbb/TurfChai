@@ -1,194 +1,363 @@
-import { useState } from "react";
-import { PageTitle } from "@/components/common/PageTitle";
-import { Button } from "@/components/buttons/Button";
-import { Overlay } from "@/components/modals/Overlay";
-import { useDisclosure } from "@/hooks/useDisclosure";
-import { useToast } from "@/hooks/useToast";
-import { paths } from "@/routes/paths";
-import "./ReviewPage.css";
+import { useState } from 'react';
+import { PageTitle } from '@/components/common/PageTitle';
+import { Button } from '@/components/buttons/Button';
+import { Overlay } from '@/components/modals/Overlay';
+import { Section, SectionTitle } from '@/components/layout/Section';
+import { useDisclosure } from '@/hooks/useDisclosure';
+import './RewardsPage.css';
 
-const RATING_ROWS = [
-  { id: "overall", label: "Overall", primary: true, initial: 5 },
-  { id: "surface", label: "Surface", initial: 5 },
-  { id: "lighting", label: "Lighting", initial: 4 },
-  { id: "cleanliness", label: "Cleanliness", initial: 4 },
-  { id: "amenities", label: "Amenities", initial: 3 },
-  { id: "safety", label: "Safety", initial: 5 },
-  { id: "youth", label: "Youth-friendliness", initial: 4 },
+const TIERS = [
+  {
+    id: 'silver',
+    name: 'Silver',
+    glyph: '🥈',
+    points: '0 pts · Starter',
+    perk: '0% off bookings',
+  },
+  {
+    id: 'gold',
+    name: 'Gold',
+    glyph: '🥇',
+    points: '1,000 pts',
+    perk: '10% off bookings',
+    state: 'current',
+    badge: { tone: 'green', label: 'Current tier' },
+  },
+  {
+    id: 'platinum',
+    name: 'Platinum',
+    glyph: '💎',
+    points: '2,000 pts',
+    perk: 'Priority booking · 15% off',
+    state: 'locked',
+    badge: { tone: 'gray', label: 'Locked' },
+  },
 ];
 
-const INITIAL_RATINGS = Object.fromEntries(
-  RATING_ROWS.map((row) => [row.id, row.initial]),
-);
+const EARN_WAYS = [
+  { id: 'book', glyph: '⚽', label: 'Book a turf', points: '+50' },
+  { id: 'play', glyph: '🏟️', label: 'Attend & play your match', points: '+30' },
+  { id: 'review', glyph: '⭐', label: 'Leave a review after a match', points: '+20' },
+  { id: 'profile', glyph: '👤', label: 'Complete your profile', note: 'one-time', points: '+10' },
+  { id: 'solo', glyph: '🎯', label: 'Join an open game as a solo', points: '+15' },
+  { id: 'offpeak', glyph: '🌙', label: 'Book an off-peak slot', note: 'bonus', points: '+10' },
+];
 
-const STARS = [1, 2, 3, 4, 5];
+const REWARDS = [
+  {
+    id: 'discount-50',
+    glyph: '🎁',
+    name: '৳50 Booking Discount',
+    cost: '500',
+    note: 'Valid on any turf',
+    value: 50,
+  },
+  {
+    id: 'discount-150',
+    glyph: '💰',
+    name: '৳150 Booking Discount',
+    cost: '1,000',
+    note: 'Bigger savings on any slot',
+    value: 150,
+  },
+  {
+    id: 'free-slot',
+    glyph: '⏰',
+    name: 'Free 1-Hour Slot',
+    cost: '2,000',
+    note: 'Any turf · any time',
+    lock: '🔒 760 pts to go',
+  },
+  {
+    id: 'ten-percent',
+    glyph: '🏷️',
+    name: '10% Off Your Next Booking',
+    cost: '2,500',
+    note: 'Applies at checkout',
+    lock: '🔒 1,260 pts to go',
+  },
+  {
+    id: 'priority',
+    glyph: '⚡',
+    name: 'Priority Booking Pass',
+    cost: '3,000',
+    note: 'Skip queues in peak hours',
+    lock: '🔒 1,760 pts to go',
+  },
+];
 
-const DEFAULT_REVIEW =
-  "Grass is fresh and fast, floodlights excellent. Handover was exactly on time. Changing room a bit small for 10 people.";
+const ACTIVITY = [
+  {
+    id: 'booked',
+    glyph: '⚽',
+    title: 'Booked Kick Off Arena · Pitch 2',
+    when: 'Fri 2 Aug · evening slot',
+    value: '+60',
+  },
+  {
+    id: 'redeemed',
+    glyph: '🧧',
+    title: 'Redeemed ৳50 Booking Discount',
+    when: 'Thu 1 Aug · added to wallet',
+    value: '−500',
+    minus: true,
+  },
+  { id: 'review', glyph: '⭐', title: 'Left a review at GreenTurf', when: 'Thu 1 Aug', value: '+20' },
+  {
+    id: 'played',
+    glyph: '🏆',
+    title: 'Played Friday Night Football · Kick Off Arena',
+    when: 'Wed 31 Jul · completed match',
+    value: '+150',
+  },
+  {
+    id: 'bonus',
+    glyph: '🎉',
+    title: '5th booking this month',
+    when: 'Sat 25 Jul · monthly bonus',
+    value: '+75',
+  },
+];
 
-export default function ReviewPage() {
-  const { showToast } = useToast();
-  const published = useDisclosure(false);
-  const [ratings, setRatings] = useState(INITIAL_RATINGS);
-  const [body, setBody] = useState(DEFAULT_REVIEW);
-  const [parentReview, setParentReview] = useState(false);
+export default function RewardsPage() {
+  const redeemed = useDisclosure(false);
+  const [wallet, setWallet] = useState(150);
+  const [claimed, setClaimed] = useState([]);
+  const [lastRedeemed, setLastRedeemed] = useState('৳50 discount');
 
-  /** Sets one category to the clicked star value. */
-  const rate = (id, value) => setRatings((prev) => ({ ...prev, [id]: value }));
+  /** Credits the reward value to the wallet, locks its button and opens the receipt modal. */
+  const redeem = (reward) => {
+    setWallet((prev) => prev + reward.value);
+    setClaimed((prev) => [...prev, reward.id]);
+    setLastRedeemed(reward.name);
+    redeemed.open();
+  };
+
+  const walletText = `৳${wallet}`;
 
   return (
     <>
-      <PageTitle title="Leave a review" />
-      <main
-        className="wrap-form"
-        id="main"
-        style={{ paddingTop: 32, paddingBottom: 64 }}
-      >
-        <div className="glass glass-card center" style={{ marginBottom: 16 }}>
-          <span style={{ fontSize: 30 }}>⚽</span>
-          <h1 style={{ fontSize: 21, marginTop: 6 }}>
-            Great game at Kick Off Arena?
-          </h1>
-          <p className="subtle small">
-            Fri 8 Aug · 7:30–9:00 PM · your review is labelled{" "}
-            <b>Verified booking</b>
-          </p>
-          <div
-            className="row"
-            style={{ justifyContent: "center", marginTop: 8 }}
-          >
-            <Button variant="tertiary" to={paths.player.home}>
-              Not now
-            </Button>
-            <a className="btn btn-primary" href="#form">
-              Leave a review
-            </a>
+      <PageTitle title="Rewards" />
+      <main className="wrap" id="main" style={{ paddingTop: 28 }}>
+        <div className="between" style={{ marginBottom: 18, flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <h1 style={{ fontSize: 24, margin: 0 }}>Rewards</h1>
+            <span className="subtle">Loyalty points · member tiers · play, earn, redeem</span>
           </div>
-          <div
-            className="alert ok"
-            style={{ marginTop: 14, textAlign: "left" }}
-          >
-            <span className="ico">🏅</span>
-            <div>
-              <b>+250 points already credited</b> for completing this match —
-              Silver → 1,490 pts. Reviews earn +25 more.
-            </div>
-          </div>
+          <span className="badge amber">🥇 Gold member</span>
         </div>
 
-        <div className="card" id="form">
-          <h3>Rate the venue</h3>
-          <div style={{ marginTop: 6 }}>
-            {RATING_ROWS.map((row) => (
-              <div className="rate-row" key={row.id}>
-                {row.primary ? (
-                  <b className="small">{row.label}</b>
-                ) : (
-                  <span className="small muted">{row.label}</span>
-                )}
-                <div
-                  className="starpick"
-                  role="radiogroup"
-                  aria-label={`${row.label} rating`}
-                >
-                  {STARS.map((star) => (
-                    <button
-                      type="button"
-                      key={star}
-                      className={star > ratings[row.id] ? "off" : undefined}
-                      aria-label={`${star} star${star > 1 ? "s" : ""}`}
-                      aria-checked={ratings[row.id] === star}
-                      role="radio"
-                      onClick={() => rate(row.id, star)}
-                    >
-                      ★
-                    </button>
-                  ))}
+        {/* Status header */}
+        <Section style={{ marginTop: 0 }}>
+          <div className="glass glass-card status-card">
+            <div className="row">
+              <span className="tier-ico gold">🥇</span>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 22 }}>You&apos;re a Gold member</h2>
+                <span className="subtle">Keep playing to climb to Platinum</span>
+              </div>
+            </div>
+            <div className="status-balance">
+              <span className="lbl">Current balance</span>
+              <b>1,240</b> <small>pts</small>
+              <div className="wallet-line">
+                💳 <span className="num">{walletText}</span> in redeemed rewards
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Tier progress */}
+        <Section style={{ marginTop: 28 }}>
+          <div className="glass glass-card tp-card">
+            <div className="tp-head">
+              <div>
+                <span className="badge amber nodot">Gold → Platinum</span>
+                <h2>1,240 / 2,000 pts to Platinum</h2>
+              </div>
+              <span className="badge green nodot">62% there</span>
+            </div>
+            <div className="tp-track-wrap">
+              <div
+                className="tp-track"
+                role="progressbar"
+                aria-valuenow={62}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Progress to Platinum tier"
+              >
+                <i className="tp-fill" style={{ width: '62%' }} />
+                <span className="tp-mark on" style={{ left: '0%' }} aria-hidden="true">
+                  🥈
+                </span>
+                <span className="tp-mark on cur" style={{ left: '25%' }} aria-hidden="true">
+                  🥇
+                </span>
+                <span className="tp-mark" style={{ left: '100%' }} aria-hidden="true">
+                  💎
+                </span>
+              </div>
+            </div>
+            <div className="tp-labels">
+              <div className="c1">
+                <b>0 pts</b>Silver · earned
+              </div>
+              <div className="c2 here">
+                <b>1,000 pts</b>Gold · you&apos;re here
+              </div>
+              <div className="c3">
+                <b>2,000 pts</b>Platinum · next
+              </div>
+            </div>
+            <p className="subtle center" style={{ margin: '20px auto 0', maxWidth: 520 }}>
+              Reach Platinum to unlock priority booking + bigger discounts.
+            </p>
+          </div>
+        </Section>
+
+        {/* Tier overview */}
+        <Section>
+          <SectionTitle title="Member tiers">
+            <span className="subtle small">Benefits grow as you climb</span>
+          </SectionTitle>
+          <div className="grid3" style={{ alignItems: 'start' }}>
+            {TIERS.map((tier) => {
+              const head = (
+                <div className="tier-top">
+                  <span className={`tier-ico ${tier.id}`}>{tier.glyph}</span>
+                  <div>
+                    <h3>{tier.name}</h3>
+                    <span className="tier-pts">{tier.points}</span>
+                  </div>
                 </div>
+              );
+              return (
+                <article
+                  className={`glass glass-card tier-card${tier.state ? ` ${tier.state}` : ''}`}
+                  key={tier.id}
+                >
+                  {tier.badge ? (
+                    <div className="between">
+                      {head}
+                      <span className={`badge ${tier.badge.tone} nodot`}>{tier.badge.label}</span>
+                    </div>
+                  ) : (
+                    head
+                  )}
+                  <ul className="tier-perks">
+                    <li>{tier.perk}</li>
+                  </ul>
+                </article>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* How to earn points */}
+        <Section>
+          <SectionTitle title="How to earn points">
+            <span className="subtle small">Every booking and match counts</span>
+          </SectionTitle>
+          <div className="earn-grid">
+            {EARN_WAYS.map((way) => (
+              <div className="glass glass-card earn-card" key={way.id}>
+                <span className="ec-ico">{way.glyph}</span>
+                <div className="ec-text">
+                  <b>{way.label}</b>
+                  {way.note ? <span className="ec-note">{way.note}</span> : null}
+                </div>
+                <b className="ec-pts">{way.points}</b>
               </div>
             ))}
           </div>
+        </Section>
 
-          <div className="field" style={{ marginTop: 14 }}>
-            <label htmlFor="rev">Your review</label>
-            <textarea
-              className="input"
-              id="rev"
-              placeholder="How was the pitch, the lights, the staff?"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-            />
+        {/* Redeem your points */}
+        <Section>
+          <SectionTitle title="Redeem your points">
+            <span className="subtle small">Redeemed rewards go straight to your wallet</span>
+          </SectionTitle>
+          <div className="redeem-grid">
+            {REWARDS.map((reward) => {
+              const isClaimed = claimed.includes(reward.id);
+              return (
+                <div className="glass glass-card redeem-card" key={reward.id}>
+                  <div className="rc-top">
+                    <span className="rc-ico">{reward.glyph}</span>
+                    <h4>{reward.name}</h4>
+                  </div>
+                  <div className="rc-cost">
+                    {reward.cost} <small>pts</small>
+                  </div>
+                  <span className="rc-note">{reward.note}</span>
+                  {reward.lock ? (
+                    <span className="redeem-lock">{reward.lock}</span>
+                  ) : (
+                    <Button
+                      variant={isClaimed ? 'secondary' : 'primary'}
+                      disabled={isClaimed}
+                      onClick={() => redeem(reward)}
+                    >
+                      {isClaimed ? 'Redeemed ✓' : 'Redeem'}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
+        </Section>
 
-          <div className="field">
-            <label>Photos (optional)</label>
-            <div className="row">
-              <button
-                type="button"
-                className="icon-btn"
-                style={{ width: 64, height: 64, fontSize: 22 }}
-                aria-label="Add a photo"
-                onClick={() => showToast("Camera opened 📷")}
-              >
-                +
-              </button>
-              <div
-                className="photo"
-                style={{ width: 64, height: 64, fontSize: 20 }}
-              >
-                ⚽
-              </div>
+        {/* Recent points activity */}
+        <Section>
+          <SectionTitle title="Recent points activity">
+            <span className="subtle small">Last 30 days</span>
+          </SectionTitle>
+          <div className="glass glass-card" style={{ padding: '4px 20px' }}>
+            <div className="act-list">
+              {ACTIVITY.map((entry) => (
+                <div className="act-row" key={entry.id}>
+                  <span className={entry.minus ? 'act-ico minus' : 'act-ico'}>{entry.glyph}</span>
+                  <div>
+                    <b>{entry.title}</b>
+                    <div className="when">{entry.when}</div>
+                  </div>
+                  <b className={entry.minus ? 'act-val minus' : 'act-val'}>{entry.value}</b>
+                </div>
+              ))}
             </div>
           </div>
-
-          <label className="checkline" style={{ marginBottom: 16 }}>
-            <input
-              type="checkbox"
-              checked={parentReview}
-              onChange={(event) => setParentReview(event.target.checked)}
-            />
-            <span>
-              🧒 Mark as a <b>parent review</b> — I brought children to this
-              venue
-            </span>
-          </label>
-
-          <Button variant="primary" size="lg" block onClick={published.open}>
-            Submit review
-          </Button>
-        </div>
+        </Section>
       </main>
 
+      {/* Redeem success modal */}
       <Overlay
-        isOpen={published.isOpen}
-        onClose={published.close}
+        isOpen={redeemed.isOpen}
+        onClose={redeemed.close}
         hideHeader
-        title="Review published"
+        maxWidth={420}
+        title="Reward redeemed"
       >
-        <div className="center">
+        <div style={{ textAlign: 'center' }}>
           <div className="check-anim" aria-hidden="true">
-            🏅
+            ✓
           </div>
-          <h3>Review published — +25 points</h3>
-          <p className="muted small">
-            Thanks Rafi! Your verified review helps the next team book with
-            confidence.
+          <h3 style={{ margin: 0 }}>Redeemed!</h3>
+          <p className="muted" style={{ margin: '6px 0 0' }}>
+            {lastRedeemed} added to your wallet
           </p>
-          <div className="panel between" style={{ margin: "12px 0" }}>
-            <span className="small muted">Rewards balance</span>
-            <b className="num">1,515 pts · Silver</b>
+          <div className="panel" style={{ margin: '16px 0 12px', textAlign: 'left' }}>
+            <div className="between">
+              <span className="small muted">New wallet balance</span>
+              <b className="num" style={{ color: 'var(--brand-600)' }}>
+                {walletText}
+              </b>
+            </div>
           </div>
-          <div className="progress" style={{ marginBottom: 6 }}>
-            <i style={{ width: "76%" }} />
-          </div>
-          <p className="subtle tiny">485 points to Gold</p>
-          <Button
-            variant="primary"
-            block
-            to={paths.player.home}
-            style={{ marginTop: 8 }}
-          >
-            Done
+          <p className="tiny subtle" style={{ margin: '0 0 16px' }}>
+            It shows up as &quot;Apply Reward Discount&quot; at your next checkout — no code to copy.
+          </p>
+          <Button variant="primary" block onClick={redeemed.close}>
+            Great
           </Button>
         </div>
       </Overlay>
