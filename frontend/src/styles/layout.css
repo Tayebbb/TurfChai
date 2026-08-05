@@ -1,0 +1,165 @@
+/* ---------- Layout ---------- */
+.wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px
+}
+
+.wrap-narrow {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 20px
+}
+
+.wrap-form {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 0 20px
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px
+}
+
+.stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 12px
+}
+
+.row-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+.between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px
+}
+
+.grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px
+}
+
+.grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px
+}
+
+.grid4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px
+}
+
+.spacer {
+    flex: 1
+}
+
+.section {
+    margin-block: 44px
+}
+
+.section-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px
+}
+
+.section-title h2 {
+    margin: 0;
+    font-size: 19px
+}
+
+.section-title a {
+    font-size: 13px;
+    font-weight: 600
+}
+
+@media (max-width:900px) {
+    .grid4 {
+        grid-template-columns: repeat(2, 1fr)
+    }
+
+    .grid3 {
+        grid-template-columns: repeat(2, 1fr)
+    }
+}
+
+@media (max-width:640px) {
+
+    .grid2,
+    .grid3 {
+        grid-template-columns: 1fr
+    }
+
+    .grid4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px
+    }
+}
+
+@media (max-width:420px) {
+    .grid4 {
+        grid-template-columns: 1fr
+    }
+}
+
+/* ---------- Glass & solid surfaces ---------- */
+.glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--dur) var(--ease);
+}
+
+.card-flat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px
+}
+
+.glass-card {
+    border-radius: var(--r-lg);
+    padding: 18px
+}
+
+/* Glass as accent only: content cards stay near-solid for readability */
+.glass.glass-card {
+    background: var(--glass-bg-strong);
+    box-shadow: var(--shadow-sm)
+}
+
+.panel {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 12px 14px
+}
