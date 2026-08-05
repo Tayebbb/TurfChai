@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { pitchColumns, pitchSchedule } from '@/data/tournaments';
@@ -38,7 +38,9 @@ const formatLabel = (format) => (format ? format.replaceAll('_', '-') : '');
 
 export default function MultiPitchPage() {
   const { showToast } = useToast();
-  const tournament = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
+  const [params] = useSearchParams();
+  const code = params.get('code') ?? DEMO_TOURNAMENT_CODE;
+  const tournament = useApi(() => getTournament(code), [code]);
   const live = tournament.data;
   const venueSlug = live?.venueSlug;
   const venue = useApi(

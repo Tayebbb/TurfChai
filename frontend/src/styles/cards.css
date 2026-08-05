@@ -63,7 +63,7 @@
 }
 
 .rating::before {
-    content: "â˜…";
+    content: "★";
     color: #E8A93C
 }
 
