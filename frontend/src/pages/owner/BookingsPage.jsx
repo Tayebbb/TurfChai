@@ -116,4 +116,111 @@ export default function BookingsPage() {
     ? BOOKINGS.filter((row) =>
         `${row.customer} ${row.sub} ${row.id}`.toLowerCase().includes(term),
       )
-    : BOOKINGS;
+    : BOOKINGS;
+
+  return (
+    <>
+      <PageTitle title="Bookings" />
+
+      <div className="main-header">
+        <div>
+          <h1>Bookings</h1>
+          <span className="subtle small">All sources · searchable &amp; filterable</span>
+        </div>
+        <Button variant="primary" onClick={() => showToast('Manual booking drawer — see Calendar page')}>
+          + Manual booking
+        </Button>
+      </div>
+
+      <div className="row-wrap" style={{ marginBottom: 14 }}>
+        <Input
+          style={{ maxWidth: 260 }}
+          placeholder="🔍 Search name, phone, ref…"
+          aria-label="Search bookings"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        {FILTERS.map((filter) => (
+          <Chip key={filter} active={chips.isActive(filter)} onToggle={() => chips.toggle(filter)}>
+            {filter}
+          </Chip>
+        ))}
+      </div>
+
+      <div className="card table-wrap" style={{ padding: 0 }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Ref</th>
+              <th>Customer</th>
+              <th>Pitch</th>
+              <th>Source</th>
+              <th className="num">Amount</th>
+              <th>Payment</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((row) => (
+              <tr key={row.id} style={row.dim ? { opacity: 0.65 } : undefined}>
+                <td className="num">{row.time}</td>
+                <td className="num">{row.id}</td>
+                <td>
+                  {row.customer}
+                  <br />
+                  <span className={row.subNum ? 'tiny subtle num' : 'tiny subtle'}>{row.sub}</span>
+                </td>
+                <td>{row.pitch}</td>
+                <td>
+                  <Badge tone={row.source.tone} dot={false}>
+                    {row.source.text}
+                  </Badge>
+                </td>
+                <td className="num">{row.amount}</td>
+                <td>
+                  <Badge tone={row.payment.tone}>{row.payment.text}</Badge>
+                </td>
+                <td>
+                  {row.actions.length > 1 ? (
+                    <div className="row" style={{ gap: 6 }}>
+                      {row.actions.map((action) => (
+                        <Button
+                          key={action.label}
+                          size="sm"
+                          variant={action.variant}
+                          onClick={() => showToast(action.toast)}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={row.actions[0].variant}
+                      onClick={() => showToast(row.actions[0].toast)}
+                    >
+                      {row.actions[0].label}
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="between small" style={{ marginTop: 10 }}>
+        <span className="subtle">Showing {visible.length} of 14 bookings today</span>
+        <div className="row">
+          <Button size="sm" variant="tertiary" onClick={() => showToast('Previous page')}>
+            ‹ Prev
+          </Button>
+          <Button size="sm" variant="tertiary" onClick={() => showToast('Next page')}>
+            Next ›
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+}
