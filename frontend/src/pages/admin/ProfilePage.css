@@ -1,0 +1,77 @@
+/* Profile UI Enhancements */
+.profile-header-card {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(38, 96, 216, 0.08) 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .profile-header-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 32px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid var(--border-soft);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--mint);
+  border: 3px solid var(--surface-1);
+}
+
+.stat-mini-row {
+  display: flex;
+  gap: 20px;
+  margin-top: 12px;
+}
+@media (max-width: 768px) {
+  .stat-mini-row {
+    justify-content: center;
+  }
+}
+
+.stat-mini-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.tline-item {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 14px;
+}
+.tline-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+}
