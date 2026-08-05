@@ -1,0 +1,167 @@
+package com.turfchai.player.service;
+
+import com.turfchai.player.dto.PlayerProfileDto;
+import com.turfchai.player.dto.UpdateProfileRequest;
+import com.turfchai.player.entity.SavedVenue;
+import com.turfchai.player.entity.User;
+import com.turfchai.player.repository.SavedVenueRepository;
+import com.turfchai.player.repository.UserRepository;
+import com.turfchai.venue.dto.VenueSummaryDto;
+import com.turfchai.venue.entity.Sport;
+import com.turfchai.venue.entity.SportPricingRule;
+import com.turfchai.venue.entity.Venue;
+import com.turfchai.venue.repository.VenueRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
+/** Player profile management and saved-venue bookmarks. */
+@Service
+public class UserProfileService {
+
+    private final UserRepository users;
+    private final SavedVenueRepository savedVenues;
+    private final VenueRepository venues;
+
+    public UserProfileService(UserRepository users, SavedVenueRepository savedVenues, VenueRepository venues) {
+        this.users = users;
+        this.savedVenues = savedVenues;
+        this.venues = venues;
+    }
+
+    @Transactional(readOnly = true)
+    public PlayerProfileDto getProfile(UUID publicId) {
+        return toDto(requireUser(publicId));
+    }
+
+    @Transactional
+    public PlayerProfileDto updateProfile(UUID publicId, UpdateProfileRequest request) {
+        User user = requireUser(publicId);
+        if (request.fullName() != null) {
+            user.setFullName(request.fullName().trim());
+            user.setAvatarInitials(initialsOf(request.fullName()));
+        }
+        if (request.area() != null) {
+            user.setArea(request.area().trim());
+        }
+        if (request.bio() != null) {
+            user.setBio(request.bio().trim());
+        }
+        if (request.playStyle() != null) {
+            user.setPlayStyle(request.playStyle());
+        }
+        if (request.playerRole() != null) {
+            user.setPlayerRole(request.playerRole());
+        }
+        if (request.preferredSports() != null) {
+            user.setPreferredSports(toCsv(request.preferredSports()));
+        }
+        if (request.preferredTimes() != null) {
+            user.setPreferredTimes(toCsv(request.preferredTimes()));
+        }
+        return toDto(users.save(user));
+    }
+
+    @Transactional(readOnly = true)
+    public List<VenueSummaryDto> listSavedVenues(UUID publicId) {
+        User user = requireUser(publicId);
+        return savedVenues.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+                .map(saved -> toVenueSummary(saved.getVenue()))
+                .toList();
+    }
+
+    /** Bookmarks the venue if not saved, removes it otherwise. Returns the new state. */
+    @Transactional
+    public boolean toggleSavedVenue(UUID publicId, String venueSlug) {
+        User user = requireUser(publicId);
+        Venue venue = venues.findBySlug(venueSlug)
+                .orElseThrow(() -> new com.turfchai.venue.service.VenueSearchService.VenueNotFoundException(venueSlug));
+
+        return savedVenues.findByUserIdAndVenueId(user.getId(), venue.getId())
+                .map(existing -> {
+                    savedVenues.delete(existing);
+                    return false;
+                })
+                .orElseGet(() -> {
+                    savedVenues.save(new SavedVenue(user, venue));
+                    return true;
+                });
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isSaved(UUID publicId, String venueSlug) {
+        User user = requireUser(publicId);
+        return venues.findBySlug(venueSlug)
+                .map(venue -> savedVenues.existsByUserIdAndVenueId(user.getId(), venue.getId()))
+                .orElse(false);
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────
+
+    private User requireUser(UUID publicId) {
+        return users.findByPublicId(publicId)
+                .orElseThrow(() -> new UserNotFoundException(publicId));
+    }
+
+    private PlayerProfileDto toDto(User user) {
+        return new PlayerProfileDto(
+                user.getPublicId(), user.getFullName(), user.getEmail(), user.getPhone(),
+                user.getArea(), user.getBio(), user.getAvatarInitials(), user.getPlayStyle(),
+                user.getPlayerRole(), fromCsv(user.getPreferredSports()), fromCsv(user.getPreferredTimes()));
+    }
+
+    private VenueSummaryDto toVenueSummary(Venue venue) {
+        SportPricingRule cheapest = venue.getPricingRules().stream()
+                .filter(SportPricingRule::isActive)
+                .min(Comparator.comparing(SportPricingRule::getRate))
+                .orElse(null);
+        List<String> sports = venue.getPitches().stream()
+                .flatMap(pitch -> pitch.getSports().stream())
+                .map(Sport::getSlug)
+                .distinct()
+                .toList();
+        return new VenueSummaryDto(
+                venue.getId(), venue.getSlug(), venue.getName(), venue.getArea(), venue.getAddress(),
+                venue.getRatingAvg(), venue.getReviewCount(), venue.isVerified(), venue.getPromotionLabel(),
+                fromCsv(venue.getAmenities()), sports,
+                cheapest == null ? null : cheapest.getRate(),
+                cheapest == null ? null : cheapest.getSlotDurationMin(),
+                null);
+    }
+
+    private static String initialsOf(String fullName) {
+        String[] parts = fullName.trim().split("\\s+");
+        StringBuilder initials = new StringBuilder();
+        for (int i = 0; i < Math.min(parts.length, 2); i++) {
+            initials.append(Character.toUpperCase(parts[i].charAt(0)));
+        }
+        return initials.toString();
+    }
+
+    private static String toCsv(List<String> values) {
+        return values.stream()
+                .map(value -> value.trim().toLowerCase(Locale.ROOT))
+                .filter(value -> !value.isEmpty())
+                .distinct()
+                .reduce((a, b) -> a + "," + b)
+                .orElse("");
+    }
+
+    private static List<String> fromCsv(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(csv.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+    }
+
+    public static class UserNotFoundException extends RuntimeException {
+        public UserNotFoundException(UUID publicId) {
+            super("User not found: " + publicId);
+        }
+    }
+}
