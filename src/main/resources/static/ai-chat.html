@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TurfChai — AI Assistant Test Console</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #2ea043; --accent-2: #238636;
+    --user: #1f6feb; --error: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12px; margin-left: auto; }
+  header button {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  }
+  header button:hover { color: var(--text); border-color: var(--muted); }
+  #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 72%; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--user); border-bottom-right-radius: 4px; }
+  .msg.bot  { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.error { align-self: center; background: none; border: 1px solid var(--error); color: var(--error); font-size: 13px; }
+  .meta { align-self: flex-start; color: var(--muted); font-size: 11px; margin: -6px 0 0 6px; }
+  .typing { align-self: flex-start; color: var(--muted); font-size: 13px; padding: 4px 8px; }
+  form {
+    display: flex; gap: 10px; padding: 16px 20px;
+    background: var(--panel); border-top: 1px solid var(--border);
+  }
+  input[type=text] {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 12px 14px; font-size: 15px; outline: none;
+  }
+  input[type=text]:focus { border-color: var(--accent); }
+  form button {
+    background: var(--accent-2); color: #fff; border: none; border-radius: 8px;
+    padding: 0 22px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  form button:disabled { opacity: .5; cursor: default; }
+  .hints { padding: 0 20px 10px; display: flex; gap: 8px; flex-wrap: wrap; background: var(--panel); }
+  .hints span {
+    font-size: 12px; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 999px; padding: 3px 10px; cursor: pointer;
+  }
+  .hints span:hover { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="dot"></div>
+  <h1>TurfChai AI Assistant</h1>
+  <span class="sub" id="session-label"></span>
+  <button id="reset">Reset session</button>
+</header>
+
+<div id="chat">
+  <div class="msg bot">Hi! I'm the TurfChai assistant. Ask me to find a turf, check availability, book a slot, or explain policies like refunds and loyalty points.</div>
+</div>
+
+<div class="hints" id="hints">
+  <span>Find a football turf in Banani</span>
+  <span>What is the cancellation refund policy?</span>
+  <span>Check availability at V-0044 tomorrow</span>
+  <span>Show upcoming tournaments</span>
+  <span>How do loyalty points work?</span>
+</div>
+
+<form id="form" autocomplete="off">
+  <input type="text" id="input" placeholder="Type a message…" maxlength="2000" autofocus>
+  <button type="submit" id="send">Send</button>
+</form>
+
+<script>
+  const chat = document.getElementById('chat');
+  const form = document.getElementById('form');
+  const input = document.getElementById('input');
+  const send = document.getElementById('send');
+
+  let sessionId = sessionStorage.getItem('tc-ai-session') || '';
+  const userId = 'test-user';
+  updateSessionLabel();
+
+  function updateSessionLabel() {
+    document.getElementById('session-label').textContent =
+      sessionId ? 'session ' + sessionId.slice(0, 8) + '…' : 'new session';
+  }
+
+  function add(cls, text) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + cls;
+    el.textContent = text;
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+
+  function addMeta(text) {
+    const el = document.createElement('div');
+    el.className = 'meta';
+    el.textContent = text;
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function sendMessage(text) {
+    add('user', text);
+    input.value = '';
+    send.disabled = true;
+    const typing = add('typing', 'thinking…');
+
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, message: text, userId })
+      });
+      const data = await res.json();
+      typing.remove();
+
+      if (!res.ok) {
+        add('error', data.error || ('HTTP ' + res.status));
+        return;
+      }
+      sessionId = data.sessionId;
+      sessionStorage.setItem('tc-ai-session', sessionId);
+      updateSessionLabel();
+      add('bot', data.reply);
+      addMeta('intent: ' + data.intent
+        + (data.toolsUsed.length ? ' · tools: ' + data.toolsUsed.join(', ') : '')
+        + ' · ' + data.latencyMs + ' ms');
+    } catch (err) {
+      typing.remove();
+      add('error', 'Network error: ' + err.message);
+    } finally {
+      send.disabled = false;
+      input.focus();
+    }
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (text) sendMessage(text);
+  });
+
+  document.getElementById('hints').addEventListener('click', e => {
+    if (e.target.tagName === 'SPAN') sendMessage(e.target.textContent);
+  });
+
+  document.getElementById('reset').addEventListener('click', async () => {
+    if (sessionId) {
+      await fetch('/api/ai/sessions/' + encodeURIComponent(sessionId), { method: 'DELETE' }).catch(() => {});
+    }
+    sessionId = '';
+    sessionStorage.removeItem('tc-ai-session');
+    updateSessionLabel();
+    chat.innerHTML = '';
+    add('bot', 'Session reset. How can I help?');
+  });
+</script>
+</body>
+</html>
