@@ -38,27 +38,6 @@ const AUTH_TABS = [
   { id: 'signup', label: 'Create account' },
 ];
 
-const ROLE_COPY = {
-  player: {
-    siTitle: 'Welcome Back, Player!',
-    siSub: 'Sign in with your phone or email to manage your pitch bookings and matches.',
-    suTitle: 'Join TurfChai as a Player',
-    suSub: 'One account for turf booking, finding open games, and earning rewards.',
-  },
-  owner: {
-    siTitle: 'Welcome Back, Turf Manager!',
-    siSub: 'Sign in to manage your venue calendar, pricing, bookings, and payouts.',
-    suTitle: 'List Your Turf Venue',
-    suSub: 'Create a venue owner account to start listing your pitches and receiving bookings.',
-  },
-  admin: {
-    siTitle: 'Administrator Control Center',
-    siSub: 'Sign in with your administrator credentials to access platform governance.',
-    suTitle: 'Request Admin Account',
-    suSub: 'Submit an administrator access request for TurfChai platform management.',
-  },
-};
-
 export default function AuthPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -77,14 +56,13 @@ export default function AuthPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const copy = ROLE_COPY[role];
   const activeRoleConfig = ROLES.find((r) => r.id === role);
 
-  /** Calculate target destination based on selected role */
-  const getDestination = () => {
-    if (role === 'admin') return paths.admin.dashboard;
-    if (role === 'owner') return tab === 'signup' ? paths.owner.onboarding : paths.owner.dashboard;
-    return tab === 'signup' ? paths.player.onboarding : paths.player.home;
+  /** Map the DB role (returned by the login API) to a redirect destination */
+  const getDestinationByRole = (apiRole) => {
+    if (apiRole === 'ADMIN') return paths.admin.dashboard;
+    if (apiRole === 'OWNER') return paths.owner.dashboard;
+    return paths.player.home;
   };
 
   const handleApiError = (error) => {
@@ -100,8 +78,9 @@ export default function AuthPage() {
       const payload = { email: signinEmail, password: signinPassword };
       const response = await login(payload);
       setSession(response);
-      showToast(`Signed in successfully as ${activeRoleConfig?.label} ✓`);
-      navigate(getDestination());
+      const dbRole = response?.user?.role ?? 'PLAYER';
+      showToast(`Signed in successfully ✓`);
+      navigate(getDestinationByRole(dbRole));
     } catch (error) {
       handleApiError(error);
     }
@@ -121,7 +100,9 @@ export default function AuthPage() {
       });
       setSession(response);
       showToast(`Account created! Welcome to TurfChai ✓`);
-      navigate(getDestination());
+      if (role === 'admin') navigate(paths.admin.dashboard);
+      else if (role === 'owner') navigate(paths.owner.onboarding);
+      else navigate(paths.player.onboarding);
     } catch (error) {
       handleApiError(error);
     }
@@ -132,71 +113,6 @@ export default function AuthPage() {
       <PageTitle title="Authentication — TurfChai" />
 
       <div className="wrap-form" style={{ paddingTop: 36, paddingBottom: 64, maxWidth: 480, margin: '0 auto' }}>
-        {/* Role Selection Header */}
-        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>Select Account Role</h1>
-          <p className="subtle small" style={{ margin: 0 }}>
-            Choose your role to customize your login experience
-          </p>
-        </div>
-
-        {/* Role Selector Tabs */}
-        <div
-          className="seg glass"
-          role="tablist"
-          aria-label="Account Role Selection"
-          style={{ display: 'flex', gap: 6, padding: 6, borderRadius: 16, marginBottom: 20 }}
-        >
-          {ROLES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={role === item.id ? 'on' : undefined}
-              role="tab"
-              aria-selected={role === item.id}
-              style={{
-                flex: 1,
-                padding: '10px 4px',
-                borderRadius: 12,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onClick={() => setRole(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Selected Role Banner */}
-        <div
-          style={{
-            background: `color-mix(in srgb, ${activeRoleConfig?.tone} 12%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${activeRoleConfig?.tone} 35%, transparent)`,
-            borderRadius: 16,
-            padding: '12px 16px',
-            marginBottom: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: activeRoleConfig?.tone }}>
-              Active Role: {activeRoleConfig?.label}
-            </span>
-            <div className="tiny subtle" style={{ marginTop: 2 }}>
-              {activeRoleConfig?.subtext}
-            </div>
-          </div>
-          <span className="badge" style={{ background: activeRoleConfig?.tone, color: '#fff', fontWeight: 700 }}>
-            {role.toUpperCase()}
-          </span>
-        </div>
-
         {/* Main Card Container */}
         <Card style={{ padding: 24, borderRadius: 20 }}>
           {/* Sign In vs Create Account Tabs */}
@@ -207,16 +123,16 @@ export default function AuthPage() {
           {/* SIGN IN TAB */}
           <TabPanel id="signin" value={tab}>
             <form onSubmit={handleQuickSubmit}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>{copy.siTitle}</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Welcome Back!</h2>
               <p className="subtle small" style={{ marginBottom: 18 }}>
-                {copy.siSub}
+                Sign in with your email and password to continue.
               </p>
 
               <Field label="Email Address" htmlFor="em">
                 <Input
                   id="em"
                   type="email"
-                  placeholder={role === 'admin' ? 'admin@turfchai.com' : 'user@example.com'}
+                  placeholder="user@example.com"
                   value={signinEmail}
                   onChange={(e) => setSigninEmail(e.target.value)}
                 />
@@ -232,7 +148,7 @@ export default function AuthPage() {
               </Field>
 
               <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
-                {isSubmitting ? 'Working…' : `Sign In as ${activeRoleConfig?.label} →`}
+                {isSubmitting ? 'Working…' : 'Sign In →'}
               </Button>
             </form>
 
@@ -251,11 +167,46 @@ export default function AuthPage() {
 
           {/* SIGN UP TAB */}
           <TabPanel id="signup" value={tab}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Create Your Account</h2>
+            <p className="subtle small" style={{ marginBottom: 18 }}>
+              Select your role to get started.
+            </p>
+
+            {/* Role Selector */}
+            <div style={{ marginBottom: 18 }}>
+              <div className="subtle tiny" style={{ fontWeight: 700, marginBottom: 6 }}>
+                Select Account Role
+              </div>
+              <div className="seg glass" role="tablist" aria-label="Account Role Selection" style={{ display: 'flex', gap: 6, padding: 6, borderRadius: 16 }}>
+                {ROLES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={role === item.id ? 'on' : undefined}
+                    role="tab"
+                    aria-selected={role === item.id}
+                    style={{
+                      flex: 1,
+                      padding: '10px 4px',
+                      borderRadius: 12,
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onClick={() => setRole(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="tiny subtle" style={{ marginTop: 6 }}>
+                {activeRoleConfig?.subtext}
+              </div>
+            </div>
+
             <form onSubmit={handleSignupSubmit}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>{copy.suTitle}</h2>
-              <p className="subtle small" style={{ marginBottom: 18 }}>
-                {copy.suSub}
-              </p>
 
               <Field label="Full Name" htmlFor="nm">
                 <Input
