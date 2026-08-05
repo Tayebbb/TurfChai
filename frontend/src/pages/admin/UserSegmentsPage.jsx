@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
 import { PageTitle } from '@/components/common/PageTitle';
+import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
 
 const KPIS = [
@@ -233,7 +234,7 @@ export default function UserSegmentsPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>User Segment Breakdown</h1>
+            <h1>User Segment Breakdown</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Distribution across player roles, venue partners, and geographic regions
@@ -242,7 +243,7 @@ export default function UserSegmentsPage() {
       </div>
 
       <div className="grid4" style={{ gap: 20, marginBottom: 28 }}>
-        {KPIS.map((kpi) => (
+        {KPIS.map((kpi, index) => (
           <div className="liquid-glass kpi-card" key={kpi.id}>
             <div>
               <div className="between">
@@ -255,7 +256,7 @@ export default function UserSegmentsPage() {
                 className="value num"
                 style={{ color: kpi.color, fontSize: 36, display: 'block', margin: '6px 0 2px' }}
               >
-                {kpi.value}
+                <CountUp to={Number(kpi.value.replace(/,/g, ''))} delay={index * 120} />
               </b>
               <span className={kpi.deltaClass} style={kpi.deltaStyle}>
                 {kpi.deltaText}

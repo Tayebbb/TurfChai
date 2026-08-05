@@ -1,0 +1,63 @@
+/* Leaflet host — new stacking context so map panes stay under the app chrome */
+.venue-map {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+  background: var(--surface-2);
+}
+
+/* Leaflet centres divIcons on a 12×12 default box; recentre our pill */
+.venue-map-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.venue-map-pin {
+  display: inline-block;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.venue-map-pin:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.venue-map-pin.hot {
+  background: var(--brand);
+  color: #fff;
+}
+[data-theme='dark'] .venue-map-pin.hot {
+  color: #04120a;
+}
+
+/* Match the app's dark theme: dim the raster tiles */
+[data-theme='dark'] .venue-map .leaflet-tile-pane {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+[data-theme='dark'] .venue-map .leaflet-container {
+  background: #16211c;
+}
+
+.venue-map .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.7);
+}
+[data-theme='dark'] .venue-map .leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.55);
+  color: #aaa;
+}
+[data-theme='dark'] .venue-map .leaflet-control-attribution a {
+  color: #8fc7a8;
+}
