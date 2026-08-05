@@ -24,3 +24,8 @@ export function verifyOtp(payload) {
 export function getMe() {
   return api('/me');
 }
+
+/** Update the current user's profile (name, email, phone). Returns the updated user. */
+export function updateMe(payload) {
+  return api('/me', { method: 'PATCH', body: payload });
+}

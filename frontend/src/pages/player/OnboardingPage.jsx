@@ -40,7 +40,7 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [step] = useState('about');
-  const [name, setName] = useState(currentPlayer.name);
+  const [name, setName] = useState(currentPlayer?.name ?? '');
   const [area, setArea] = useState('Dhanmondi');
   const [role, setRole] = useState('captain');
   const [saving, setSaving] = useState(false);
