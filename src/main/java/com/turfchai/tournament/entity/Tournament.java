@@ -1,6 +1,6 @@
 package com.turfchai.tournament.entity;
 
-import com.turfchai.player.entity.User;
+import com.turfchai.model.User;
 import com.turfchai.venue.entity.Venue;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -41,7 +41,7 @@ public class Tournament {
     private Long id;
 
     /** Human-facing code, e.g. TR-CUP-0091. */
-    @Column(nullable = false, unique = true, length = 16)
+    @Column(name = "tournament_code", nullable = false, unique = true, length = 16)
     private String code;
 
     @Column(nullable = false, length = 150)
@@ -58,13 +58,13 @@ public class Tournament {
     @Column(nullable = false)
     private LocalDate tournamentDate;
 
-    @Column(nullable = false)
+    @Column(name = "time_window_start", nullable = false)
     private LocalTime windowStart;
 
-    @Column(nullable = false)
+    @Column(name = "time_window_end", nullable = false)
     private LocalTime windowEnd;
 
-    /** '5_a_side' | '6_a_side' | '7_a_side' | 'knockout' */
+    /** '5_A_SIDE' | '6_A_SIDE' | '7_A_SIDE' | 'KNOCKOUT' (baseline CHECK values). */
     @Column(nullable = false, length = 20)
     private String format;
 
@@ -77,16 +77,16 @@ public class Tournament {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal prizePool = BigDecimal.ZERO;
 
-    /** 'open' | 'invite_only' */
+    /** 'OPEN' | 'INVITE_ONLY' (baseline CHECK values). */
     @Column(nullable = false, length = 15)
-    private String privacy = "open";
+    private String privacy = "OPEN";
 
     @Column(nullable = false, unique = true, length = 40)
     private String inviteCode;
 
-    /** 'draft' | 'published' | 'confirmed' */
+    /** 'DRAFT' | 'PUBLISHED' | 'CONFIRMED' (baseline CHECK values). */
     @Column(nullable = false, length = 15)
-    private String status = "draft";
+    private String status = "DRAFT";
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal depositAmount = BigDecimal.ZERO;

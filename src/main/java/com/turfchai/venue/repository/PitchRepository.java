@@ -16,6 +16,9 @@ public interface PitchRepository extends JpaRepository<Pitch, Long> {
 
     List<Pitch> findByVenueSlug(String slug);
 
+    // Open-games module lookup (moved from the deleted stub repository)
+    List<Pitch> findByVenueId(Long venueId);
+
     /**
      * Locks the pitch row for the duration of the transaction — used to
      * serialize concurrent slot reservations on the same pitch.

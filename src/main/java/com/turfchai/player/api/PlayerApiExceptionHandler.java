@@ -12,6 +12,7 @@ import java.util.Map;
 
 /** Scoped to player endpoints — the platform-wide advice is another dev's task. */
 @RestControllerAdvice(basePackages = "com.turfchai.player.api")
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class PlayerApiExceptionHandler {
 
     @ExceptionHandler({UserNotFoundException.class, VenueNotFoundException.class})

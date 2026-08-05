@@ -15,6 +15,7 @@ import java.util.Map;
  * separate infrastructure task owned by another developer.
  */
 @RestControllerAdvice(basePackages = "com.turfchai.venue.api")
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class VenueApiExceptionHandler {
 
     @ExceptionHandler(VenueNotFoundException.class)

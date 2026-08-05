@@ -8,8 +8,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -34,6 +38,8 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Venue {
 
     @Id
@@ -45,6 +51,18 @@ public class Venue {
      */
     @Column(nullable = false, unique = true, length = 80)
     private String slug;
+
+    /** Short operator-facing code (owner module), e.g. VEN-1024. */
+    @Column(name = "venue_code", unique = true, length = 12)
+    private String venueCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_user_id")
+    private com.turfchai.model.User owner;
+
+    /** Lifecycle status per the baseline schema, e.g. LIVE. */
+    @Column(length = 30)
+    private String status = "LIVE";
 
     @Column(nullable = false, length = 120)
     private String name;
@@ -64,24 +82,27 @@ public class Venue {
     @Column(name = "rating_avg", nullable = false, precision = 3, scale = 2)
     private BigDecimal ratingAvg = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column(name = "review_count", nullable = false)
     private int reviewCount = 0;
 
-    @Column(nullable = false)
+    @Column(name = "is_verified", nullable = false)
     private boolean verified = false;
 
     /** Marketing badge shown on cards, e.g. "Buy 5 get 1 free". */
-    @Column(length = 100)
+    @Column(name = "promotion_label", length = 100)
     private String promotionLabel;
 
-    /** Comma-separated amenity keys, e.g. "floodlights,parking,changing_room". */
-    @Column(length = 500)
+    /**
+     * Comma-separated amenity keys, e.g. "floodlights,parking,changing_room".
+     * Interim representation beside the baseline's JSONB `amenities` column.
+     */
+    @Column(name = "amenities_csv", length = 500)
     private String amenities;
 
-    @Column(nullable = false)
+    @Column(name = "open_time", nullable = false)
     private LocalTime openTime = LocalTime.of(6, 0);
 
-    @Column(nullable = false)
+    @Column(name = "close_time", nullable = false)
     private LocalTime closeTime = LocalTime.of(23, 0);
 
     @Column(nullable = false)

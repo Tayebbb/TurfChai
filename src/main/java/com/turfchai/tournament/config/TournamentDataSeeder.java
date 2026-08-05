@@ -1,7 +1,7 @@
 package com.turfchai.tournament.config;
 
-import com.turfchai.player.entity.User;
-import com.turfchai.player.repository.UserRepository;
+import com.turfchai.model.User;
+import com.turfchai.repository.UserRepository;
 import com.turfchai.tournament.api.TournamentRestController;
 import com.turfchai.tournament.entity.Tournament;
 import com.turfchai.tournament.entity.TournamentPitchReservation;
@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 
 import java.math.BigDecimal;
@@ -33,6 +34,7 @@ import java.util.List;
  * 13 reserved slots across the day, and a generated R16 bracket.
  */
 @Configuration
+@Profile("dev")
 public class TournamentDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(TournamentDataSeeder.class);
@@ -72,7 +74,7 @@ public class TournamentDataSeeder {
               PitchRepository pitches,
               UserRepository users) {
         Venue venue = venues.findBySlug("mirpur-sports-city").orElse(null);
-        User host = users.findByPublicId(TournamentRestController.DEMO_USER_ID).orElse(null);
+        User host = users.findByPublicId(TournamentRestController.DEMO_USER_ID.toString()).orElse(null);
         if (venue == null || host == null) {
             log.warn("Skipping tournament seed — demo venue or user missing");
             return;
@@ -101,13 +103,13 @@ public class TournamentDataSeeder {
         t.setTournamentDate(LocalDate.of(2027, 8, 21));
         t.setWindowStart(LocalTime.of(8, 0));
         t.setWindowEnd(LocalTime.of(18, 0));
-        t.setFormat("knockout");
+        t.setFormat("KNOCKOUT");
         t.setTeamCapacity(16);
         t.setEntryFeePerTeam(new BigDecimal("3500"));
         t.setPrizePool(new BigDecimal("40000"));
-        t.setPrivacy("invite_only");
+        t.setPrivacy("INVITE_ONLY");
         t.setInviteCode("t/ramadan-cup-0091");
-        t.setStatus("confirmed");
+        t.setStatus("CONFIRMED");
         t.setBalanceDueDate(LocalDate.of(2027, 8, 18));
         t = tournaments.save(t);
 
@@ -120,7 +122,7 @@ public class TournamentDataSeeder {
             team.setTournament(t);
             team.setName(name);
             team.setCaptainName(name.split(" ")[0] + " Captain");
-            team.setEntryFeeStatus("paid");
+            team.setEntryFeeStatus("PAID");
             team.setEntryFeePaid(t.getEntryFeePerTeam());
             teams.save(team);
         }

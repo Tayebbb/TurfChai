@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
-public interface SavedVenueRepository extends JpaRepository<SavedVenue, Long> {
+public interface SavedVenueRepository extends JpaRepository<SavedVenue, SavedVenue.Key> {
 
-    List<SavedVenue> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<SavedVenue> findByIdUserIdOrderByCreatedAtDesc(Long userId);
 
-    Optional<SavedVenue> findByUserIdAndVenueId(Long userId, Long venueId);
+    Optional<SavedVenue> findByIdUserIdAndIdVenueId(Long userId, Long venueId);
 
-    boolean existsByUserIdAndVenueId(Long userId, Long venueId);
+    boolean existsByIdUserIdAndIdVenueId(Long userId, Long venueId);
 }

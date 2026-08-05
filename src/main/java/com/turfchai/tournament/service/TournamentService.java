@@ -1,6 +1,6 @@
 package com.turfchai.tournament.service;
 
-import com.turfchai.player.entity.User;
+import com.turfchai.model.User;
 import com.turfchai.tournament.entity.Tournament;
 import com.turfchai.tournament.entity.TournamentFixture;
 import com.turfchai.tournament.entity.TournamentPitchReservation;
@@ -90,13 +90,13 @@ public class TournamentService {
         t.setTournamentDate(request.date());
         t.setWindowStart(request.windowStart());
         t.setWindowEnd(request.windowEnd());
-        t.setFormat(request.format());
+        t.setFormat(request.format().toUpperCase(Locale.ROOT));
         t.setTeamCapacity(request.teamCapacity());
         t.setEntryFeePerTeam(request.entryFeePerTeam());
         t.setPrizePool(request.prizePool() == null ? BigDecimal.ZERO : request.prizePool());
-        t.setPrivacy(request.privacy() == null ? "open" : request.privacy());
+        t.setPrivacy(request.privacy() == null ? "OPEN" : request.privacy().toUpperCase(Locale.ROOT));
         t.setInviteCode("t/" + slugify(request.name()) + "-" + randomDigits(4));
-        t.setStatus("published");
+        t.setStatus("PUBLISHED");
         t.setBalanceDueDate(request.date().minusDays(3));
         return toView(tournaments.save(t));
     }
@@ -144,7 +144,7 @@ public class TournamentService {
         TournamentTeam team = teams.findById(teamId)
                 .filter(x -> x.getTournament().getId().equals(t.getId()))
                 .orElseThrow(() -> new TournamentNotFoundException("No team " + teamId + " in " + code));
-        team.setEntryFeeStatus("paid");
+        team.setEntryFeeStatus("PAID");
         team.setEntryFeePaid(t.getEntryFeePerTeam());
         return toView(team);
     }
@@ -219,7 +219,7 @@ public class TournamentService {
             // Unique-constraint backstop for an exact-duplicate slot race.
             throw new PitchConflictException("One of the requested slots was just taken");
         }
-        t.setStatus("confirmed");
+        t.setStatus("CONFIRMED");
         t.setDepositAmount(costSummary(t).deposit());
         return toView(t);
     }
@@ -269,7 +269,7 @@ public class TournamentService {
     public List<FixtureView> generateFixtures(String code) {
         Tournament t = require(code);
         List<TournamentTeam> paid = teams.findByTournamentIdOrderByJoinedAtAsc(t.getId()).stream()
-                .filter(x -> "paid".equals(x.getEntryFeeStatus()))
+                .filter(x -> "PAID".equals(x.getEntryFeeStatus()))
                 .toList();
         if (paid.size() < 2) {
             throw new TournamentConflictException(
@@ -306,7 +306,7 @@ public class TournamentService {
             f.setRoundLabel(round);
             f.setMatchNumber(++matchNumber);
             f.setTeamA(paid.get(i));
-            f.setStatus("bye");
+            f.setStatus("BYE");
             generated.add(f);
         }
         // Remaining teams are paired first-vs-last to spread seeds.

@@ -56,7 +56,7 @@ public class Pitch {
     @Column(nullable = false)
     private boolean indoor = false;
 
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
     @ManyToMany(fetch = FetchType.LAZY)

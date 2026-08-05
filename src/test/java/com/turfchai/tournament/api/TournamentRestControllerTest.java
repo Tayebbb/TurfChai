@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@org.springframework.test.context.ActiveProfiles({"test", "dev"})
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
@@ -82,7 +83,7 @@ class TournamentRestControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Alpha\",\"captainName\":\"Cap\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.entryFeeStatus").value("pending"));
+                .andExpect(jsonPath("$.entryFeeStatus").value("DUE"));
 
         // Duplicate name -> 409
         mockMvc.perform(post(BASE + "/" + code + "/teams")
@@ -103,7 +104,7 @@ class TournamentRestControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content(slotBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reservations.length()").value(1))
-                .andExpect(jsonPath("$.status").value("confirmed"));
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
 
         // Overlapping window -> 409 with an explanatory error
         String overlap = """

@@ -10,6 +10,10 @@ import { Tabs, TabPanel } from '@/components/navigation/Tabs';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { login, register, requestOtp, verifyOtp } from '@/api/auth';
+import { setSession } from '@/api/client';
+
+const ROLE_TO_API = { player: 'PLAYER', owner: 'OWNER', admin: 'ADMIN' };
 
 const ROLES = [
   {
@@ -93,6 +97,9 @@ export default function AuthPage() {
   const [signupPassword, setSignupPassword] = useState('');
   const [venueName, setVenueName] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingOtp, setPendingOtp] = useState(null); // { phone, fullName } for phone signup
+
   const copy = ROLE_COPY[role];
   const activeRoleConfig = ROLES.find((r) => r.id === role);
 
@@ -103,22 +110,95 @@ export default function AuthPage() {
     return tab === 'signup' ? paths.player.onboarding : paths.player.home;
   };
 
-  const handleQuickSubmit = (e) => {
+  const fullPhone = (dial, number) => `${dial || ''}${number || ''}`.replace(/[^\d+]/g, '');
+
+  const handleApiError = (error) => {
+    showToast(error?.message || 'Something went wrong. Please try again.', { duration: 5000 });
+    setIsSubmitting(false);
+  };
+
+  const handleQuickSubmit = async (e) => {
     e?.preventDefault();
+    setIsSubmitting(true);
+
     if (authMethod === 'phone') {
-      otpModal.open();
-    } else {
-      const dest = getDestination();
+      const phone = fullPhone(signinDial, signinPhone);
+      try {
+        await requestOtp(phone);
+        setPendingOtp({ phone });
+        otpModal.open();
+        showToast(`Verification code sent to ${phone.slice(0, -4)}•••• 📱`);
+      } catch (error) {
+        handleApiError(error);
+        return;
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const payload = { email: signinEmail, password: signinPassword };
+      const response = await login(payload);
+      setSession(response);
       showToast(`Signed in successfully as ${activeRoleConfig?.label} ✓`);
-      navigate(dest);
+      navigate(getDestination());
+    } catch (error) {
+      handleApiError(error);
     }
   };
 
-  const handleOtpVerify = () => {
-    otpModal.close();
-    const dest = getDestination();
-    showToast(`Verification successful! Welcome to TurfChai ✓`);
-    navigate(dest);
+  const handleSignupSubmit = async (e) => {
+    e?.preventDefault();
+    setIsSubmitting(true);
+
+    if (authMethod === 'phone') {
+      const phone = fullPhone(signupDial, signupPhone);
+      try {
+        await requestOtp(phone);
+        setPendingOtp({ phone, fullName, role: ROLE_TO_API[role] });
+        otpModal.open();
+        showToast(`Verification code sent to ${phone.slice(0, -4)}•••• 📱`);
+      } catch (error) {
+        handleApiError(error);
+        return;
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const response = await register({
+        fullName,
+        email: signupEmail,
+        password: signupPassword,
+        phone: fullPhone(signupDial, signupPhone) || `+880${Date.now() % 1000000000}`,
+        role: ROLE_TO_API[role] ?? 'PLAYER',
+      });
+      setSession(response);
+      showToast(`Account created! Welcome to TurfChai ✓`);
+      navigate(getDestination());
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
+  const handleOtpVerify = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await verifyOtp({
+        phone: pendingOtp?.phone,
+        code,
+        fullName: pendingOtp?.fullName,
+        role: pendingOtp?.role,
+      });
+      setSession(response);
+      otpModal.close();
+      showToast(`Verification successful! Welcome to TurfChai ✓`);
+      navigate(getDestination());
+    } catch (error) {
+      showToast(error?.message || 'Invalid code. Please try again.', { duration: 5000 });
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -267,8 +347,12 @@ export default function AuthPage() {
                 </>
               )}
 
-              <Button variant="primary" block type="submit" style={{ marginTop: 8 }}>
-                {authMethod === 'phone' ? 'Send Verification Code 📱' : `Sign In as ${activeRoleConfig?.label} →`}
+              <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
+                {isSubmitting
+                  ? 'Working…'
+                  : authMethod === 'phone'
+                    ? 'Send Verification Code 📱'
+                    : `Sign In as ${activeRoleConfig?.label} →`}
               </Button>
             </form>
 
@@ -307,7 +391,7 @@ export default function AuthPage() {
 
           {/* SIGN UP TAB */}
           <TabPanel id="signup" value={tab}>
-            <form onSubmit={handleQuickSubmit}>
+            <form onSubmit={handleSignupSubmit}>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>{copy.suTitle}</h2>
               <p className="subtle small" style={{ marginBottom: 18 }}>
                 {copy.suSub}
@@ -374,8 +458,12 @@ export default function AuthPage() {
                 </>
               )}
 
-              <Button variant="primary" block type="submit" style={{ marginTop: 8 }}>
-                {authMethod === 'phone' ? 'Verify & Continue →' : `Register as ${activeRoleConfig?.label} →`}
+              <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
+                {isSubmitting
+                  ? 'Working…'
+                  : authMethod === 'phone'
+                    ? 'Verify & Continue →'
+                    : `Register as ${activeRoleConfig?.label} →`}
               </Button>
             </form>
 
@@ -422,15 +510,15 @@ export default function AuthPage() {
       <Overlay isOpen={otpModal.isOpen} onClose={otpModal.close} title="Enter Verification Code" hideHeader className="center">
         <h3>Enter 4-Digit Code</h3>
         <p className="subtle small">
-          Sent by SMS to {signinDial || signupDial} 1712 ••• 678
+          Sent by SMS to {pendingOtp?.phone ? `${pendingOtp.phone.slice(0, -4)} •••` : 'your phone'}
         </p>
 
         <div style={{ margin: '20px 0' }}>
           <OtpInput value={code} onChange={setCode} />
         </div>
 
-        <Button variant="primary" block onClick={handleOtpVerify}>
-          Verify Code &amp; Log In
+        <Button variant="primary" block onClick={handleOtpVerify} disabled={isSubmitting}>
+          {isSubmitting ? 'Verifying…' : 'Verify Code & Log In'}
         </Button>
 
         <p className="subtle tiny" style={{ marginTop: 14 }}>

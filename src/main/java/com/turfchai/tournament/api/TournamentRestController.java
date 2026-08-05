@@ -1,7 +1,7 @@
 package com.turfchai.tournament.api;
 
-import com.turfchai.player.entity.User;
-import com.turfchai.player.repository.UserRepository;
+import com.turfchai.model.User;
+import com.turfchai.repository.UserRepository;
 import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
 import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
@@ -58,7 +58,7 @@ public class TournamentRestController {
                 throw new IllegalArgumentException("X-User-Id must be a UUID");
             }
         }
-        return users.findByPublicId(id)
+        return users.findByPublicId(id.toString())
                 .orElseThrow(() -> new IllegalArgumentException("Unknown user: " + id));
     }
 

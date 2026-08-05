@@ -4,7 +4,7 @@ import com.turfchai.player.api.UserProfileRestController;
 import com.turfchai.player.dto.PlayerProfileDto;
 import com.turfchai.player.dto.UpdateProfileRequest;
 import com.turfchai.player.repository.SavedVenueRepository;
-import com.turfchai.player.repository.UserRepository;
+import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.VenueTestData;
 import com.turfchai.venue.dto.VenueSummaryDto;
 import com.turfchai.venue.entity.Sport;
@@ -23,6 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@org.springframework.test.context.ActiveProfiles({"test", "dev"})
 @SpringBootTest
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:profile-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
@@ -104,11 +105,14 @@ class UserProfileServiceTest {
                 "parking", 2000, football);
         service.toggleSavedVenue(DEMO, venue.getSlug());
 
-        var other = new com.turfchai.player.entity.User();
-        other.setFullName("Other Player");
-        other.setEmail("other@turfchai.dev");
+        var other = com.turfchai.model.User.builder()
+                .fullName("Other Player")
+                .email("other@turfchai.dev")
+                .phone("+8801700000999")
+                .passwordHash("test-hash")
+                .build();
         users.save(other);
 
-        assertThat(service.listSavedVenues(other.getPublicId())).isEmpty();
+        assertThat(service.listSavedVenues(UUID.fromString(other.getPublicId()))).isEmpty();
     }
 }

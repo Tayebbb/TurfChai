@@ -37,18 +37,18 @@ public class TournamentTeam {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(length = 100)
+    @Column(name = "captain_name", length = 100)
     private String captainName;
 
     /**
-     * 'pending' | 'paid' — entry-fee tracking only. Actual payment
+     * 'DUE' | 'PAID' — entry-fee tracking only. Actual payment
      * processing is owned by the payments module; this flag is what the
      * bracket generator checks before seeding a team.
      */
-    @Column(nullable = false, length = 10)
-    private String entryFeeStatus = "pending";
+    @Column(name = "payment_status", nullable = false, length = 10)
+    private String entryFeeStatus = "DUE";
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(name = "entry_fee_paid_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal entryFeePaid = BigDecimal.ZERO;
 
     @Column(nullable = false)

@@ -39,7 +39,7 @@ public class TournamentFixture {
     private String roundLabel;
 
     /** Order within the round, 1-based. */
-    @Column(nullable = false)
+    @Column(name = "match_number", nullable = false)
     private int matchNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -58,7 +58,7 @@ public class TournamentFixture {
     @JoinColumn(name = "team_b_id")
     private TournamentTeam teamB;
 
-    /** 'scheduled' | 'bye' */
+    /** 'SCHEDULED' | 'BYE' (baseline uses uppercase statuses). */
     @Column(nullable = false, length = 12)
-    private String status = "scheduled";
+    private String status = "SCHEDULED";
 }

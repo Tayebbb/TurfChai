@@ -44,7 +44,7 @@ public final class VenueTestData {
 
         SportPricingRule rule = new SportPricingRule();
         rule.setSport(sportList[0]);
-        rule.setWindowType("peak");
+        rule.setWindowType("PEAK");
         rule.setRate(BigDecimal.valueOf(peakPrice));
         rule.setSlotDurationMin(90);
         rule.setWindowStart(LocalTime.of(16, 0));

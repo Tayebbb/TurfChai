@@ -1,5 +1,8 @@
 package com.turfchai.venue.config;
 
+import com.turfchai.model.User;
+import com.turfchai.player.api.UserProfileRestController;
+import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.entity.Pitch;
 import com.turfchai.venue.entity.Sport;
 import com.turfchai.venue.entity.SportPricingRule;
@@ -11,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,30 +25,32 @@ import java.util.Map;
 
 /**
  * Dev seed matching the frontend prototype's Dhaka sample venues.
- * Runs only when the venues table is empty; replaced by real owner
- * onboarding + Flyway seeds later.
+ * Runs only when the venues table is empty; production data comes from
+ * owner onboarding + Flyway seeds.
  */
 @Configuration
+@Profile("dev")
 public class VenueDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(VenueDataSeeder.class);
 
     @Bean
-    @Order(1)   // venues first — player and tournament seeders depend on them
-    CommandLineRunner seedVenues(VenueRepository venues, SportRepository sports) {
-        return args -> seed(venues, sports);
+    @Order(2)   // after the demo player — venues need an owner user
+    CommandLineRunner seedVenues(VenueRepository venues, SportRepository sports, UserRepository users) {
+        return args -> seed(venues, sports, users);
     }
 
     @Transactional
-    void seed(VenueRepository venues, SportRepository sports) {
+    void seed(VenueRepository venues, SportRepository sports, UserRepository users) {
         if (venues.count() > 0) {
             return;
         }
+        User owner = users.findByPublicId(UserProfileRestController.DEMO_USER_ID.toString()).orElse(null);
 
-        Sport football = sports.save(new Sport("Football", "football"));
-        Sport cricket = sports.save(new Sport("Cricket", "cricket"));
-        Sport badminton = sports.save(new Sport("Badminton", "badminton"));
-        Sport futsal = sports.save(new Sport("Futsal", "futsal"));
+        Sport football = sport(sports, "Football", "football");
+        Sport cricket = sport(sports, "Cricket", "cricket");
+        Sport badminton = sport(sports, "Badminton", "badminton");
+        Sport futsal = sport(sports, "Futsal", "futsal");
 
         record Seed(String slug, String name, String address, String area, double lat, double lng,
                 double rating, int reviews, boolean verified, String promo, String amenities,
@@ -72,12 +78,15 @@ public class VenueDataSeeder {
                         "floodlights,parking,cafeteria", "7_a_side", List.of(football, cricket), 3200, 90));
 
         Map<String, LocalTime[]> windows = Map.of(
-                "off_peak", new LocalTime[] { LocalTime.of(6, 0), LocalTime.of(16, 0) },
-                "peak", new LocalTime[] { LocalTime.of(16, 0), LocalTime.of(23, 0) });
+                "OFF_PEAK", new LocalTime[] { LocalTime.of(6, 0), LocalTime.of(16, 0) },
+                "PEAK", new LocalTime[] { LocalTime.of(16, 0), LocalTime.of(23, 0) });
 
+        int venueNumber = 1000;
         for (Seed row : rows) {
             Venue venue = new Venue();
             venue.setSlug(row.slug());
+            venue.setVenueCode("VEN-" + (++venueNumber));
+            venue.setOwner(owner);
             venue.setName(row.name());
             venue.setAddress(row.address());
             venue.setArea(row.area());
@@ -105,7 +114,7 @@ public class VenueDataSeeder {
                 rule.setWindowType(window.getKey());
                 // off-peak is 20% cheaper than the listed (peak) price
                 BigDecimal rate = BigDecimal.valueOf(
-                        "off_peak".equals(window.getKey()) ? Math.round(row.price() * 0.8) : row.price());
+                        "OFF_PEAK".equals(window.getKey()) ? Math.round(row.price() * 0.8) : row.price());
                 rule.setRate(rate);
                 rule.setSlotDurationMin(row.duration());
                 rule.setWindowStart(window.getValue()[0]);
@@ -115,5 +124,9 @@ public class VenueDataSeeder {
             venues.save(venue);
         }
         log.info("Seeded {} demo venues", rows.size());
+    }
+
+    private static Sport sport(SportRepository sports, String name, String slug) {
+        return sports.findBySlug(slug).orElseGet(() -> sports.save(new Sport(name, slug)));
     }
 }

@@ -1,11 +1,12 @@
 package com.turfchai.player.service;
 
+import com.turfchai.model.User;
+import com.turfchai.model.enums.SkillLevel;
 import com.turfchai.player.dto.PlayerProfileDto;
 import com.turfchai.player.dto.UpdateProfileRequest;
 import com.turfchai.player.entity.SavedVenue;
-import com.turfchai.player.entity.User;
 import com.turfchai.player.repository.SavedVenueRepository;
-import com.turfchai.player.repository.UserRepository;
+import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.dto.VenueSummaryDto;
 import com.turfchai.venue.entity.Sport;
 import com.turfchai.venue.entity.SportPricingRule;
@@ -58,7 +59,7 @@ public class UserProfileService {
             user.setBio(request.bio().trim());
         }
         if (request.playStyle() != null) {
-            user.setPlayStyle(request.playStyle());
+            user.setPlayStyle(SkillLevel.fromString(request.playStyle()));
         }
         if (request.playerRole() != null) {
             user.setPlayerRole(request.playerRole());
@@ -75,7 +76,7 @@ public class UserProfileService {
     @Transactional(readOnly = true)
     public List<VenueSummaryDto> listSavedVenues(UUID publicId) {
         User user = requireUser(publicId);
-        return savedVenues.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+        return savedVenues.findByIdUserIdOrderByCreatedAtDesc(user.getId()).stream()
                 .map(saved -> toVenueSummary(saved.getVenue()))
                 .toList();
     }
@@ -87,7 +88,7 @@ public class UserProfileService {
         Venue venue = venues.findBySlug(venueSlug)
                 .orElseThrow(() -> new com.turfchai.venue.service.VenueSearchService.VenueNotFoundException(venueSlug));
 
-        return savedVenues.findByUserIdAndVenueId(user.getId(), venue.getId())
+        return savedVenues.findByIdUserIdAndIdVenueId(user.getId(), venue.getId())
                 .map(existing -> {
                     savedVenues.delete(existing);
                     return false;
@@ -107,7 +108,7 @@ public class UserProfileService {
     public void removeSavedVenue(UUID publicId, String venueSlug) {
         User user = requireUser(publicId);
         venues.findBySlug(venueSlug).ifPresent(venue ->
-                savedVenues.findByUserIdAndVenueId(user.getId(), venue.getId())
+                savedVenues.findByIdUserIdAndIdVenueId(user.getId(), venue.getId())
                         .ifPresent(savedVenues::delete));
     }
 
@@ -115,21 +116,22 @@ public class UserProfileService {
     public boolean isSaved(UUID publicId, String venueSlug) {
         User user = requireUser(publicId);
         return venues.findBySlug(venueSlug)
-                .map(venue -> savedVenues.existsByUserIdAndVenueId(user.getId(), venue.getId()))
+                .map(venue -> savedVenues.existsByIdUserIdAndIdVenueId(user.getId(), venue.getId()))
                 .orElse(false);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────
+    // ── helpers ──────────────────────────────────────────────────────
 
     private User requireUser(UUID publicId) {
-        return users.findByPublicId(publicId)
+        return users.findByPublicId(publicId.toString())
                 .orElseThrow(() -> new UserNotFoundException(publicId));
     }
 
     private PlayerProfileDto toDto(User user) {
         return new PlayerProfileDto(
-                user.getPublicId(), user.getFullName(), user.getEmail(), user.getPhone(),
-                user.getArea(), user.getBio(), user.getAvatarInitials(), user.getPlayStyle(),
+                UUID.fromString(user.getPublicId()), user.getFullName(), user.getEmail(), user.getPhone(),
+                user.getArea(), user.getBio(), user.getAvatarInitials(),
+                user.getPlayStyle() == null ? null : user.getPlayStyle().name().toLowerCase(Locale.ROOT),
                 user.getPlayerRole(), fromCsv(user.getPreferredSports()), fromCsv(user.getPreferredTimes()));
     }
 

@@ -1,8 +1,8 @@
 package com.turfchai.tournament.service;
 
 import com.turfchai.player.api.UserProfileRestController;
-import com.turfchai.player.entity.User;
-import com.turfchai.player.repository.UserRepository;
+import com.turfchai.model.User;
+import com.turfchai.repository.UserRepository;
 import com.turfchai.tournament.config.TournamentDataSeeder;
 import com.turfchai.tournament.repository.TournamentFixtureRepository;
 import com.turfchai.tournament.repository.TournamentPitchReservationRepository;
@@ -32,6 +32,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@org.springframework.test.context.ActiveProfiles({"test", "dev"})
 @SpringBootTest
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:tournament-svc-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
@@ -62,7 +63,7 @@ class TournamentServiceTest {
     }
 
     private User demoHost() {
-        return users.findByPublicId(UserProfileRestController.DEMO_USER_ID).orElseThrow();
+        return users.findByPublicId(UserProfileRestController.DEMO_USER_ID.toString()).orElseThrow();
     }
 
     private TournamentView createTournament(int capacity) {
@@ -86,7 +87,7 @@ class TournamentServiceTest {
         TournamentView t = createTournament(8);
         assertThat(t.code()).matches("TR-CUP-\\d{4}");
         assertThat(t.inviteCode()).startsWith("t/test-cup-");
-        assertThat(t.status()).isEqualTo("published");
+        assertThat(t.status()).isEqualTo("PUBLISHED");
         assertThat(t.balanceDueDate()).isEqualTo(LocalDate.of(2027, 9, 1));
     }
 
@@ -134,7 +135,7 @@ class TournamentServiceTest {
         TournamentView t = createTournament(4);
         TeamView team = service.registerTeam(t.code(), new RegisterTeamRequest("Alpha", "A"));
         TeamView paid = service.markEntryFeePaid(t.code(), team.id());
-        assertThat(paid.entryFeeStatus()).isEqualTo("paid");
+        assertThat(paid.entryFeeStatus()).isEqualTo("PAID");
         assertThat(paid.entryFeePaid()).isEqualByComparingTo("2000");
     }
 
@@ -221,7 +222,7 @@ class TournamentServiceTest {
         List<FixtureView> generated = service.generateFixtures(t.code());
         assertThat(generated).hasSize(2);
         assertThat(generated).allMatch(f -> "SF".equals(f.roundLabel()));
-        assertThat(generated).allMatch(f -> "scheduled".equals(f.status()));
+        assertThat(generated).allMatch(f -> "SCHEDULED".equals(f.status()));
         assertThat(generated).allMatch(f -> f.pitchName() != null && f.startTime() != null);
         // No pitch/time collision between fixtures.
         assertThat(generated.stream().map(f -> f.pitchName() + "@" + f.startTime()).distinct())
@@ -234,8 +235,8 @@ class TournamentServiceTest {
         TournamentView t = tournamentWithPaidTeams(5, 1);
         List<FixtureView> generated = service.generateFixtures(t.code());
         assertThat(generated).hasSize(4);
-        assertThat(generated.stream().filter(f -> "bye".equals(f.status()))).hasSize(3);
-        FixtureView real = generated.stream().filter(f -> "scheduled".equals(f.status())).findFirst().orElseThrow();
+        assertThat(generated.stream().filter(f -> "BYE".equals(f.status()))).hasSize(3);
+        FixtureView real = generated.stream().filter(f -> "SCHEDULED".equals(f.status())).findFirst().orElseThrow();
         assertThat(real.roundLabel()).isEqualTo("QF");
         assertThat(real.teamA()).isEqualTo("Team D");
         assertThat(real.teamB()).isEqualTo("Team E");
