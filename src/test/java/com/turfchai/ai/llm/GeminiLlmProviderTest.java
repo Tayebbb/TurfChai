@@ -115,6 +115,30 @@ class GeminiLlmProviderTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void thoughtSignatureIsCapturedAndEchoedBack() throws Exception {
+        // capture from response
+        JsonNode root = mapper.readTree("""
+                {"candidates":[{"content":{"parts":[
+                  {"functionCall":{"name":"search_venues","args":{}},
+                   "thoughtSignature":"sig-123"}]}}]}""");
+        LlmResponse response = provider.parseResponse(root);
+        ToolCall call = response.toolCalls().get(0);
+        assertThat(call.thoughtSignature()).isEqualTo("sig-123");
+
+        // echo back in the replayed conversation
+        Map<String, Object> body = provider.buildRequestBody(new LlmRequest(
+                List.of(ChatMessage.user("x"),
+                        ChatMessage.assistantToolCall(call),
+                        ChatMessage.tool("search_venues", "{}")),
+                List.of()));
+        List<Map<String, Object>> contents = (List<Map<String, Object>>) body.get("contents");
+        Map<String, Object> modelPart =
+                ((List<Map<String, Object>>) contents.get(1).get("parts")).get(0);
+        assertThat(modelPart.get("thoughtSignature")).isEqualTo("sig-123");
+    }
+
+    @Test
     void blockedPromptRaisesLlmException() throws Exception {
         JsonNode root = mapper.readTree("""
                 {"candidates":[],"promptFeedback":{"blockReason":"SAFETY"}}""");

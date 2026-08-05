@@ -95,9 +95,15 @@ public class GeminiLlmProvider implements LlmProvider {
                 case USER -> contents.add(content("user", Map.of("text", message.content())));
                 case ASSISTANT -> {
                     if (message.toolCall() != null) {
-                        contents.add(content("model", Map.of("functionCall", Map.of(
+                        Map<String, Object> part = new LinkedHashMap<>();
+                        part.put("functionCall", Map.of(
                                 "name", message.toolCall().name(),
-                                "args", message.toolCall().arguments()))));
+                                "args", message.toolCall().arguments()));
+                        // Newer Gemini models require the signature echoed back.
+                        if (message.toolCall().thoughtSignature() != null) {
+                            part.put("thoughtSignature", message.toolCall().thoughtSignature());
+                        }
+                        contents.add(content("model", part));
                     } else {
                         contents.add(content("model", Map.of("text", message.content())));
                     }
@@ -175,7 +181,10 @@ public class GeminiLlmProvider implements LlmProvider {
                 Map<String, Object> args = objectMapper.convertValue(
                         call.path("args"), objectMapper.getTypeFactory()
                                 .constructMapType(LinkedHashMap.class, String.class, Object.class));
-                toolCalls.add(new ToolCall(call.path("name").asText(), args));
+                String signature = part.hasNonNull("thoughtSignature")
+                        ? part.get("thoughtSignature").asText()
+                        : null;
+                toolCalls.add(new ToolCall(call.path("name").asText(), args, signature));
             } else if (part.has("text")) {
                 text.append(part.get("text").asText());
             }
