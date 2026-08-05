@@ -45,15 +45,15 @@ public class WebCorsConfig implements WebMvcConfigurer {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        String[] configured = new String[0];
         if (frontendUrl != null && !frontendUrl.isBlank()) {
-            List<String> allowedOrigins = Arrays.stream(frontendUrl.split(","))
+            configured = Arrays.stream(frontendUrl.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
-                    .toList();
-            configuration.setAllowedOrigins(allowedOrigins);
-        } else {
-            configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://turf-chai.vercel.app"));
+                    .toArray(String[]::new);
         }
+        configuration.setAllowedOriginPatterns(
+                Arrays.asList(concat(configured, "http://localhost:*", "http://127.0.0.1:*")));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
