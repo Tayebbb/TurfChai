@@ -43,6 +43,7 @@ This document provides a complete technical summary of the **TurfChai** project.
   * `V3__player_platform_alignment.sql`: Platform schema alignment updates.
   * `V4__admins.sql`: Admin access control table & seed roles.
   * `V5__users_reliability_score_integer.sql`: Widen user reliability score to Integer.
+  * `V6__tournament_player_registration.sql`: Player-facing tournament registration schema updates.
 
 ### Key Entity Alignments:
 * `User.java`: Field `reliabilityScore` is mapped to database column `reliability_score` (`INTEGER`).
@@ -55,7 +56,7 @@ This document provides a complete technical summary of the **TurfChai** project.
 
 1. **Database & Schema Status**:
    * PostgreSQL database `turfchai` is created and initialized.
-   * All Flyway schema migrations (V1 to V5) execute cleanly.
+   * All Flyway schema migrations (V1 to V6) execute cleanly.
    * **Demo Data Clean-up**: All demo data in PostgreSQL has been removed. Tables currently contain **0 records** for clean deployment/testing.
    * **Test Seeders Scoped**: Seeder classes (`PlayerDataSeeder`, `VenueDataSeeder`, `TournamentDataSeeder`) use `@Profile("test")` so that unit tests pass using in-memory H2, while keeping the main PostgreSQL database completely empty.
 
