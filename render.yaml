@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: turfchai-backend
+    runtime: java
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/turfchai-0.0.1-SNAPSHOT.jar
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+
+    envVars:
+      - key: JAVA_VERSION
+        value: 21
+
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: turfchai-db
+          property: jdbcConnectionString   # verify this property name
+
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: turfchai-db
+          property: user
+
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: turfchai-db
+          property: password
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: FRONTEND_URL
+        sync: false
+
+      - key: OPENROUTER_API_KEY
+        sync: false
+
+      - key: HF_API_KEY
+        sync: false
+
+databases:
+  - name: turfchai-db
+    databaseName: turfchai
+    user: postgres
