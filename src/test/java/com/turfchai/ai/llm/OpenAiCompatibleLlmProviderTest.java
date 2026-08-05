@@ -13,23 +13,29 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Verifies the provider-agnostic ↔ OpenAI/Hugging Face wire-format mapping. */
-class HuggingFaceLlmProviderTest {
+/** Verifies the provider-agnostic ↔ OpenAI wire-format mapping (OpenRouter/HF). */
+class OpenAiCompatibleLlmProviderTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
-    private final HuggingFaceLlmProvider provider = new HuggingFaceLlmProvider(null, mapper,
-            new AiProperties.HuggingFace());
+    private final OpenAiCompatibleLlmProvider provider = new OpenAiCompatibleLlmProvider(
+            "openrouter", null, mapper, endpoint());
+
+    private static AiProperties.Endpoint endpoint() {
+        AiProperties.Endpoint e = new AiProperties.Endpoint();
+        e.setModel("meta-llama/llama-3.3-70b-instruct:free");
+        return e;
+    }
 
     // ── request mapping ──────────────────────────────────────────────────
 
     @Test
     @SuppressWarnings("unchecked")
-    void mapsRolesAndModel() {
+    void mapsRolesModelAndGenerationParams() {
         Map<String, Object> body = provider.buildRequestBody(new LlmRequest(
                 List.of(ChatMessage.system("sys"), ChatMessage.user("hi"), ChatMessage.assistant("yo")),
                 List.of()));
 
-        assertThat(body.get("model")).isEqualTo("meta-llama/Llama-3.3-70B-Instruct");
+        assertThat(body.get("model")).isEqualTo("meta-llama/llama-3.3-70b-instruct:free");
         assertThat(body.get("temperature")).isEqualTo(0.3);
         assertThat(body.get("top_p")).isEqualTo(0.9);
         assertThat(body.get("max_tokens")).isEqualTo(600);
@@ -103,6 +109,16 @@ class HuggingFaceLlmProviderTest {
         assertThat(response.hasToolCalls()).isTrue();
         assertThat(response.toolCalls().get(0).name()).isEqualTo("search_venues");
         assertThat(response.toolCalls().get(0).arguments()).containsEntry("area", "Banani");
+    }
+
+    @Test
+    void apiErrorBodySurfacesAsRetryableLlmException() throws Exception {
+        JsonNode root = mapper.readTree("""
+                {"error":{"message":"Rate limit exceeded: free-models-per-day","code":429}}""");
+
+        assertThatThrownBy(() -> provider.parseResponse(root))
+                .isInstanceOf(LlmException.class)
+                .hasMessageContaining("Rate limit exceeded");
     }
 
     @Test

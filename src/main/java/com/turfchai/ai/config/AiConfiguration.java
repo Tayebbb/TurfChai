@@ -6,9 +6,8 @@ import com.turfchai.ai.agent.BookingAssistantAgent;
 import com.turfchai.ai.agent.IntentRouter;
 import com.turfchai.ai.evaluation.AiMetricsRecorder;
 import com.turfchai.ai.llm.FallbackLlmProvider;
-import com.turfchai.ai.llm.GeminiLlmProvider;
-import com.turfchai.ai.llm.HuggingFaceLlmProvider;
 import com.turfchai.ai.llm.LlmProvider;
+import com.turfchai.ai.llm.OpenAiCompatibleLlmProvider;
 import com.turfchai.ai.llm.UnconfiguredLlmProvider;
 import com.turfchai.ai.memory.ConversationMemory;
 import com.turfchai.ai.memory.InMemoryConversationMemory;
@@ -16,7 +15,6 @@ import com.turfchai.ai.prompt.PromptBuilder;
 import com.turfchai.ai.prompt.PromptLoader;
 import com.turfchai.ai.rag.ClasspathDocumentLoader;
 import com.turfchai.ai.rag.EmbeddingProvider;
-import com.turfchai.ai.rag.GeminiEmbeddingProvider;
 import com.turfchai.ai.rag.HashingEmbeddingProvider;
 import com.turfchai.ai.rag.InMemoryVectorStore;
 import com.turfchai.ai.rag.KnowledgeRetriever;
@@ -43,6 +41,7 @@ import org.springframework.web.client.RestClient;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Wires the AI platform. Mock tools are explicit beans here; when real
@@ -62,31 +61,29 @@ public class AiConfiguration {
     }
 
     @Bean
-    RestClient geminiRestClient(AiProperties properties) {
-        return buildRestClient(
-                properties.getGemini().getBaseUrl(),
-                "x-goog-api-key", properties.getGemini().getApiKey(),
-                properties.getGemini().getTimeoutSeconds());
+    RestClient openRouterRestClient(AiProperties properties) {
+        return buildRestClient(properties.getOpenrouter(), Map.of(
+                // OpenRouter attribution headers (optional but recommended)
+                "HTTP-Referer", "http://localhost:8080",
+                "X-Title", "TurfChai"));
     }
 
     @Bean
     RestClient huggingFaceRestClient(AiProperties properties) {
-        return buildRestClient(
-                properties.getHuggingface().getBaseUrl(),
-                "Authorization", "Bearer " + properties.getHuggingface().getApiKey(),
-                properties.getHuggingface().getTimeoutSeconds());
+        return buildRestClient(properties.getHuggingface(), Map.of());
     }
 
-    private RestClient buildRestClient(String baseUrl, String authHeader, String authValue, int timeoutSeconds) {
-        Duration timeout = Duration.ofSeconds(timeoutSeconds);
+    private RestClient buildRestClient(AiProperties.Endpoint endpoint, Map<String, String> extraHeaders) {
+        Duration timeout = Duration.ofSeconds(endpoint.getTimeoutSeconds());
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeout);
         requestFactory.setReadTimeout(timeout);
-        return RestClient.builder()
-                .baseUrl(baseUrl)
-                .defaultHeader(authHeader, authValue)
-                .requestFactory(requestFactory)
-                .build();
+        RestClient.Builder builder = RestClient.builder()
+                .baseUrl(endpoint.getBaseUrl())
+                .defaultHeader("Authorization", "Bearer " + endpoint.getApiKey())
+                .requestFactory(requestFactory);
+        extraHeaders.forEach(builder::defaultHeader);
+        return builder.build();
     }
 
     /**
@@ -97,34 +94,31 @@ public class AiConfiguration {
      */
     @Bean
     LlmProvider llmProvider(AiProperties properties,
-            RestClient geminiRestClient,
+            RestClient openRouterRestClient,
             RestClient huggingFaceRestClient,
             ObjectMapper objectMapper) {
-        boolean hasGemini = !properties.getGemini().getApiKey().isBlank();
-        boolean hasHuggingFace = !properties.getHuggingface().getApiKey().isBlank();
+        LlmProvider openRouter = properties.getOpenrouter().getApiKey().isBlank() ? null
+                : new OpenAiCompatibleLlmProvider("openrouter", openRouterRestClient,
+                        objectMapper, properties.getOpenrouter());
+        LlmProvider huggingFace = properties.getHuggingface().getApiKey().isBlank() ? null
+                : new OpenAiCompatibleLlmProvider("huggingface", huggingFaceRestClient,
+                        objectMapper, properties.getHuggingface());
 
-        LlmProvider gemini = hasGemini
-                ? new GeminiLlmProvider(geminiRestClient, objectMapper, properties.getGemini())
-                : null;
-        LlmProvider huggingFace = hasHuggingFace
-                ? new HuggingFaceLlmProvider(huggingFaceRestClient, objectMapper, properties.getHuggingface())
-                : null;
-
-        if (gemini != null && huggingFace != null) {
+        if (openRouter != null && huggingFace != null) {
             boolean hfFirst = "huggingface".equalsIgnoreCase(properties.getPrimaryProvider());
-            LlmProvider primary = hfFirst ? huggingFace : gemini;
-            LlmProvider secondary = hfFirst ? gemini : huggingFace;
+            LlmProvider primary = hfFirst ? huggingFace : openRouter;
+            LlmProvider secondary = hfFirst ? openRouter : huggingFace;
             log.info("LLM providers: {} (primary) with {} fallback", primary.name(), secondary.name());
             return new FallbackLlmProvider(primary, secondary,
                     Duration.ofSeconds(properties.getAgent().getPrimaryCooldownSeconds()),
                     Clock.systemUTC());
         }
-        if (gemini != null) {
-            log.info("LLM provider: gemini only (no fallback configured)");
-            return gemini;
+        if (openRouter != null) {
+            log.info("LLM provider: openrouter only (no fallback configured)");
+            return openRouter;
         }
         if (huggingFace != null) {
-            log.info("LLM provider: huggingface only (Gemini key not set)");
+            log.info("LLM provider: huggingface only (OpenRouter key not set)");
             return huggingFace;
         }
         log.warn("No LLM API keys set — AI chat endpoints will return 503");
@@ -132,12 +126,10 @@ public class AiConfiguration {
     }
 
     @Bean
-    EmbeddingProvider embeddingProvider(AiProperties properties, RestClient geminiRestClient, ObjectMapper objectMapper) {
-        if (properties.getGemini().getApiKey().isBlank()) {
-            log.warn("app.ai.gemini.api-key not set — using offline hashing embeddings for RAG");
-            return new HashingEmbeddingProvider();
-        }
-        return new GeminiEmbeddingProvider(geminiRestClient, objectMapper, properties.getGemini());
+    EmbeddingProvider embeddingProvider() {
+        // OpenRouter has no embeddings API; the deterministic offline
+        // hashing embedder serves the small policy/FAQ knowledge base well.
+        return new HashingEmbeddingProvider();
     }
 
     @Bean
@@ -150,15 +142,11 @@ public class AiConfiguration {
             EmbeddingProvider embeddingProvider,
             VectorStore vectorStore) {
         AiProperties.Rag rag = properties.getRag();
-        // Offline fallback keeps RAG alive when the embedding API is down/out of quota.
-        EmbeddingProvider fallback = embeddingProvider instanceof HashingEmbeddingProvider
-                ? null
-                : new HashingEmbeddingProvider();
         return new KnowledgeRetriever(
                 new ClasspathDocumentLoader(),
                 new TextChunker(rag.getChunkSize(), rag.getChunkOverlap()),
                 embeddingProvider,
-                fallback,
+                null,
                 vectorStore,
                 rag.getTopK(),
                 rag.getMinScore());

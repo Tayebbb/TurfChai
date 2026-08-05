@@ -20,20 +20,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@link LlmProvider} backed by the Hugging Face Inference Router
- * (OpenAI-compatible {@code /chat/completions} API). Used as the fallback
- * when Gemini fails or exhausts its quota.
+ * {@link LlmProvider} for any OpenAI-compatible {@code /chat/completions}
+ * endpoint — used for both OpenRouter (primary) and the Hugging Face
+ * Inference Router (fallback). One implementation, two configurations.
  */
-public class HuggingFaceLlmProvider implements LlmProvider {
+public class OpenAiCompatibleLlmProvider implements LlmProvider {
 
-    private static final Logger log = LoggerFactory.getLogger(HuggingFaceLlmProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleLlmProvider.class);
 
+    private final String providerName;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final AiProperties.HuggingFace config;
+    private final AiProperties.Endpoint config;
 
-    public HuggingFaceLlmProvider(RestClient restClient, ObjectMapper objectMapper,
-            AiProperties.HuggingFace config) {
+    public OpenAiCompatibleLlmProvider(String providerName, RestClient restClient,
+                                       ObjectMapper objectMapper, AiProperties.Endpoint config) {
+        this.providerName = providerName;
         this.restClient = restClient;
         this.objectMapper = objectMapper;
         this.config = config;
@@ -41,7 +43,7 @@ public class HuggingFaceLlmProvider implements LlmProvider {
 
     @Override
     public String name() {
-        return "huggingface";
+        return providerName;
     }
 
     @Override
@@ -61,17 +63,17 @@ public class HuggingFaceLlmProvider implements LlmProvider {
             int status = e.getStatusCode().value();
             // 429/402 = quota/credits, 5xx = outage - all retryable
             boolean retryable = status == 429 || status == 402 || e.getStatusCode().is5xxServerError();
-            throw new LlmException("Hugging Face request failed with HTTP " + status, e, retryable);
+            throw new LlmException(providerName + " request failed with HTTP " + status, e, retryable);
         } catch (RestClientException e) {
-            throw new LlmException("Hugging Face request failed: " + e.getMessage(), e, true);
+            throw new LlmException(providerName + " request failed: " + e.getMessage(), e, true);
         }
         if (raw == null || raw.isBlank()) {
-            throw new LlmException("Hugging Face returned an empty response");
+            throw new LlmException(providerName + " returned an empty response");
         }
         try {
             return parseResponse(objectMapper.readTree(raw));
         } catch (JsonProcessingException e) {
-            throw new LlmException("Hugging Face returned malformed JSON", e, false);
+            throw new LlmException(providerName + " returned malformed JSON", e, false);
         }
     }
 
@@ -151,7 +153,11 @@ public class HuggingFaceLlmProvider implements LlmProvider {
     LlmResponse parseResponse(JsonNode root) {
         JsonNode message = root.path("choices").path(0).path("message");
         if (message.isMissingNode()) {
-            throw new LlmException("Hugging Face returned no choices");
+            String apiError = root.path("error").path("message").asText("");
+            if (!apiError.isEmpty()) {
+                throw new LlmException(providerName + " error: " + apiError, null, true);
+            }
+            throw new LlmException(providerName + " returned no choices");
         }
 
         List<ToolCall> toolCalls = new ArrayList<>();
@@ -171,7 +177,7 @@ public class HuggingFaceLlmProvider implements LlmProvider {
         }
 
         if (!toolCalls.isEmpty()) {
-            log.debug("Hugging Face requested {} tool call(s)", toolCalls.size());
+            log.debug("{} requested {} tool call(s)", providerName, toolCalls.size());
             return new LlmResponse(null, toolCalls, usage);
         }
         return new LlmResponse(message.path("content").asText(""), List.of(), usage);
@@ -182,7 +188,7 @@ public class HuggingFaceLlmProvider implements LlmProvider {
             return objectMapper.readValue(json, objectMapper.getTypeFactory()
                     .constructMapType(LinkedHashMap.class, String.class, Object.class));
         } catch (JsonProcessingException e) {
-            throw new LlmException("Hugging Face returned malformed tool arguments", e, false);
+            throw new LlmException(providerName + " returned malformed tool arguments", e, false);
         }
     }
 

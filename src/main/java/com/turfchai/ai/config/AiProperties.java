@@ -8,14 +8,28 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.ai")
 public class AiProperties {
 
-    /** Which LLM is tried first: {@code huggingface} or {@code gemini}. */
-    private String primaryProvider = "gemini";
+    /** Which LLM is tried first: {@code openrouter} or {@code huggingface}. */
+    private String primaryProvider = "openrouter";
 
-    private final Gemini gemini = new Gemini();
-    private final HuggingFace huggingface = new HuggingFace();
+    private final Endpoint openrouter = defaultOpenRouter();
+    private final Endpoint huggingface = defaultHuggingFace();
     private final Rag rag = new Rag();
     private final Memory memory = new Memory();
     private final Agent agent = new Agent();
+
+    private static Endpoint defaultOpenRouter() {
+        Endpoint e = new Endpoint();
+        e.setBaseUrl("https://openrouter.ai/api/v1");
+        e.setModel("meta-llama/llama-3.3-70b-instruct:free");
+        return e;
+    }
+
+    private static Endpoint defaultHuggingFace() {
+        Endpoint e = new Endpoint();
+        e.setBaseUrl("https://router.huggingface.co/v1");
+        e.setModel("meta-llama/Llama-3.3-70B-Instruct");
+        return e;
+    }
 
     public String getPrimaryProvider() {
         return primaryProvider;
@@ -25,11 +39,11 @@ public class AiProperties {
         this.primaryProvider = primaryProvider;
     }
 
-    public Gemini getGemini() {
-        return gemini;
+    public Endpoint getOpenrouter() {
+        return openrouter;
     }
 
-    public HuggingFace getHuggingface() {
+    public Endpoint getHuggingface() {
         return huggingface;
     }
 
@@ -45,62 +59,12 @@ public class AiProperties {
         return agent;
     }
 
-    public static class Gemini {
-        /** API key; when blank the app boots but chat requests return 503. */
-        private String apiKey = "";
-        private String model = "gemini-flash-latest";
-        private String embeddingModel = "gemini-embedding-001";
-        private String baseUrl = "https://generativelanguage.googleapis.com/v1beta";
-        private int timeoutSeconds = 30;
-
-        public String getApiKey() {
-            return apiKey;
-        }
-
-        public void setApiKey(String apiKey) {
-            this.apiKey = apiKey;
-        }
-
-        public String getModel() {
-            return model;
-        }
-
-        public void setModel(String model) {
-            this.model = model;
-        }
-
-        public String getEmbeddingModel() {
-            return embeddingModel;
-        }
-
-        public void setEmbeddingModel(String embeddingModel) {
-            this.embeddingModel = embeddingModel;
-        }
-
-        public String getBaseUrl() {
-            return baseUrl;
-        }
-
-        public void setBaseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-        }
-
-        public int getTimeoutSeconds() {
-            return timeoutSeconds;
-        }
-
-        public void setTimeoutSeconds(int timeoutSeconds) {
-            this.timeoutSeconds = timeoutSeconds;
-        }
-    }
-
-    /** Hugging Face Inference Router (OpenAI-compatible) settings. */
-    public static class HuggingFace {
+    /** Settings for one OpenAI-compatible chat-completions endpoint. */
+    public static class Endpoint {
         /** API key; when blank the provider is not registered. */
         private String apiKey = "";
-        private String model = "meta-llama/Llama-3.3-70B-Instruct";
-        /** OpenAI-compatible router endpoint. */
-        private String baseUrl = "https://router.huggingface.co/v1";
+        private String model = "";
+        private String baseUrl = "";
         private int timeoutSeconds = 45;
         /** Low temperature keeps tool arguments and policy answers precise. */
         private double temperature = 0.3;
@@ -133,6 +97,14 @@ public class AiProperties {
             this.baseUrl = baseUrl;
         }
 
+        public int getTimeoutSeconds() {
+            return timeoutSeconds;
+        }
+
+        public void setTimeoutSeconds(int timeoutSeconds) {
+            this.timeoutSeconds = timeoutSeconds;
+        }
+
         public double getTemperature() {
             return temperature;
         }
@@ -155,14 +127,6 @@ public class AiProperties {
 
         public void setMaxTokens(int maxTokens) {
             this.maxTokens = maxTokens;
-        }
-
-        public int getTimeoutSeconds() {
-            return timeoutSeconds;
-        }
-
-        public void setTimeoutSeconds(int timeoutSeconds) {
-            this.timeoutSeconds = timeoutSeconds;
         }
     }
 
@@ -208,7 +172,7 @@ public class AiProperties {
 
     public static class Memory {
         /** Max messages retained per conversation session. */
-        private int maxMessages = 30;
+        private int maxMessages = 20;
         /** Max concurrent sessions kept in memory. */
         private int maxSessions = 1000;
 
