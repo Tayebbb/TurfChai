@@ -128,6 +128,18 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(readOnly = true)
+    public AuthResponse refreshToken(String refreshToken) {
+        if (!jwtService.isValidRefreshToken(refreshToken)) {
+            throw new InvalidCredentialsException("Invalid or expired refresh token");
+        }
+        String publicId = jwtService.extractPublicId(refreshToken);
+        User user = userRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid or expired refresh token"));
+        return toAuthResponse(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public UserResponse getCurrentUser(String publicId) {
         User user = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -161,7 +173,14 @@ public class AuthServiceImpl implements AuthService {
 
     private AuthResponse toAuthResponse(User user) {
         String token = jwtService.generateToken(user);
-        return new AuthResponse(token, "Bearer", jwtServiceExpirationMs(), toUserResponse(user));
+        String refreshToken = jwtService.generateRefreshToken(user);
+        return new AuthResponse(
+                token,
+                "Bearer",
+                jwtServiceExpirationMs(),
+                refreshToken,
+                jwtService.refreshExpirationMs(),
+                toUserResponse(user));
     }
 
     private long jwtServiceExpirationMs() {

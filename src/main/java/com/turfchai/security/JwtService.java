@@ -25,6 +25,14 @@ public class JwtService {
     }
 
     public String generateToken(User user) {
+        return generateToken(user, "access", properties.expirationMs());
+    }
+
+    public String generateRefreshToken(User user) {
+        return generateToken(user, "refresh", properties.refreshExpirationMs());
+    }
+
+    private String generateToken(User user, String type, long ttlMs) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(user.getPublicId())
@@ -32,9 +40,10 @@ public class JwtService {
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
                 .claim("name", user.getFullName())
+                .claim("type", type)
                 .issuer(properties.issuer())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(properties.expirationMs())))
+                .expiration(Date.from(now.plusMillis(ttlMs)))
                 .signWith(secretKey)
                 .compact();
     }
@@ -47,10 +56,26 @@ public class JwtService {
         return properties.expirationMs();
     }
 
+    public long refreshExpirationMs() {
+        return properties.refreshExpirationMs();
+    }
+
     public boolean isValid(String token) {
         try {
             Claims claims = parseClaims(token);
             return properties.issuer().equals(claims.getIssuer()) && claims.getExpiration().after(new Date());
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /** Validates a refresh token: must be well-formed, unexpired, and of type "refresh". */
+    public boolean isValidRefreshToken(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            return properties.issuer().equals(claims.getIssuer())
+                    && "refresh".equals(claims.get("type", String.class))
+                    && claims.getExpiration().after(new Date());
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

@@ -20,18 +20,26 @@ public class WebCorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        String[] allowedOrigins = new String[0];
         if (frontendUrl != null && !frontendUrl.isBlank()) {
-            String[] allowedOrigins = Arrays.stream(frontendUrl.split(","))
+            allowedOrigins = Arrays.stream(frontendUrl.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
                     .toArray(String[]::new);
-
-            registry.addMapping("/**")
-                    .allowedOrigins(allowedOrigins)
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                    .allowedHeaders("*")
-                    .allowCredentials(true);
         }
+
+        registry.addMapping("/**")
+                .allowedOriginPatterns(
+                        concat(allowedOrigins, "http://localhost:*", "http://127.0.0.1:*"))
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true);
+    }
+
+    private String[] concat(String[] first, String... rest) {
+        String[] result = Arrays.copyOf(first, first.length + rest.length);
+        System.arraycopy(rest, 0, result, first.length, rest.length);
+        return result;
     }
 
     @Bean

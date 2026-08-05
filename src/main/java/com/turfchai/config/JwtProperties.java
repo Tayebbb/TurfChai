@@ -7,5 +7,6 @@ public record JwtProperties(
         String secret,
         String issuer,
         long expirationMs,
+        long refreshExpirationMs,
         long otpTtlSeconds) {
 }

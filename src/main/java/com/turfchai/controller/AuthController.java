@@ -3,6 +3,7 @@ package com.turfchai.controller;
 import com.turfchai.dto.request.LoginRequest;
 import com.turfchai.dto.request.OtpRequest;
 import com.turfchai.dto.request.OtpVerifyRequest;
+import com.turfchai.dto.request.RefreshTokenRequest;
 import com.turfchai.dto.request.RegisterRequest;
 import com.turfchai.dto.response.AuthResponse;
 import com.turfchai.dto.response.OtpRequestResponse;
@@ -28,6 +29,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request.refreshToken()));
     }
 
     @PostMapping("/otp/request")

@@ -14,6 +14,7 @@ public interface AuthService {
     AuthResponse login(LoginRequest request);
     OtpRequestResponse requestOtp(OtpRequest request);
     AuthResponse verifyOtp(OtpVerifyRequest request);
+    AuthResponse refreshToken(String refreshToken);
     UserResponse getCurrentUser(String publicId);
     UserResponse updateProfile(String publicId, UpdateProfileRequest request);
 }
