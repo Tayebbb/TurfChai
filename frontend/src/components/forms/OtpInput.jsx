@@ -26,3 +26,25 @@ export function OtpInput({ length = 4, value = '', onChange, label = 'One-time p
     }
   };
 
+  return (
+    <div className="otp-row" role="group" aria-label={label}>
+      {digits.map((digit, index) => (
+        <input
+          key={index}
+          ref={(node) => {
+            refs.current[index] = node;
+          }}
+          className="otp"
+          type="text"
+          inputMode="numeric"
+          autoComplete={index === 0 ? 'one-time-code' : 'off'}
+          maxLength={1}
+          value={digit}
+          aria-label={`Digit ${index + 1}`}
+          onChange={handleChange(index)}
+          onKeyDown={handleKeyDown(index)}
+        />
+      ))}
+    </div>
+  );
+}
