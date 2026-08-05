@@ -23,6 +23,21 @@ export const paths = {
     cancel: '/player/cancel',
     rewards: '/player/rewards',
     settings: '/player/settings',
+    tournament: (code = ':code') => `/player/tournaments/${code}`,
+    tournamentRegister: (code = ':code') => `/player/tournaments/${code}/register`,
+
+    dashboard: {
+      root: '/player/dashboard',
+      tournaments: '/player/dashboard/tournaments',
+      venues: '/player/dashboard/venues',
+      bookings: '/player/dashboard/bookings',
+      teams: '/player/dashboard/teams',
+      network: '/player/dashboard/network',
+      stats: '/player/dashboard/stats',
+      wallet: '/player/dashboard/wallet',
+      notifications: '/player/dashboard/notifications',
+      settings: '/player/dashboard/settings',
+    },
   },
 
   solo: {

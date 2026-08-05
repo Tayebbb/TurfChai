@@ -12,7 +12,17 @@ public final class TournamentViews {
     }
 
     public record TeamView(Long id, String name, String captainName,
-                           String entryFeeStatus, BigDecimal entryFeePaid) {
+                           String entryFeeStatus, BigDecimal entryFeePaid,
+                           String registrationCode) {
+    }
+
+    /** Compact card for browse feeds and the player's tournament history. */
+    public record TournamentCard(String code, String name, String venueSlug, String venueName,
+                                 LocalDate date, LocalTime windowStart, LocalTime windowEnd,
+                                 String format, String privacy, String status,
+                                 int teamCapacity, int registeredTeams, int spotsLeft,
+                                 BigDecimal entryFeePerTeam, BigDecimal prizePool,
+                                 String myRegistrationCode, String myPaymentStatus) {
     }
 
     public record FixtureView(Long id, String roundLabel, int matchNumber,
