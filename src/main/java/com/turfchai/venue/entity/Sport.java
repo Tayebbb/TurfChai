@@ -28,7 +28,7 @@ public class Sport {
     @Column(nullable = false, unique = true, length = 50)
     private String slug;
 
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
     public Sport(String name, String slug) {

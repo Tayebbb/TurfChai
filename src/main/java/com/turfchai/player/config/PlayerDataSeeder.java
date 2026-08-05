@@ -14,9 +14,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-/** Seeds the demo player matching the frontend's `currentPlayer` persona (dev only). */
+/** Seeds the demo player matching the frontend's `currentPlayer` persona (test profile only). */
 @Configuration
-@Profile("dev")
+@Profile("test")
 public class PlayerDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerDataSeeder.class);
