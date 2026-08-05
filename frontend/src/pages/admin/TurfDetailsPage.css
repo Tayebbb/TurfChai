@@ -1,0 +1,31 @@
+/* Custom styles for details page */
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+@media (max-width: 900px) {
+  .details-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.stat-card-simple {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-soft);
+}
+
+.doc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-soft);
+  margin-bottom: 8px;
+}
