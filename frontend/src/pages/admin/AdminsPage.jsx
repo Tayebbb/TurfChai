@@ -208,3 +208,32 @@ export default function AdminsPage() {
           </form>
         </section>
       </div>
+
+      {/* Success Modal */}
+      <Overlay
+        isOpen={adminMade.isOpen}
+        onClose={adminMade.close}
+        title="Admin Invitation Sent"
+        hideHeader
+        className="center"
+      >
+        <div className="check-anim" aria-hidden="true">
+          🛡️
+        </div>
+        <h3 style={{ marginBottom: 8 }}>Admin Invitation Sent</h3>
+        <p className="muted small" style={{ marginBottom: 16 }}>
+          An invitation email has been dispatched. The account remains pending until 2FA setup is
+          completed.
+        </p>
+        <div className="stack-sm">
+          <Link className="btn btn-primary btn-block" to={paths.admin.activity}>
+            View Activity Log Entry →
+          </Link>
+          <button className="btn btn-tertiary btn-block" type="button" onClick={adminMade.close}>
+            Done
+          </button>
+        </div>
+      </Overlay>
+    </>
+  );
+}
