@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 import { Button } from '@/components/buttons/Button';
@@ -12,8 +12,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Panel';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { PLAYER_BOTTOM_NAV, PLAYER_NAV_LINKS } from '@/constants/navigation';
-import { currentPlayer } from '@/data/users';
 import { playerNotifications } from '@/data/notifications';
+import { getMyProfile } from '@/api/players';
+import { clearSession } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 import { useBodyClass } from '@/hooks/useBodyClass';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { paths } from '@/routes/paths';
@@ -25,7 +27,26 @@ import { paths } from '@/routes/paths';
 export function PlayerLayout({ withFooter = false }) {
   const notifications = useDisclosure(false);
   const profile = useDisclosure(false);
+  const navigate = useNavigate();
   useBodyClass('has-bottomnav');
+
+  const me = useApi(() => getMyProfile(), []);
+  const player = me.data;
+  const initials =
+    player?.avatarInitials ||
+    (player?.fullName ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') ||
+    '\u00b7';
+
+  const signOut = () => {
+    clearSession();
+    profile.close();
+    navigate(paths.auth);
+  };
 
   return (
     <>
@@ -48,7 +69,7 @@ export function PlayerLayout({ withFooter = false }) {
             border: 'none',
           }}
         >
-          {currentPlayer.initials}
+          {initials}
         </IconButton>
       </Topbar>
 
@@ -97,50 +118,58 @@ export function PlayerLayout({ withFooter = false }) {
         hideHeader
         showGrabber
       >
-        <div className="row" style={{ marginBottom: 14 }}>
-          <Avatar name={currentPlayer.name} initials={currentPlayer.initials} size="lg" />
-          <div>
-            <b>{currentPlayer.name}</b>
+        <div className="row" style={{ marginBottom: 16 }}>
+          <Avatar name={player?.fullName ?? 'Player'} initials={initials} size="lg" />
+          <div style={{ minWidth: 0 }}>
+            <b>{player?.fullName ?? (me.loading ? 'Loading…' : 'Your profile')}</b>
             <div className="subtle">
-              {currentPlayer.phone} · {currentPlayer.area}
+              {[player?.phone, player?.area].filter(Boolean).join(' · ') ||
+                (me.error ? 'Profile unavailable — check your connection' : '\u00a0')}
             </div>
-            <div className="row-wrap" style={{ marginTop: 4 }}>
-              <Badge tone="green">{currentPlayer.tier}</Badge>
-              <Badge tone="blue" dot={false}>
-                {currentPlayer.reliability}% reliability
-              </Badge>
-            </div>
+            {player ? (
+              <div className="row-wrap" style={{ marginTop: 6 }}>
+                {player.playStyle ? <Badge tone="green">{player.playStyle}</Badge> : null}
+                {player.reliabilityScore != null ? (
+                  <Badge tone="blue" dot={false}>
+                    {player.reliabilityScore}% reliability
+                  </Badge>
+                ) : null}
+                {player.gamesAttended ? (
+                  <Badge tone="gray" dot={false}>
+                    {player.gamesAttended} games
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
+
+        {me.error ? (
+          <Button block variant="secondary" onClick={me.reload} style={{ marginBottom: 10 }}>
+            Retry loading profile
+          </Button>
+        ) : null}
+
         <div className="stack-sm">
-          <Button block to={paths.player.bookings} onClick={profile.close}>
+          <Button block to={paths.player.settings} onClick={profile.close}>
+            Profile dashboard
+          </Button>
+          <Button block variant="secondary" to={paths.player.bookings} onClick={profile.close}>
             My bookings
           </Button>
-          <Button block to={paths.solo.alerts} onClick={profile.close}>
+          <Button block variant="secondary" to={paths.solo.alerts} onClick={profile.close}>
             My LFG alerts
-          </Button>
-          <Button block to={paths.player.onboarding} onClick={profile.close}>
-            Edit preferences
           </Button>
         </div>
         <hr />
-        <p className="tiny subtle" style={{ marginBottom: 8 }}>
-          SWITCH WORKSPACE
-        </p>
         <div className="stack-sm">
-          <Button block to={paths.owner.dashboard} onClick={profile.close}>
-            🏟️ Owner workspace — Kick Off Arena
+          <Button variant="danger" block onClick={signOut}>
+            Sign out
           </Button>
-          <Link className="btn btn-secondary btn-block" to={paths.host.hub} onClick={profile.close}>
-            🏆 Tournament host
-          </Link>
-          <Button variant="danger" block to={paths.auth} onClick={profile.close} style={{ marginTop: 8 }}>
-            🚪 Sign Out / Change Role
+          <Button variant="tertiary" block onClick={profile.close}>
+            Close
           </Button>
         </div>
-        <Button variant="tertiary" block onClick={profile.close} style={{ marginTop: 10 }}>
-          Close
-        </Button>
       </Overlay>
     </>
   );

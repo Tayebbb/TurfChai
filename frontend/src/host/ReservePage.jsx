@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { Overlay } from '@/components/modals/Overlay';
@@ -12,6 +12,7 @@ import {
   formatTime,
   formatDate,
 } from '@/api/tournaments';
+import { getMyProfile } from '@/api/players';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -37,7 +38,9 @@ const POLICY_POINTS = (summary) => [
 export default function ReservePage() {
   const { showToast } = useToast();
   const reserved = useDisclosure(false);
-  const tournament = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
+  const [params] = useSearchParams();
+  const code = params.get('code') ?? DEMO_TOURNAMENT_CODE;
+  const tournament = useApi(() => getTournament(code), [code]);
   const live = tournament.data;
 
   const summary = live
@@ -66,14 +69,33 @@ export default function ReservePage() {
         balanceDue: ramadanCup.balanceDue,
       };
 
-  const [name, setName] = useState(ramadanCup.name);
-  const [format, setFormat] = useState(FORMATS[0]);
-  const [teams, setTeams] = useState('16');
-  const [organizer, setOrganizer] = useState('Shakil Ahmed Liton · +880 1552 887 990');
+  // Form mirrors the live tournament once it loads; edits stay local.
+  const [nameOverride, setNameOverride] = useState(null);
+  const name = nameOverride ?? live?.name ?? ramadanCup.name;
+  const setName = setNameOverride;
+  const [formatOverride, setFormatOverride] = useState(null);
+  const format =
+    formatOverride ??
+    (live?.format
+      ? `${live.format.charAt(0)}${live.format.slice(1).toLowerCase().replaceAll('_', '-')}`
+      : FORMATS[0]);
+  const setFormat = setFormatOverride;
+  const [teamsOverride, setTeamsOverride] = useState(null);
+  const teams = teamsOverride ?? (live ? String(live.teamCapacity) : '16');
+  const setTeams = setTeamsOverride;
+
+  const me = useApi(() => getMyProfile(), []);
+  const [organizerOverride, setOrganizerOverride] = useState(null);
+  const organizer =
+    organizerOverride ??
+    [me.data?.fullName, me.data?.phone].filter(Boolean).join(' · ') ??
+    '';
+  const setOrganizer = setOrganizerOverride;
+
   const [listPublicly, setListPublicly] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [method, setMethod] = useState('bKash');
-  const [bkashNumber, setBkashNumber] = useState('+880 1552 887 990');
+  const [bkashNumber, setBkashNumber] = useState('');
 
   return (
     <>
@@ -240,21 +262,24 @@ export default function ReservePage() {
       <Overlay
         isOpen={reserved.isOpen}
         onClose={reserved.close}
-        title="Ramadan Cup is booked!"
+        title={`${name} is booked!`}
         hideHeader
         className="center"
       >
         <div className="check-anim" aria-hidden="true">
           🏆
         </div>
-        <h3>Ramadan Cup is booked!</h3>
+        <h3>{name} is booked!</h3>
         <p className="muted small">
-          Deposit ৳17,120 received via bKash (TXN 7R2M88). Reservation{' '}
-          <b className="num">{ramadanCup.id}</b> confirmed — venue contact and schedule tools are on your
-          dashboard.
+          Deposit {summary.deposit} due via {method}. Reservation{' '}
+          <b className="num">{live?.code ?? ramadanCup.id}</b> holds {summary.slotCount} slots at{' '}
+          {summary.venue} — payment capture arrives with the payments service.
         </p>
         <div className="stack-sm" style={{ marginTop: 12 }}>
-          <Link className="btn btn-primary btn-block" to={paths.host.hub}>
+          <Link
+            className="btn btn-primary btn-block"
+            to={live ? `${paths.host.tournament}?code=${live.code}` : paths.host.tournament}
+          >
             Go to your tournament →
           </Link>
           <button

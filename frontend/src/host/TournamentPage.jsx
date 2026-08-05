@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { KpiCard } from '@/components/cards/KpiCard';
@@ -37,8 +38,7 @@ const CANCELLATION_TERMS = [
 ];
 
 const PRIVACY_HINTS = {
-  invite:
-    'Hidden from search — teams can only join through your invite link. 13 teams joined this way.',
+  invite: 'Hidden from search — teams can only join through your invite link.',
   open: 'Listed publicly — any team on TurfChai can find this tournament and request to join.',
 };
 
@@ -46,7 +46,9 @@ const INVITE_LINK = 'turfchai.app/t/ramadan-cup-0091';
 
 export default function TournamentPage() {
   const { showToast } = useToast();
-  const tournament = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
+  const [params] = useSearchParams();
+  const code = params.get('code') ?? DEMO_TOURNAMENT_CODE;
+  const tournament = useApi(() => getTournament(code), [code]);
   const live = tournament.data;
 
   // Derived view-model: live API data when available, prototype copy while
@@ -137,13 +139,27 @@ export default function TournamentPage() {
 
   const inviteLink = live ? `turfchai.app/${live.inviteCode}` : INVITE_LINK;
 
-  const [privacy, setPrivacy] = useState('invite');
+  const livePrivacy = live?.privacy === 'INVITE_ONLY' ? 'invite' : live?.privacy ? 'open' : null;
+  const [privacyOverride, setPrivacyOverride] = useState(null);
+  const privacy = privacyOverride ?? livePrivacy ?? 'invite';
+  const privacyLabel = privacy === 'invite' ? '\ud83d\udd12 Invite-only' : '\ud83c\udf10 Open';
+  const statusLabel = live
+    ? { DRAFT: 'Draft · not published', PUBLISHED: 'Published · taking teams', CONFIRMED: 'Venue confirmed · slots reserved' }[
+        live.status
+      ] ?? live.status
+    : 'Venue confirmed · deposit paid';
+  const formatLabel = live?.format ? live.format.toLowerCase().replaceAll('_', '-') : 'knockout';
+  const depositPct = live && Number(live.costs.total) > 0
+    ? Math.round((Number(live.costs.deposit) / Number(live.costs.total)) * 100)
+    : 40;
+  const teamsDue = live ? live.teams.filter((team) => team.entryFeeStatus !== 'PAID').length : null;
+
   const [notes, setNotes] = useState(
     'Referees arrive 7:30 AM. PA system check 7:45. Trophy table near Pitch D.',
   );
 
   const changePrivacy = (next) => {
-    setPrivacy(next);
+    setPrivacyOverride(next);
     showToast(next === 'invite' ? '🔒 Tournament is now invite-only' : '🌐 Tournament is now open to everyone');
   };
 
@@ -175,13 +191,13 @@ export default function TournamentPage() {
           <div>
             <h1 style={{ fontSize: 22, marginBottom: 2 }}>🏆 {header.name}</h1>
             <span className="subtle small">
-              {header.venue} · {header.date} · {header.window} · knockout ·{' '}
+              {header.venue} · {header.date} · {header.window} · {formatLabel} ·{' '}
               <span className="num">{header.code}</span>
             </span>
             <div className="row-wrap" style={{ marginTop: 6 }}>
-              <span className="badge green">Venue confirmed · deposit paid</span>
+              <span className="badge green">{statusLabel}</span>
               <span className="badge amber">{header.teamsLabel}</span>
-              <span className="badge gray nodot">🔒 Invite-only</span>
+              <span className="badge gray nodot">{privacyLabel}</span>
             </div>
           </div>
           <button
@@ -207,7 +223,7 @@ export default function TournamentPage() {
                 <span className="badge amber">Balance due {header.balanceDue}</span>
               </div>
               <div className="progress" style={{ margin: '10px 0' }}>
-                <i style={{ width: '40%' }} />
+                <i style={{ width: `${depositPct}%` }} />
               </div>
               <div className="between small">
                 <span className="muted">Deposit paid · bKash TXN {ramadanCup.depositTxn}</span>
@@ -218,7 +234,11 @@ export default function TournamentPage() {
                 <b className="num">{header.balance}</b>
               </div>
               <p className="tiny subtle" style={{ margin: '8px 0 0' }}>
-                Team entry fees auto-remind Thu 9 AM · 3 teams still due.
+                {teamsDue == null
+                  ? 'Team entry fees auto-remind Thu 9 AM.'
+                  : teamsDue === 0
+                    ? 'All registered teams have paid their entry fee ✓'
+                    : `Team entry fees auto-remind Thu 9 AM · ${teamsDue} team${teamsDue > 1 ? 's' : ''} still due.`}
               </p>
             </div>
 
@@ -296,7 +316,7 @@ export default function TournamentPage() {
             <div className="card">
               <div className="between">
                 <h3 style={{ margin: 0 }}>Registration &amp; privacy</h3>
-                <span className="badge gray nodot">🔒 Invite-only</span>
+                <span className="badge gray nodot">{privacyLabel}</span>
               </div>
               <div className="seg" style={{ display: 'flex', marginTop: 12 }} role="tablist" aria-label="Registration privacy">
                 <button
@@ -322,6 +342,7 @@ export default function TournamentPage() {
               </div>
               <p className="tiny subtle" style={{ margin: '8px 0 0' }}>
                 {PRIVACY_HINTS[privacy]}
+                {live ? ` ${live.teams.length} team${live.teams.length === 1 ? '' : 's'} joined so far.` : ''}
               </p>
               {privacy === 'invite' ? (
                 <div className="panel" style={{ marginTop: 10 }}>

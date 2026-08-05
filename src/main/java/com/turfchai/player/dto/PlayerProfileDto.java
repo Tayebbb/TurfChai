@@ -15,5 +15,7 @@ public record PlayerProfileDto(
         String playStyle,
         String playerRole,
         List<String> preferredSports,
-        List<String> preferredTimes) {
+        List<String> preferredTimes,
+        Integer reliabilityScore,
+        Integer gamesAttended) {
 }
