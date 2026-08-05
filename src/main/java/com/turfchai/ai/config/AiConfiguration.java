@@ -54,6 +54,12 @@ public class AiConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(AiConfiguration.class);
 
+    /** Boot 4 no longer auto-configures a bare ObjectMapper bean. */
+    @Bean
+    ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
+
     @Bean
     RestClient geminiRestClient(AiProperties properties) {
         return buildRestClient(
