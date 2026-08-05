@@ -93,9 +93,7 @@ export default function AdminsPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              Admin Accounts &amp; Access Control
-            </h1>
+            <h1>Admin Accounts &amp; Access Control</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Privileged Management · Only Super Admins can grant or revoke admin access

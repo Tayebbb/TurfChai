@@ -133,7 +133,7 @@ export default function TurfRequestsPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>Turf Listing Requests</h1>
+            <h1>Turf Listing Requests</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Verify new venue submissions · Target SLA: 48 hours

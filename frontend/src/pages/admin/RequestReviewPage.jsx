@@ -83,11 +83,9 @@ export default function RequestReviewPage() {
               to={paths.admin.turfRequests}
               style={{ padding: '4px 10px', fontWeight: 700 }}
             >
-              ← Back to Requests
+              ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              Review Submission: {request.venueName} ({request.id})
-            </h1>
+            <h1>Review Submission: {request.venueName} ({request.id})</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Submitted by {request.ownerName} on {request.submittedDate}
