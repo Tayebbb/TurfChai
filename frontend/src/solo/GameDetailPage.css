@@ -1,0 +1,1 @@
+.gd-grid{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}@media (max-width:900px){.gd-grid{grid-template-columns:1fr}}
