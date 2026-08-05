@@ -1,0 +1,374 @@
+/* ---------- Top navigation (glass) ---------- */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-bottom: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+}
+
+.topbar-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: relative
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 19px;
+    color: var(--text);
+    text-decoration: none;
+    letter-spacing: -.02em
+}
+
+.brand:hover {
+    text-decoration: none
+}
+
+.brand svg {
+    width: 28px;
+    height: 28px
+}
+
+/* Centered frosted pill, Apple-style */
+.navlinks {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    box-shadow: var(--glass-shadow);
+}
+
+.navlinks a {
+    color: var(--text-2);
+    font-weight: 500;
+    font-size: 14px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    text-decoration: none;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.navlinks a:hover {
+    background: var(--surface-2);
+    color: var(--text)
+}
+
+.navlinks a.active {
+    background: var(--brand-soft);
+    color: var(--brand-600)
+}
+
+[data-theme="dark"] .navlinks a.active {
+    color: var(--brand)
+}
+
+@media (max-width:1100px) {
+    .navlinks {
+        position: static;
+        transform: none;
+        margin-inline: auto;
+        box-shadow: none
+    }
+}
+
+@media (max-width:820px) {
+    .navlinks {
+        display: none
+    }
+}
+
+@media (max-width:640px) {
+    .topbar-inner {
+        padding: 0 12px !important;
+        gap: 8px !important
+    }
+
+    .brand {
+        font-size: 16px;
+        gap: 6px
+    }
+
+    .brand svg {
+        width: 22px !important;
+        height: 22px !important
+    }
+
+    .brand .badge {
+        display: none
+    }
+
+    .topbar .spacer {
+        flex: 1;
+    }
+
+    .topbar .icon-btn {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* ---------- Mobile bottom nav (glass) ---------- */
+.bottomnav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: none;
+    border-top: 1px solid var(--glass-border);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+
+.bottomnav-inner {
+    display: flex;
+    justify-content: space-around;
+    max-width: 520px;
+    margin: 0 auto
+}
+
+.bottomnav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 56px;
+    min-height: 48px;
+    justify-content: center;
+    color: var(--text-3);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 12px;
+    transition: color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.bottomnav a:active {
+    transform: scale(.94)
+}
+
+.bottomnav a:hover {
+    text-decoration: none;
+    color: var(--text)
+}
+
+.bottomnav a.active {
+    color: var(--brand-600)
+}
+
+[data-theme="dark"] .bottomnav a.active {
+    color: var(--brand)
+}
+
+.bottomnav .ico {
+    font-size: 20px;
+    line-height: 1
+}
+
+@media (max-width:820px) {
+    .has-bottomnav .bottomnav {
+        display: block
+    }
+
+    .has-bottomnav main {
+        padding-bottom: 92px
+    }
+}
+
+/* ---------- Workspace shell (owner / admin / host) ---------- */
+.shell {
+    display: grid;
+    grid-template-columns: 236px 1fr;
+    min-height: 100vh
+}
+
+.sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 12px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar .brand {
+    padding: 6px 10px 16px
+}
+
+.sidebar-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 12px 10px 4px;
+    display: block
+}
+
+.sidenav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px
+}
+
+.sidenav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    color: var(--text-2);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    min-height: 38px;
+    white-space: normal;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.sidenav a:hover {
+    background: var(--surface-2);
+    color: var(--text)
+}
+
+.sidenav a:active {
+    transform: scale(0.98)
+}
+
+.sidenav a.active {
+    background: var(--brand-soft);
+    color: var(--brand-600)
+}
+
+[data-theme="dark"] .sidenav a.active {
+    color: var(--brand)
+}
+
+.sidenav .ico {
+    width: 20px;
+    text-align: center;
+    transition: transform var(--dur) var(--ease)
+}
+
+.sidenav a:hover .ico {
+    transform: scale(1.1)
+}
+
+.main {
+    padding: 24px 28px 64px;
+    min-width: 0
+}
+
+.main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap
+}
+
+.main-header h1 {
+    font-size: 24px;
+    margin: 0
+}
+
+.mobile-menu-btn {
+    display: inline-flex !important;
+    font-size: 18px;
+    margin-right: 4px;
+    padding: 0 8px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    align-items: center;
+    justify-content: center
+}
+
+[data-theme="dark"] .mobile-menu-btn {
+    color: var(--text)
+}
+
+.mobile-menu-btn:focus-visible {
+    outline: 2px solid var(--brand);
+    border-radius: 4px
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    top: 64px;
+    background: rgba(0, 0, 0, .45);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    z-index: 85;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--dur) var(--ease)
+}
+
+body.sidebar-open .sidebar-backdrop {
+    display: block;
+    opacity: 1
+}
+
+@media (min-width:901px) {
+    body.sidebar-closed .shell {
+        grid-template-columns: 1fr !important
+    }
+
+    body.sidebar-closed .sidebar {
+        display: none !important
+    }
+}
+
+@media (max-width:900px) {
+    .shell {
+        grid-template-columns: 1fr
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 64px;
+        left: -280px;
+        width: 260px;
+        height: calc(100vh - 64px);
+        z-index: 90;
+        box-shadow: var(--shadow-md);
+        transition: left var(--dur) var(--ease);
+        background: var(--surface);
+    }
+
+    body.sidebar-open .sidebar {
+        left: 0 !important;
+        display: flex !important
+    }
+
+    .main {
+        padding: 16px 16px 48px
+    }
+}
