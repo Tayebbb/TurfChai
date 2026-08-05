@@ -12,3 +12,83 @@ export function Checkline({ label, className, ...rest }) {
   );
 }
 
+/** Accessible toggle switch. */
+export function Switch({ label, checked, onChange, className, ...rest }) {
+  return (
+    <span className={cn('switch', className)}>
+      <input
+        type="checkbox"
+        role="switch"
+        aria-label={label}
+        checked={checked}
+        onChange={onChange}
+        {...rest}
+      />
+      <span className="track" />
+    </span>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
