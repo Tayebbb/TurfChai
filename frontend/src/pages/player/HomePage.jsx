@@ -13,9 +13,12 @@ import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Chip, ChipRow } from '@/components/ui/Chip';
 import { Photo } from '@/components/ui/Photo';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Skill } from '@/components/ui/Tags';
-import { nearbyVenues } from '@/data/venues';
+import { searchVenues, toNearbyCard } from '@/api/venues';
+import { nearbyVenues as nearbyVenuesFallback } from '@/data/venues';
 import { currentPlayer } from '@/data/users';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useQueryParam } from '@/hooks/useQueryParam';
 import { useToast } from '@/hooks/useToast';
@@ -145,7 +148,9 @@ export default function HomePage() {
         <div className="between" style={{ marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h1 style={{ fontSize: 24, margin: 0 }}>Salam, {currentPlayer.shortName}</h1>
-            <span className="subtle">{currentPlayer.area}</span>
+            <span className="subtle">
+              {currentPlayer.area} · <Link to={paths.player.settings}>Edit profile</Link>
+            </span>
           </div>
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
             <Badge tone="green">
@@ -163,6 +168,10 @@ export default function HomePage() {
 
 /* ======== PLAYER MODE ======== */
 function PlayerMode() {
+  // Live venue rail; falls back to sample data when the API is unreachable.
+  const venuesApi = useApi(() => searchVenues({ size: 6, sort: 'rating' }), []);
+  const nearbyVenues = venuesApi.data ? venuesApi.data.items.map(toNearbyCard) : nearbyVenuesFallback;
+
   return (
     <div className="tabpanel on">
       <SearchCompact
@@ -221,10 +230,22 @@ function PlayerMode() {
           <Link to={paths.player.explore}>See all →</Link>
         </div>
         <div className="hscroll">
-          {nearbyVenues.map((venue) => (
-            <VenueCard key={venue.id} venue={venue} compact />
-          ))}
+          {venuesApi.loading
+            ? Array.from({ length: 4 }, (_, index) => (
+                <Skeleton key={index} height={190} width={220} radius={14} style={{ flexShrink: 0 }} />
+              ))
+            : nearbyVenues.map((venue) => (
+                <VenueCard key={venue.id} venue={venue} compact />
+              ))}
         </div>
+        {venuesApi.error ? (
+          <p className="subtle" role="status" style={{ marginTop: 8 }}>
+            Live venues unavailable — showing sample data.{' '}
+            <button type="button" onClick={venuesApi.reload} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}>
+              Retry
+            </button>
+          </p>
+        ) : null}
       </section>
 
       {/* Open games needing players */}

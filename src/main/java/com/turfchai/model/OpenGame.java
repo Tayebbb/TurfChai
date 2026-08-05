@@ -2,6 +2,8 @@ package com.turfchai.model;
 
 import com.turfchai.model.enums.OpenGameStatus;
 import com.turfchai.model.enums.SkillLevel;
+import com.turfchai.venue.entity.Pitch;
+import com.turfchai.venue.entity.Venue;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
