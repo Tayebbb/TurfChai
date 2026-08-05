@@ -21,36 +21,20 @@ export function AdminLayout() {
   return (
     <>
       <Topbar className="admin-topbar" brand={<Brand to={paths.admin.dashboard} />} links={ADMIN_NAV_LINKS}>
-        <IconButton label="View alerts" notify onClick={alerts.open}>
-          <Icon name="bell" />
-        </IconButton>
-        <ThemeToggle />
-        <IconButton
-          label="My profile"
-          to={paths.admin.profile}
-          style={{
-            background: 'var(--brand-soft)',
-            color: 'var(--brand-600)',
-            fontWeight: 700,
-            border: '1px solid var(--brand)',
-            textDecoration: 'none',
-          }}
-        >
-          {currentAdmin.initials}
-        </IconButton>
-        <IconButton
-          label="Sign Out"
-          to={paths.auth}
-          style={{
-            background: 'var(--danger-soft)',
-            color: 'var(--danger)',
-            fontWeight: 700,
-            border: 'none',
-            textDecoration: 'none',
-          }}
-        >
-          🚪
-        </IconButton>
+        <div className="admin-actions">
+          <IconButton className="admin-ico" label="View alerts" onClick={alerts.open}>
+            <Icon name="bell" />
+            <span className="admin-badge">{adminAlerts.length}</span>
+          </IconButton>
+          <ThemeToggle className="admin-ico" />
+          <IconButton className="admin-avatar" label="My profile" to={paths.admin.profile}>
+            {currentAdmin.initials}
+            <span className="admin-online" aria-hidden="true" />
+          </IconButton>
+          <IconButton className="admin-ico admin-logout" label="Sign Out" to={paths.auth}>
+            <Icon name="logout" />
+          </IconButton>
+        </div>
       </Topbar>
 
       <main className="admin-page-wrap" id="main" tabIndex={-1}>
