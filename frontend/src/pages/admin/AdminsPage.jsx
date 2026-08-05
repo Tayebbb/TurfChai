@@ -78,3 +78,133 @@ export default function AdminsPage() {
     event.preventDefault();
     adminMade.open();
   };
+
+  return (
+    <>
+      <PageTitle title="Admin Accounts & Access Control" />
+
+      <div className="main-header" style={{ marginBottom: 24 }}>
+        <div>
+          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+            <Link
+              className="btn btn-sm btn-tertiary"
+              to={paths.admin.dashboard}
+              style={{ padding: '4px 10px', fontWeight: 700 }}
+            >
+              ← Back
+            </Link>
+            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
+              Admin Accounts &amp; Access Control
+            </h1>
+          </div>
+          <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
+            Privileged Management · Only Super Admins can grant or revoke admin access
+          </span>
+        </div>
+      </div>
+
+      <div className="grid2" style={{ alignItems: 'start' }}>
+        {/* Current Admins Roster */}
+        <section className="liquid-glass" style={{ padding: 24, borderRadius: 24 }}>
+          <h3 style={{ marginBottom: 14 }}>Active Administrators (3)</h3>
+          <div className="stack-sm">
+            {ADMINS.map((admin) => (
+              <div className="panel between" key={admin.id} style={admin.panelStyle}>
+                <div className="row" style={{ gap: 10 }}>
+                  <span className={admin.avatarClass} style={admin.avatarStyle}>
+                    {admin.initials}
+                  </span>
+                  <div>
+                    <b className="small">{admin.name}</b>{' '}
+                    <span className={`badge ${admin.roleTone} nodot`}>{admin.role}</span>
+                    <div className="tiny subtle">{admin.meta}</div>
+                  </div>
+                </div>
+                {admin.self ? null : (
+                  <div className="row" style={{ gap: 6 }}>
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      type="button"
+                      onClick={() => showToast('Opening permissions editor...')}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-sm btn-ghost-danger"
+                      type="button"
+                      onClick={() => showToast('Admin deactivation logged to audit trail')}
+                    >
+                      Deactivate
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Add New Admin Form */}
+        <section className="liquid-glass" style={{ padding: 24, borderRadius: 24 }}>
+          <h3 style={{ marginBottom: 12 }}>Create Admin Account</h3>
+          <form onSubmit={handleSubmit}>
+            <div className="field">
+              <label htmlFor="naName">Full Name</label>
+              <input
+                className="input"
+                id="naName"
+                placeholder="e.g. Sajid Rahman"
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="naEmail">Work Email</label>
+              <input
+                className="input"
+                id="naEmail"
+                type="email"
+                placeholder="sajid@turfchai.com"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="naRole">Administrative Role</label>
+              <select
+                className="select"
+                id="naRole"
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+              >
+                {ADMIN_ROLES.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label style={{ marginBottom: 6, display: 'block' }}>Granular Permissions</label>
+              <div className="stack-sm">
+                {PERMISSIONS.map((permission) => (
+                  <label className="checkline" style={{ cursor: 'pointer' }} key={permission.id}>
+                    <input
+                      type="checkbox"
+                      checked={permissions.includes(permission.id)}
+                      onChange={() => togglePermission(permission.id)}
+                    />
+                    <span>{permission.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <button
+              className="btn btn-primary btn-block"
+              type="submit"
+              style={{ marginTop: 14, fontWeight: 700 }}
+            >
+              Create &amp; Send Invite →
+            </button>
+          </form>
+        </section>
+      </div>
