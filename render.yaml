@@ -29,7 +29,7 @@ services:
         generateValue: true
 
       - key: FRONTEND_URL
-        sync: false
+        value: https://turf-chai.vercel.app
 
       - key: OPENROUTER_API_KEY
         sync: false
