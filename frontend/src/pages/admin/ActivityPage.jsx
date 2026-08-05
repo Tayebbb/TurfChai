@@ -135,9 +135,7 @@ export default function ActivityPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              System Audit &amp; Activity Log
-            </h1>
+            <h1>System Audit &amp; Activity Log</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Immutable Record of Administrative &amp; Automated Actions

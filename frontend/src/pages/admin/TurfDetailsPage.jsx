@@ -97,11 +97,9 @@ export default function TurfDetailsPage() {
               to={paths.admin.turfs}
               style={{ padding: '4px 10px', fontWeight: 700 }}
             >
-              ← Back to List
+              ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              {venue.name} ({venue.id})
-            </h1>
+            <h1>{venue.name} ({venue.id})</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             {venue.area} · Registered on {venue.dateAdded}
@@ -147,6 +145,7 @@ export default function TurfDetailsPage() {
 
       {/* Row 1: KPI Cards + Interactive Analytics Chart */}
       <div
+        className="admin-stack-mobile"
         style={{
           display: 'grid',
           gridTemplateColumns: '320px 1fr',

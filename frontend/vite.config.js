@@ -15,4 +15,12 @@ export default defineConfig({
     outDir: 'dist',
     chunkSizeWarningLimit: 700,
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 });

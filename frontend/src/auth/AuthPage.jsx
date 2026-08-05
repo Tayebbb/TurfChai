@@ -1,501 +1,263 @@
-import {
-  useState,
-} from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/buttons/Button';
+import { Card } from '@/components/cards/Card';
+import { PageTitle } from '@/components/common/PageTitle';
+import { Field, Input } from '@/components/forms/Field';
+import { Tabs, TabPanel } from '@/components/navigation/Tabs';
+import { useToast } from '@/hooks/useToast';
+import { paths } from '@/routes/paths';
+import { login, register } from '@/api/auth';
+import { setSession } from '@/api/client';
 
-import {
-  Button,
-} from '@/components/buttons/Button';
-
-import {
-  Card,
-} from '@/components/cards/Card';
-
-import {
-  PageTitle,
-} from '@/components/common/PageTitle';
-
-import {
-  Field,
-  Input,
-  InputRow,
-} from '@/components/forms/Field';
-
-import {
-  OtpInput,
-} from '@/components/forms/OtpInput';
-
-import {
-  Overlay,
-} from '@/components/modals/Overlay';
-
-import {
-  Tabs,
-  TabPanel,
-} from '@/components/navigation/Tabs';
-
-import {
-  useDisclosure,
-} from '@/hooks/useDisclosure';
-
-import {
-  useToast,
-} from '@/hooks/useToast';
-
-import {
-  paths,
-} from '@/routes/paths';
-
-
-
+const ROLE_TO_API = { player: 'PLAYER', owner: 'OWNER', admin: 'ADMIN' };
 
 const ROLES = [
   {
     id: 'player',
-    label: "⚽ I'm a player",
+    label: '⚽ Player',
+    subtext: 'Book turfs & join games',
+    tone: '#10B981',
   },
   {
     id: 'owner',
-    label: '🏟️ I run a turf',
+    label: '🏟️ Turf Owner',
+    subtext: 'Manage pitches & payouts',
+    tone: '#F59E0B',
+  },
+  {
+    id: 'admin',
+    label: '🛡️ Admin',
+    subtext: 'Platform control & reviews',
+    tone: '#3B82F6',
   },
 ];
-
-
-
 
 const AUTH_TABS = [
-  {
-    id: 'signin',
-    label: 'Sign in',
-  },
-  {
-    id: 'signup',
-    label: 'Create account',
-  },
+  { id: 'signin', label: 'Sign in' },
+  { id: 'signup', label: 'Create account' },
 ];
 
-
-
-
-const ROLE_COPY = {
-  player: {
-    siTitle: 'Welcome back',
-    siSub: "Sign in with your phone number — we'll text you a code.",
-    suTitle: 'Join TurfChai',
-    suSub: 'One account for booking, open games, and rewards.',
-  },
-  owner: {
-    siTitle: 'Welcome back, owner',
-    siSub: 'Sign in to your turf dashboard — calendar, payments, and the QR gate.',
-    suTitle: 'List your turf',
-    suSub: "Create an owner account — we'll walk you through venue setup and verification.",
-  },
-};
-
-
-
-
-const GOOGLE_ICON = (
-  <svg
-    width="17"
-    height="17"
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-  >
-    <path
-      fill="#4285F4"
-      d="M23.5 12.3c0-.9-.1-1.7-.2-2.5H12v4.7h6.5c-.3 1.5-1.1 2.8-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9z"
-    />
-
-    <path
-      fill="#34A853"
-      d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.2v3.1C3.2 21.3 7.3 24 12 24z"
-    />
-
-    <path
-      fill="#FBBC05"
-      d="M5.3 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3V6.6H1.2C.4 8.2 0 10 0 12s.4 3.8 1.2 5.4l4.1-3.1z"
-    />
-
-    <path
-      fill="#EA4335"
-      d="M12 4.7c1.8 0 3.3.6 4.6 1.8L20 3C18 1.1 15.2 0 12 0 7.3 0 3.2 2.7 1.2 6.6l4.1 3.1c.9-2.9 3.6-5 6.7-5z"
-    />
-  </svg>
-);
-
-
-
-
 export default function AuthPage() {
-  const {
-    showToast,
-  } = useToast();
-
-  const otpModal = useDisclosure();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [role, setRole] = useState('player');
   const [tab, setTab] = useState('signin');
-  const [code, setCode] = useState('481');
 
-  const [signinDial, setSigninDial] = useState('+880');
-  const [signinPhone, setSigninPhone] = useState('');
+  // Form states
+  const [signinEmail, setSigninEmail] = useState('');
+  const [signinPassword, setSigninPassword] = useState('');
+
   const [fullName, setFullName] = useState('');
-  const [signupDial, setSignupDial] = useState('+880');
-  const [signupPhone, setSignupPhone] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [venueName, setVenueName] = useState('');
 
-  const copy = ROLE_COPY[role];
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /** Owners land in their console; players continue to profile onboarding. */
-  const verifyTo =
-    role === 'owner'
-      ? tab === 'signup'
-        ? paths.owner.onboarding
-        : paths.owner.dashboard
-      : paths.player.onboarding;
+  const activeRoleConfig = ROLES.find((r) => r.id === role);
+
+  /** Map the DB role (returned by the login API) to a redirect destination */
+  const getDestinationByRole = (apiRole) => {
+    if (apiRole === 'ADMIN') return paths.admin.dashboard;
+    if (apiRole === 'OWNER') return paths.owner.dashboard;
+    return paths.player.home;
+  };
+
+  const handleApiError = (error) => {
+    showToast(error?.message || 'Something went wrong. Please try again.', { duration: 5000 });
+    setIsSubmitting(false);
+  };
+
+  const handleQuickSubmit = async (e) => {
+    e?.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const payload = { email: signinEmail, password: signinPassword };
+      const response = await login(payload);
+      setSession(response);
+      const dbRole = response?.user?.role ?? 'PLAYER';
+      showToast(`Signed in successfully ✓`);
+      navigate(getDestinationByRole(dbRole));
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
+  const handleSignupSubmit = async (e) => {
+    e?.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await register({
+        fullName,
+        email: signupEmail,
+        password: signupPassword,
+        phone: `+880${Date.now() % 1000000000}`,
+        role: ROLE_TO_API[role] ?? 'PLAYER',
+      });
+      setSession(response);
+      showToast(`Account created! Welcome to TurfChai ✓`);
+      if (role === 'admin') navigate(paths.admin.dashboard);
+      else if (role === 'owner') navigate(paths.owner.onboarding);
+      else navigate(paths.player.onboarding);
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
 
   return (
     <>
-      <PageTitle
-        title="Sign in"
-      />
+      <PageTitle title="Authentication — TurfChai" />
 
-      <div
-        className="wrap-form"
-        style={{
-          paddingTop: 48,
-          paddingBottom: 64,
-        }}
-      >
-        <div
-          className="seg glass"
-          role="tablist"
-          aria-label="Account type"
-          style={{
-            display: 'flex',
-            marginBottom: 14,
-          }}
-        >
-          {ROLES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={role === item.id ? 'on' : undefined}
-              role="tab"
-              aria-selected={role === item.id}
-              style={{
-                flex: 1,
-              }}
-              onClick={() => setRole(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        <Card
-          style={{
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              marginBottom: 18,
-            }}
-          >
-            <Tabs
-              items={AUTH_TABS}
-              value={tab}
-              onChange={setTab}
-              label="Authentication"
-            />
+      <div className="wrap-form" style={{ paddingTop: 36, paddingBottom: 64, maxWidth: 480, margin: '0 auto' }}>
+        {/* Main Card Container */}
+        <Card style={{ padding: 24, borderRadius: 20 }}>
+          {/* Sign In vs Create Account Tabs */}
+          <div style={{ marginBottom: 20 }}>
+            <Tabs items={AUTH_TABS} value={tab} onChange={setTab} label="Authentication Mode" />
           </div>
 
-          {/* SIGN IN */}
+          {/* SIGN IN TAB */}
           <TabPanel id="signin" value={tab}>
-            <h2
-              style={{
-                fontSize: 20,
-              }}
-            >
-              {copy.siTitle}
-            </h2>
+            <form onSubmit={handleQuickSubmit}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Welcome Back!</h2>
+              <p className="subtle small" style={{ marginBottom: 18 }}>
+                Sign in with your email and password to continue.
+              </p>
 
-            <p
-              className="subtle"
-              style={{
-                marginBottom: 16,
-              }}
-            >
-              {copy.siSub}
-            </p>
-
-            <Field
-              label="Phone number"
-              htmlFor="ph"
-            >
-              <InputRow>
+              <Field label="Email Address" htmlFor="em">
                 <Input
-                  value={signinDial}
-                  onChange={(event) => setSigninDial(event.target.value)}
-                  style={{
-                    maxWidth: 84,
-                  }}
-                  aria-label="Country code"
+                  id="em"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={signinEmail}
+                  onChange={(e) => setSigninEmail(e.target.value)}
                 />
-
+              </Field>
+              <Field label="Password" htmlFor="pw">
                 <Input
-                  id="ph"
-                  placeholder="1712 345 678"
-                  inputMode="tel"
-                  value={signinPhone}
-                  onChange={(event) => setSigninPhone(event.target.value)}
+                  id="pw"
+                  type="password"
+                  placeholder="••••••••"
+                  value={signinPassword}
+                  onChange={(e) => setSigninPassword(e.target.value)}
                 />
-              </InputRow>
-            </Field>
+              </Field>
 
-            <Button
-              variant="primary"
-              block
-              onClick={otpModal.open}
-            >
-              Send code
-            </Button>
+              <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
+                {isSubmitting ? 'Working…' : 'Sign In →'}
+              </Button>
+            </form>
 
-            <div
-              className="row"
-              style={{
-                margin: '16px 0',
-              }}
-            >
-              <hr
-                style={{
-                  flex: 1,
-                  margin: 0,
-                }}
-              />
-
-              <span
-                className="subtle"
-              >
-                or
-              </span>
-
-              <hr
-                style={{
-                  flex: 1,
-                  margin: 0,
-                }}
-              />
-            </div>
-
-            <Button
-              variant="secondary"
-              block
-              onClick={() => showToast('Signed in with Google ✓')}
-            >
-              {GOOGLE_ICON}
-
-              Continue with Google
-            </Button>
-
-            <p
-              className="subtle center"
-              style={{
-                marginTop: 14,
-              }}
-            >
+            <p className="subtle center tiny" style={{ marginTop: 16, marginBottom: 0 }}>
               <a
                 href="#trouble"
-                onClick={(event) => {
-                  event.preventDefault();
-                  showToast('Recovery link sent to your phone 📱');
+                onClick={(e) => {
+                  e.preventDefault();
+                  showToast('Password reset link sent to your registered phone/email 📩');
                 }}
               >
-                Trouble signing in?
+                Forgot credentials or need help?
               </a>
             </p>
           </TabPanel>
 
-          {/* SIGN UP */}
+          {/* SIGN UP TAB */}
           <TabPanel id="signup" value={tab}>
-            <h2
-              style={{
-                fontSize: 20,
-              }}
-            >
-              {copy.suTitle}
-            </h2>
-
-            <p
-              className="subtle"
-              style={{
-                marginBottom: 16,
-              }}
-            >
-              {copy.suSub}
+            <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Create Your Account</h2>
+            <p className="subtle small" style={{ marginBottom: 18 }}>
+              Select your role to get started.
             </p>
 
-            <Field
-              label="Full name"
-              htmlFor="nm"
-            >
-              <Input
-                id="nm"
-                placeholder="Rafiul Karim"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-              />
-            </Field>
-
-            <Field
-              label="Phone number"
-              htmlFor="ph2"
-              hint="We'll verify this with a one-time code."
-            >
-              <InputRow>
-                <Input
-                  value={signupDial}
-                  onChange={(event) => setSignupDial(event.target.value)}
-                  style={{
-                    maxWidth: 84,
-                  }}
-                  aria-label="Country code"
-                />
-
-                <Input
-                  id="ph2"
-                  placeholder="1712 345 678"
-                  inputMode="tel"
-                  value={signupPhone}
-                  onChange={(event) => setSignupPhone(event.target.value)}
-                />
-              </InputRow>
-            </Field>
-
-            <Button
-              variant="primary"
-              block
-              onClick={otpModal.open}
-            >
-              Verify &amp; continue
-            </Button>
-
-            <div
-              className="row"
-              style={{
-                margin: '16px 0',
-              }}
-            >
-              <hr
-                style={{
-                  flex: 1,
-                  margin: 0,
-                }}
-              />
-
-              <span
-                className="subtle"
-              >
-                or
-              </span>
-
-              <hr
-                style={{
-                  flex: 1,
-                  margin: 0,
-                }}
-              />
+            {/* Role Selector */}
+            <div style={{ marginBottom: 18 }}>
+              <div className="subtle tiny" style={{ fontWeight: 700, marginBottom: 6 }}>
+                Select Account Role
+              </div>
+              <div className="seg glass" role="tablist" aria-label="Account Role Selection" style={{ display: 'flex', gap: 6, padding: 6, borderRadius: 16 }}>
+                {ROLES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={role === item.id ? 'on' : undefined}
+                    role="tab"
+                    aria-selected={role === item.id}
+                    style={{
+                      flex: 1,
+                      padding: '10px 4px',
+                      borderRadius: 12,
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onClick={() => setRole(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="tiny subtle" style={{ marginTop: 6 }}>
+                {activeRoleConfig?.subtext}
+              </div>
             </div>
 
-            <Button
-              variant="secondary"
-              block
-              onClick={() => showToast('Account created with Google ✓')}
-            >
-              Continue with Google
-            </Button>
+            <form onSubmit={handleSignupSubmit}>
 
-            <p
-              className="subtle center"
-              style={{
-                marginTop: 14,
-              }}
-            >
-              By continuing you agree to TurfChai's terms and cancellation policies.
+              <Field label="Full Name" htmlFor="nm">
+                <Input
+                  id="nm"
+                  placeholder="e.g. Mahfuzur Rahman"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </Field>
+
+              {role === 'owner' && (
+                <Field label="Venue Name" htmlFor="vnm">
+                  <Input
+                    id="vnm"
+                    placeholder="e.g. Dream Arena Turf"
+                    value={venueName}
+                    onChange={(e) => setVenueName(e.target.value)}
+                  />
+                </Field>
+              )}
+
+              <Field label="Email Address" htmlFor="em2">
+                <Input
+                  id="em2"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                />
+              </Field>
+              <Field label="Create Password" htmlFor="pw2">
+                <Input
+                  id="pw2"
+                  type="password"
+                  placeholder="At least 8 characters"
+                  value={signupPassword}
+                  onChange={(e) => setSignupPassword(e.target.value)}
+                />
+              </Field>
+
+              <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
+                {isSubmitting ? 'Working…' : `Register as ${activeRoleConfig?.label} →`}
+              </Button>
+            </form>
+
+            <p className="subtle center tiny" style={{ marginTop: 16, marginBottom: 0 }}>
+              By registering, you agree to TurfChai's terms of service and privacy policy.
             </p>
           </TabPanel>
         </Card>
       </div>
-
-      {/* OTP MODAL */}
-      <Overlay
-        isOpen={otpModal.isOpen}
-        onClose={otpModal.close}
-        title="Enter the 4-digit code"
-        hideHeader
-        className="center"
-      >
-        <h3>
-          Enter the 4-digit code
-        </h3>
-
-        <p
-          className="subtle"
-        >
-          Sent by SMS to +880 1712 ••• 678
-        </p>
-
-        <div
-          style={{
-            margin: '18px 0',
-          }}
-        >
-          <OtpInput
-            value={code}
-            onChange={setCode}
-          />
-        </div>
-
-        <Button
-          variant="primary"
-          block
-          to={verifyTo}
-        >
-          Verify
-        </Button>
-
-        <p
-          className="subtle"
-          style={{
-            marginTop: 12,
-          }}
-        >
-          Didn't get it?{' '}
-
-          <a
-            href="#resend"
-            onClick={(event) => {
-              event.preventDefault();
-              showToast('New code sent 📱');
-            }}
-          >
-            Resend code
-          </a>{' '}
-
-          · <span
-              className="num"
-            >
-              0:42
-            </span>
-        </p>
-
-        <Button
-          variant="tertiary"
-          onClick={otpModal.close}
-        >
-          Cancel
-        </Button>
-      </Overlay>
     </>
   );
 }

@@ -20,6 +20,7 @@ function OwnerChrome() {
   const { toggle } = useSidebar();
   const account = useDisclosure(false);
   const { showToast } = useToast();
+  const owner = currentOwner ?? { initials: '??', name: 'Owner', venue: '—', area: '—' };
 
   return (
     <>
@@ -57,7 +58,7 @@ function OwnerChrome() {
             border: 'none',
           }}
         >
-          {currentOwner.initials}
+          {owner.initials}
         </IconButton>
       </Topbar>
 
@@ -72,11 +73,11 @@ function OwnerChrome() {
 
       <Overlay isOpen={account.isOpen} onClose={account.close} title="Account" mode="sheet" showGrabber hideHeader>
         <div className="row" style={{ marginBottom: 14 }}>
-          <span className="avatar lg b">{currentOwner.initials}</span>
+          <span className="avatar lg b">{owner.initials}</span>
           <div>
-            <b>{currentOwner.name}</b>
+            <b>{owner.name}</b>
             <div className="subtle">
-              {currentOwner.venue} · {currentOwner.area}
+              {owner.venue} · {owner.area}
             </div>
           </div>
         </div>
@@ -89,6 +90,9 @@ function OwnerChrome() {
           </Button>
           <Button block to={paths.player.home} onClick={account.close}>
             ⚽ Switch to player workspace
+          </Button>
+          <Button variant="danger" block to={paths.auth} onClick={account.close} style={{ marginTop: 8 }}>
+            🚪 Sign Out / Change Role
           </Button>
         </div>
         <Button variant="tertiary" block onClick={account.close} style={{ marginTop: 10 }}>

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { Input, Select } from '@/components/forms/Field';
 import { Stepper } from '@/components/navigation/Stepper';
 import { Chip } from '@/components/ui/Chip';
-import { currentPlayer } from '@/data/users';
+import { getMyProfile, updateMyProfile } from '@/api/players';
 import { useFilterChips } from '@/hooks/useFilterChips';
+import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 
 const STEPS = [
@@ -34,13 +36,54 @@ const ROLES = [
 ];
 
 export default function OnboardingPage() {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [step] = useState('about');
-  const [name, setName] = useState(currentPlayer.name);
+  const [name, setName] = useState('');
   const [area, setArea] = useState('Dhanmondi');
   const [role, setRole] = useState('captain');
+  const [saving, setSaving] = useState(false);
   const sports = useFilterChips(['⚽ Football', '🏏 Cricket']);
   const times = useFilterChips(['Evening', 'Late night', 'Weekends']);
   const skill = useFilterChips(['Intermediate']);
+
+  // Prefill from the saved profile so onboarding never overwrites it blindly.
+  useEffect(() => {
+    let cancelled = false;
+    getMyProfile()
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        if (profile.fullName) setName(profile.fullName);
+        if (profile.area) setArea(profile.area.split(',')[0].trim());
+        if (profile.playerRole) setRole(profile.playerRole);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const stripEmoji = (label) => label.replace(/^[^\p{L}]+/u, '').trim();
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      await updateMyProfile({
+        fullName: name,
+        area,
+        playerRole: role,
+        playStyle: [...skill.active][0]?.toLowerCase(),
+        preferredSports: [...sports.active].map(stripEmoji),
+        preferredTimes: [...times.active],
+      });
+      showToast('✅ Profile saved — welcome to TurfChai!');
+      navigate(paths.player.home);
+    } catch (error) {
+      showToast(error?.message ?? 'Could not save profile — please try again');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -131,8 +174,8 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          <Button variant="primary" size="lg" block to={paths.player.home}>
-            Start playing →
+          <Button variant="primary" size="lg" block disabled={saving} onClick={submit}>
+            {saving ? 'Saving…' : 'Start playing →'}
           </Button>
         </div>
       </main>

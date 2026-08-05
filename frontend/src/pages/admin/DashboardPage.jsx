@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
 import { PageTitle } from '@/components/common/PageTitle';
+import { CountUp } from '@/components/ui/CountUp';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './DashboardPage.css';
@@ -242,9 +243,7 @@ export default function DashboardPage() {
 
       <div className="main-header" style={{ marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>
-            Platform Overview
-          </h1>
+          <h1>Platform Overview</h1>
           <span className="subtle small">Welcome back, Nadia Amin · Super Admin Executive Console</span>
         </div>
         <div className="row" style={{ gap: 10 }}>
@@ -273,7 +272,7 @@ export default function DashboardPage() {
               className="value num"
               style={{ color: 'var(--warn)', fontSize: 36, display: 'block', margin: '6px 0 2px' }}
             >
-              4
+              <CountUp to={4} />
             </b>
             <span className="delta down" style={{ fontSize: 12 }}>
               Oldest request: 3 days ago
@@ -293,7 +292,7 @@ export default function DashboardPage() {
               <Icon name="pin" style={{ color: 'var(--brand)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              128
+              <CountUp to={128} delay={120} />
             </b>
             <span className="delta up" style={{ fontSize: 12 }}>
               ▲ 6 venues added this month
@@ -313,7 +312,7 @@ export default function DashboardPage() {
               <Icon name="users" style={{ color: 'var(--info)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              41,270
+              <CountUp to={41270} delay={240} />
             </b>
             <span className="delta up" style={{ fontSize: 12 }}>
               ▲ 1,140 registered this week
@@ -333,7 +332,7 @@ export default function DashboardPage() {
               <Icon name="shield" style={{ color: 'var(--mint)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              5
+              <CountUp to={5} delay={360} />
             </b>
             <span className="delta nodot" style={{ color: 'var(--mint)', fontSize: 12 }}>
               Super Admin privileges active
@@ -599,7 +598,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="row" style={{ gap: 16, marginBottom: 14 }}>
+          <div className="row admin-wrap-mobile" style={{ gap: 16, marginBottom: 14 }}>
             <div>
               <span className="tiny subtle">Total User Base</span>
               <b style={{ display: 'block', fontSize: 22, fontWeight: 800 }}>41,270</b>
@@ -649,6 +648,7 @@ export default function DashboardPage() {
           </div>
 
           <div
+            className="admin-stack-mobile"
             style={{
               display: 'grid',
               gridTemplateColumns: '180px 1fr',

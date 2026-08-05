@@ -56,7 +56,7 @@ export default function TurfsPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>All Turfs &amp; Venues</h1>
+            <h1>All Turfs &amp; Venues</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Overview and administrative controls for all registered turf venues
