@@ -130,7 +130,7 @@ public class AiProperties {
         private int chunkOverlap = 120;
         private int topK = 4;
         /** Minimum cosine similarity for a chunk to be considered relevant. */
-        private double minScore = 0.30;
+        private double minScore = 0.05;
 
         public int getChunkSize() {
             return chunkSize;
@@ -191,6 +191,8 @@ public class AiProperties {
     public static class Agent {
         /** Safety cap on LLM->tool->LLM round-trips per user message. */
         private int maxToolIterations = 4;
+        /** How long to skip a failed primary LLM before retrying it. */
+        private int primaryCooldownSeconds = 60;
 
         public int getMaxToolIterations() {
             return maxToolIterations;
@@ -198,6 +200,14 @@ public class AiProperties {
 
         public void setMaxToolIterations(int maxToolIterations) {
             this.maxToolIterations = maxToolIterations;
+        }
+
+        public int getPrimaryCooldownSeconds() {
+            return primaryCooldownSeconds;
+        }
+
+        public void setPrimaryCooldownSeconds(int primaryCooldownSeconds) {
+            this.primaryCooldownSeconds = primaryCooldownSeconds;
         }
     }
 }

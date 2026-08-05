@@ -51,6 +51,7 @@ class BookingAssistantAgentTest {
                 new ClasspathDocumentLoader(),
                 new TextChunker(800, 120),
                 new HashingEmbeddingProvider(),
+                null,
                 new InMemoryVectorStore(),
                 4, 0.05);
 

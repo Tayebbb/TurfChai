@@ -58,8 +58,10 @@ public class HuggingFaceLlmProvider implements LlmProvider {
                     .retrieve()
                     .body(String.class);
         } catch (RestClientResponseException e) {
-            boolean retryable = e.getStatusCode().value() == 429 || e.getStatusCode().is5xxServerError();
-            throw new LlmException("Hugging Face request failed with HTTP " + e.getStatusCode().value(), e, retryable);
+            int status = e.getStatusCode().value();
+            // 429/402 = quota/credits, 5xx = outage - all retryable
+            boolean retryable = status == 429 || status == 402 || e.getStatusCode().is5xxServerError();
+            throw new LlmException("Hugging Face request failed with HTTP " + status, e, retryable);
         } catch (RestClientException e) {
             throw new LlmException("Hugging Face request failed: " + e.getMessage(), e, true);
         }

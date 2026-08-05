@@ -40,6 +40,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 
@@ -110,7 +111,9 @@ public class AiConfiguration {
 
         if (gemini != null && huggingFace != null) {
             log.info("LLM providers: gemini (primary) with huggingface fallback");
-            return new FallbackLlmProvider(gemini, huggingFace);
+            return new FallbackLlmProvider(gemini, huggingFace,
+                    Duration.ofSeconds(properties.getAgent().getPrimaryCooldownSeconds()),
+                    Clock.systemUTC());
         }
         if (gemini != null) {
             log.info("LLM provider: gemini only (no fallback configured)");
@@ -143,10 +146,15 @@ public class AiConfiguration {
             EmbeddingProvider embeddingProvider,
             VectorStore vectorStore) {
         AiProperties.Rag rag = properties.getRag();
+        // Offline fallback keeps RAG alive when the embedding API is down/out of quota.
+        EmbeddingProvider fallback = embeddingProvider instanceof HashingEmbeddingProvider
+                ? null
+                : new HashingEmbeddingProvider();
         return new KnowledgeRetriever(
                 new ClasspathDocumentLoader(),
                 new TextChunker(rag.getChunkSize(), rag.getChunkOverlap()),
                 embeddingProvider,
+                fallback,
                 vectorStore,
                 rag.getTopK(),
                 rag.getMinScore());
