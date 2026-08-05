@@ -7,7 +7,10 @@ import { Input, Select } from '@/components/forms/Field';
 import { Overlay } from '@/components/modals/Overlay';
 import { Chip } from '@/components/ui/Chip';
 import { Photo } from '@/components/ui/Photo';
-import { exploreMapPins, exploreVenues } from '@/data/venues';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { searchVenues, toExploreCard } from '@/api/venues';
+import { exploreMapPins, exploreVenues as exploreVenuesFallback } from '@/data/venues';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
@@ -101,13 +104,20 @@ const AMENITIES = [
   'Has promotion',
 ];
 
-const PAGES = ['2', '3'];
+const PAGE_SIZE = 10;
 
 export default function ExplorePage() {
   const { showToast } = useToast();
   const filters = useDisclosure(false);
   const [query, setQuery] = useState('');
   const [view, setView] = useState('list');
+  const [page, setPage] = useState(0);
+
+  // Live search; falls back to the sample list when the API is unreachable.
+  const search = useApi(() => searchVenues({ q: query, page, size: PAGE_SIZE, sort: 'rating' }), [query, page]);
+  const venues = search.data ? search.data.items.map(toExploreCard) : exploreVenuesFallback;
+  const totalPages = search.data?.totalPages ?? 1;
+  const totalItems = search.data?.totalItems ?? venues.length;
 
   return (
     <>
@@ -197,12 +207,25 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        <p className="results-meta">34 venues with open slots · sorted by distance</p>
+        <p className="results-meta" role="status">
+          {search.loading
+            ? 'Searching venues…'
+            : `${totalItems} venue${totalItems === 1 ? '' : 's'} with open slots · sorted by rating`}
+          {search.error ? ' · live results unavailable, showing samples' : ''}
+        </p>
 
         {/* ── Split: list + map ── */}
         <div className="split">
           <div className="stack">
-            {exploreVenues.map((venue) => (
+            {search.loading ? <SkeletonList count={4} height={180} /> : null}
+            {!search.loading && venues.length === 0 ? (
+              <div className="alert-nudge">
+                <p className="small" style={{ margin: 0, color: 'var(--text-2)' }}>
+                  No venues match your search — try a different area or clear filters.
+                </p>
+              </div>
+            ) : null}
+            {!search.loading && venues.map((venue) => (
               <Link key={venue.id} className="vc" to={paths.player.venue(venue.id)} aria-label={venue.cardLabel}>
                 <div className="vc-photo">
                   <Photo variant={venue.photoVariant} />
@@ -281,31 +304,37 @@ export default function ExplorePage() {
                 marginTop: 32,
               }}
             >
-              <Button variant="tertiary" size="sm" disabled style={{ padding: '0 12px' }}>
+              <Button
+                variant="tertiary"
+                size="sm"
+                disabled={page === 0 || search.loading}
+                style={{ padding: '0 12px' }}
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+              >
                 ← Prev
               </Button>
-              <Button
-                size="sm"
-                style={{
-                  background: 'var(--brand)',
-                  color: '#fff',
-                  borderColor: 'var(--brand)',
-                  width: 36,
-                  padding: 0,
-                }}
-              >
-                1
-              </Button>
-              {PAGES.map((page) => (
-                <Button key={page} variant="tertiary" size="sm" style={{ width: 36, padding: 0 }}>
-                  {page}
+              {Array.from({ length: Math.max(totalPages, 1) }, (_, index) => (
+                <Button
+                  key={index}
+                  variant={index === page ? undefined : 'tertiary'}
+                  size="sm"
+                  style={
+                    index === page
+                      ? { background: 'var(--brand)', color: '#fff', borderColor: 'var(--brand)', width: 36, padding: 0 }
+                      : { width: 36, padding: 0 }
+                  }
+                  onClick={() => setPage(index)}
+                >
+                  {index + 1}
                 </Button>
               ))}
-              <span style={{ color: 'var(--text-3)', margin: '0 4px', fontSize: 14 }}>...</span>
-              <Button variant="tertiary" size="sm" style={{ width: 36, padding: 0 }}>
-                8
-              </Button>
-              <Button variant="tertiary" size="sm" style={{ padding: '0 12px' }}>
+              <Button
+                variant="tertiary"
+                size="sm"
+                disabled={page >= totalPages - 1 || search.loading}
+                style={{ padding: '0 12px' }}
+                onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+              >
                 Next →
               </Button>
             </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Photo } from '@/components/ui/Photo';
 import { Stars } from '@/components/ui/Stars';
 import { Verified } from '@/components/ui/Tags';
-import { similarVenues } from '@/data/venues';
+import { similarVenues as similarVenuesFallback } from '@/data/venues';
+import { getVenue, searchVenues, toSimilarCard } from '@/api/venues';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -163,24 +165,53 @@ const REVIEW_FILTERS = [
 ];
 
 export default function VenuePage() {
+  const { venueId } = useParams();
   const { showToast } = useToast();
   const rules = useDisclosure(false);
   const [dateId, setDateId] = useState('4');
   const [slotId, setSlotId] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
 
+  // Live venue details by slug; static prototype copy remains as fallback.
+  const detail = useApi(() => getVenue(venueId), [venueId]);
+  const venue = detail.data;
+  const similarApi = useApi(
+    () => searchVenues({ size: 4, sort: 'rating' }).then((page) =>
+      page.items.filter((item) => item.slug !== venueId).slice(0, 3).map(toSimilarCard)),
+    [venueId],
+  );
+  const similarVenues = similarApi.data ?? similarVenuesFallback;
+
+  const name = venue?.name ?? 'Kick Off Arena';
+  const metaLine = venue ? `${venue.address}` : 'Road 27, Dhanmondi · 1.2 km';
+  const rating = venue ? String(venue.rating) : '4.8';
+  const reviewCount = venue ? venue.reviewCount : 214;
+
   const selectedSlot = SLOTS.find((slot) => slot.id === slotId);
+
+  if (detail.error && detail.error.status === 404) {
+    return (
+      <>
+        <PageTitle title="Venue not found" />
+        <main className="wrap" style={{ paddingTop: 40 }} id="main">
+          <h1 style={{ fontSize: 24 }}>Venue not found</h1>
+          <p className="subtle">This venue may have been removed or the link is incorrect.</p>
+          <Link to={paths.player.explore}>← Back to Explore</Link>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
-      <PageTitle title="Kick Off Arena" />
+      <PageTitle title={name} />
       <main className="wrap" style={{ paddingTop: 20 }} id="main">
         <nav className="breadcrumbs" aria-label="Breadcrumb">
           <Link to={paths.player.explore}>Explore</Link>
           <span className="sep">/</span>
-          <Link to={paths.player.explore}>Dhanmondi</Link>
+          <Link to={paths.player.explore}>{venue?.area ?? 'Dhanmondi'}</Link>
           <span className="sep">/</span>
-          <span>Kick Off Arena</span>
+          <span>{name}</span>
         </nav>
 
         {/* ── Gallery ── */}
@@ -197,8 +228,8 @@ export default function VenuePage() {
         <div className="between" style={{ marginTop: 28, flexWrap: 'wrap', gap: 14 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-              <h1 style={{ fontSize: 30, margin: 0 }}>Kick Off Arena</h1>
-              <Verified />
+              <h1 style={{ fontSize: 30, margin: 0 }}>{name}</h1>
+              {venue == null || venue.verified ? <Verified /> : null}
             </div>
             <div
               style={{
@@ -215,10 +246,10 @@ export default function VenuePage() {
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                Road 27, Dhanmondi · 1.2 km
+                {metaLine}
               </span>
-              <span className="rating">4.8</span>
-              <span>(214 reviews)</span>
+              <span className="rating">{rating}</span>
+              <span>({reviewCount} reviews)</span>
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
