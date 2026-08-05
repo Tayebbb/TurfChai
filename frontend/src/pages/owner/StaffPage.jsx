@@ -308,4 +308,59 @@ export default function StaffPage() {
         <Button variant="tertiary" block onClick={closeShift.close}>
           Cancel
         </Button>
-      </Overlay>
+      </Overlay>
+
+      {/* Modal: Invite Staff / Owner */}
+      <Overlay
+        isOpen={inviteModal.isOpen}
+        onClose={inviteModal.close}
+        title="Invite team member or co-owner"
+        maxWidth={480}
+      >
+        <p className="subtle small" style={{ margin: '4px 0 12px' }}>
+          An invitation link with setup credentials will be sent to the email address below.
+        </p>
+
+        <Field label="Full Name" htmlFor="stName">
+          <Input
+            id="stName"
+            placeholder="e.g. Tariqul Islam"
+            value={invite.name}
+            onChange={(event) => setInvite((current) => ({ ...current, name: event.target.value }))}
+          />
+        </Field>
+        <Field label="Email Address" htmlFor="stEmail">
+          <Input
+            id="stEmail"
+            type="email"
+            placeholder="e.g. tariqul@example.com"
+            value={invite.email}
+            onChange={(event) => setInvite((current) => ({ ...current, email: event.target.value }))}
+          />
+        </Field>
+
+        <Field label="Role & Access Level" htmlFor="stRole">
+          <Select
+            id="stRole"
+            value={invite.role}
+            onChange={(event) => setInvite((current) => ({ ...current, role: event.target.value }))}
+          >
+            <option value="Co-owner">Co-owner · Full access, payouts &amp; staff management</option>
+            <option value="Manager">Manager · Calendar, bookings, cash &amp; promotions</option>
+            <option value="Front desk">Front desk / Staff · Check-ins, walk-ins, cash logging only</option>
+            <option value="Accountant">Accountant · View ledger, settlements &amp; financial reports</option>
+          </Select>
+        </Field>
+
+        <div className="stack-sm" style={{ marginTop: 16 }}>
+          <Button variant="primary" block onClick={sendInvite}>
+            Send Email Invitation Link 📧
+          </Button>
+          <Button variant="tertiary" block onClick={inviteModal.close}>
+            Cancel
+          </Button>
+        </div>
+      </Overlay>
+    </>
+  );
+}
