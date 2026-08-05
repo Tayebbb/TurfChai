@@ -269,3 +269,112 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Edit User Drawer */}
+      <Overlay
+        isOpen={editUser.isOpen}
+        onClose={editUser.close}
+        title="Update User · Rafiul Karim"
+        mode="drawer"
+      >
+        <div className="field">
+          <label htmlFor="euName">Full Name</label>
+          <input
+            className="input"
+            id="euName"
+            value={editName}
+            onChange={(event) => setEditName(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="euPhone">Phone Contact</label>
+          <input
+            className="input num"
+            id="euPhone"
+            value={editPhone}
+            onChange={(event) => setEditPhone(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="euStatus">Account Standing</label>
+          <select
+            className="select"
+            id="euStatus"
+            value={editStanding}
+            onChange={(event) => setEditStanding(event.target.value)}
+          >
+            {ACCOUNT_STANDINGS.map((standing) => (
+              <option key={standing}>{standing}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>Assigned Roles</label>
+          <div className="row-wrap" style={{ marginTop: 4 }}>
+            {ROLE_CHIPS.map((role) => (
+              <Chip
+                key={role}
+                active={editRoles.includes(role)}
+                onToggle={() => toggleRole(role)}
+              >
+                {role}
+              </Chip>
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <label htmlFor="euNote">Audit Reason (Required for status updates)</label>
+          <input
+            className="input"
+            id="euNote"
+            placeholder="Enter reason for audit trail..."
+            value={editNote}
+            onChange={(event) => setEditNote(event.target.value)}
+          />
+        </div>
+        <button
+          className="btn btn-primary btn-block"
+          type="button"
+          onClick={saveUser}
+          style={{ marginTop: 14 }}
+        >
+          Save User Profile
+        </button>
+      </Overlay>
+
+      {/* Delete User Modal */}
+      <Overlay
+        isOpen={delUser.isOpen}
+        onClose={delUser.close}
+        title="Delete User Account?"
+        hideHeader
+      >
+        <div className="fail-anim" aria-hidden="true">
+          !
+        </div>
+        <h3 className="center" style={{ marginBottom: 8 }}>
+          Delete User Account?
+        </h3>
+        <div className="alert danger" style={{ margin: '12px 0', borderRadius: 12 }}>
+          <span className="ico">⚠️</span>
+          <div>
+            <b>Account Deletion Impact</b>
+            <ul className="tiny" style={{ margin: '6px 0 0', paddingLeft: 16, lineHeight: 1.8 }}>
+              <li>1 upcoming booking (৳2,550) will be cancelled and refunded</li>
+              <li>User will automatically exit active matchmaking games</li>
+              <li>Account data scheduled for deletion in 30 days</li>
+            </ul>
+          </div>
+        </div>
+        <div className="stack-sm" style={{ marginTop: 14 }}>
+          <button className="btn btn-danger btn-block" type="button" onClick={confirmDelete}>
+            Confirm Delete Account
+          </button>
+          <button className="btn btn-tertiary btn-block" type="button" onClick={delUser.close}>
+            Cancel
+          </button>
+        </div>
+      </Overlay>
+    </>
+  );
+}
