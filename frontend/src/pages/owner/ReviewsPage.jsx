@@ -159,4 +159,50 @@ export default function ReviewsPage() {
                 &quot;Thanks Tanvir! Extra parking opens next month at the rear gate.&quot;
               </p>
             </div>
-          </div>
+          </div>
+        </div>
+
+        <div className="stack">
+          <div className="glass glass-card">
+            <div className="row" style={{ gap: 14 }}>
+              <div className="center">
+                <b className="num" style={{ fontSize: 40, fontFamily: 'var(--font-display)' }}>
+                  4.8
+                </b>
+                <div className="rating" aria-label="4.8 stars" />
+                <div className="tiny subtle">214 verified reviews</div>
+              </div>
+              <div style={{ flex: 1 }} className="stack-sm">
+                {RATING_BREAKDOWN.map((row) => (
+                  <div className="row" style={{ gap: 8 }} key={row.star}>
+                    <span className="tiny num" style={{ width: 12 }}>
+                      {row.star}
+                    </span>
+                    <div className="progress" style={{ flex: 1 }}>
+                      <i style={{ width: row.width }} />
+                    </div>
+                    <span className="tiny subtle num">{row.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <h4>Category averages</h4>
+            <div className="stack-sm" style={{ marginTop: 8 }}>
+              {CATEGORY_AVERAGES.map((item) => (
+                <div className="between small" key={item.id}>
+                  <span className="muted">{item.label}</span>
+                  <b className="num">{item.value}</b>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Alert tone="info" icon="💬" title="Responding pays off">
+            Venues that reply to reviews within 48h see 22% more repeat bookings.
+          </Alert>
+        </div>
+      </div>
+    </>
+  );
+}
