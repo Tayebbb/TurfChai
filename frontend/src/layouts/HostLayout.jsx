@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 import { ThemeToggle } from '@/components/buttons/ThemeToggle';
 import { Topbar } from '@/components/navigation/Topbar';
 import { paths } from '@/routes/paths';
@@ -28,8 +29,10 @@ export function HostLayout() {
         </span>
       </Topbar>
 
-      <main id="main">
-        <Outlet />
+      <main id="main" tabIndex={-1}>
+        <RouteErrorBoundary>
+          <Outlet />
+        </RouteErrorBoundary>
       </main>
     </>
   );

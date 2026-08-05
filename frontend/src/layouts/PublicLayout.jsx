@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 import { Button } from '@/components/buttons/Button';
 import { ThemeToggle } from '@/components/buttons/ThemeToggle';
 import { Topbar } from '@/components/navigation/Topbar';
@@ -21,8 +22,10 @@ export function PublicLayout() {
         </Button>
       </Topbar>
 
-      <main id="main">
-        <Outlet />
+      <main id="main" tabIndex={-1}>
+        <RouteErrorBoundary>
+          <Outlet />
+        </RouteErrorBoundary>
       </main>
 
       <SiteFooter />

@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { Icon } from '@/components/common/Icon';
+import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 import { IconButton } from '@/components/buttons/IconButton';
 import { ThemeToggle } from '@/components/buttons/ThemeToggle';
 import { Topbar } from '@/components/navigation/Topbar';
@@ -50,8 +51,10 @@ export function AdminLayout() {
         </IconButton>
       </Topbar>
 
-      <main className="admin-page-wrap" id="main">
-        <Outlet />
+      <main className="admin-page-wrap" id="main" tabIndex={-1}>
+        <RouteErrorBoundary>
+          <Outlet />
+        </RouteErrorBoundary>
       </main>
 
       <Overlay isOpen={alerts.isOpen} onClose={alerts.close} title="Platform alerts" mode="drawer">
