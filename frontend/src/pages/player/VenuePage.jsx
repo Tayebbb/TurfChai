@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -18,6 +18,8 @@ import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './VenuePage.css';
+
+const VenueMap = lazy(() => import('@/components/common/VenueMap'));
 
 const svgProps = {
   fill: 'none',
@@ -187,6 +189,26 @@ export default function VenuePage() {
   const metaLine = venue ? `${venue.address}` : 'Road 27, Dhanmondi · 1.2 km';
   const rating = venue ? String(venue.rating) : '4.8';
   const reviewCount = venue ? venue.reviewCount : 214;
+
+  const mapMarker = useMemo(
+    () =>
+      venue?.lat != null && venue?.lng != null
+        ? [{ id: venue.slug, lat: Number(venue.lat), lng: Number(venue.lng), label: '⚽', title: venue.name }]
+        : [],
+    [venue],
+  );
+
+  const openDirections = () => {
+    if (venue?.lat != null && venue?.lng != null) {
+      window.open(
+        `https://www.openstreetmap.org/directions?to=${venue.lat}%2C${venue.lng}`,
+        '_blank',
+        'noopener',
+      );
+    } else {
+      showToast('Directions unavailable — venue location not loaded');
+    }
+  };
 
   // Saved state for this venue's heart button.
   const [isSaved, setIsSaved] = useState(false);
@@ -498,20 +520,28 @@ export default function VenuePage() {
         <section className="vsection">
           <h2 style={{ fontSize: 20, margin: '0 0 4px' }}>Location</h2>
           <p style={{ fontSize: 14, color: 'var(--text-3)', margin: 0 }}>
-            House 12, Road 27, Dhanmondi, Dhaka
+            {venue ? `${venue.address}, ${venue.area}` : 'House 12, Road 27, Dhanmondi, Dhaka'}
           </p>
 
-          <div className="map-ph" role="img" aria-label="Map showing Kick Off Arena at Road 27 Dhanmondi">
-            <div className="map-ph-pin">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--brand)" aria-hidden="true">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-              </svg>
-              <span>Road 27, Dhanmondi</span>
+          {mapMarker.length > 0 ? (
+            <div className="map-ph" style={{ padding: 0 }}>
+              <Suspense fallback={<div className="map-ph" aria-hidden="true" style={{ margin: 0 }} />}>
+                <VenueMap markers={mapMarker} zoom={15} style={{ borderRadius: 16 }} />
+              </Suspense>
             </div>
-          </div>
+          ) : (
+            <div className="map-ph" role="img" aria-label={`Map showing ${name}`}>
+              <div className="map-ph-pin">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--brand)" aria-hidden="true">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                <span>{metaLine}</span>
+              </div>
+            </div>
+          )}
 
           <div className="row" style={{ marginTop: 14, gap: 12 }}>
-            <Button size="sm" onClick={() => showToast('Opening in Maps')}>
+            <Button size="sm" onClick={openDirections}>
               <svg width="14" height="14" viewBox="0 0 24 24" strokeWidth="2.5" {...svgProps}>
                 <polygon points="3 11 22 2 13 21 11 13 3 11" />
               </svg>

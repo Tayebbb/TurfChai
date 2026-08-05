@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
@@ -17,6 +17,9 @@ import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './ExplorePage.css';
+
+// Leaflet stays out of the main bundle until the map view is rendered.
+const VenueMap = lazy(() => import('@/components/common/VenueMap'));
 
 const svgProps = {
   fill: 'none',
@@ -117,6 +120,7 @@ const AMENITY_KEYS = {
 
 export default function ExplorePage() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const filters = useDisclosure(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -138,6 +142,24 @@ export default function ExplorePage() {
   const venues = search.data ? search.data.items.map(toExploreCard) : exploreVenuesFallback;
   const totalPages = search.data?.totalPages ?? 1;
   const totalItems = search.data?.totalItems ?? venues.length;
+
+  const mapMarkers = useMemo(
+    () =>
+      (search.data?.items ?? [])
+        .filter((venue) => venue.lat != null && venue.lng != null)
+        .map((venue) => ({
+          id: venue.slug,
+          lat: Number(venue.lat),
+          lng: Number(venue.lng),
+          label:
+            venue.fromPrice != null
+              ? `৳${Number(venue.fromPrice).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+              : venue.name,
+          title: venue.name,
+          hot: Boolean(venue.promotionLabel),
+        })),
+    [search.data],
+  );
 
   const applyFilters = (params) => {
     setFilterParams(params);
@@ -403,23 +425,34 @@ export default function ExplorePage() {
             </div>
           </div>
 
-          {/* ── Map ── */}
-          <div
-            className="mapbox photo map"
-            role="img"
-            aria-label="Map of Dhanmondi area showing venue prices"
-          >
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Dhanmondi · map view</span>
-            {exploreMapPins.map((pin) => (
-              <span
-                key={pin.id}
-                className={pin.hot ? 'mappin hot' : 'mappin'}
-                style={{ top: pin.top, left: pin.left }}
-              >
-                {pin.price}
-              </span>
-            ))}
-          </div>
+          {/* ── Map (OpenStreetMap) ── */}
+          {mapMarkers.length > 0 ? (
+            <div className="mapbox">
+              <Suspense fallback={<div className="mapbox photo map" aria-hidden="true" />}>
+                <VenueMap
+                  markers={mapMarkers}
+                  onMarkerClick={(marker) => navigate(paths.player.venue(marker.id))}
+                />
+              </Suspense>
+            </div>
+          ) : (
+            <div
+              className="mapbox photo map"
+              role="img"
+              aria-label="Map of Dhanmondi area showing venue prices"
+            >
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Dhanmondi · map view</span>
+              {exploreMapPins.map((pin) => (
+                <span
+                  key={pin.id}
+                  className={pin.hot ? 'mappin hot' : 'mappin'}
+                  style={{ top: pin.top, left: pin.left }}
+                >
+                  {pin.price}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 

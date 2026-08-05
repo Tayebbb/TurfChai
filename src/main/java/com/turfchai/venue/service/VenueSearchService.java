@@ -84,6 +84,8 @@ public class VenueSearchService {
                 venue.getName(),
                 venue.getArea(),
                 venue.getAddress(),
+                venue.getLat(),
+                venue.getLng(),
                 venue.getRatingAvg(),
                 venue.getReviewCount(),
                 venue.isVerified(),

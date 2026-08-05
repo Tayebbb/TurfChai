@@ -10,6 +10,8 @@ public record VenueSummaryDto(
         String name,
         String area,
         String address,
+        BigDecimal lat,
+        BigDecimal lng,
         BigDecimal rating,
         int reviewCount,
         boolean verified,
