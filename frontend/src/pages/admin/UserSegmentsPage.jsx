@@ -278,6 +278,7 @@ export default function UserSegmentsPage() {
           </div>
 
           <div
+            className="admin-stack-mobile"
             style={{
               display: 'grid',
               gridTemplateColumns: '170px 1fr',

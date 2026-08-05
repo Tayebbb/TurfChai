@@ -186,5 +186,31 @@
 .sidebar .sidenav a.active{background:var(--brand);color:#06130B}
 [data-theme="light"] .sidebar .sidenav a.active{background:var(--brand-soft);color:var(--brand-600)}
 
+/* ---------- Admin responsive refinements ---------- */
+/* Keep the pill nav reachable on mobile: becomes a scrollable second row */
+@media (max-width:820px){
+  .admin-topbar .topbar-inner{
+    flex-wrap:wrap;height:auto;min-height:64px;padding:8px 14px;row-gap:8px;
+  }
+  .admin-topbar .navlinks{
+    position:static;transform:none;order:3;width:100%;
+    display:flex;overflow-x:auto;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;margin:0;justify-content:flex-start;
+  }
+  .admin-topbar .navlinks::-webkit-scrollbar{display:none}
+  .admin-topbar .navlinks a{flex:none;white-space:nowrap;font-size:13px;padding:6px 12px}
+}
+/* Collapse fixed two-column admin grids to a single column */
+@media (max-width:720px){
+  .admin-stack-mobile{grid-template-columns:1fr!important}
+}
+@media (max-width:640px){
+  .admin-page-wrap .glass-pill-group{flex-wrap:wrap}
+  .admin-wrap-mobile{flex-wrap:wrap!important}
+  .admin-page-wrap .main-header h1{font-size:21px}
+  .admin-page-wrap .kpi-card{min-height:140px;padding:18px}
+  .admin-page-wrap .kpi-card .value{font-size:30px!important}
+}
+
 /* ---------- Global ambient orbs injected by turfchai.js ---------- */
 

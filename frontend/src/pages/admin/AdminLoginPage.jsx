@@ -36,6 +36,9 @@ import {
   paths,
 } from '@/routes/paths';
 
+import { login } from '@/api/auth';
+import { setSession } from '@/api/client';
+
 export default function AdminLoginPage() {
   const {
     showToast,
@@ -44,11 +47,26 @@ export default function AdminLoginPage() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('nadia@turfchai.com');
-  const [password, setPassword] = useState('••••••••••');
+  const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // The prototype painted this glow on <body>; scope it to the route instead.
   useBodyClass('admin-login-bg');
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const response = await login({ email: email.trim(), password });
+      setSession(response);
+      showToast(`Welcome back, ${response.user?.fullName ?? 'Admin'} ✓`);
+      navigate(paths.admin.dashboard);
+    } catch (error) {
+      showToast(error?.message || 'Invalid email or password', { duration: 5000 });
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -179,10 +197,7 @@ export default function AdminLoginPage() {
           </div>
 
           <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              navigate(paths.admin.dashboard);
-            }}
+            onSubmit={handleSubmit}
           >
             <Field
               label="Work Email"
@@ -268,8 +283,9 @@ export default function AdminLoginPage() {
               style={{
                 fontWeight: 700,
               }}
+              disabled={isSubmitting}
             >
-              Sign In to Dashboard →
+              {isSubmitting ? 'Signing In…' : 'Sign In to Dashboard →'}
             </Button>
           </form>
 
