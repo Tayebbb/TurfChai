@@ -24,7 +24,8 @@ public class VenueApiExceptionHandler {
     }
 
     @ExceptionHandler({IllegalArgumentException.class, HandlerMethodValidationException.class,
-            ConstraintViolationException.class})
+            ConstraintViolationException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String, String>> handleBadRequest(Exception e) {
         String message = e instanceof IllegalArgumentException
                 ? e.getMessage()

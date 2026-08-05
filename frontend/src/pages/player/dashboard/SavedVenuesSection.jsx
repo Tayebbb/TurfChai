@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/buttons/Button';
 import { Badge } from '@/components/ui/Badge';
-import { getSavedVenues, toggleSavedVenue } from '@/api/players';
+import { getSavedVenues, removeSavedVenue } from '@/api/players';
 import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -46,7 +46,7 @@ export default function SavedVenuesSection() {
   const remove = async (venue) => {
     setRemoving(venue.slug);
     try {
-      await toggleSavedVenue(venue.slug);
+      await removeSavedVenue(venue.slug);
       showToast(`Removed ${venue.name} from saved`);
       saved.reload();
     } catch {
