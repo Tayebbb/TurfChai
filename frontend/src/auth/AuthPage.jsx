@@ -151,21 +151,6 @@ export default function AuthPage() {
     e?.preventDefault();
     setIsSubmitting(true);
 
-    if (authMethod === 'phone') {
-      const phone = fullPhone(signupDial, signupPhone);
-      try {
-        await requestOtp(phone);
-        setPendingOtp({ phone, fullName, role: ROLE_TO_API[role] });
-        otpModal.open();
-        showToast(`Verification code sent to ${phone.slice(0, -4)}•••• 📱`);
-      } catch (error) {
-        handleApiError(error);
-        return;
-      }
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
       const response = await register({
         fullName,
@@ -278,25 +263,27 @@ export default function AuthPage() {
             <Tabs items={AUTH_TABS} value={tab} onChange={setTab} label="Authentication Mode" />
           </div>
 
-          {/* Auth Method Selector (Phone vs Email) */}
-          <div className="row" style={{ gap: 8, marginBottom: 18 }}>
-            <button
-              type="button"
-              className={`btn btn-sm ${authMethod === 'phone' ? 'btn-primary' : 'btn-tertiary'}`}
-              style={{ flex: 1, fontSize: 13 }}
-              onClick={() => setAuthMethod('phone')}
-            >
-              📱 Mobile OTP
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm ${authMethod === 'email' ? 'btn-primary' : 'btn-tertiary'}`}
-              style={{ flex: 1, fontSize: 13 }}
-              onClick={() => setAuthMethod('email')}
-            >
-              ✉️ Email &amp; Password
-            </button>
-          </div>
+          {/* Auth Method Selector (Phone vs Email) — Sign In only */}
+          {tab === 'signin' && (
+            <div className="row" style={{ gap: 8, marginBottom: 18 }}>
+              <button
+                type="button"
+                className={`btn btn-sm ${authMethod === 'phone' ? 'btn-primary' : 'btn-tertiary'}`}
+                style={{ flex: 1, fontSize: 13 }}
+                onClick={() => setAuthMethod('phone')}
+              >
+                📱 Mobile OTP
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${authMethod === 'email' ? 'btn-primary' : 'btn-tertiary'}`}
+                style={{ flex: 1, fontSize: 13 }}
+                onClick={() => setAuthMethod('email')}
+              >
+                ✉️ Email &amp; Password
+              </button>
+            </div>
+          )}
 
           {/* SIGN IN TAB */}
           <TabPanel id="signin" value={tab}>
@@ -417,53 +404,27 @@ export default function AuthPage() {
                 </Field>
               )}
 
-              {authMethod === 'phone' ? (
-                <Field label="Phone Number" htmlFor="ph2" hint="We will verify this with a 4-digit code.">
-                  <InputRow>
-                    <Input
-                      value={signupDial}
-                      onChange={(e) => setSignupDial(e.target.value)}
-                      style={{ maxWidth: 80 }}
-                      aria-label="Country code"
-                    />
-                    <Input
-                      id="ph2"
-                      placeholder="1712 345 678"
-                      inputMode="tel"
-                      value={signupPhone}
-                      onChange={(e) => setSignupPhone(e.target.value)}
-                    />
-                  </InputRow>
-                </Field>
-              ) : (
-                <>
-                  <Field label="Email Address" htmlFor="em2">
-                    <Input
-                      id="em2"
-                      type="email"
-                      placeholder="user@example.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Create Password" htmlFor="pw2">
-                    <Input
-                      id="pw2"
-                      type="password"
-                      placeholder="At least 8 characters"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                    />
-                  </Field>
-                </>
-              )}
+              <Field label="Email Address" htmlFor="em2">
+                <Input
+                  id="em2"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                />
+              </Field>
+              <Field label="Create Password" htmlFor="pw2">
+                <Input
+                  id="pw2"
+                  type="password"
+                  placeholder="At least 8 characters"
+                  value={signupPassword}
+                  onChange={(e) => setSignupPassword(e.target.value)}
+                />
+              </Field>
 
               <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
-                {isSubmitting
-                  ? 'Working…'
-                  : authMethod === 'phone'
-                    ? 'Verify & Continue →'
-                    : `Register as ${activeRoleConfig?.label} →`}
+                {isSubmitting ? 'Working…' : `Register as ${activeRoleConfig?.label} →`}
               </Button>
             </form>
 
