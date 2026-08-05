@@ -246,35 +246,37 @@
     text-decoration: none;
     min-height: 38px;
     white-space: normal;
-    transition: background var(--dur) var(--ease), color var(--dur) var(--ease), transform var(--dur) var(--ease);
+    transition: background var(--dur-slow) var(--ease-out), color var(--dur-slow) var(--ease-out), transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .sidenav a:hover {
     background: var(--surface-2);
-    color: var(--text)
+    color: var(--text);
+    transform: translateX(4px);
 }
 
 .sidenav a:active {
-    transform: scale(0.98)
+    transform: translateX(2px) scale(0.97);
+    transition: transform 0.15s ease-out;
 }
 
 .sidenav a.active {
     background: var(--brand-soft);
-    color: var(--brand-600)
+    color: var(--brand-600);
 }
 
 [data-theme="dark"] .sidenav a.active {
-    color: var(--brand)
+    color: var(--brand);
 }
 
 .sidenav .ico {
     width: 20px;
     text-align: center;
-    transition: transform var(--dur) var(--ease)
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .sidenav a:hover .ico {
-    transform: scale(1.1)
+    transform: scale(1.15) rotate(-4deg);
 }
 
 .main {
@@ -359,7 +361,7 @@ body.sidebar-open .sidebar-backdrop {
         height: calc(100vh - 64px);
         z-index: 90;
         box-shadow: var(--shadow-md);
-        transition: left var(--dur) var(--ease);
+        transition: left 0.4s cubic-bezier(0.22, 1, 0.36, 1);
         background: var(--surface);
     }
 
