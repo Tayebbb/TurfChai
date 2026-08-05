@@ -5,6 +5,7 @@ import { Button } from '@/components/buttons/Button';
 import { ThemeToggle } from '@/components/buttons/ThemeToggle';
 import { Topbar } from '@/components/navigation/Topbar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PUBLIC_NAV_LINKS } from '@/constants/navigation';
 import { paths } from '@/routes/paths';
 
@@ -29,6 +30,7 @@ export function PublicLayout() {
       </main>
 
       <SiteFooter />
+      <ChatWidget />
     </>
   );
 }

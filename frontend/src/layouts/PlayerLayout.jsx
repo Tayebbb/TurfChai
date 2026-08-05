@@ -11,6 +11,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Panel';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PLAYER_BOTTOM_NAV, PLAYER_NAV_LINKS } from '@/constants/navigation';
 import { playerNotifications } from '@/data/notifications';
 import { getMyProfile } from '@/api/players';
@@ -171,6 +172,8 @@ export function PlayerLayout({ withFooter = false }) {
           </Button>
         </div>
       </Overlay>
+
+      <ChatWidget />
     </>
   );
 }
