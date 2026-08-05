@@ -44,21 +44,18 @@ const ROLE_COPY = {
     siSub: 'Sign in with your phone or email to manage your pitch bookings and matches.',
     suTitle: 'Join TurfChai as a Player',
     suSub: 'One account for turf booking, finding open games, and earning rewards.',
-    perks: ['Instant online slot booking', 'Join community match games', 'Earn loyalty points'],
   },
   owner: {
     siTitle: 'Welcome Back, Turf Manager!',
     siSub: 'Sign in to manage your venue calendar, pricing, bookings, and payouts.',
     suTitle: 'List Your Turf Venue',
     suSub: 'Create a venue owner account to start listing your pitches and receiving bookings.',
-    perks: ['Real-time slot calendar manager', 'QR code entry gates', 'Automated split payouts'],
   },
   admin: {
     siTitle: 'Administrator Control Center',
     siSub: 'Sign in with your administrator credentials to access platform governance.',
     suTitle: 'Request Admin Account',
     suSub: 'Submit an administrator access request for TurfChai platform management.',
-    perks: ['Review venue onboarding requests', 'Platform revenue analytics', 'User & turf access control'],
   },
 };
 
@@ -358,18 +355,6 @@ export default function AuthPage() {
             </p>
           </TabPanel>
         </Card>
-
-        {/* Role Perks Highlights */}
-        <div style={{ marginTop: 24, padding: 16, borderRadius: 16, background: 'var(--surface-2, rgba(255, 255, 255, 0.04))' }}>
-          <b style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>Features for {activeRoleConfig?.label}:</b>
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }} className="subtle">
-            {copy.perks.map((perk, idx) => (
-              <li key={idx} style={{ marginBottom: 4 }}>
-                {perk}
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </>
   );
