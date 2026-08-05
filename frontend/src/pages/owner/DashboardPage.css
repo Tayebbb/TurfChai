@@ -1,0 +1,10 @@
+.viewfinder{position:relative;height:220px;border-radius:14px;background:linear-gradient(160deg,#0E1613,#1A2620);overflow:hidden;display:flex;align-items:flex-end;justify-content:center}
+.viewfinder .scanline{position:absolute;left:10%;right:10%;height:2px;background:var(--brand);box-shadow:0 0 14px var(--brand);animation:scan 2.2s ease-in-out infinite}
+@keyframes scan{0%,100%{top:16%}50%{top:80%}}
+.viewfinder .corner{position:absolute;width:26px;height:26px;border:3px solid rgba(255,255,255,.85);border-radius:2px}
+.viewfinder .tl{top:14px;left:14px;border-right:none;border-bottom:none}
+.viewfinder .tr{top:14px;right:14px;border-left:none;border-bottom:none}
+.viewfinder .bl{bottom:44px;left:14px;border-right:none;border-top:none}
+.viewfinder .br{bottom:44px;right:14px;border-left:none;border-top:none}
+.vf-hint{position:relative;color:rgba(255,255,255,.75);font-size:12px;padding:10px 14px;text-align:center}
+@media (prefers-reduced-motion:reduce){.viewfinder .scanline{animation:none;top:50%}}
