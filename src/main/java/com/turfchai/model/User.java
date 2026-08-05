@@ -89,6 +89,17 @@ public class User {
     @Column(name = "play_style")
     private SkillLevel playStyle;
 
+    // Player-profile fields (profile module). CSV columns are the interim
+    // representation until the array/JSONB baseline columns get mapped types.
+    @Column(name = "player_role", length = 30)
+    private String playerRole;
+
+    @Column(name = "preferred_sports_csv")
+    private String preferredSports;
+
+    @Column(name = "preferred_times_csv")
+    private String preferredTimes;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private OffsetDateTime createdAt = OffsetDateTime.now();

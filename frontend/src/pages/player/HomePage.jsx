@@ -13,9 +13,13 @@ import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Chip, ChipRow } from '@/components/ui/Chip';
 import { Photo } from '@/components/ui/Photo';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Skill } from '@/components/ui/Tags';
-import { nearbyVenues } from '@/data/venues';
-import { currentPlayer } from '@/data/users';
+import { searchVenues, toNearbyCard } from '@/api/venues';
+import { getMyProfile } from '@/api/players';
+import { getTournament, DEMO_TOURNAMENT_CODE, formatDate } from '@/api/tournaments';
+import { nearbyVenues as nearbyVenuesFallback } from '@/data/venues';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useQueryParam } from '@/hooks/useQueryParam';
 import { useToast } from '@/hooks/useToast';
@@ -136,6 +140,9 @@ const PRIVACY_HINTS = {
 
 export default function HomePage() {
   const [mode, setMode] = useQueryParam('mode', 'player');
+  const me = useApi(() => getMyProfile(), []);
+  const player = me.data;
+  const firstName = player?.fullName?.split(/\s+/)[0];
 
   return (
     <>
@@ -144,13 +151,21 @@ export default function HomePage() {
         {/* Greeting + workspace switcher */}
         <div className="between" style={{ marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h1 style={{ fontSize: 24, margin: 0 }}>Salam, {currentPlayer.shortName}</h1>
-            <span className="subtle">{currentPlayer.area}</span>
+            <h1 style={{ fontSize: 24, margin: 0 }}>
+              {firstName ? `Salam, ${firstName}` : 'Salam'}
+            </h1>
+            <span className="subtle">
+              {player?.area ? `${player.area} · ` : ''}
+              <Link to={paths.player.settings}>Edit profile</Link>
+            </span>
           </div>
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-            <Badge tone="green">
-              {currentPlayer.tier} member · {formatNumber(currentPlayer.points)} pts
-            </Badge>
+            {player?.reliabilityScore != null ? (
+              <Badge tone="green">
+                {player.reliabilityScore}% reliability
+                {player.gamesAttended ? ` · ${formatNumber(player.gamesAttended)} games` : ''}
+              </Badge>
+            ) : null}
             <ViewAsMenu options={MODES} value={mode} onChange={setMode} />
           </div>
         </div>
@@ -163,6 +178,10 @@ export default function HomePage() {
 
 /* ======== PLAYER MODE ======== */
 function PlayerMode() {
+  // Live venue rail; falls back to sample data when the API is unreachable.
+  const venuesApi = useApi(() => searchVenues({ size: 6, sort: 'rating' }), []);
+  const nearbyVenues = venuesApi.data ? venuesApi.data.items.map(toNearbyCard) : nearbyVenuesFallback;
+
   return (
     <div className="tabpanel on">
       <SearchCompact
@@ -221,10 +240,22 @@ function PlayerMode() {
           <Link to={paths.player.explore}>See all →</Link>
         </div>
         <div className="hscroll">
-          {nearbyVenues.map((venue) => (
-            <VenueCard key={venue.id} venue={venue} compact />
-          ))}
+          {venuesApi.loading
+            ? Array.from({ length: 4 }, (_, index) => (
+                <Skeleton key={index} height={190} width={220} radius={14} style={{ flexShrink: 0 }} />
+              ))
+            : nearbyVenues.map((venue) => (
+                <VenueCard key={venue.id} venue={venue} compact />
+              ))}
         </div>
+        {venuesApi.error ? (
+          <p className="subtle" role="status" style={{ marginTop: 8 }}>
+            Live venues unavailable — showing sample data.{' '}
+            <button type="button" onClick={venuesApi.reload} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}>
+              Retry
+            </button>
+          </p>
+        ) : null}
       </section>
 
       {/* Open games needing players */}
@@ -271,6 +302,12 @@ function PlayerMode() {
 
 /* ======== SOLO PLAYER MODE ======== */
 function SoloMode() {
+  const me = useApi(() => getMyProfile(), []);
+  const soloRecord =
+    me.data?.reliabilityScore != null
+      ? `${me.data.gamesAttended ?? 0} games \u00b7 ${me.data.reliabilityScore}% show-up`
+      : null;
+
   return (
     <div className="tabpanel on">
       <SearchCompact
@@ -347,7 +384,9 @@ function SoloMode() {
           </div>
           <div className="card">
             <Badge tone="green">Your solo record</Badge>
-            <h3 style={{ marginTop: 8 }}>12 games · 98% show-up</h3>
+            <h3 style={{ marginTop: 8 }}>
+              {soloRecord ?? 'Your reliability score'}
+            </h3>
             <p className="subtle">
               Hosts see your reliability score when you request to join. Keep it above 90% for
               instant-join games.
@@ -367,6 +406,8 @@ function HostMode() {
   const { showToast } = useToast();
   const createModal = useDisclosure(false);
   const [inviteCode, setInviteCode] = useState('');
+  const tournamentApi = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
+  const tournament = tournamentApi.data;
 
   return (
     <div className="tabpanel on">
@@ -386,18 +427,38 @@ function HostMode() {
 
         <Link
           className="glass glass-card"
-          to={paths.host.tournament}
+          to={tournament ? `${paths.host.tournament}?code=${tournament.code}` : paths.host.tournament}
           style={{ display: 'block', textDecoration: 'none', color: 'var(--text)' }}
         >
           <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
             <div className="row">
               <Photo variant="alt2" style={{ width: 56, height: 56, fontSize: 22, flex: 'none' }} glyph="🏆" />
               <div>
-                <b>Ramadan Cup 2027 · Mirpur Sports City</b>
-                <div className="subtle">Sat 23 Aug · in 12 days · 3 pitches · knockout</div>
+                <b>
+                  {tournament
+                    ? `${tournament.name} · ${tournament.venueName}`
+                    : 'Ramadan Cup 2027 · Mirpur Sports City'}
+                </b>
+                <div className="subtle">
+                  {tournament
+                    ? `${formatDate(tournament.date)} · ${
+                        new Set(tournament.reservations.map((r) => r.pitchName)).size
+                      } pitches · ${tournament.format.toLowerCase().replaceAll('_', '-')}`
+                    : 'Sat 23 Aug · 3 pitches · knockout'}
+                </div>
                 <div className="row-wrap" style={{ marginTop: 4 }}>
-                  <Badge tone="green">Venue confirmed</Badge>
-                  <Badge tone="amber">13/16 teams · balance due 20 Aug</Badge>
+                  <Badge tone="green">
+                    {tournament ? tournament.status.toLowerCase() : 'Venue confirmed'}
+                  </Badge>
+                  <Badge tone="amber">
+                    {tournament
+                      ? `${tournament.teams.length}/${tournament.teamCapacity} teams${
+                          tournament.balanceDueDate
+                            ? ` · balance due ${formatDate(tournament.balanceDueDate)}`
+                            : ''
+                        }`
+                      : '13/16 teams'}
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -495,6 +556,8 @@ function HostMode() {
 
 /** Two-state modal: the setup form, then the created-tournament receipt. */
 function CreateTournamentModal({ isOpen, onClose }) {
+  const venuesApi = useApi(() => searchVenues({ size: 20, sort: 'rating' }), []);
+  const venueOptions = venuesApi.data?.items ?? [];
   const { showToast } = useToast();
   const [created, setCreated] = useState(false);
   const [name, setName] = useState('Dhanmondi Champions Cup');
@@ -600,9 +663,15 @@ function CreateTournamentModal({ isOpen, onClose }) {
               value={venue}
               onChange={(event) => setVenue(event.target.value)}
             >
-              <option>Kick Off Arena · Dhanmondi · 3 pitches</option>
-              <option>Mirpur Sports City · 4 pitches</option>
-              <option>Baridhara Sports Hub · 2 pitches</option>
+              {venueOptions.length > 0 ? (
+                venueOptions.map((option) => (
+                  <option key={option.slug}>
+                    {option.name} · {option.area}
+                  </option>
+                ))
+              ) : (
+                <option>Loading venues…</option>
+              )}
             </select>
             <span className="hint">
               Need options? <Link to={paths.player.explore}>Browse 🏆 Tournament-ready venues →</Link>

@@ -1,8 +1,17 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { KpiCard } from '@/components/cards/KpiCard';
 import { ramadanCup, tournamentFixtures } from '@/data/tournaments';
+import { useApi } from '@/hooks/useApi';
+import {
+  DEMO_TOURNAMENT_CODE,
+  getTournament,
+  bdt,
+  formatTime,
+  formatDate,
+} from '@/api/tournaments';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 
@@ -29,8 +38,7 @@ const CANCELLATION_TERMS = [
 ];
 
 const PRIVACY_HINTS = {
-  invite:
-    'Hidden from search — teams can only join through your invite link. 13 teams joined this way.',
+  invite: 'Hidden from search — teams can only join through your invite link.',
   open: 'Listed publicly — any team on TurfChai can find this tournament and request to join.',
 };
 
@@ -38,52 +46,171 @@ const INVITE_LINK = 'turfchai.app/t/ramadan-cup-0091';
 
 export default function TournamentPage() {
   const { showToast } = useToast();
-  const [privacy, setPrivacy] = useState('invite');
+  const [params] = useSearchParams();
+  const code = params.get('code') ?? DEMO_TOURNAMENT_CODE;
+  const tournament = useApi(() => getTournament(code), [code]);
+  const live = tournament.data;
+
+  // Derived view-model: live API data when available, prototype copy while
+  // loading or if the backend is unreachable.
+  const header = live
+    ? {
+        name: live.name,
+        venue: live.venueName,
+        date: formatDate(live.date),
+        window: `${formatTime(live.windowStart)}\u2013${formatTime(live.windowEnd)}`,
+        code: live.code,
+        teamsLabel: `${live.teams.length}/${live.teamCapacity} teams`,
+        balance: bdt(live.costs.balance),
+        deposit: bdt(live.costs.deposit),
+        balanceDue: formatDate(live.balanceDueDate),
+      }
+    : {
+        name: ramadanCup.name,
+        venue: ramadanCup.venue,
+        date: ramadanCup.date,
+        window: ramadanCup.window,
+        code: ramadanCup.id,
+        teamsLabel: '13/16 teams',
+        balance: ramadanCup.balance,
+        deposit: ramadanCup.deposit,
+        balanceDue: ramadanCup.balanceDue,
+      };
+
+  const paidTeams = live ? live.teams.filter((team) => team.entryFeeStatus === 'paid').length : 0;
+  const feesCollected = live
+    ? live.teams.reduce((sum, team) => sum + Number(team.entryFeePaid), 0)
+    : 0;
+  const feesExpected = live ? live.teamCapacity * Number(live.entryFeePerTeam) : 0;
+  // Captured once per mount — "days to kickoff" doesn't need live ticking.
+  const [now] = useState(() => Date.now());
+  const daysToKickoff = live
+    ? Math.max(0, Math.ceil((new Date(`${live.date}T00:00:00`) - now) / 86400000))
+    : null;
+
+  const kpis = live
+    ? [
+        { id: 'days', label: 'Days to kickoff', value: String(daysToKickoff), delta: 'On track', trend: 'up' },
+        {
+          id: 'fees',
+          label: 'Entry fees collected',
+          value: feesExpected ? `${Math.round((feesCollected / feesExpected) * 100)}%` : '—',
+          delta: `${bdt(feesCollected)} / ${bdt(feesExpected)}`,
+        },
+        {
+          id: 'teams',
+          label: 'Teams registered',
+          value: `${live.teams.length} / ${live.teamCapacity}`,
+          delta: `${paidTeams} paid entry`,
+          trend: 'up',
+        },
+        {
+          id: 'slots',
+          label: 'Slots reserved',
+          value: String(live.costs.slotCount),
+          delta: `${new Set(live.reservations.map((r) => r.pitchName)).size} pitches · ${header.window}`,
+        },
+      ]
+    : KPIS;
+
+  const scheduleRows = live
+    ? live.fixtures.map((fixture) => ({
+        id: String(fixture.id),
+        time: fixture.status === 'bye' ? '—' : formatTime(fixture.startTime),
+        pitch: fixture.pitchName ? fixture.pitchName.replace('Pitch ', '') : '—',
+        fixture:
+          fixture.status === 'bye'
+            ? `${fixture.roundLabel} · ${fixture.teamA} — bye`
+            : `${fixture.roundLabel} · ${fixture.teamA} vs ${fixture.teamB}`,
+      }))
+    : tournamentFixtures;
+
+  const teamChips = live
+    ? [
+        ...live.teams.slice(0, 5).map((team) => ({ id: String(team.id), label: team.name, on: true })),
+        ...(live.teams.length > 5
+          ? [{ id: 'more', label: `+${live.teams.length - 5} more`, on: true }]
+          : []),
+        ...(live.teamCapacity > live.teams.length
+          ? [{ id: 'spots', label: `${live.teamCapacity - live.teams.length} spots left`, on: false }]
+          : []),
+      ]
+    : TEAM_CHIPS;
+
+  const inviteLink = live ? `turfchai.app/${live.inviteCode}` : INVITE_LINK;
+
+  const livePrivacy = live?.privacy === 'INVITE_ONLY' ? 'invite' : live?.privacy ? 'open' : null;
+  const [privacyOverride, setPrivacyOverride] = useState(null);
+  const privacy = privacyOverride ?? livePrivacy ?? 'invite';
+  const privacyLabel = privacy === 'invite' ? '\ud83d\udd12 Invite-only' : '\ud83c\udf10 Open';
+  const statusLabel = live
+    ? { DRAFT: 'Draft · not published', PUBLISHED: 'Published · taking teams', CONFIRMED: 'Venue confirmed · slots reserved' }[
+        live.status
+      ] ?? live.status
+    : 'Venue confirmed · deposit paid';
+  const formatLabel = live?.format ? live.format.toLowerCase().replaceAll('_', '-') : 'knockout';
+  const depositPct = live && Number(live.costs.total) > 0
+    ? Math.round((Number(live.costs.deposit) / Number(live.costs.total)) * 100)
+    : 40;
+  const teamsDue = live ? live.teams.filter((team) => team.entryFeeStatus !== 'PAID').length : null;
+
   const [notes, setNotes] = useState(
     'Referees arrive 7:30 AM. PA system check 7:45. Trophy table near Pitch D.',
   );
 
   const changePrivacy = (next) => {
-    setPrivacy(next);
+    setPrivacyOverride(next);
     showToast(next === 'invite' ? '🔒 Tournament is now invite-only' : '🌐 Tournament is now open to everyone');
   };
 
   const copyInvite = () => {
-    navigator.clipboard?.writeText(INVITE_LINK);
+    navigator.clipboard?.writeText(inviteLink);
     showToast('🔗 Invite link copied — share it with team captains');
   };
 
   return (
     <>
-      <PageTitle title="Ramadan Cup 2027" />
+      <PageTitle title={header.name} />
 
       <div className="wrap" style={{ paddingTop: 20, maxWidth: 1100, paddingBottom: 60 }}>
         <BackButton to={paths.host.hub}>Host hub</BackButton>
 
+        {tournament.error ? (
+          <div className="alert warn" style={{ marginBottom: 12 }}>
+            <span className="ico">⚠️</span>
+            <div className="tiny">
+              Couldn’t load live tournament data — showing sample content.{' '}
+              <button className="btn btn-sm btn-tertiary" type="button" onClick={tournament.reload}>
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="between" style={{ flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
           <div>
-            <h1 style={{ fontSize: 22, marginBottom: 2 }}>🏆 {ramadanCup.name}</h1>
+            <h1 style={{ fontSize: 22, marginBottom: 2 }}>🏆 {header.name}</h1>
             <span className="subtle small">
-              {ramadanCup.venue} · {ramadanCup.date} · {ramadanCup.window} · 3 pitches · knockout ·{' '}
-              <span className="num">{ramadanCup.id}</span>
+              {header.venue} · {header.date} · {header.window} · {formatLabel} ·{' '}
+              <span className="num">{header.code}</span>
             </span>
             <div className="row-wrap" style={{ marginTop: 6 }}>
-              <span className="badge green">Venue confirmed · deposit paid</span>
-              <span className="badge amber">13/16 teams</span>
-              <span className="badge gray nodot">🔒 Invite-only</span>
+              <span className="badge green">{statusLabel}</span>
+              <span className="badge amber">{header.teamsLabel}</span>
+              <span className="badge gray nodot">{privacyLabel}</span>
             </div>
           </div>
           <button
             className="btn btn-primary"
             type="button"
-            onClick={() => showToast('Balance paid ৳25,680 via bKash ✓ — reservation fully paid')}
+            onClick={() => showToast(`Balance paid ${header.balance} via bKash ✓ — reservation fully paid`)}
           >
-            Pay balance · {ramadanCup.balance}
+            Pay balance · {header.balance}
           </button>
         </div>
 
         <div className="grid4" style={{ marginBottom: 14 }}>
-          {KPIS.map((kpi) => (
+          {kpis.map((kpi) => (
             <KpiCard key={kpi.id} label={kpi.label} value={kpi.value} delta={kpi.delta} trend={kpi.trend} />
           ))}
         </div>
@@ -93,26 +220,30 @@ export default function TournamentPage() {
             <div className="card">
               <div className="between">
                 <h3 style={{ margin: 0 }}>Venue payment</h3>
-                <span className="badge amber">Balance due 20 Aug</span>
+                <span className="badge amber">Balance due {header.balanceDue}</span>
               </div>
               <div className="progress" style={{ margin: '10px 0' }}>
-                <i style={{ width: '40%' }} />
+                <i style={{ width: `${depositPct}%` }} />
               </div>
               <div className="between small">
                 <span className="muted">Deposit paid · bKash TXN {ramadanCup.depositTxn}</span>
-                <b className="num">{ramadanCup.deposit} ✓</b>
+                <b className="num">{header.deposit} ✓</b>
               </div>
               <div className="between small" style={{ marginTop: 4 }}>
-                <span className="muted">Balance · due {ramadanCup.balanceDue}</span>
-                <b className="num">{ramadanCup.balance}</b>
+                <span className="muted">Balance · due {header.balanceDue}</span>
+                <b className="num">{header.balance}</b>
               </div>
               <p className="tiny subtle" style={{ margin: '8px 0 0' }}>
-                Team entry fees auto-remind Thu 9 AM · 3 teams still due.
+                {teamsDue == null
+                  ? 'Team entry fees auto-remind Thu 9 AM.'
+                  : teamsDue === 0
+                    ? 'All registered teams have paid their entry fee ✓'
+                    : `Team entry fees auto-remind Thu 9 AM · ${teamsDue} team${teamsDue > 1 ? 's' : ''} still due.`}
               </p>
             </div>
 
             <div className="card">
-              <h3>Match schedule · Sat 23 Aug</h3>
+              <h3>Match schedule · {header.date}</h3>
               <div className="table-wrap" style={{ marginTop: 8 }}>
                 <table className="table" style={{ minWidth: 420 }}>
                   <thead>
@@ -123,7 +254,7 @@ export default function TournamentPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tournamentFixtures.map((fixture) => (
+                    {scheduleRows.map((fixture) => (
                       <tr key={fixture.id}>
                         <td className="num">{fixture.time}</td>
                         <td>{fixture.pitch}</td>
@@ -145,11 +276,11 @@ export default function TournamentPage() {
 
             <div className="card">
               <div className="between">
-                <h3 style={{ margin: 0 }}>Teams · 13 of 16</h3>
+                <h3 style={{ margin: 0 }}>Teams · {header.teamsLabel}</h3>
                 <span className="badge gray nodot">Joined via invite link</span>
               </div>
               <div className="row-wrap" style={{ marginTop: 10 }}>
-                {TEAM_CHIPS.map((team) => (
+                {teamChips.map((team) => (
                   <span key={team.id} className={team.on ? 'chip on' : 'chip'}>
                     {team.label}
                   </span>
@@ -185,7 +316,7 @@ export default function TournamentPage() {
             <div className="card">
               <div className="between">
                 <h3 style={{ margin: 0 }}>Registration &amp; privacy</h3>
-                <span className="badge gray nodot">🔒 Invite-only</span>
+                <span className="badge gray nodot">{privacyLabel}</span>
               </div>
               <div className="seg" style={{ display: 'flex', marginTop: 12 }} role="tablist" aria-label="Registration privacy">
                 <button
@@ -211,6 +342,7 @@ export default function TournamentPage() {
               </div>
               <p className="tiny subtle" style={{ margin: '8px 0 0' }}>
                 {PRIVACY_HINTS[privacy]}
+                {live ? ` ${live.teams.length} team${live.teams.length === 1 ? '' : 's'} joined so far.` : ''}
               </p>
               {privacy === 'invite' ? (
                 <div className="panel" style={{ marginTop: 10 }}>
@@ -219,7 +351,7 @@ export default function TournamentPage() {
                     <input
                       className="input"
                       readOnly
-                      value={INVITE_LINK}
+                      value={inviteLink}
                       aria-label="Invite link"
                       style={{ flex: 1 }}
                     />

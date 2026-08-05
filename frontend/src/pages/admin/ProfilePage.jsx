@@ -49,7 +49,7 @@ export default function ProfilePage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>My Account &amp; Settings</h1>
+            <h1>My Account &amp; Settings</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Manage your administrative credentials and security logs

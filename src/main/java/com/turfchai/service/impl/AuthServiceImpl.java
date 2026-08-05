@@ -7,6 +7,7 @@ import com.turfchai.dto.request.RegisterRequest;
 import com.turfchai.dto.response.AuthResponse;
 import com.turfchai.dto.response.OtpRequestResponse;
 import com.turfchai.dto.response.UserResponse;
+import com.turfchai.exception.AdminRoleNotAllowedException;
 import com.turfchai.exception.EmailAlreadyExistsException;
 import com.turfchai.exception.InvalidCredentialsException;
 import com.turfchai.exception.OtpException;
@@ -52,6 +53,11 @@ public class AuthServiceImpl implements AuthService {
         }
 
         RoleType role = parseRole(roleName);
+
+        if (role == RoleType.ADMIN || role == RoleType.SUPER_ADMIN) {
+            throw new AdminRoleNotAllowedException(
+                    "Admin accounts cannot be self-registered. Only a super admin can appoint them.");
+        }
 
         User user = User.builder()
                 .fullName(request.fullName().trim())

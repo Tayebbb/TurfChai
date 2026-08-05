@@ -1,4 +1,17 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/v1';
+/**
+ * Unified REST client.
+ *
+ * Two call styles coexist during integration:
+ *  - `api(path, options)` — auth-module style: paths relative to /api/v1,
+ *    normalizes `message` error bodies, manages the JWT session.
+ *  - `apiGet` / `apiSend` — discovery/profile/tournament style: absolute
+ *    /api/v1/... paths against the backend origin, `error` bodies, URL params.
+ * Both attach the bearer token when a session exists.
+ */
+
+const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_ORIGIN || '';
+const BACKEND_ORIGIN = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, '') : '';
+const DEFAULT_PREFIX = import.meta.env.VITE_API_BASE ?? '/api/v1';
 
 const TOKEN_KEY = 'turfchai.auth.token';
 const USER_KEY = 'turfchai.auth.user';
@@ -26,6 +39,20 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
+function resolveUrl(path) {
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (BACKEND_ORIGIN) {
+    if (cleanPath.startsWith('/api/')) {
+      return `${BACKEND_ORIGIN}${cleanPath}`;
+    }
+    return `${BACKEND_ORIGIN}${DEFAULT_PREFIX}${cleanPath}`;
+  }
+  if (cleanPath.startsWith('/api/')) {
+    return cleanPath;
+  }
+  return `${DEFAULT_PREFIX}${cleanPath}`;
+}
+
 /**
  * Thin fetch wrapper: attaches the bearer token and normalizes error bodies.
  * Throws an Error with the backend `message` when the response is not OK.
@@ -37,9 +64,11 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
     if (authToken) headers.Authorization = `Bearer ${authToken}`;
   }
 
+  const url = resolveUrl(path);
+
   let response;
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetch(url, {
       method,
       headers,
       body: body != null ? JSON.stringify(body) : undefined,
@@ -53,6 +82,7 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
     try {
       const errorBody = await response.json();
       if (errorBody?.message) message = errorBody.message;
+      else if (errorBody?.error) message = errorBody.error;
     } catch {
       // keep default message
     }
@@ -64,4 +94,60 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
   if (response.status === 204) return null;
   const contentType = response.headers.get('content-type') ?? '';
   return contentType.includes('application/json') ? response.json() : response.text();
+}
+
+export class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function authHeaders(extra = {}) {
+  const headers = { Accept: 'application/json', ...extra };
+  const authToken = getToken();
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+  return headers;
+}
+
+async function throwApiError(response) {
+  let message = `Request failed (${response.status})`;
+  try {
+    const body = await response.json();
+    if (body?.error) message = body.error;
+    else if (body?.message) message = body.message;
+  } catch {
+    /* non-JSON error body */
+  }
+  throw new ApiError(response.status, message);
+}
+
+/** GET with URL params against the backend origin (path includes /api/v1). */
+export async function apiGet(path, params = {}) {
+  const fullUrlString = resolveUrl(path);
+  const url = new URL(fullUrlString, window.location.origin);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (Array.isArray(value)) {
+      value.forEach((item) => url.searchParams.append(key, item));
+    } else {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  const response = await fetch(url.toString(), { headers: authHeaders() });
+  if (!response.ok) await throwApiError(response);
+  return response.json();
+}
+
+/** Mutating request against the backend origin (path includes /api/v1). */
+export async function apiSend(method, path, body) {
+  const url = resolveUrl(path);
+  const response = await fetch(url, {
+    method,
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) await throwApiError(response);
+  return response.status === 204 ? null : response.json();
 }

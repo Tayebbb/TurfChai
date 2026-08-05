@@ -62,7 +62,13 @@ public class SecurityConfig {
                                 "/api/v1/solo/open-games/*/members",
                                 "/api/ai/**",
                                 "/error",
-                                "/actuator/health"
+                                "/actuator/health",
+                                // Interim public access while the player/host UI
+                                // adopts JWT login (X-User-Id demo identity):
+                                "/api/v1/venues/**",
+                                "/api/v1/players/**",
+                                "/api/v1/tournaments/**",
+                                "/api/v1/host/tournaments/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

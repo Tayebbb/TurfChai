@@ -1,9 +1,18 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { Overlay } from '@/components/modals/Overlay';
 import { ramadanCup } from '@/data/tournaments';
+import { useApi } from '@/hooks/useApi';
+import {
+  DEMO_TOURNAMENT_CODE,
+  getTournament,
+  bdt,
+  formatTime,
+  formatDate,
+} from '@/api/tournaments';
+import { getMyProfile } from '@/api/players';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -12,9 +21,10 @@ const FORMATS = ['Knockout · 16 teams', 'Group + knockout', 'League'];
 const TEAM_COUNTS = ['8', '16', '24'];
 const PAYMENT_METHODS = ['bKash', 'Nagad', 'Card', 'Bank transfer'];
 
-const POLICY_POINTS = [
+const POLICY_POINTS = (summary) => [
   <>
-    <b>Deposit:</b> 40% now (৳17,120) secures all 14 slots · balance due 3 days before event
+    <b>Deposit:</b> 40% now ({summary.deposit}) secures all {summary.slotCount} slots · balance due 3
+    days before event
   </>,
   <>
     <b>Free cancellation</b> up to 7 days before · 50% refund up to 72h · none after
@@ -28,15 +38,64 @@ const POLICY_POINTS = [
 export default function ReservePage() {
   const { showToast } = useToast();
   const reserved = useDisclosure(false);
+  const [params] = useSearchParams();
+  const code = params.get('code') ?? DEMO_TOURNAMENT_CODE;
+  const tournament = useApi(() => getTournament(code), [code]);
+  const live = tournament.data;
 
-  const [name, setName] = useState(ramadanCup.name);
-  const [format, setFormat] = useState(FORMATS[0]);
-  const [teams, setTeams] = useState('16');
-  const [organizer, setOrganizer] = useState('Shakil Ahmed Liton · +880 1552 887 990');
+  const summary = live
+    ? {
+        venue: live.venueName,
+        when: `${formatDate(live.date)} · ${formatTime(live.windowStart)} – ${formatTime(live.windowEnd)}`,
+        slots: `${live.costs.slotCount} slots · ${new Set(live.reservations.map((r) => r.pitchName)).size} pitches`,
+        slotCount: live.costs.slotCount,
+        slotTotal: bdt(live.costs.slotTotal),
+        discount: Number(live.costs.discount) > 0 ? `−${bdt(live.costs.discount)}` : '৳0',
+        total: bdt(live.costs.total),
+        deposit: bdt(live.costs.deposit),
+        balance: bdt(live.costs.balance),
+        balanceDue: formatDate(live.balanceDueDate),
+      }
+    : {
+        venue: 'Mirpur Sports City',
+        when: 'Sat 23 Aug · 8:00 AM – 6:00 PM',
+        slots: '14 slots · Pitches A, B, D (+ C partial)',
+        slotCount: 14,
+        slotTotal: ramadanCup.slotTotal,
+        discount: ramadanCup.discount,
+        total: ramadanCup.total,
+        deposit: ramadanCup.deposit,
+        balance: ramadanCup.balance,
+        balanceDue: ramadanCup.balanceDue,
+      };
+
+  // Form mirrors the live tournament once it loads; edits stay local.
+  const [nameOverride, setNameOverride] = useState(null);
+  const name = nameOverride ?? live?.name ?? ramadanCup.name;
+  const setName = setNameOverride;
+  const [formatOverride, setFormatOverride] = useState(null);
+  const format =
+    formatOverride ??
+    (live?.format
+      ? `${live.format.charAt(0)}${live.format.slice(1).toLowerCase().replaceAll('_', '-')}`
+      : FORMATS[0]);
+  const setFormat = setFormatOverride;
+  const [teamsOverride, setTeamsOverride] = useState(null);
+  const teams = teamsOverride ?? (live ? String(live.teamCapacity) : '16');
+  const setTeams = setTeamsOverride;
+
+  const me = useApi(() => getMyProfile(), []);
+  const [organizerOverride, setOrganizerOverride] = useState(null);
+  const organizer =
+    organizerOverride ??
+    [me.data?.fullName, me.data?.phone].filter(Boolean).join(' · ') ??
+    '';
+  const setOrganizer = setOrganizerOverride;
+
   const [listPublicly, setListPublicly] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [method, setMethod] = useState('bKash');
-  const [bkashNumber, setBkashNumber] = useState('+880 1552 887 990');
+  const [bkashNumber, setBkashNumber] = useState('');
 
   return (
     <>
@@ -109,7 +168,7 @@ export default function ReservePage() {
             <section className="card">
               <h3>2 · Policy &amp; terms</h3>
               <ul className="small muted" style={{ margin: '8px 0 0', paddingLeft: 16, lineHeight: 1.9 }}>
-                {POLICY_POINTS.map((point, index) => (
+                {POLICY_POINTS(summary).map((point, index) => (
                   // Static copy — index keys are stable here.
                   <li key={index}>{point}</li>
                 ))}
@@ -148,10 +207,10 @@ export default function ReservePage() {
                 />
               </div>
               <button className="btn btn-primary btn-lg btn-block" type="button" onClick={reserved.open}>
-                Pay ৳17,120 deposit &amp; reserve
+                Pay {summary.deposit} deposit &amp; reserve
               </button>
               <p className="tiny subtle center" style={{ marginTop: 8 }}>
-                🔒 Held for you while you pay · balance ৳25,680 due Wed 20 Aug
+                🔒 Held for you while you pay · balance {summary.balance} due {summary.balanceDue}
               </p>
             </section>
           </div>
@@ -160,39 +219,40 @@ export default function ReservePage() {
             <b style={{ fontFamily: 'var(--font-display)' }}>Reservation summary</b>
             <div className="panel" style={{ margin: '10px 0' }}>
               <b className="small">
-                Mirpur Sports City <span className="verified">✓</span>
+                {summary.venue} <span className="verified">✓</span>
               </b>
-              <div className="tiny subtle">Mirpur 10 · Sat 23 Aug 2026 · 8:00 AM – 6:00 PM</div>
+              <div className="tiny subtle">{summary.when}</div>
               <div className="tiny subtle" style={{ marginTop: 4 }}>
-                14 slots · Pitches A, B, D (+ C partial)
+                {summary.slots}
               </div>
             </div>
             <div className="pricerow">
-              <span>14 pitch-slots</span>
-              <span className="num">৳44,600</span>
+              <span>{summary.slotCount} pitch-slots</span>
+              <span className="num">{summary.slotTotal}</span>
             </div>
             <div className="pricerow neg">
               <span>Multi-pitch discount</span>
-              <span className="num">−৳1,800</span>
+              <span className="num">{summary.discount}</span>
             </div>
             <div className="pricerow total">
               <span>Total</span>
-              <span className="num">৳42,800</span>
+              <span className="num">{summary.total}</span>
             </div>
             <div className="pricerow">
               <span>Deposit due now (40%)</span>
               <span className="num">
-                <b>৳17,120</b>
+                <b>{summary.deposit}</b>
               </span>
             </div>
             <div className="pricerow">
-              <span>Balance · by 20 Aug</span>
-              <span className="num">৳25,680</span>
+              <span>Balance · by {summary.balanceDue}</span>
+              <span className="num">{summary.balance}</span>
             </div>
             <div className="alert info" style={{ marginTop: 10 }}>
               <span className="ico">💡</span>
               <div className="tiny">
-                One reservation covers everything — the venue blocks all 14 slots the moment your deposit clears.
+                One reservation covers everything — the venue blocks all {summary.slotCount} slots the
+                moment your deposit clears.
               </div>
             </div>
           </aside>
@@ -202,21 +262,24 @@ export default function ReservePage() {
       <Overlay
         isOpen={reserved.isOpen}
         onClose={reserved.close}
-        title="Ramadan Cup is booked!"
+        title={`${name} is booked!`}
         hideHeader
         className="center"
       >
         <div className="check-anim" aria-hidden="true">
           🏆
         </div>
-        <h3>Ramadan Cup is booked!</h3>
+        <h3>{name} is booked!</h3>
         <p className="muted small">
-          Deposit ৳17,120 received via bKash (TXN 7R2M88). Reservation{' '}
-          <b className="num">{ramadanCup.id}</b> confirmed — venue contact and schedule tools are on your
-          dashboard.
+          Deposit {summary.deposit} due via {method}. Reservation{' '}
+          <b className="num">{live?.code ?? ramadanCup.id}</b> holds {summary.slotCount} slots at{' '}
+          {summary.venue} — payment capture arrives with the payments service.
         </p>
         <div className="stack-sm" style={{ marginTop: 12 }}>
-          <Link className="btn btn-primary btn-block" to={paths.host.hub}>
+          <Link
+            className="btn btn-primary btn-block"
+            to={live ? `${paths.host.tournament}?code=${live.code}` : paths.host.tournament}
+          >
             Go to your tournament →
           </Link>
           <button

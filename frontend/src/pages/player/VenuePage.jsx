@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
@@ -10,11 +10,16 @@ import { Badge } from '@/components/ui/Badge';
 import { Photo } from '@/components/ui/Photo';
 import { Stars } from '@/components/ui/Stars';
 import { Verified } from '@/components/ui/Tags';
-import { similarVenues } from '@/data/venues';
+import { similarVenues as similarVenuesFallback } from '@/data/venues';
+import { getVenue, searchVenues, toSimilarCard } from '@/api/venues';
+import { getSavedVenues, toggleSavedVenue } from '@/api/players';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './VenuePage.css';
+
+const VenueMap = lazy(() => import('@/components/common/VenueMap'));
 
 const svgProps = {
   fill: 'none',
@@ -34,12 +39,45 @@ const DATES = [
   { id: '10', weekday: 'Sun', day: '10' },
 ];
 
+/** Next 7 real calendar days — availability per day still needs the booking service. */
+function nextSevenDays(from) {
+  return Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date(from);
+    date.setDate(date.getDate() + offset);
+    return {
+      id: date.toISOString().slice(0, 10),
+      weekday: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+      day: String(date.getDate()),
+    };
+  });
+}
+
 const SLOTS = [
-  { id: 'slot-1600', time: '4:00 PM', price: 'Booked', status: 'booked' },
-  { id: 'slot-1740', time: '5:40 PM', price: 'Booked', status: 'booked' },
-  { id: 'slot-1930', time: '7:30 PM', price: 'ends 9:00 · ৳2,500', status: 'available' },
-  { id: 'slot-2110', time: '9:10 PM', price: 'Held', status: 'held' },
-  { id: 'slot-2250', time: '10:50 PM', price: 'ends 12:20 · ৳2,000', status: 'available' },
+  { id: 'slot-1600', time: '4:00 PM', price: <span className="slot-meta">Booked</span>, status: 'booked' },
+  { id: 'slot-1740', time: '5:40 PM', price: <span className="slot-meta">Booked</span>, status: 'booked' },
+  {
+    id: 'slot-1930',
+    time: '7:30 PM',
+    price: (
+      <>
+        <span className="slot-price">৳2,500</span>
+        <span className="slot-meta">ends 9:00</span>
+      </>
+    ),
+    status: 'available',
+  },
+  { id: 'slot-2110', time: '9:10 PM', price: <span className="slot-meta">Held</span>, status: 'held' },
+  {
+    id: 'slot-2250',
+    time: '10:50 PM',
+    price: (
+      <>
+        <span className="slot-price">৳2,000</span>
+        <span className="slot-meta">ends 12:20</span>
+      </>
+    ),
+    status: 'available',
+  },
 ];
 
 const GALLERY = [
@@ -56,67 +94,112 @@ const SPECS = [
   { label: 'Booking', value: 'Instant Confirmation', sub: 'No approval needed' },
 ];
 
+const formatLabel = (format) => (format ? format.replaceAll('_', '-') : null);
+
+/** Spec cells built from the venue's first active pitch + opening hours. */
+function specsOf(venue) {
+  if (!venue) return SPECS;
+  const pitch = venue.pitches?.[0];
+  const cells = [];
+  if (pitch?.surfaceType) {
+    cells.push({
+      label: 'Surface',
+      value: pitch.surfaceType,
+      sub: pitch.indoor ? 'Indoor facility' : 'Open-air pitch',
+    });
+  }
+  if (pitch?.lighting) {
+    cells.push({ label: 'Lighting', value: pitch.lighting, sub: 'Full night coverage' });
+  }
+  if (pitch?.format) {
+    cells.push({
+      label: 'Format',
+      value: formatLabel(pitch.format),
+      sub: pitch.maxPlayers ? `Max ${pitch.maxPlayers} players` : null,
+    });
+  }
+  if (venue.openTime && venue.closeTime) {
+    cells.push({
+      label: 'Open hours',
+      value: `${formatTime(venue.openTime)} – ${formatTime(venue.closeTime)}`,
+      sub: venue.pitches?.length ? `${venue.pitches.length} pitch${venue.pitches.length > 1 ? 'es' : ''}` : null,
+    });
+  }
+  return cells.length ? cells : SPECS;
+}
+
+/** '18:00:00' -> '6:00 PM' */
+function formatTime(time) {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m ? `${hour}:${String(m).padStart(2, '0')} ${suffix}` : `${hour} ${suffix}`;
+}
+
+const bdt = (value) =>
+  value == null ? null : `৳${Math.round(Number(value)).toLocaleString('en-IN')}`;
+
+/** Backend amenity keys -> the labels rendered in the amenity grid. */
+const AMENITY_LABELS = {
+  floodlights: 'Floodlights for night play',
+  parking: 'On-site parking',
+  changing_room: 'Changing room & shower',
+  indoor: 'Indoor facility',
+  youth_friendly: 'Youth-friendly',
+  cafeteria: 'Cafeteria on site',
+};
+
 const amenSvg = { ...svgProps, width: 24, height: 24, viewBox: '0 0 24 24', strokeWidth: '1.8' };
 
-const AMENITIES = [
-  {
-    label: 'Free parking (12 spots)',
-    icon: (
-      <svg {...amenSvg}>
-        <rect x="1" y="3" width="15" height="13" rx="2" />
-        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-        <circle cx="5.5" cy="18.5" r="2.5" />
-        <circle cx="18.5" cy="18.5" r="2.5" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Changing room & shower',
-    icon: (
-      <svg {...amenSvg}>
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Drinking water',
-    icon: (
-      <svg {...amenSvg}>
-        <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
-        <path d="M12 6v6l4 2" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Bibs & balls provided',
-    icon: (
-      <svg {...amenSvg}>
-        <circle cx="12" cy="12" r="10" />
-        <line x1="8" y1="12" x2="16" y2="12" />
-        <line x1="12" y1="8" x2="12" y2="16" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Spectator seating',
-    icon: (
-      <svg {...amenSvg}>
-        <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
-        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Youth-friendly',
-    icon: (
-      <svg {...amenSvg}>
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-  },
-];
+/** Icon per backend amenity key; unknown keys fall back to the check glyph. */
+const AMENITY_ICONS = {
+  parking: (
+    <svg {...amenSvg}>
+      <rect x="1" y="3" width="15" height="13" rx="2" />
+      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="18.5" cy="18.5" r="2.5" />
+    </svg>
+  ),
+  changing_room: (
+    <svg {...amenSvg}>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    </svg>
+  ),
+  floodlights: (
+    <svg {...amenSvg}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  ),
+  cafeteria: (
+    <svg {...amenSvg}>
+      <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+      <line x1="6" y1="1" x2="6" y2="4" />
+      <line x1="10" y1="1" x2="10" y2="4" />
+      <line x1="14" y1="1" x2="14" y2="4" />
+    </svg>
+  ),
+  indoor: (
+    <svg {...amenSvg}>
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ),
+  youth_friendly: (
+    <svg {...amenSvg}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  default: (
+    <svg {...amenSvg}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+};
 
 const RULES = [
   'Turf shoes or mouldies only — no metal studs',
@@ -163,24 +246,136 @@ const REVIEW_FILTERS = [
 ];
 
 export default function VenuePage() {
+  const { venueId } = useParams();
   const { showToast } = useToast();
   const rules = useDisclosure(false);
-  const [dateId, setDateId] = useState('4');
+  // Captured once per mount so the strip doesn't shift while the page is open.
+  const [dates] = useState(() => nextSevenDays(new Date()));
+  const [dateId, setDateId] = useState(() => dates[0].id);
   const [slotId, setSlotId] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
 
+  // Live venue details by slug; static prototype copy remains as fallback.
+  const detail = useApi(() => getVenue(venueId), [venueId]);
+  const venue = detail.data;
+  const similarApi = useApi(
+    () => searchVenues({ size: 4, sort: 'rating' }).then((page) =>
+      page.items.filter((item) => item.slug !== venueId).slice(0, 3).map(toSimilarCard)),
+    [venueId],
+  );
+  const similarVenues = similarApi.data ?? similarVenuesFallback;
+
+  const name = venue?.name ?? 'Kick Off Arena';
+  const metaLine = venue ? `${venue.address}` : 'Road 27, Dhanmondi · 1.2 km';
+  const rating = venue ? String(venue.rating) : '4.8';
+  const reviewCount = venue ? venue.reviewCount : 214;
+
+  const specs = useMemo(() => specsOf(venue), [venue]);
+  const amenities = useMemo(
+    () =>
+      (venue?.amenities ?? []).map((key) => ({
+        key,
+        label: AMENITY_LABELS[key] ?? key.replaceAll('_', ' '),
+        icon: AMENITY_ICONS[key] ?? AMENITY_ICONS.default,
+      })),
+    [venue],
+  );
+
+  const pitch = venue?.pitches?.[0];
+  /** Cheapest active rule drives the headline "from" price. */
+  const cheapestRule = useMemo(() => {
+    const rules = venue?.pricing ?? [];
+    return rules.length
+      ? rules.reduce((min, rule) => (Number(rule.rate) < Number(min.rate) ? rule : min))
+      : null;
+  }, [venue]);
+  const offPeakRule = venue?.pricing?.find((rule) => rule.windowType === 'OFF_PEAK');
+  const headlinePrice = cheapestRule ? bdt(cheapestRule.rate) : '৳2,500';
+  const slotDuration = cheapestRule?.slotDurationMin ?? 90;
+  const pitchLine = pitch
+    ? [pitch.name, formatLabel(pitch.format), `${slotDuration}-min slots`].filter(Boolean).join(' · ')
+    : `Pitch 2 · 7-a-side · ${slotDuration}-min slots`;
+
+  const selectedDateLabel = useMemo(() => {
+    const picked = dates.find((date) => date.id === dateId) ?? dates[0];
+    return new Date(`${picked.id}T00:00:00`).toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  }, [dates, dateId]);
+
+  const mapMarker = useMemo(
+    () =>
+      venue?.lat != null && venue?.lng != null
+        ? [{ id: venue.slug, lat: Number(venue.lat), lng: Number(venue.lng), label: '⚽', title: venue.name }]
+        : [],
+    [venue],
+  );
+
+  const openDirections = () => {
+    if (venue?.lat != null && venue?.lng != null) {
+      window.open(
+        `https://www.openstreetmap.org/directions?to=${venue.lat}%2C${venue.lng}`,
+        '_blank',
+        'noopener',
+      );
+    } else {
+      showToast('Directions unavailable — venue location not loaded');
+    }
+  };
+
+  // Saved state for this venue's heart button.
+  const [isSaved, setIsSaved] = useState(false);
+  useEffect(() => {
+    getSavedVenues()
+      .then((items) => setIsSaved(items.some((item) => item.slug === venueId)))
+      .catch(() => {});
+  }, [venueId]);
+
+  const onToggleSave = async () => {
+    try {
+      const { saved } = await toggleSavedVenue(venueId);
+      setIsSaved(saved);
+      showToast(saved ? '❤️ Saved to favourites' : 'Removed from favourites');
+    } catch {
+      showToast('Could not update saved venues — try again');
+    }
+  };
+
   const selectedSlot = SLOTS.find((slot) => slot.id === slotId);
+
+  if (detail.error && detail.error.status === 404) {
+    return (
+      <>
+        <PageTitle title="Venue not found" />
+        <main className="wrap" style={{ paddingTop: 40 }} id="main">
+          <h1 style={{ fontSize: 24 }}>Venue not found</h1>
+          <p className="subtle">This venue may have been removed or the link is incorrect.</p>
+          <Link to={paths.player.explore}>← Back to Explore</Link>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
-      <PageTitle title="Kick Off Arena" />
+      <PageTitle title={name} />
       <main className="wrap" style={{ paddingTop: 20 }} id="main">
+        {detail.error && detail.error.status !== 404 ? (
+          <p className="subtle" role="status" style={{ marginBottom: 10 }}>
+            Live venue data unavailable — showing sample content.{' '}
+            <button type="button" onClick={detail.reload} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}>
+              Retry
+            </button>
+          </p>
+        ) : null}
         <nav className="breadcrumbs" aria-label="Breadcrumb">
           <Link to={paths.player.explore}>Explore</Link>
           <span className="sep">/</span>
-          <Link to={paths.player.explore}>Dhanmondi</Link>
+          <Link to={paths.player.explore}>{venue?.area ?? 'Dhanmondi'}</Link>
           <span className="sep">/</span>
-          <span>Kick Off Arena</span>
+          <span>{name}</span>
         </nav>
 
         {/* ── Gallery ── */}
@@ -197,8 +392,8 @@ export default function VenuePage() {
         <div className="between" style={{ marginTop: 28, flexWrap: 'wrap', gap: 14 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-              <h1 style={{ fontSize: 30, margin: 0 }}>Kick Off Arena</h1>
-              <Verified />
+              <h1 style={{ fontSize: 30, margin: 0 }}>{name}</h1>
+              {venue == null || venue.verified ? <Verified /> : null}
             </div>
             <div
               style={{
@@ -215,14 +410,18 @@ export default function VenuePage() {
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                Road 27, Dhanmondi · 1.2 km
+                {metaLine}
               </span>
-              <span className="rating">4.8</span>
-              <span>(214 reviews)</span>
+              <span className="rating">{rating}</span>
+              <span>({reviewCount} reviews)</span>
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
-            <IconButton label="Save venue" onClick={() => showToast('Saved to favourites')}>
+            <IconButton
+              label={isSaved ? 'Remove from saved' : 'Save venue'}
+              onClick={onToggleSave}
+              style={isSaved ? { color: 'var(--danger)' } : undefined}
+            >
               <svg width="17" height="17" viewBox="0 0 24 24" strokeWidth="2" {...svgProps}>
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
@@ -243,27 +442,25 @@ export default function VenuePage() {
         </div>
 
         {/* ── Detail grid ── */}
-        <div className="detail-grid" style={{ marginTop: 36 }}>
+        <div className="detail-grid" style={{ marginTop: 28 }}>
           <div>
             {/* Live availability */}
             <section className="vsection" id="slots">
-              <div className="between" style={{ marginBottom: 22 }}>
+              <div className="between" style={{ marginBottom: 18 }}>
                 <h2 style={{ fontSize: 20, margin: 0 }}>Live availability</h2>
-                <Badge tone="green">Real-time</Badge>
+                <Badge tone="amber" dot={false}>Sample schedule</Badge>
               </div>
 
               <DateStrip
-                dates={DATES}
+                dates={dates}
                 selectedId={dateId}
                 onSelect={(date) => setDateId(date.id)}
                 label="Pick a date"
-                className="datestrip"
-                style={{ marginBottom: 22 }}
               />
 
-              <div className="between" style={{ marginBottom: 14 }}>
+              <div className="between" style={{ marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>
-                  Pitch 2 · 7-a-side · 90-min slots
+                  {pitchLine}
                 </span>
                 <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
                   10-min buffer between slots
@@ -277,8 +474,10 @@ export default function VenuePage() {
                 label="Available time slots"
               />
 
-              <p style={{ margin: '14px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
-                Off-peak price applies after 10:30 PM. Arrive 10 min early.
+              <p style={{ margin: '16px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+                {offPeakRule
+                  ? `Off-peak price applies ${formatTime(offPeakRule.windowStart)}\u2013${formatTime(offPeakRule.windowEnd)}. Arrive 10 min early.`
+                  : 'Arrive 10 min early.'}
               </p>
             </section>
 
@@ -290,23 +489,29 @@ export default function VenuePage() {
               </p>
 
               <div className="spec-grid">
-                {SPECS.map((spec) => (
+                {specs.map((spec) => (
                   <div key={spec.label} className="spec-cell">
                     <div className="spec-label">{spec.label}</div>
                     <div className="spec-value">{spec.value}</div>
-                    <div className="spec-sub">{spec.sub}</div>
+                    {spec.sub ? <div className="spec-sub">{spec.sub}</div> : null}
                   </div>
                 ))}
               </div>
 
-              <div className="amen-grid">
-                {AMENITIES.map((amenity) => (
-                  <div key={amenity.label} className="amen-item">
-                    {amenity.icon}
-                    <span>{amenity.label}</span>
-                  </div>
-                ))}
-              </div>
+              {amenities.length > 0 ? (
+                <div className="amen-grid">
+                  {amenities.map((amenity) => (
+                    <div key={amenity.key} className="amen-item">
+                      {amenity.icon}
+                      <span>{amenity.label}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 18 }}>
+                  {detail.loading ? 'Loading amenities…' : 'This venue hasn’t listed any amenities yet.'}
+                </p>
+              )}
             </section>
 
             {/* Rules & cancellation (collapsible) */}
@@ -362,9 +567,11 @@ export default function VenuePage() {
             <div className="between" style={{ marginBottom: 2 }}>
               <div>
                 <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)' }}>
-                  ৳2,500
+                  {headlinePrice}
                 </span>
-                <span style={{ fontSize: 13, color: 'var(--text-3)', marginLeft: 3 }}>/ 90 min</span>
+                <span style={{ fontSize: 13, color: 'var(--text-3)', marginLeft: 3 }}>
+                  / {slotDuration} min
+                </span>
               </div>
               <Badge tone="green">Instant</Badge>
             </div>
@@ -379,9 +586,9 @@ export default function VenuePage() {
               }}
             >
               <span className="rating" style={{ fontSize: 12.5 }}>
-                4.8
+                {rating}
               </span>
-              <span>· 214 reviews</span>
+              <span>· {reviewCount} reviews</span>
             </div>
 
             <hr />
@@ -389,7 +596,7 @@ export default function VenuePage() {
             <div style={{ marginBottom: 12 }}>
               <div className="brow">
                 <span className="brow-label">Date</span>
-                <span className="brow-value">Mon 4 Aug</span>
+                <span className="brow-value">{selectedDateLabel}</span>
               </div>
               <div className="brow">
                 <span className="brow-label">Slot</span>
@@ -402,7 +609,9 @@ export default function VenuePage() {
               </div>
               <div className="brow">
                 <span className="brow-label">Pitch</span>
-                <span className="brow-value">Pitch 2 · 7-a-side</span>
+                <span className="brow-value">
+                  {pitch ? [pitch.name, formatLabel(pitch.format)].filter(Boolean).join(' · ') : '—'}
+                </span>
               </div>
               <div className="brow">
                 <span className="brow-label">Arrive</span>
@@ -436,26 +645,34 @@ export default function VenuePage() {
         <section className="vsection">
           <h2 style={{ fontSize: 20, margin: '0 0 4px' }}>Location</h2>
           <p style={{ fontSize: 14, color: 'var(--text-3)', margin: 0 }}>
-            House 12, Road 27, Dhanmondi, Dhaka
+            {venue ? `${venue.address}, ${venue.area}` : 'House 12, Road 27, Dhanmondi, Dhaka'}
           </p>
 
-          <div className="map-ph" role="img" aria-label="Map showing Kick Off Arena at Road 27 Dhanmondi">
-            <div className="map-ph-pin">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--brand)" aria-hidden="true">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-              </svg>
-              <span>Road 27, Dhanmondi</span>
+          {mapMarker.length > 0 ? (
+            <div className="map-ph" style={{ padding: 0 }}>
+              <Suspense fallback={<div className="map-ph" aria-hidden="true" style={{ margin: 0 }} />}>
+                <VenueMap markers={mapMarker} zoom={15} style={{ borderRadius: 16 }} />
+              </Suspense>
             </div>
-          </div>
+          ) : (
+            <div className="map-ph" role="img" aria-label={`Map showing ${name}`}>
+              <div className="map-ph-pin">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--brand)" aria-hidden="true">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                <span>{metaLine}</span>
+              </div>
+            </div>
+          )}
 
           <div className="row" style={{ marginTop: 14, gap: 12 }}>
-            <Button size="sm" onClick={() => showToast('Opening in Maps')}>
+            <Button size="sm" onClick={openDirections}>
               <svg width="14" height="14" viewBox="0 0 24 24" strokeWidth="2.5" {...svgProps}>
                 <polygon points="3 11 22 2 13 21 11 13 3 11" />
               </svg>
               Get directions
             </Button>
-            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>~12 min from Dhanmondi 32</span>
+            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{venue?.area ?? ''}</span>
           </div>
         </section>
 
@@ -465,9 +682,9 @@ export default function VenuePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <h2 style={{ fontSize: 20, margin: 0 }}>Reviews</h2>
               <span className="rating" style={{ fontSize: 16 }}>
-                4.8
+                {rating}
               </span>
-              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>(214)</span>
+              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>({reviewCount})</span>
             </div>
             <Segmented
               items={REVIEW_FILTERS}
@@ -537,7 +754,7 @@ export default function VenuePage() {
           </div>
 
           <Button size="sm" style={{ marginTop: 12 }} onClick={() => showToast('Loading all reviews…')}>
-            Show all 214 reviews
+            Show all {reviewCount} reviews
           </Button>
         </section>
 
@@ -574,12 +791,12 @@ export default function VenuePage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
               <span style={{ fontSize: 21, fontWeight: 800, fontFamily: 'var(--font-display)' }}>
-                ৳2,500
+                {headlinePrice}
               </span>
-              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>/ 90 min</span>
+              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>/ {slotDuration} min</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>
-              Mon 4 Aug · <span>{selectedSlot ? selectedSlot.time : 'select a slot'}</span>
+              {selectedDateLabel} · <span>{selectedSlot ? selectedSlot.time : 'select a slot'}</span>
             </div>
           </div>
           <Button variant="primary" to={paths.player.checkout}>
