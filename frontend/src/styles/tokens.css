@@ -1,0 +1,91 @@
+/* ============================================================
+   TurfChai Design System â€” v1.0
+   Refined glassmorphism Â· Light + Dark Â· WCAG AA
+   ============================================================ */
+
+/* ---------- Tokens ---------- */
+:root {
+    /* Brand */
+    --brand: #0E7A4A;
+    /* deep turf green */
+    --brand-600: #0C6A40;
+    --brand-700: #095434;
+    --brand-soft: #E3F4EB;
+    --mint: #59D999;
+    --lime: #B5E655;
+
+    /* Semantic */
+    --info: #2660D8;
+    --info-soft: #E8EFFD;
+    --warn: #9A6A0A;
+    --warn-soft: #FCF1DC;
+    --danger: #C93B3B;
+    --danger-soft: #FBE9E9;
+
+    /* Neutrals */
+    --bg: #F7F9F8;
+    --surface: #FFFFFF;
+    --surface-2: #F0F4F2;
+    --surface-3: #E7EDEA;
+    --text: #122019;
+    --text-2: #4C5F55;
+    --text-3: #71847A;
+    --border: #E4EAE6;
+    --border-strong: #CFDAD4;
+
+    /* Glass */
+    --glass-bg: rgba(255, 255, 255, .68);
+    --glass-bg-strong: rgba(255, 255, 255, .86);
+    --glass-border: rgba(18, 32, 25, .08);
+    --glass-shadow: 0 8px 28px rgba(10, 30, 20, .08);
+
+    /* Shape & motion */
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 20px;
+    --r-hero: 24px;
+    --shadow-sm: 0 1px 2px rgba(10, 30, 20, .05);
+    --shadow-md: 0 10px 28px rgba(10, 30, 20, .08);
+    --dur: 180ms;
+    --dur-slow: 280ms;
+    --ease: cubic-bezier(.4, 0, .2, 1);
+    --ease-out: cubic-bezier(.22, 1, .36, 1);
+
+    /* Type */
+    --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Manrope', system-ui, sans-serif;
+}
+
+[data-theme="dark"] {
+    --brand: #22C55E;
+    --brand-600: #4ADE80;
+    --brand-700: #16A34A;
+    --brand-soft: rgba(34, 197, 94, .13);
+    --mint: #4ADE80;
+    --lime: #A3E635;
+
+    --info: #60A5FA;
+    --info-soft: rgba(96, 165, 250, .14);
+    --warn: #FBBF24;
+    --warn-soft: rgba(251, 191, 36, .13);
+    --danger: #F87171;
+    --danger-soft: rgba(248, 113, 113, .14);
+
+    --bg: #0A0F0B;
+    --surface: #10170F;
+    --surface-2: #151F16;
+    --surface-3: #1C291E;
+    --text: #F2F6F2;
+    --text-2: #A6B8AA;
+    --text-3: #7C8F80;
+    --border: #1D2A1F;
+    --border-strong: #2C3C2F;
+
+    --glass-bg: rgba(12, 18, 13, .62);
+    --glass-bg-strong: rgba(12, 18, 13, .88);
+    --glass-border: rgba(255, 255, 255, .08);
+    --glass-shadow: 0 8px 28px rgba(0, 0, 0, .45);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, .35);
+    --shadow-md: 0 8px 22px rgba(0, 0, 0, .45);
+}
