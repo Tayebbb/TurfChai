@@ -212,5 +212,83 @@
   .admin-page-wrap .kpi-card .value{font-size:30px!important}
 }
 
+/* ---------- Admin micro-interactions: header + KPI polish ---------- */
+.admin-topbar{transition:box-shadow var(--dur) var(--ease)}
+.admin-topbar:hover{box-shadow:0 4px 26px rgba(0,0,0,.3),0 0 0 1px rgba(34,197,94,.16)}
+[data-theme="light"] .admin-topbar:hover{box-shadow:0 4px 26px rgba(10,30,20,.08),0 0 0 1px rgba(34,197,94,.2)}
+
+.admin-topbar .brand{
+  transition:transform 220ms var(--ease),filter 220ms var(--ease);
+}
+.admin-topbar .brand:hover{
+  transform:translateY(-1px);
+  filter:drop-shadow(0 4px 10px rgba(34,197,94,.45));
+}
+
+.admin-topbar .navlinks a{
+  position:relative;overflow:hidden;
+  transition:color 200ms var(--ease),background 200ms var(--ease),transform 200ms var(--ease),box-shadow 200ms var(--ease);
+}
+.admin-topbar .navlinks a::after{
+  content:'';position:absolute;top:0;bottom:0;left:-65%;width:40%;
+  background:linear-gradient(105deg,transparent 0%,rgba(255,255,255,.4) 50%,transparent 100%);
+  transform:skewX(-18deg);opacity:0;pointer-events:none;
+}
+.admin-topbar .navlinks a:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(34,197,94,.28)}
+.admin-topbar .navlinks a:hover::after{animation:adminSheen 620ms ease}
+[data-theme="light"] .admin-topbar .navlinks a:hover{background:rgba(34,197,94,.1)}
+[data-theme="light"] .admin-topbar .navlinks a:hover::after{
+  background:linear-gradient(105deg,transparent 0%,rgba(255,255,255,.95) 50%,transparent 100%);
+}
+.admin-topbar .navlinks a.active{animation:adminActivePulse 2.6s ease-in-out infinite}
+[data-theme="light"] .admin-topbar .navlinks a.active{animation:adminActivePulseLight 2.6s ease-in-out infinite}
+@keyframes adminSheen{
+  from{left:-65%;opacity:0}
+  20%{opacity:1}
+  to{left:125%;opacity:0}
+}
+@keyframes adminActivePulse{
+  0%,100%{box-shadow:0 2px 10px rgba(34,197,94,.25)}
+  50%{box-shadow:0 4px 20px rgba(34,197,94,.5)}
+}
+@keyframes adminActivePulseLight{
+  0%,100%{box-shadow:0 2px 10px rgba(34,197,94,.2)}
+  50%{box-shadow:0 4px 18px rgba(34,197,94,.4)}
+}
+
+/* KPI metric cards: staggered entrance + professional hover */
+.admin-page-wrap .kpi-card{animation:adminKpiIn 520ms var(--ease) backwards}
+.admin-page-wrap .kpi-card:nth-child(1){animation-delay:40ms}
+.admin-page-wrap .kpi-card:nth-child(2){animation-delay:120ms}
+.admin-page-wrap .kpi-card:nth-child(3){animation-delay:200ms}
+.admin-page-wrap .kpi-card:nth-child(4){animation-delay:280ms}
+@keyframes adminKpiIn{
+  from{opacity:0;transform:translateY(16px) scale(.98)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.admin-page-wrap .kpi-card::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%);
+  transform:translateX(-130%);opacity:0;
+}
+.admin-page-wrap .kpi-card:hover::after{animation:adminCardSheen 850ms var(--ease)}
+@keyframes adminCardSheen{
+  from{transform:translateX(-130%);opacity:0}
+  25%{opacity:1}
+  to{transform:translateX(130%);opacity:0}
+}
+.admin-page-wrap .kpi-card .between svg{transition:transform 240ms var(--ease)}
+.admin-page-wrap .kpi-card:hover .between svg{transform:rotate(-10deg) scale(1.18)}
+.admin-page-wrap .kpi-card .value{
+  transition:transform 240ms var(--ease),text-shadow 240ms var(--ease);
+}
+.admin-page-wrap .kpi-card:hover .value{
+  transform:translateY(-1px) scale(1.04);
+  text-shadow:0 0 24px currentColor;
+}
+.admin-page-wrap .kpi-card .btn-link{transition:transform 200ms var(--ease),box-shadow 200ms var(--ease)}
+.admin-page-wrap .kpi-card:hover .btn-link{transform:translateX(3px);box-shadow:0 8px 18px rgba(0,0,0,.22)}
+[data-theme="light"] .admin-page-wrap .kpi-card:hover .btn-link{box-shadow:0 8px 18px rgba(10,30,20,.12)}
+
 /* ---------- Global ambient orbs injected by turfchai.js ---------- */
 
