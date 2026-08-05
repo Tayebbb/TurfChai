@@ -1,10 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0A0F0B" />
+    <meta
+      name="description"
+      content="TurfChai — book verified turfs, cricket grounds and badminton courts across Dhaka in seconds."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2.5C9.6 2.5 4.5 7.6 4.5 14c0 8.2 11.5 15.5 11.5 15.5S27.5 22.2 27.5 14C27.5 7.6 22.4 2.5 16 2.5z' fill='%2312A150'/%3E%3Crect x='10' y='8.5' width='12' height='11' rx='2' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cline x1='16' y1='8.5' x2='16' y2='19.5' stroke='%23fff' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='14' r='2.2' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>TurfChai — Book verified turfs in seconds</title>
+    <script>
+      // Applied before first paint so the saved palette never flashes.
+      try {
+        var stored = localStorage.getItem('tc-theme');
+        if (stored === 'light' || stored === 'dark') {
+          document.documentElement.setAttribute('data-theme', stored);
+        }
+      } catch (e) {
+        /* private mode — keep the default dark palette */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
