@@ -3,14 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/buttons/Button';
 import { Card } from '@/components/cards/Card';
 import { PageTitle } from '@/components/common/PageTitle';
-import { Field, Input, InputRow } from '@/components/forms/Field';
-import { OtpInput } from '@/components/forms/OtpInput';
-import { Overlay } from '@/components/modals/Overlay';
+import { Field, Input } from '@/components/forms/Field';
 import { Tabs, TabPanel } from '@/components/navigation/Tabs';
-import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
-import { login, register, requestOtp, verifyOtp } from '@/api/auth';
+import { login, register } from '@/api/auth';
 import { setSession } from '@/api/client';
 
 const ROLE_TO_API = { player: 'PLAYER', owner: 'OWNER', admin: 'ADMIN' };
@@ -77,28 +74,20 @@ const GOOGLE_ICON = (
 export default function AuthPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const otpModal = useDisclosure();
 
   const [role, setRole] = useState('player');
   const [tab, setTab] = useState('signin');
-  const [authMethod, setAuthMethod] = useState('phone'); // 'phone' | 'email'
-  const [code, setCode] = useState('4810');
 
   // Form states
-  const [signinDial, setSigninDial] = useState('+880');
-  const [signinPhone, setSigninPhone] = useState('');
   const [signinEmail, setSigninEmail] = useState('');
   const [signinPassword, setSigninPassword] = useState('');
 
   const [fullName, setFullName] = useState('');
-  const [signupDial, setSignupDial] = useState('+880');
-  const [signupPhone, setSignupPhone] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [venueName, setVenueName] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingOtp, setPendingOtp] = useState(null); // { phone, fullName } for phone signup
 
   const copy = ROLE_COPY[role];
   const activeRoleConfig = ROLES.find((r) => r.id === role);
@@ -110,8 +99,6 @@ export default function AuthPage() {
     return tab === 'signup' ? paths.player.onboarding : paths.player.home;
   };
 
-  const fullPhone = (dial, number) => `${dial || ''}${number || ''}`.replace(/[^\d+]/g, '');
-
   const handleApiError = (error) => {
     showToast(error?.message || 'Something went wrong. Please try again.', { duration: 5000 });
     setIsSubmitting(false);
@@ -120,21 +107,6 @@ export default function AuthPage() {
   const handleQuickSubmit = async (e) => {
     e?.preventDefault();
     setIsSubmitting(true);
-
-    if (authMethod === 'phone') {
-      const phone = fullPhone(signinDial, signinPhone);
-      try {
-        await requestOtp(phone);
-        setPendingOtp({ phone });
-        otpModal.open();
-        showToast(`Verification code sent to ${phone.slice(0, -4)}•••• 📱`);
-      } catch (error) {
-        handleApiError(error);
-        return;
-      }
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
       const payload = { email: signinEmail, password: signinPassword };
@@ -156,7 +128,7 @@ export default function AuthPage() {
         fullName,
         email: signupEmail,
         password: signupPassword,
-        phone: fullPhone(signupDial, signupPhone) || `+880${Date.now() % 1000000000}`,
+        phone: `+880${Date.now() % 1000000000}`,
         role: ROLE_TO_API[role] ?? 'PLAYER',
       });
       setSession(response);
@@ -164,25 +136,6 @@ export default function AuthPage() {
       navigate(getDestination());
     } catch (error) {
       handleApiError(error);
-    }
-  };
-
-  const handleOtpVerify = async () => {
-    setIsSubmitting(true);
-    try {
-      const response = await verifyOtp({
-        phone: pendingOtp?.phone,
-        code,
-        fullName: pendingOtp?.fullName,
-        role: pendingOtp?.role,
-      });
-      setSession(response);
-      otpModal.close();
-      showToast(`Verification successful! Welcome to TurfChai ✓`);
-      navigate(getDestination());
-    } catch (error) {
-      showToast(error?.message || 'Invalid code. Please try again.', { duration: 5000 });
-      setIsSubmitting(false);
     }
   };
 
@@ -263,28 +216,6 @@ export default function AuthPage() {
             <Tabs items={AUTH_TABS} value={tab} onChange={setTab} label="Authentication Mode" />
           </div>
 
-          {/* Auth Method Selector (Phone vs Email) — Sign In only */}
-          {tab === 'signin' && (
-            <div className="row" style={{ gap: 8, marginBottom: 18 }}>
-              <button
-                type="button"
-                className={`btn btn-sm ${authMethod === 'phone' ? 'btn-primary' : 'btn-tertiary'}`}
-                style={{ flex: 1, fontSize: 13 }}
-                onClick={() => setAuthMethod('phone')}
-              >
-                📱 Mobile OTP
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${authMethod === 'email' ? 'btn-primary' : 'btn-tertiary'}`}
-                style={{ flex: 1, fontSize: 13 }}
-                onClick={() => setAuthMethod('email')}
-              >
-                ✉️ Email &amp; Password
-              </button>
-            </div>
-          )}
-
           {/* SIGN IN TAB */}
           <TabPanel id="signin" value={tab}>
             <form onSubmit={handleQuickSubmit}>
@@ -293,53 +224,27 @@ export default function AuthPage() {
                 {copy.siSub}
               </p>
 
-              {authMethod === 'phone' ? (
-                <Field label="Phone number" htmlFor="ph">
-                  <InputRow>
-                    <Input
-                      value={signinDial}
-                      onChange={(e) => setSigninDial(e.target.value)}
-                      style={{ maxWidth: 80 }}
-                      aria-label="Country code"
-                    />
-                    <Input
-                      id="ph"
-                      placeholder="1712 345 678"
-                      inputMode="tel"
-                      value={signinPhone}
-                      onChange={(e) => setSigninPhone(e.target.value)}
-                    />
-                  </InputRow>
-                </Field>
-              ) : (
-                <>
-                  <Field label="Email Address" htmlFor="em">
-                    <Input
-                      id="em"
-                      type="email"
-                      placeholder={role === 'admin' ? 'admin@turfchai.com' : 'user@example.com'}
-                      value={signinEmail}
-                      onChange={(e) => setSigninEmail(e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Password" htmlFor="pw">
-                    <Input
-                      id="pw"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signinPassword}
-                      onChange={(e) => setSigninPassword(e.target.value)}
-                    />
-                  </Field>
-                </>
-              )}
+              <Field label="Email Address" htmlFor="em">
+                <Input
+                  id="em"
+                  type="email"
+                  placeholder={role === 'admin' ? 'admin@turfchai.com' : 'user@example.com'}
+                  value={signinEmail}
+                  onChange={(e) => setSigninEmail(e.target.value)}
+                />
+              </Field>
+              <Field label="Password" htmlFor="pw">
+                <Input
+                  id="pw"
+                  type="password"
+                  placeholder="••••••••"
+                  value={signinPassword}
+                  onChange={(e) => setSigninPassword(e.target.value)}
+                />
+              </Field>
 
               <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
-                {isSubmitting
-                  ? 'Working…'
-                  : authMethod === 'phone'
-                    ? 'Send Verification Code 📱'
-                    : `Sign In as ${activeRoleConfig?.label} →`}
+                {isSubmitting ? 'Working…' : `Sign In as ${activeRoleConfig?.label} →`}
               </Button>
             </form>
 
@@ -466,40 +371,6 @@ export default function AuthPage() {
           </ul>
         </div>
       </div>
-
-      {/* OTP MODAL */}
-      <Overlay isOpen={otpModal.isOpen} onClose={otpModal.close} title="Enter Verification Code" hideHeader className="center">
-        <h3>Enter 4-Digit Code</h3>
-        <p className="subtle small">
-          Sent by SMS to {pendingOtp?.phone ? `${pendingOtp.phone.slice(0, -4)} •••` : 'your phone'}
-        </p>
-
-        <div style={{ margin: '20px 0' }}>
-          <OtpInput value={code} onChange={setCode} />
-        </div>
-
-        <Button variant="primary" block onClick={handleOtpVerify} disabled={isSubmitting}>
-          {isSubmitting ? 'Verifying…' : 'Verify Code & Log In'}
-        </Button>
-
-        <p className="subtle tiny" style={{ marginTop: 14 }}>
-          Didn't get it?{' '}
-          <a
-            href="#resend"
-            onClick={(e) => {
-              e.preventDefault();
-              showToast('New verification code sent 📱');
-            }}
-          >
-            Resend Code
-          </a>{' '}
-          · <span className="num font-semibold">0:45</span>
-        </p>
-
-        <Button variant="tertiary" block onClick={otpModal.close} style={{ marginTop: 8 }}>
-          Cancel
-        </Button>
-      </Overlay>
     </>
   );
 }
