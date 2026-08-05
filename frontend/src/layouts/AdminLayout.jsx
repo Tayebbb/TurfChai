@@ -20,7 +20,7 @@ export function AdminLayout() {
 
   return (
     <>
-      <Topbar brand={<Brand to={paths.admin.dashboard} />} links={ADMIN_NAV_LINKS}>
+      <Topbar className="admin-topbar" brand={<Brand to={paths.admin.dashboard} />} links={ADMIN_NAV_LINKS}>
         <IconButton label="View alerts" notify onClick={alerts.open}>
           <Icon name="bell" />
         </IconButton>
