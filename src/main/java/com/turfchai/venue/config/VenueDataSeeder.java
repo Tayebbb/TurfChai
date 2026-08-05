@@ -24,12 +24,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Dev seed matching the frontend prototype's Dhaka sample venues.
- * Runs only when the venues table is empty; production data comes from
- * owner onboarding + Flyway seeds.
+ * Test seed matching the sample venues (test profile only).
  */
 @Configuration
-@Profile("dev")
+@Profile("test")
 public class VenueDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(VenueDataSeeder.class);
@@ -112,7 +110,6 @@ public class VenueDataSeeder {
                 SportPricingRule rule = new SportPricingRule();
                 rule.setSport(row.sportList().get(0));
                 rule.setWindowType(window.getKey());
-                // off-peak is 20% cheaper than the listed (peak) price
                 BigDecimal rate = BigDecimal.valueOf(
                         "OFF_PEAK".equals(window.getKey()) ? Math.round(row.price() * 0.8) : row.price());
                 rule.setRate(rate);
@@ -123,7 +120,7 @@ public class VenueDataSeeder {
             }
             venues.save(venue);
         }
-        log.info("Seeded {} demo venues", rows.size());
+        log.info("Seeded {} test venues", rows.size());
     }
 
     private static Sport sport(SportRepository sports, String name, String slug) {

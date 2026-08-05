@@ -29,37 +29,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Seeds the "Ramadan Cup 2027" demo tournament matching the host-side
- * prototype: 4 pitches at Mirpur Sports City, 13 registered teams,
- * 13 reserved slots across the day, and a generated R16 bracket.
+ * Seeds test tournament data (test profile only).
  */
 @Configuration
-@Profile("dev")
+@Profile("test")
 public class TournamentDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(TournamentDataSeeder.class);
 
-    /** Code the frontend prototype hardcodes. */
     public static final String DEMO_CODE = "TR-CUP-0091";
 
     @Bean
     @Order(3)   // after venue (1) and player (2) seeders
     CommandLineRunner seedDemoTournament(TournamentRepository tournaments,
-                                         TournamentTeamRepository teams,
-                                         TournamentPitchReservationRepository reservations,
-                                         VenueRepository venues,
-                                         PitchRepository pitches,
-                                         UserRepository users,
-                                         TournamentService tournamentService,
-                                         org.springframework.transaction.support.TransactionTemplate tx) {
+                                          TournamentTeamRepository teams,
+                                          TournamentPitchReservationRepository reservations,
+                                          VenueRepository venues,
+                                          PitchRepository pitches,
+                                          UserRepository users,
+                                          TournamentService tournamentService,
+                                          org.springframework.transaction.support.TransactionTemplate tx) {
         return args -> {
             if (tournaments.existsByCode(DEMO_CODE)) {
                 return;
             }
             tx.executeWithoutResult(status ->
                     seed(tournaments, teams, reservations, venues, pitches, users));
-            // seed() skips quietly when demo prerequisites are missing — only
-            // generate the bracket if the tournament actually exists.
             if (tournaments.existsByCode(DEMO_CODE)) {
                 tournamentService.generateFixtures(DEMO_CODE);
                 log.info("Seeded demo tournament {}", DEMO_CODE);
@@ -80,7 +75,6 @@ public class TournamentDataSeeder {
             return;
         }
 
-        // The prototype's multi-pitch grid: Pitch A-C are 7-a-side, D is 9-a-side.
         List<Pitch> tournamentPitches = new ArrayList<>();
         String[][] specs = {{"Pitch A", "7_a_side"}, {"Pitch B", "7_a_side"},
                 {"Pitch C", "7_a_side"}, {"Pitch D", "9_a_side"}};
@@ -127,10 +121,7 @@ public class TournamentDataSeeder {
             teams.save(team);
         }
 
-        // Reserved slots (mirrors the prototype grid; C@10:00 and B@14:00 are
-        // taken by other bookings, so they are deliberately not reserved).
         int[][] slotMatrix = {
-                // hour, pitchA..D reserved?
                 {8, 1, 1, 0, 1},
                 {10, 1, 1, 0, 1},
                 {12, 1, 1, 0, 1},
