@@ -20,7 +20,7 @@ public class AiProperties {
     private static Endpoint defaultOpenRouter() {
         Endpoint e = new Endpoint();
         e.setBaseUrl("https://openrouter.ai/api/v1");
-        e.setModel("google/gemma-4-31b-it:free");
+        e.setModel("inclusionai/ling-3.0-flash:free");
         e.setLatencyRouting(true);
         return e;
     }
