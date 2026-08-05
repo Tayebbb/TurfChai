@@ -1,25 +1,24 @@
-# Multi-stage Dockerfile for Spring Boot (TurfChai Backend)
-
-# Stage 1: Build stage
-FROM maven:3.9.6-eclipse-temurin-21 AS build
+# Stage 1: Build application using Maven and Java 21
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
-# Copy pom.xml and source code
+# Copy Maven POM and source files
 COPY pom.xml .
 COPY src ./src
 
-# Build production jar skipping tests
+# Package application (skip tests during Docker build)
 RUN mvn clean package -DskipTests
 
-# Stage 2: Runtime stage
+# Stage 2: Runtime environment using Java 21 JRE
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Expose server port
+# Render dynamically sets PORT at runtime; default to 8080
+ENV PORT=8080
 EXPOSE 8080
 
-# Copy built jar from build stage
-COPY --from=build /app/target/turfchai-0.0.1-SNAPSHOT.jar app.jar
+# Copy built Spring Boot executable JAR from builder stage
+COPY --from=builder /app/target/turfchai-0.0.1-SNAPSHOT.jar app.jar
 
-# Run application
+# Run the Spring Boot application
 ENTRYPOINT ["java", "-jar", "app.jar"]
