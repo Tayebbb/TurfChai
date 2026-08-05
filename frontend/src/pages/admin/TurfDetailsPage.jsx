@@ -147,6 +147,7 @@ export default function TurfDetailsPage() {
 
       {/* Row 1: KPI Cards + Interactive Analytics Chart */}
       <div
+        className="admin-stack-mobile"
         style={{
           display: 'grid',
           gridTemplateColumns: '320px 1fr',

@@ -107,6 +107,7 @@ export default function RequestReviewPage() {
       </div>
 
       <div
+        className="admin-stack-mobile"
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 340px',
