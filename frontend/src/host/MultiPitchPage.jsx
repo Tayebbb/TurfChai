@@ -47,9 +47,7 @@ export default function MultiPitchPage() {
   );
 
   const ready = Boolean(live && venue.data);
-  const pitches = ready
-    ? venue.data.pitches.filter((pitch) => pitch.name !== 'Pitch 1')
-    : [];
+  const pitches = ready ? venue.data.pitches : [];
   const windows = ready ? buildWindows(live.windowStart, live.windowEnd) : [];
 
   const reservedAt = (pitchId, start) =>
@@ -57,17 +55,10 @@ export default function MultiPitchPage() {
       (r) => r.pitchId === pitchId && r.startTime.startsWith(start),
     );
 
-  const slotPrice = (pitch) => (pitch.format === '9_a_side' ? 3600 : 3000);
-
   const addSlot = async (pitch, window) => {
     try {
       await reserveSlots(DEMO_TOURNAMENT_CODE, [
-        {
-          pitchId: pitch.id,
-          startTime: window.start,
-          endTime: window.end,
-          price: slotPrice(pitch),
-        },
+        { pitchId: pitch.id, startTime: window.start, endTime: window.end },
       ]);
       showToast(`Added ${pitch.name} ${formatTime(window.start)} — conflict check passed ✓`);
       tournament.reload();
@@ -85,12 +76,7 @@ export default function MultiPitchPage() {
     pitches.forEach((pitch) => {
       windows.forEach((window) => {
         if (!reservedAt(pitch.id, window.start)) {
-          free.push({
-            pitchId: pitch.id,
-            startTime: window.start,
-            endTime: window.end,
-            price: slotPrice(pitch),
-          });
+          free.push({ pitchId: pitch.id, startTime: window.start, endTime: window.end });
         }
       });
     });
@@ -105,7 +91,7 @@ export default function MultiPitchPage() {
     } catch (error) {
       showToast(
         error.status === 409
-          ? `⚠️ ${error.message} — remove the clash and retry`
+          ? `⚠️ ${error.message} — a slot clashed with another booking, so nothing was added`
           : 'Could not reserve the full day — please try again',
       );
     }
@@ -175,7 +161,7 @@ export default function MultiPitchPage() {
                           </button>
                         ) : (
                           <button className="addcell" type="button" onClick={() => addSlot(pitch, window)}>
-                            + {bdt(slotPrice(pitch))}
+                            + Add slot
                           </button>
                         )}
                       </div>

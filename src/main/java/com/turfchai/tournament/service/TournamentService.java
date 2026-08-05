@@ -113,6 +113,9 @@ public class TournamentService {
     @Transactional
     public TeamView registerTeam(String code, RegisterTeamRequest request) {
         Tournament t = require(code);
+        // Count-then-insert: a concurrent registration burst could briefly
+        // exceed capacity. Acceptable for the interim demo identity model;
+        // revisit with a tournament-row lock once real auth lands.
         long registered = teams.countByTournamentId(t.getId());
         if (registered >= t.getTeamCapacity()) {
             throw new TournamentConflictException("Tournament is full (" + t.getTeamCapacity() + " teams)");
@@ -153,18 +156,27 @@ public class TournamentService {
     /**
      * Reserves a batch of pitch/time slots for the tournament date. The whole
      * batch is atomic: any conflict (existing reservation overlap, duplicate
-     * slot within the request, pitch from another venue) rejects the batch.
+     * slot within the request, pitch from another venue, slot outside the
+     * tournament window) rejects the batch. Prices are computed server-side
+     * from the venue's pricing rules. Each pitch row is pessimistically
+     * locked before the overlap check so concurrent reservations on the same
+     * pitch are serialized.
      */
     @Transactional
     public TournamentView reserveSlots(String code, ReserveSlotsRequest request) {
         Tournament t = require(code);
         List<SlotRequest> slots = request.slots();
 
-        // In-request duplicate / overlap detection.
+        // In-request duplicate / overlap / window validation.
         for (int i = 0; i < slots.size(); i++) {
             SlotRequest a = slots.get(i);
             if (!a.endTime().isAfter(a.startTime())) {
                 throw new IllegalArgumentException("Slot endTime must be after startTime");
+            }
+            if (a.startTime().isBefore(t.getWindowStart()) || a.endTime().isAfter(t.getWindowEnd())) {
+                throw new IllegalArgumentException(
+                        "Slot " + a.startTime() + "-" + a.endTime() + " is outside the tournament window "
+                                + t.getWindowStart() + "-" + t.getWindowEnd());
             }
             for (int j = i + 1; j < slots.size(); j++) {
                 SlotRequest b = slots.get(j);
@@ -176,7 +188,8 @@ public class TournamentService {
         }
 
         for (SlotRequest slot : slots) {
-            Pitch pitch = pitches.findById(slot.pitchId())
+            // Pessimistic lock: serializes concurrent reservations per pitch.
+            Pitch pitch = pitches.findByIdForUpdate(slot.pitchId())
                     .orElseThrow(() -> new IllegalArgumentException("Unknown pitch: " + slot.pitchId()));
             if (!pitch.getVenue().getId().equals(t.getVenue().getId())) {
                 throw new IllegalArgumentException(
@@ -197,17 +210,47 @@ public class TournamentService {
             r.setSlotDate(t.getTournamentDate());
             r.setStartTime(slot.startTime());
             r.setEndTime(slot.endTime());
-            r.setPrice(slot.price());
+            r.setPrice(slotPrice(t, pitch, slot.startTime(), slot.endTime()));
             reservations.save(r);
         }
         try {
             reservations.flush();
         } catch (DataIntegrityViolationException e) {
-            // Unique-constraint backstop for a concurrent reservation race.
+            // Unique-constraint backstop for an exact-duplicate slot race.
             throw new PitchConflictException("One of the requested slots was just taken");
         }
         t.setStatus("confirmed");
+        t.setDepositAmount(costSummary(t).deposit());
         return toView(t);
+    }
+
+    /**
+     * Server-side slot pricing from the venue's pricing rules: picks the rule
+     * whose window contains the slot start (falling back to the first active
+     * rule) and scales its rate to the slot length. Larger-format pitches
+     * (9/11-a-side) carry a 20% premium.
+     */
+    BigDecimal slotPrice(Tournament t, Pitch pitch, java.time.LocalTime start, java.time.LocalTime end) {
+        List<com.turfchai.venue.entity.SportPricingRule> rules = t.getVenue().getPricingRules().stream()
+                .filter(com.turfchai.venue.entity.SportPricingRule::isActive)
+                .toList();
+        if (rules.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Venue " + t.getVenue().getSlug() + " has no pricing configured");
+        }
+        com.turfchai.venue.entity.SportPricingRule rule = rules.stream()
+                .filter(x -> !start.isBefore(x.getWindowStart()) && start.isBefore(x.getWindowEnd()))
+                .findFirst()
+                .orElse(rules.get(0));
+        long minutes = java.time.Duration.between(start, end).toMinutes();
+        BigDecimal price = rule.getRate()
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(rule.getSlotDurationMin()), 2, RoundingMode.HALF_UP);
+        String format = pitch.getFormat();
+        if ("9_a_side".equals(format) || "11_a_side".equals(format)) {
+            price = price.multiply(new BigDecimal("1.20"));
+        }
+        return price.setScale(0, RoundingMode.HALF_UP);
     }
 
     // ------------------------------------------------------------------

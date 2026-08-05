@@ -147,17 +147,20 @@ class TournamentServiceTest {
         TournamentView t = createTournament(8);
         Long pitchId = pitchIdOf("kick-off-arena");
         service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
-                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0), new BigDecimal("2500")))));
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)))));
 
         // Overlapping window (9-11) on the same pitch/date must 409.
         assertThatThrownBy(() -> service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
-                new SlotRequest(pitchId, LocalTime.of(9, 0), LocalTime.of(11, 0), new BigDecimal("2500"))))))
+                new SlotRequest(pitchId, LocalTime.of(9, 0), LocalTime.of(11, 0))))))
                 .isInstanceOf(PitchConflictException.class);
 
         // Adjacent window (10-12) is fine.
         TournamentView after = service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
-                new SlotRequest(pitchId, LocalTime.of(10, 0), LocalTime.of(12, 0), new BigDecimal("2500")))));
+                new SlotRequest(pitchId, LocalTime.of(10, 0), LocalTime.of(12, 0)))));
         assertThat(after.reservations()).hasSize(2);
+        // Prices are computed server-side from the venue's pricing rules.
+        assertThat(after.reservations()).allSatisfy(r ->
+                assertThat(r.price()).isGreaterThan(BigDecimal.ZERO));
     }
 
     @Test
@@ -165,16 +168,22 @@ class TournamentServiceTest {
         TournamentView t = createTournament(8);
         Long pitchId = pitchIdOf("kick-off-arena");
         assertThatThrownBy(() -> service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
-                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0), BigDecimal.ONE),
-                new SlotRequest(pitchId, LocalTime.of(9, 0), LocalTime.of(11, 0), BigDecimal.ONE)))))
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)),
+                new SlotRequest(pitchId, LocalTime.of(9, 0), LocalTime.of(11, 0))))))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("overlapping");
 
         Long foreignPitch = pitchIdOf("baridhara-sports-hub");
         assertThatThrownBy(() -> service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
-                new SlotRequest(foreignPitch, LocalTime.of(8, 0), LocalTime.of(10, 0), BigDecimal.ONE)))))
+                new SlotRequest(foreignPitch, LocalTime.of(8, 0), LocalTime.of(10, 0))))))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("does not belong");
+
+        // Slots outside the tournament window are rejected.
+        assertThatThrownBy(() -> service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
+                new SlotRequest(pitchId, LocalTime.of(20, 0), LocalTime.of(22, 0))))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("outside the tournament window");
     }
 
     @Test
@@ -182,7 +191,7 @@ class TournamentServiceTest {
         TournamentView a = createTournament(8);
         TournamentView b = createTournament(8);
         Long pitchId = pitchIdOf("kick-off-arena");
-        SlotRequest slot = new SlotRequest(pitchId, LocalTime.of(14, 0), LocalTime.of(16, 0), BigDecimal.TEN);
+        SlotRequest slot = new SlotRequest(pitchId, LocalTime.of(14, 0), LocalTime.of(16, 0));
         service.reserveSlots(a.code(), new ReserveSlotsRequest(List.of(slot)));
         assertThatThrownBy(() -> service.reserveSlots(b.code(), new ReserveSlotsRequest(List.of(slot))))
                 .isInstanceOf(PitchConflictException.class);
@@ -201,7 +210,7 @@ class TournamentServiceTest {
         Long pitchId = pitchIdOf("kick-off-arena");
         for (int i = 0; i < slots; i++) {
             service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(new SlotRequest(
-                    pitchId, LocalTime.of(8 + i, 0), LocalTime.of(9 + i, 0), BigDecimal.TEN))));
+                    pitchId, LocalTime.of(8 + i, 0), LocalTime.of(9 + i, 0)))));
         }
         return service.get(t.code());
     }
@@ -256,6 +265,19 @@ class TournamentServiceTest {
         // 5 paid -> bracket 8 -> 4 fixtures total (3 byes + 1 match)
         assertThat(regenerated).hasSize(4);
         assertThat(service.listFixtures(t.code())).hasSize(4);
+    }
+
+    @Test
+    void bracketSeedsOnlyPaidTeamsWhenFieldIsMixed() {
+        TournamentView t = tournamentWithPaidTeams(4, 3);
+        // Two extra teams that never pay must not appear in the bracket.
+        service.registerTeam(t.code(), new RegisterTeamRequest("Unpaid One", null));
+        service.registerTeam(t.code(), new RegisterTeamRequest("Unpaid Two", null));
+        List<FixtureView> generated = service.generateFixtures(t.code());
+        assertThat(generated).hasSize(2);
+        assertThat(generated)
+                .noneMatch(f -> "Unpaid One".equals(f.teamA()) || "Unpaid One".equals(f.teamB())
+                        || "Unpaid Two".equals(f.teamA()) || "Unpaid Two".equals(f.teamB()));
     }
 
     @Test

@@ -31,7 +31,7 @@ export function getTournament(code = DEMO_TOURNAMENT_CODE) {
   return apiGet(`/api/v1/host/tournaments/${encodeURIComponent(code)}`);
 }
 
-/** POST /{code}/multi-pitch-reserve — slots: [{pitchId, startTime, endTime, price}] */
+/** POST /{code}/multi-pitch-reserve — slots: [{pitchId, startTime, endTime}] (priced server-side) */
 export function reserveSlots(code, slots) {
   return apiSend('POST', `/api/v1/host/tournaments/${encodeURIComponent(code)}/multi-pitch-reserve`, {
     slots,

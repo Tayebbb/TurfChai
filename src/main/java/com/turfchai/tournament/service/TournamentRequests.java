@@ -42,8 +42,7 @@ public final class TournamentRequests {
     public record SlotRequest(
             @NotNull Long pitchId,
             @NotNull LocalTime startTime,
-            @NotNull LocalTime endTime,
-            @NotNull @DecimalMin("0") BigDecimal price) {
+            @NotNull LocalTime endTime) {
     }
 
     public record ReserveSlotsRequest(@NotEmpty List<@Valid SlotRequest> slots) {

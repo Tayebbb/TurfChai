@@ -33,12 +33,17 @@ class VenueSearchServiceTest {
     private VenueRepository venues;
     @Autowired
     private SportRepository sports;
+    @Autowired
+    private com.turfchai.tournament.repository.TournamentRepository tournaments;
 
     private Sport football;
     private Sport badminton;
 
     @BeforeEach
     void setUp() {
+        // The demo tournament seeder references venue pitches — clear it
+        // first so the venue reset below doesn't hit FK constraints.
+        tournaments.deleteAll();
         venues.deleteAll();
         football = VenueTestData.sport(sports, "football");
         badminton = VenueTestData.sport(sports, "badminton");

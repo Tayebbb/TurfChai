@@ -21,9 +21,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * A pitch/time slot reserved for a tournament. The unique constraint is the
- * hard backstop against double-booking a pitch slot; the service layer also
- * performs an overlap check for friendlier errors.
+ * A pitch/time slot reserved for a tournament. The unique constraint rejects
+ * exact duplicate slots; partial overlaps are prevented by the service layer,
+ * which takes a pessimistic lock on the pitch row before its overlap check.
  */
 @Entity
 @Table(name = "tournament_pitch_reservations",

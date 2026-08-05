@@ -56,8 +56,12 @@ public class TournamentDataSeeder {
             }
             tx.executeWithoutResult(status ->
                     seed(tournaments, teams, reservations, venues, pitches, users));
-            tournamentService.generateFixtures(DEMO_CODE);
-            log.info("Seeded demo tournament {}", DEMO_CODE);
+            // seed() skips quietly when demo prerequisites are missing — only
+            // generate the bracket if the tournament actually exists.
+            if (tournaments.existsByCode(DEMO_CODE)) {
+                tournamentService.generateFixtures(DEMO_CODE);
+                log.info("Seeded demo tournament {}", DEMO_CODE);
+            }
         };
     }
 

@@ -20,9 +20,10 @@ const FORMATS = ['Knockout · 16 teams', 'Group + knockout', 'League'];
 const TEAM_COUNTS = ['8', '16', '24'];
 const PAYMENT_METHODS = ['bKash', 'Nagad', 'Card', 'Bank transfer'];
 
-const POLICY_POINTS = [
+const POLICY_POINTS = (summary) => [
   <>
-    <b>Deposit:</b> 40% now (৳17,120) secures all 14 slots · balance due 3 days before event
+    <b>Deposit:</b> 40% now ({summary.deposit}) secures all {summary.slotCount} slots · balance due 3
+    days before event
   </>,
   <>
     <b>Free cancellation</b> up to 7 days before · 50% refund up to 72h · none after
@@ -145,7 +146,7 @@ export default function ReservePage() {
             <section className="card">
               <h3>2 · Policy &amp; terms</h3>
               <ul className="small muted" style={{ margin: '8px 0 0', paddingLeft: 16, lineHeight: 1.9 }}>
-                {POLICY_POINTS.map((point, index) => (
+                {POLICY_POINTS(summary).map((point, index) => (
                   // Static copy — index keys are stable here.
                   <li key={index}>{point}</li>
                 ))}

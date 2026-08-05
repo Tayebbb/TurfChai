@@ -97,7 +97,7 @@ class TournamentRestControllerTest {
         String pitchId = firstPitchIdOf("kick-off-arena");
 
         String slotBody = """
-                {"slots":[{"pitchId":%s,"startTime":"08:00","endTime":"10:00","price":2500}]}
+                {"slots":[{"pitchId":%s,"startTime":"08:00","endTime":"10:00"}]}
                 """.formatted(pitchId);
         mockMvc.perform(post(BASE + "/" + code + "/multi-pitch-reserve")
                         .contentType(MediaType.APPLICATION_JSON).content(slotBody))
@@ -107,7 +107,7 @@ class TournamentRestControllerTest {
 
         // Overlapping window -> 409 with an explanatory error
         String overlap = """
-                {"slots":[{"pitchId":%s,"startTime":"09:00","endTime":"11:00","price":2500}]}
+                {"slots":[{"pitchId":%s,"startTime":"09:00","endTime":"11:00"}]}
                 """.formatted(pitchId);
         mockMvc.perform(post(BASE + "/" + code + "/multi-pitch-reserve")
                         .contentType(MediaType.APPLICATION_JSON).content(overlap))
