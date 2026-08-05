@@ -5,7 +5,9 @@ import com.turfchai.ai.agent.AgentPlanner;
 import com.turfchai.ai.agent.BookingAssistantAgent;
 import com.turfchai.ai.agent.IntentRouter;
 import com.turfchai.ai.evaluation.AiMetricsRecorder;
+import com.turfchai.ai.llm.FallbackLlmProvider;
 import com.turfchai.ai.llm.GeminiLlmProvider;
+import com.turfchai.ai.llm.HuggingFaceLlmProvider;
 import com.turfchai.ai.llm.LlmProvider;
 import com.turfchai.ai.llm.UnconfiguredLlmProvider;
 import com.turfchai.ai.memory.ConversationMemory;
@@ -54,24 +56,66 @@ public class AiConfiguration {
 
     @Bean
     RestClient geminiRestClient(AiProperties properties) {
-        Duration timeout = Duration.ofSeconds(properties.getGemini().getTimeoutSeconds());
+        return buildRestClient(
+                properties.getGemini().getBaseUrl(),
+                "x-goog-api-key", properties.getGemini().getApiKey(),
+                properties.getGemini().getTimeoutSeconds());
+    }
+
+    @Bean
+    RestClient huggingFaceRestClient(AiProperties properties) {
+        return buildRestClient(
+                properties.getHuggingface().getBaseUrl(),
+                "Authorization", "Bearer " + properties.getHuggingface().getApiKey(),
+                properties.getHuggingface().getTimeoutSeconds());
+    }
+
+    private RestClient buildRestClient(String baseUrl, String authHeader, String authValue, int timeoutSeconds) {
+        Duration timeout = Duration.ofSeconds(timeoutSeconds);
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeout);
         requestFactory.setReadTimeout(timeout);
         return RestClient.builder()
-                .baseUrl(properties.getGemini().getBaseUrl())
-                .defaultHeader("x-goog-api-key", properties.getGemini().getApiKey())
+                .baseUrl(baseUrl)
+                .defaultHeader(authHeader, authValue)
                 .requestFactory(requestFactory)
                 .build();
     }
 
+    /**
+     * Provider chain: Gemini primary, Hugging Face fallback on retryable
+     * failures (quota/transport/5xx). Either can run alone; with neither
+     * key set the app still boots and chat returns 503.
+     */
     @Bean
-    LlmProvider llmProvider(AiProperties properties, RestClient geminiRestClient, ObjectMapper objectMapper) {
-        if (properties.getGemini().getApiKey().isBlank()) {
-            log.warn("app.ai.gemini.api-key not set — AI chat endpoints will return 503");
-            return new UnconfiguredLlmProvider();
+    LlmProvider llmProvider(AiProperties properties,
+                            RestClient geminiRestClient,
+                            RestClient huggingFaceRestClient,
+                            ObjectMapper objectMapper) {
+        boolean hasGemini = !properties.getGemini().getApiKey().isBlank();
+        boolean hasHuggingFace = !properties.getHuggingface().getApiKey().isBlank();
+
+        LlmProvider gemini = hasGemini
+                ? new GeminiLlmProvider(geminiRestClient, objectMapper, properties.getGemini())
+                : null;
+        LlmProvider huggingFace = hasHuggingFace
+                ? new HuggingFaceLlmProvider(huggingFaceRestClient, objectMapper, properties.getHuggingface())
+                : null;
+
+        if (gemini != null && huggingFace != null) {
+            log.info("LLM providers: gemini (primary) with huggingface fallback");
+            return new FallbackLlmProvider(gemini, huggingFace);
         }
-        return new GeminiLlmProvider(geminiRestClient, objectMapper, properties.getGemini());
+        if (gemini != null) {
+            log.info("LLM provider: gemini only (no fallback configured)");
+            return gemini;
+        }
+        if (huggingFace != null) {
+            log.info("LLM provider: huggingface only (Gemini key not set)");
+            return huggingFace;
+        }
+        log.warn("No LLM API keys set — AI chat endpoints will return 503");
+        return new UnconfiguredLlmProvider();
     }
 
     @Bean

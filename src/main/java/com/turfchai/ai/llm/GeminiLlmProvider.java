@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -51,6 +52,10 @@ public class GeminiLlmProvider implements LlmProvider {
                     .body(body)
                     .retrieve()
                     .body(JsonNode.class);
+        } catch (RestClientResponseException e) {
+            // 429 (quota) and 5xx are retryable -> eligible for provider fallback
+            boolean retryable = e.getStatusCode().value() == 429 || e.getStatusCode().is5xxServerError();
+            throw new LlmException("Gemini request failed with HTTP " + e.getStatusCode().value(), e, retryable);
         } catch (RestClientException e) {
             throw new LlmException("Gemini request failed: " + e.getMessage(), e, true);
         }

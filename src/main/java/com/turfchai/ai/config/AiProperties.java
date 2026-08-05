@@ -9,12 +9,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AiProperties {
 
     private final Gemini gemini = new Gemini();
+    private final HuggingFace huggingface = new HuggingFace();
     private final Rag rag = new Rag();
     private final Memory memory = new Memory();
     private final Agent agent = new Agent();
 
     public Gemini getGemini() {
         return gemini;
+    }
+
+    public HuggingFace getHuggingface() {
+        return huggingface;
     }
 
     public Rag getRag() {
@@ -59,6 +64,48 @@ public class AiProperties {
 
         public void setEmbeddingModel(String embeddingModel) {
             this.embeddingModel = embeddingModel;
+        }
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public int getTimeoutSeconds() {
+            return timeoutSeconds;
+        }
+
+        public void setTimeoutSeconds(int timeoutSeconds) {
+            this.timeoutSeconds = timeoutSeconds;
+        }
+    }
+
+    /** Fallback provider used when Gemini fails or hits its quota. */
+    public static class HuggingFace {
+        /** API key; when blank no fallback is registered. */
+        private String apiKey = "";
+        private String model = "meta-llama/Llama-3.3-70B-Instruct";
+        /** OpenAI-compatible router endpoint. */
+        private String baseUrl = "https://router.huggingface.co/v1";
+        private int timeoutSeconds = 45;
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
         }
 
         public String getBaseUrl() {
