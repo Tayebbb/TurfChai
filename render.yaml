@@ -17,7 +17,7 @@ services:
       - key: SPRING_DATASOURCE_URL
         fromDatabase:
           name: turfchai-db
-          property: jdbcConnectionString   # verify this property name
+          property: connectionString
 
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
