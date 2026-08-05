@@ -207,3 +207,26 @@ export default function ActivityPage() {
           </tbody>
         </table>
       </div>
+
+      <div className="between small" style={{ marginTop: 14 }}>
+        <span className="subtle">Showing latest 6 of 3,412 audit entries</span>
+        <div className="row" style={{ gap: 6 }}>
+          <button
+            className="btn btn-sm btn-tertiary"
+            type="button"
+            onClick={() => showToast('Loading previous logs...')}
+          >
+            ‹ Previous
+          </button>
+          <button
+            className="btn btn-sm btn-tertiary"
+            type="button"
+            onClick={() => showToast('Loading next page...')}
+          >
+            Next ›
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
