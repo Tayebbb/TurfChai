@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -106,18 +106,42 @@ const AMENITIES = [
 
 const PAGE_SIZE = 10;
 
+/** Filter-drawer labels -> backend amenity keys (unmapped labels are UI-only). */
+const AMENITY_KEYS = {
+  Floodlights: 'floodlights',
+  Parking: 'parking',
+  'Changing room': 'changing_room',
+  'Parent-friendly': 'youth_friendly',
+};
+
 export default function ExplorePage() {
   const { showToast } = useToast();
   const filters = useDisclosure(false);
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [view, setView] = useState('list');
   const [page, setPage] = useState(0);
+  const [filterParams, setFilterParams] = useState({});
+
+  // Debounce keystrokes so we don't hit the API on every character.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   // Live search; falls back to the sample list when the API is unreachable.
-  const search = useApi(() => searchVenues({ q: query, page, size: PAGE_SIZE, sort: 'rating' }), [query, page]);
+  const search = useApi(
+    () => searchVenues({ q: debouncedQuery, page, size: PAGE_SIZE, sort: 'rating', ...filterParams }),
+    [debouncedQuery, page, JSON.stringify(filterParams)],
+  );
   const venues = search.data ? search.data.items.map(toExploreCard) : exploreVenuesFallback;
   const totalPages = search.data?.totalPages ?? 1;
   const totalItems = search.data?.totalItems ?? venues.length;
+
+  const applyFilters = (params) => {
+    setFilterParams(params);
+    setPage(0);
+  };
 
   return (
     <>
@@ -140,7 +164,10 @@ export default function ExplorePage() {
               spellCheck="false"
               aria-label="Search venues"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(0); // new search always starts from the first page
+              }}
             />
           </label>
 
@@ -210,7 +237,7 @@ export default function ExplorePage() {
         <p className="results-meta" role="status">
           {search.loading
             ? 'Searching venues…'
-            : `${totalItems} venue${totalItems === 1 ? '' : 's'} with open slots · sorted by rating`}
+            : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by rating`}
           {search.error ? ' · live results unavailable, showing samples' : ''}
         </p>
 
@@ -360,12 +387,12 @@ export default function ExplorePage() {
         </div>
       </main>
 
-      <FilterDrawer isOpen={filters.isOpen} onClose={filters.close} />
+      <FilterDrawer isOpen={filters.isOpen} onClose={filters.close} onApply={applyFilters} />
     </>
   );
 }
 
-function FilterDrawer({ isOpen, onClose }) {
+function FilterDrawer({ isOpen, onClose, onApply }) {
   const [location, setLocation] = useState('Dhanmondi');
   const [date, setDate] = useState('Today, 4 Aug');
   const [startTime, setStartTime] = useState('7:00 PM');
@@ -470,13 +497,29 @@ function FilterDrawer({ isOpen, onClose }) {
             duration.clear();
             sports.clear();
             amenities.clear();
+            onApply({});
             onClose();
           }}
         >
           Reset
         </Button>
-        <Button variant="primary" block onClick={onClose}>
-          Show 34 venues
+        <Button
+          variant="primary"
+          block
+          onClick={() => {
+            // useFilterChips exposes a Set
+            const amenityKeys = [...amenities.active].map((label) => AMENITY_KEYS[label]).filter(Boolean);
+            const sport = [...sports.active][0];
+            onApply({
+              area: location.split(' /')[0],
+              sport: sport?.toLowerCase(),
+              maxPrice,
+              ...(amenityKeys.length ? { amenity: amenityKeys } : {}),
+            });
+            onClose();
+          }}
+        >
+          Apply filters
         </Button>
       </div>
     </Overlay>

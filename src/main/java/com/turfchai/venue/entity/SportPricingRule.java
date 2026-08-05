@@ -22,8 +22,7 @@ import java.time.LocalTime;
  * cheapest active rate as the "from" price; rule management is owner-side.
  */
 @Entity
-@Table(name = "sport_pricing_rules",
-        indexes = @Index(name = "idx_pricing_venue_sport", columnList = "venue_id, sport_id"))
+@Table(name = "sport_pricing_rules", indexes = @Index(name = "idx_pricing_venue_sport", columnList = "venue_id, sport_id"))
 @Getter
 @Setter
 @NoArgsConstructor

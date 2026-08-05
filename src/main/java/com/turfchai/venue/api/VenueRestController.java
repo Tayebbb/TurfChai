@@ -34,7 +34,7 @@ public class VenueRestController {
         this.venueSearchService = venueSearchService;
     }
 
-    @GetMapping({"/venues", "/venues/explore"})
+    @GetMapping({ "/venues", "/venues/explore" })
     public ResponseEntity<PagedResponse<VenueSummaryDto>> search(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String area,

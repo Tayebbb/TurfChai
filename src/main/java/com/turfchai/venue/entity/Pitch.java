@@ -22,9 +22,8 @@ import java.util.Set;
 
 /** An individual playable pitch/court inside a venue. */
 @Entity
-@Table(name = "pitches",
-        uniqueConstraints = @UniqueConstraint(name = "uq_pitches_venue_name", columnNames = {"venue_id", "name"}),
-        indexes = @Index(name = "idx_pitches_venue", columnList = "venue_id"))
+@Table(name = "pitches", uniqueConstraints = @UniqueConstraint(name = "uq_pitches_venue_name", columnNames = {
+        "venue_id", "name" }), indexes = @Index(name = "idx_pitches_venue", columnList = "venue_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -61,8 +60,6 @@ public class Pitch {
     private boolean active = true;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "pitch_sports",
-            joinColumns = @JoinColumn(name = "pitch_id"),
-            inverseJoinColumns = @JoinColumn(name = "sport_id"))
+    @JoinTable(name = "pitch_sports", joinColumns = @JoinColumn(name = "pitch_id"), inverseJoinColumns = @JoinColumn(name = "sport_id"))
     private Set<Sport> sports = new LinkedHashSet<>();
 }

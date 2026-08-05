@@ -239,7 +239,9 @@ function PlayerMode() {
         {venuesApi.error ? (
           <p className="subtle" role="status" style={{ marginTop: 8 }}>
             Live venues unavailable — showing sample data.{' '}
-            <button type="button" className="linklike" onClick={venuesApi.reload}>Retry</button>
+            <button type="button" onClick={venuesApi.reload} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}>
+              Retry
+            </button>
           </p>
         ) : null}
       </section>

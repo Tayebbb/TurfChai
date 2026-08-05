@@ -1,10 +1,12 @@
 package com.turfchai.venue.api;
 
 import com.turfchai.venue.service.VenueSearchService.VenueNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import java.util.Map;
 
@@ -20,8 +22,12 @@ public class VenueApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    @ExceptionHandler({IllegalArgumentException.class, HandlerMethodValidationException.class,
+            ConstraintViolationException.class})
+    public ResponseEntity<Map<String, String>> handleBadRequest(Exception e) {
+        String message = e instanceof IllegalArgumentException
+                ? e.getMessage()
+                : "Invalid request parameters";
+        return ResponseEntity.badRequest().body(Map.of("error", message));
     }
 }

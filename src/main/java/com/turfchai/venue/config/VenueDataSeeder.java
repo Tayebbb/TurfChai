@@ -45,8 +45,8 @@ public class VenueDataSeeder {
         Sport futsal = sports.save(new Sport("Futsal", "futsal"));
 
         record Seed(String slug, String name, String address, String area, double lat, double lng,
-                    double rating, int reviews, boolean verified, String promo, String amenities,
-                    String format, List<Sport> sportList, int price, int duration) {
+                double rating, int reviews, boolean verified, String promo, String amenities,
+                String format, List<Sport> sportList, int price, int duration) {
         }
 
         List<Seed> rows = List.of(
@@ -70,8 +70,8 @@ public class VenueDataSeeder {
                         "floodlights,parking,cafeteria", "7_a_side", List.of(football, cricket), 3200, 90));
 
         Map<String, LocalTime[]> windows = Map.of(
-                "off_peak", new LocalTime[]{LocalTime.of(6, 0), LocalTime.of(16, 0)},
-                "peak", new LocalTime[]{LocalTime.of(16, 0), LocalTime.of(23, 0)});
+                "off_peak", new LocalTime[] { LocalTime.of(6, 0), LocalTime.of(16, 0) },
+                "peak", new LocalTime[] { LocalTime.of(16, 0), LocalTime.of(23, 0) });
 
         for (Seed row : rows) {
             Venue venue = new Venue();

@@ -40,7 +40,9 @@ public class Venue {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** URL-friendly identifier used by the frontend routes, e.g. `kick-off-arena`. */
+    /**
+     * URL-friendly identifier used by the frontend routes, e.g. `kick-off-arena`.
+     */
     @Column(nullable = false, unique = true, length = 80)
     private String slug;
 

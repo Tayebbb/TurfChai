@@ -18,12 +18,12 @@ public final class VenueTestData {
     }
 
     public static Sport sport(SportRepository sports, String slug) {
-        return sports.findBySlug(slug).orElseGet(() ->
-                sports.save(new Sport(slug.substring(0, 1).toUpperCase() + slug.substring(1), slug)));
+        return sports.findBySlug(slug)
+                .orElseGet(() -> sports.save(new Sport(slug.substring(0, 1).toUpperCase() + slug.substring(1), slug)));
     }
 
     public static Venue venue(VenueRepository venues, String slug, String area, double rating,
-                              boolean verified, String amenities, int peakPrice, Sport... sportList) {
+            boolean verified, String amenities, int peakPrice, Sport... sportList) {
         Venue venue = new Venue();
         venue.setSlug(slug);
         venue.setName(slug.replace('-', ' '));

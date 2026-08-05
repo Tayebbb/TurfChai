@@ -206,6 +206,14 @@ export default function VenuePage() {
     <>
       <PageTitle title={name} />
       <main className="wrap" style={{ paddingTop: 20 }} id="main">
+        {detail.error && detail.error.status !== 404 ? (
+          <p className="subtle" role="status" style={{ marginBottom: 10 }}>
+            Live venue data unavailable — showing sample content.{' '}
+            <button type="button" onClick={detail.reload} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}>
+              Retry
+            </button>
+          </p>
+        ) : null}
         <nav className="breadcrumbs" aria-label="Breadcrumb">
           <Link to={paths.player.explore}>Explore</Link>
           <span className="sep">/</span>

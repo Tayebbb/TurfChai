@@ -52,7 +52,7 @@ class VenueSearchServiceTest {
     }
 
     private static VenueSearchCriteria criteria(String area, String sport, BigDecimal min, BigDecimal max,
-                                                List<String> amenities, Boolean verified) {
+            List<String> amenities, Boolean verified) {
         return new VenueSearchCriteria(null, area, sport, min, max, amenities, verified, null, null, null, null);
     }
 
@@ -114,7 +114,7 @@ class VenueSearchServiceTest {
     @Test
     void summaryCarriesFromPriceAndSports() {
         VenueSummaryDto alpha = service.search(
-                        criteria("Dhanmondi", "football", null, null, null, null), 0, 10, "rating")
+                criteria("Dhanmondi", "football", null, null, null, null), 0, 10, "rating")
                 .items().get(0);
         assertThat(alpha.fromPrice()).isEqualByComparingTo(BigDecimal.valueOf(2500));
         assertThat(alpha.sports()).contains("football");
