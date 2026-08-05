@@ -207,4 +207,105 @@ export default function StaffPage() {
               Save note
             </Button>
           </section>
-        </div>
+        </div>
+
+        <section className="card">
+          <h3>Audit log</h3>
+          <p className="subtle small" style={{ margin: '2px 0 10px' }}>
+            Every staff action is recorded — nothing disappears.
+          </p>
+          <ul className="tline">
+            {AUDIT_LOG.map((entry) => (
+              <li key={entry.id}>
+                <b className="small">{entry.title}</b>
+                <p className="tiny muted" style={{ margin: 0 }}>
+                  {entry.detail}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <Button
+            size="sm"
+            variant="tertiary"
+            style={{ marginTop: 8 }}
+            onClick={() => showToast('Full audit history opened')}
+          >
+            View full history
+          </Button>
+        </section>
+      </div>
+
+      {/* Permissions drawer */}
+      <Overlay
+        isOpen={permDrawer.isOpen}
+        onClose={permDrawer.close}
+        title="Permissions · Sumon Barua"
+        mode="drawer"
+      >
+        <div className="stack-sm" style={{ marginTop: 10 }}>
+          {PERMISSIONS.map((item) => (
+            <Checkline
+              key={item.id}
+              label={item.label}
+              checked={permissions[item.id]}
+              onChange={(event) =>
+                setPermissions((current) => ({ ...current, [item.id]: event.target.checked }))
+              }
+            />
+          ))}
+        </div>
+        <Button
+          variant="primary"
+          block
+          style={{ marginTop: 14 }}
+          onClick={() => {
+            permDrawer.close();
+            showToast('Permissions updated ✓');
+          }}
+        >
+          Save permissions
+        </Button>
+      </Overlay>
+
+      {/* Close shift modal */}
+      <Overlay isOpen={closeShift.isOpen} onClose={closeShift.close} title="Close evening shift" hideHeader>
+        <h3>Close evening shift</h3>
+        <p className="subtle small">Count the drawer — the ledger says what to expect.</p>
+        <div className="pricerow" style={{ marginTop: 8 }}>
+          <span>Opening float</span>
+          <span className="num">৳2,000</span>
+        </div>
+        <div className="pricerow">
+          <span>Cash logged this shift</span>
+          <span className="num">৳1,785</span>
+        </div>
+        <div className="pricerow total">
+          <span>Expected in drawer</span>
+          <span className="num">৳3,785</span>
+        </div>
+        <div className="field" style={{ marginTop: 10 }}>
+          <label htmlFor="counted">Counted amount</label>
+          <Input
+            className="num"
+            id="counted"
+            value={counted}
+            onChange={(event) => setCounted(event.target.value)}
+          />
+        </div>
+        <Alert tone="ok" icon="✓" title="Balanced" style={{ margin: '0 0 12px' }}>
+          Counted matches expected — no discrepancy.
+        </Alert>
+        <Button
+          variant="primary"
+          block
+          onClick={() => {
+            closeShift.close();
+            showToast('Shift closed & locked — report sent to owner 🧾');
+          }}
+        >
+          Close &amp; lock shift
+        </Button>
+        <Button variant="tertiary" block onClick={closeShift.close}>
+          Cancel
+        </Button>
+      </Overlay>
