@@ -141,9 +141,7 @@ export default function UsersPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              Users &amp; Player Matchmaking
-            </h1>
+            <h1>Users &amp; Player Matchmaking</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Manage Player Accounts · Review Matchmaking Badges · Handle Moderation
