@@ -12,6 +12,7 @@ import { adminAlerts } from '@/data/admin';
 import { currentAdmin } from '@/data/users';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { paths } from '@/routes/paths';
+import { ADMIN_NAV_LINKS } from '@/constants/navigation';
 
 /** Super-admin console shell: full-bleed glass topbar + alert drawer. */
 export function AdminLayout() {
@@ -19,19 +20,7 @@ export function AdminLayout() {
 
   return (
     <>
-      <Topbar
-        innerStyle={{ maxWidth: '100%', padding: '0 28px' }}
-        brand={
-          <Brand
-            to={paths.admin.dashboard}
-            badge={
-              <Badge tone="red" dot={false}>
-                {currentAdmin.role}
-              </Badge>
-            }
-          />
-        }
-      >
+      <Topbar brand={<Brand to={paths.admin.dashboard} />} links={ADMIN_NAV_LINKS}>
         <IconButton label="View alerts" notify onClick={alerts.open}>
           <Icon name="bell" />
         </IconButton>
