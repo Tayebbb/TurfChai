@@ -154,6 +154,10 @@ export default function ExplorePage() {
 
   const onToggleSave = async (event, venue) => {
     event.preventDefault(); // heart sits inside the venue card link
+    if (!search.data) {
+      showToast('Saving is unavailable while offline');
+      return;
+    }
     try {
       const { saved } = await toggleSavedVenue(venue.id);
       setSavedSlugs((current) => {

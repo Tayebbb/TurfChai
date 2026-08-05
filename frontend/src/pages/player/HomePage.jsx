@@ -148,7 +148,9 @@ export default function HomePage() {
         <div className="between" style={{ marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h1 style={{ fontSize: 24, margin: 0 }}>Salam, {currentPlayer.shortName}</h1>
-            <span className="subtle">{currentPlayer.area}</span>
+            <span className="subtle">
+              {currentPlayer.area} · <Link to={paths.player.settings}>Edit profile</Link>
+            </span>
           </div>
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
             <Badge tone="green">

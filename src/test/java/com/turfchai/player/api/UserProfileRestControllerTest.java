@@ -68,6 +68,27 @@ class UserProfileRestControllerTest {
     }
 
     @Test
+    void patchRejectsBlankFullName() throws Exception {
+        mockMvc.perform(patch("/api/v1/players/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void deleteIsIdempotentAndAtomic() throws Exception {
+        mockMvc.perform(delete("/api/v1/players/me/saved-venues/greenturf-mohammadpur"))
+                .andExpect(status().isNoContent());   // not saved -> still 204
+        mockMvc.perform(post("/api/v1/players/me/saved-venues/greenturf-mohammadpur"))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/v1/players/me/saved-venues/greenturf-mohammadpur"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/v1/players/me/saved-venues/greenturf-mohammadpur"))
+                .andExpect(status().isNoContent());   // repeat delete stays 204
+    }
+
+    @Test
     void savedVenueToggleFlow() throws Exception {
         // seeded venue from VenueDataSeeder
         mockMvc.perform(post("/api/v1/players/me/saved-venues/kick-off-arena"))

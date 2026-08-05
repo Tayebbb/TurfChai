@@ -22,6 +22,7 @@ export const paths = {
     review: '/player/review',
     cancel: '/player/cancel',
     rewards: '/player/rewards',
+    settings: '/player/settings',
   },
 
   solo: {

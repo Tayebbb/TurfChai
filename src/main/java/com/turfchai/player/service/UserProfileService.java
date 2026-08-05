@@ -11,6 +11,7 @@ import com.turfchai.venue.entity.Sport;
 import com.turfchai.venue.entity.SportPricingRule;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +44,12 @@ public class UserProfileService {
     public PlayerProfileDto updateProfile(UUID publicId, UpdateProfileRequest request) {
         User user = requireUser(publicId);
         if (request.fullName() != null) {
-            user.setFullName(request.fullName().trim());
-            user.setAvatarInitials(initialsOf(request.fullName()));
+            String trimmed = request.fullName().trim();
+            if (trimmed.length() < 2) {
+                throw new IllegalArgumentException("fullName must not be blank");
+            }
+            user.setFullName(trimmed);
+            user.setAvatarInitials(initialsOf(trimmed));
         }
         if (request.area() != null) {
             user.setArea(request.area().trim());
@@ -88,9 +93,22 @@ public class UserProfileService {
                     return false;
                 })
                 .orElseGet(() -> {
-                    savedVenues.save(new SavedVenue(user, venue));
+                    try {
+                        savedVenues.save(new SavedVenue(user, venue));
+                    } catch (DataIntegrityViolationException e) {
+                        // concurrent save already bookmarked it - same end state
+                    }
                     return true;
                 });
+    }
+
+    /** Atomic remove - no-op when the venue isn't bookmarked. */
+    @Transactional
+    public void removeSavedVenue(UUID publicId, String venueSlug) {
+        User user = requireUser(publicId);
+        venues.findBySlug(venueSlug).ifPresent(venue ->
+                savedVenues.findByUserIdAndVenueId(user.getId(), venue.getId())
+                        .ifPresent(savedVenues::delete));
     }
 
     @Transactional(readOnly = true)

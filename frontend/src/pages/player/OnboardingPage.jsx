@@ -63,7 +63,7 @@ export default function OnboardingPage() {
       });
       showToast('✅ Profile saved — welcome to TurfChai!');
     } catch {
-      showToast('Could not reach the server — profile will sync later');
+      showToast('Could not save profile — you can update it anytime from Settings');
     } finally {
       setSaving(false);
       navigate(paths.player.home);

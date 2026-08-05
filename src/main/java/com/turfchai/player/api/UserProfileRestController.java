@@ -84,10 +84,7 @@ public class UserProfileRestController {
     public ResponseEntity<Void> removeSaved(
             @RequestHeader(value = "X-User-Id", required = false) String userHeader,
             @PathVariable String venueSlug) {
-        UUID userId = currentUserId(userHeader);
-        if (profileService.isSaved(userId, venueSlug)) {
-            profileService.toggleSavedVenue(userId, venueSlug);
-        }
+        profileService.removeSavedVenue(currentUserId(userHeader), venueSlug);
         return ResponseEntity.noContent().build();
     }
 }

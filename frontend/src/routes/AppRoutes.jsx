@@ -29,6 +29,7 @@ const Matchday = lazy(() => import('@/pages/player/MatchdayPage'));
 const Review = lazy(() => import('@/pages/player/ReviewPage'));
 const Cancel = lazy(() => import('@/pages/player/CancelPage'));
 const Rewards = lazy(() => import('@/pages/player/RewardsPage'));
+const ProfileSettings = lazy(() => import('@/pages/player/ProfileSettingsPage'));
 
 const OpenGames = lazy(() => import('@/solo/OpenGamesPage'));
 const GameDetail = lazy(() => import('@/solo/GameDetailPage'));
@@ -91,6 +92,7 @@ export function AppRoutes() {
             <Route path="review" element={<Review />} />
             <Route path="cancel" element={<Cancel />} />
             <Route path="rewards" element={<Rewards />} />
+            <Route path="settings" element={<ProfileSettings />} />
           </Route>
 
           <Route path="solo">
