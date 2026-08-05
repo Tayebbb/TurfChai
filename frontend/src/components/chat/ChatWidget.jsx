@@ -15,6 +15,18 @@ const SUGGESTIONS = [
   'What’s the cancellation policy?',
 ];
 
+/** Distinguishes "not configured" from "rate limited" from "offline". */
+function errorMessage(error) {
+  const status = error?.status;
+  if (status === 429) return 'You’re sending messages a bit fast — give it a moment.';
+  if (status === 503) {
+    return 'The assistant isn’t available right now. If you’re running this locally, check that OPENROUTER_API_KEY or HF_API_KEY is set in your .env file.';
+  }
+  if (status >= 400 && status < 500 && error?.message) return error.message;
+  if (status >= 500) return 'The assistant hit an error handling that. Try rephrasing your question.';
+  return 'Couldn’t reach the assistant — check your connection and that the backend is running.';
+}
+
 const DropletIcon = () => (
   <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
     <path
@@ -87,11 +99,7 @@ export function ChatWidget() {
           },
         ]);
       } catch (caught) {
-        setError(
-          caught?.status === 429
-            ? 'You’re sending messages a bit fast — give it a moment.'
-            : 'Couldn’t reach the assistant. Check your connection and try again.',
-        );
+        setError(errorMessage(caught));
       } finally {
         setPending(false);
       }
