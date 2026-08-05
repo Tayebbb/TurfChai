@@ -1,0 +1,33 @@
+﻿/* ---------- View-as dropdown (workspace switcher) ---------- */
+.viewas{position:relative}
+.viewas-btn{
+  display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 15px;border-radius:999px;cursor:pointer;
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%);
+  color:var(--text-2);font-size:13px;font-weight:600;font-family:var(--font-body);
+  transition:border-color var(--dur) var(--ease),color var(--dur) var(--ease);
+}
+.viewas-btn b{color:var(--brand-600);font-weight:700}
+[data-theme="dark"] .viewas-btn b{color:var(--brand)}
+.viewas-btn .chev{font-size:11px;color:var(--text-3);transition:transform var(--dur) var(--ease)}
+.viewas-btn:hover{border-color:var(--border-strong);color:var(--text)}
+.viewas.open .viewas-btn{border-color:var(--brand)}
+.viewas.open .chev{transform:rotate(180deg)}
+.viewas-menu{
+  position:absolute;right:0;top:calc(100% + 8px);z-index:80;min-width:240px;padding:6px;display:none;
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:16px;box-shadow:var(--shadow-md);
+}
+.viewas.open .viewas-menu{display:block;animation:menupop .2s var(--ease-out)}
+@keyframes menupop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.viewas-menu button{
+  display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 12px;border:none;background:none;border-radius:11px;cursor:pointer;text-align:left;
+  color:var(--text);font-family:var(--font-body);font-size:13.5px;font-weight:600;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease);
+}
+.viewas-menu button .desc{display:block;font-size:11.5px;color:var(--text-3);font-weight:500;margin-top:1px}
+.viewas-menu button:hover{background:var(--surface-2)}
+.viewas-menu button.on{background:var(--brand-soft);color:var(--brand-600)}
+[data-theme="dark"] .viewas-menu button.on{color:var(--brand)}
+.viewas-menu button .check{font-size:13px;flex:none;width:14px}
+
