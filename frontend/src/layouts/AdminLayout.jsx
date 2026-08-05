@@ -49,6 +49,19 @@ export function AdminLayout() {
         >
           {currentAdmin.initials}
         </IconButton>
+        <IconButton
+          label="Sign Out"
+          to={paths.auth}
+          style={{
+            background: 'var(--danger-soft)',
+            color: 'var(--danger)',
+            fontWeight: 700,
+            border: 'none',
+            textDecoration: 'none',
+          }}
+        >
+          🚪
+        </IconButton>
       </Topbar>
 
       <main className="admin-page-wrap" id="main" tabIndex={-1}>

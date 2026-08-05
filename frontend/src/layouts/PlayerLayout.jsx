@@ -134,6 +134,9 @@ export function PlayerLayout({ withFooter = false }) {
           <Link className="btn btn-secondary btn-block" to={paths.host.hub} onClick={profile.close}>
             🏆 Tournament host
           </Link>
+          <Button variant="danger" block to={paths.auth} onClick={profile.close} style={{ marginTop: 8 }}>
+            🚪 Sign Out / Change Role
+          </Button>
         </div>
         <Button variant="tertiary" block onClick={profile.close} style={{ marginTop: 10 }}>
           Close
