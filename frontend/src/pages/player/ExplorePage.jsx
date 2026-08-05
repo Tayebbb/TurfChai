@@ -154,7 +154,7 @@ export default function ExplorePage() {
           label:
             venue.fromPrice != null
               ? `৳${Number(venue.fromPrice).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-              : venue.name,
+              : '⚽',
           title: venue.name,
           hot: Boolean(venue.promotionLabel),
         })),

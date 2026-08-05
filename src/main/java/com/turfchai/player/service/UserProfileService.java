@@ -145,6 +145,7 @@ public class UserProfileService {
                 .toList();
         return new VenueSummaryDto(
                 venue.getId(), venue.getSlug(), venue.getName(), venue.getArea(), venue.getAddress(),
+                venue.getLat(), venue.getLng(),
                 venue.getRatingAvg(), venue.getReviewCount(), venue.isVerified(), venue.getPromotionLabel(),
                 fromCsv(venue.getAmenities()), sports,
                 cheapest == null ? null : cheapest.getRate(),
