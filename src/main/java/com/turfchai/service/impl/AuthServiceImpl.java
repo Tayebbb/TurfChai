@@ -4,6 +4,7 @@ import com.turfchai.dto.request.LoginRequest;
 import com.turfchai.dto.request.OtpRequest;
 import com.turfchai.dto.request.OtpVerifyRequest;
 import com.turfchai.dto.request.RegisterRequest;
+import com.turfchai.dto.request.UpdateProfileRequest;
 import com.turfchai.dto.response.AuthResponse;
 import com.turfchai.dto.response.OtpRequestResponse;
 import com.turfchai.dto.response.UserResponse;
@@ -131,6 +132,31 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         return toUserResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateProfile(String publicId, UpdateProfileRequest request) {
+        User user = userRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        String email = request.email().trim().toLowerCase();
+        String phone = request.phone().trim();
+        String fullName = request.fullName().trim();
+
+        if (!user.getEmail().equals(email) && userRepository.findByEmail(email).isPresent()) {
+            throw new EmailAlreadyExistsException("An account already exists with email: " + email);
+        }
+        if (!user.getPhone().equals(phone) && userRepository.findByPhone(phone).isPresent()) {
+            throw new PhoneAlreadyExistsException("An account already exists with phone: " + phone);
+        }
+
+        user.setFullName(fullName);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setAvatarInitials(initials(fullName));
+
+        return toUserResponse(userRepository.save(user));
     }
 
     private AuthResponse toAuthResponse(User user) {
