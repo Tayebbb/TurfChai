@@ -1,0 +1,32 @@
+/* Slot & Booking components styles */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.slot-card {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.1));
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.slot-card:hover:not(.disabled) {
+  border-color: var(--brand, #10b981);
+  background: var(--brand-soft, rgba(16, 185, 129, 0.1));
+}
+
+.slot-card.selected {
+  border-color: var(--brand, #10b981);
+  background: var(--brand, #10b981);
+  color: #fff;
+}
+
+.slot-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

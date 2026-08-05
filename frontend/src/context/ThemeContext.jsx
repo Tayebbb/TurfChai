@@ -4,7 +4,13 @@ import { THEME_STORAGE_KEY } from '@/constants/app';
 export const ThemeContext = createContext(null);
 
 function readStoredTheme() {
-  if (typeof document === 'undefined') return 'dark';
+  if (typeof window === 'undefined') return 'dark';
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'light' || saved === 'dark') return saved;
+  } catch {
+    /* fallback to attribute or default */
+  }
   const attr = document.documentElement.getAttribute('data-theme');
   return attr === 'light' ? 'light' : 'dark';
 }

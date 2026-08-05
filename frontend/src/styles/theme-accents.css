@@ -1,0 +1,21 @@
+/* ============================================================
+   TurfChai Design System — Theme Accent Color Variants
+   ============================================================ */
+
+[data-accent="emerald"] {
+  --brand: #0E7A4A;
+  --brand-600: #0C6A40;
+  --brand-soft: #E3F4EB;
+}
+
+[data-accent="blue"] {
+  --brand: #2563EB;
+  --brand-600: #1D4ED8;
+  --brand-soft: #EFF6FF;
+}
+
+[data-accent="amber"] {
+  --brand: #D97706;
+  --brand-600: #B45309;
+  --brand-soft: #FFFBEB;
+}
