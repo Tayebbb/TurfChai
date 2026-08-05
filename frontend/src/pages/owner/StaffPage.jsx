@@ -106,4 +106,105 @@ export default function StaffPage() {
     showToast(`Invitation link sent to ${email} (${invite.role}) via Email 📧`);
     inviteModal.close();
     setInvite((current) => ({ ...current, name: '', email: '' }));
-  }
+  }
+
+  return (
+    <>
+      <PageTitle title="Staff & Shifts" />
+
+      <div className="main-header">
+        <div>
+          <h1>Staff &amp; Shifts</h1>
+          <span className="subtle small">Who can do what — and where every taka went</span>
+        </div>
+        <Button variant="primary" onClick={inviteModal.open}>
+          + Invite staff / owner
+        </Button>
+      </div>
+
+      <div className="grid2" style={{ alignItems: 'start' }}>
+        <div className="stack">
+          <section className="card">
+            <h3>Team</h3>
+            <div className="stack-sm" style={{ marginTop: 10 }}>
+              {team.map((member) => (
+                <div className="panel between" key={member.id}>
+                  <div className="row" style={{ gap: 8 }}>
+                    <Avatar initials={member.initials} tone={member.tone} style={member.avatarStyle} />
+                    <div>
+                      <b className="small">{member.name}</b>{' '}
+                      <Badge tone={member.badge} dot={false}>
+                        {member.role}
+                      </Badge>
+                      {member.pending ? (
+                        <>
+                          {' '}
+                          <Badge tone="amber" dot={false}>
+                            Invite sent
+                          </Badge>
+                        </>
+                      ) : null}
+                      <div className="tiny subtle">{member.detail}</div>
+                    </div>
+                  </div>
+                  {member.permissions ? (
+                    <Button size="sm" onClick={permDrawer.open}>
+                      Permissions
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="card">
+            <h3>Today&apos;s shifts</h3>
+            <div className="stack-sm" style={{ marginTop: 10 }}>
+              <div className="panel between">
+                <div>
+                  <b className="small num">6:00 AM – 2:00 PM · Morning</b>{' '}
+                  <Badge tone="gray" dot={false}>
+                    Closed
+                  </Badge>
+                  <div className="tiny subtle">Jahid R. · cash ৳0 · balanced ✓</div>
+                </div>
+              </div>
+              <div className="panel between">
+                <div>
+                  <b className="small num">2:00 PM – 7:00 PM · Afternoon</b>{' '}
+                  <Badge tone="gray" dot={false}>
+                    Closed
+                  </Badge>
+                  <div className="tiny subtle">
+                    Sumon B. · cash expected ৳1,700 · counted ৳1,700 · balanced ✓
+                  </div>
+                </div>
+                <Button size="sm" variant="tertiary" onClick={() => showToast('Shift report opened 🧾')}>
+                  Report
+                </Button>
+              </div>
+              <div className="panel between" style={{ borderLeft: '3px solid var(--brand)' }}>
+                <div>
+                  <b className="small num">7:00 PM – 11:30 PM · Evening</b>{' '}
+                  <Badge tone="green">Open · Sumon B.</Badge>
+                  <div className="tiny subtle">Cash so far ৳0 · ৳4,300 deposits due for collection</div>
+                </div>
+                <Button size="sm" variant="primary" onClick={closeShift.open}>
+                  Close shift
+                </Button>
+              </div>
+            </div>
+            <div className="field" style={{ marginTop: 12 }}>
+              <label htmlFor="hnote">Handover note for next shift</label>
+              <Input
+                id="hnote"
+                placeholder="e.g. Pitch 3 floodlight flickering — electrician coming 9 AM"
+                value={handoverNote}
+                onChange={(event) => setHandoverNote(event.target.value)}
+              />
+            </div>
+            <Button size="sm" onClick={() => showToast('Handover note saved 📝')}>
+              Save note
+            </Button>
+          </section>
+        </div>
