@@ -21,6 +21,7 @@ public class AiProperties {
         Endpoint e = new Endpoint();
         e.setBaseUrl("https://openrouter.ai/api/v1");
         e.setModel("google/gemma-4-31b-it:free");
+        e.setLatencyRouting(true);
         return e;
     }
 
@@ -66,6 +67,8 @@ public class AiProperties {
         private String model = "";
         /** Alternate models tried in order when the primary is rate-limited (OpenRouter routing). */
         private java.util.List<String> fallbackModels = java.util.List.of();
+        /** When true, asks the gateway to route to the lowest-latency upstream (OpenRouter). */
+        private boolean latencyRouting = false;
         private String baseUrl = "";
         private int timeoutSeconds = 45;
         /** Low temperature keeps tool arguments and policy answers precise. */
@@ -73,7 +76,7 @@ public class AiProperties {
         /** Nucleus sampling cap. */
         private double topP = 0.9;
         /** Reply length cap — keeps answers chat-sized and saves credits. */
-        private int maxTokens = 600;
+        private int maxTokens = 450;
 
         public String getApiKey() {
             return apiKey;
@@ -97,6 +100,14 @@ public class AiProperties {
 
         public void setFallbackModels(java.util.List<String> fallbackModels) {
             this.fallbackModels = fallbackModels;
+        }
+
+        public boolean isLatencyRouting() {
+            return latencyRouting;
+        }
+
+        public void setLatencyRouting(boolean latencyRouting) {
+            this.latencyRouting = latencyRouting;
         }
 
         public String getBaseUrl() {

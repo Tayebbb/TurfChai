@@ -35,9 +35,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -75,8 +76,13 @@ public class AiConfiguration {
 
     private RestClient buildRestClient(AiProperties.Endpoint endpoint, Map<String, String> extraHeaders) {
         Duration timeout = Duration.ofSeconds(endpoint.getTimeoutSeconds());
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(timeout);
+        // JDK HttpClient: HTTP/2 + pooled keep-alive connections avoid a
+        // fresh TLS handshake on every LLM round trip.
+        HttpClient httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_2)
+                .connectTimeout(timeout)
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(timeout);
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl(endpoint.getBaseUrl())

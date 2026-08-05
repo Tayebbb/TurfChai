@@ -38,7 +38,7 @@ class OpenAiCompatibleLlmProviderTest {
         assertThat(body.get("model")).isEqualTo("meta-llama/llama-3.3-70b-instruct:free");
         assertThat(body.get("temperature")).isEqualTo(0.3);
         assertThat(body.get("top_p")).isEqualTo(0.9);
-        assertThat(body.get("max_tokens")).isEqualTo(600);
+        assertThat(body.get("max_tokens")).isEqualTo(450);
         List<Map<String, Object>> messages = (List<Map<String, Object>>) body.get("messages");
         assertThat(messages).extracting(m -> m.get("role"))
                 .containsExactly("system", "user", "assistant");

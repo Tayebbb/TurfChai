@@ -20,6 +20,14 @@ class PromptBuilderTest {
     }
 
     @Test
+    void toolGuidanceOmittedWhenNoToolsExposed() {
+        String prompt = builder.buildSystemPrompt(null, false);
+        assertThat(prompt)
+                .contains("Safety Rules")
+                .doesNotContain("Tool Usage");
+    }
+
+    @Test
     void systemPromptIncludesStateWhenPresent() {
         String prompt = builder.buildSystemPrompt("sport=football, date=2026-08-10");
         assertThat(prompt).contains("Current booking context")

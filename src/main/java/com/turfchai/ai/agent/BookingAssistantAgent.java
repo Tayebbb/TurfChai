@@ -146,7 +146,8 @@ public class BookingAssistantAgent {
 
         BookingState state = stateStore.get(sessionId);
         messages.add(ChatMessage.system(promptBuilder.buildSystemPrompt(
-                state.isEmpty() ? null : state.summary())));
+                state.isEmpty() ? null : state.summary(),
+                !plan.allowedTools().isEmpty())));
 
         if (plan.useRetrieval()) {
             String context = retriever.retrieveAsContext(userMessage);

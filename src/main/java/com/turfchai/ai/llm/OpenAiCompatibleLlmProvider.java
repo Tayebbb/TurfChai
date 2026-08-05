@@ -127,6 +127,9 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
         body.put("temperature", config.getTemperature());
         body.put("top_p", config.getTopP());
         body.put("max_tokens", config.getMaxTokens());
+        if (config.isLatencyRouting()) {
+            body.put("provider", Map.of("sort", "latency"));
+        }
         if (!request.tools().isEmpty()) {
             body.put("tools", request.tools().stream().map(this::toToolDefinition).toList());
         }
