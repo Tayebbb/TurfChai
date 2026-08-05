@@ -150,10 +150,10 @@ class BookingAssistantAgentTest {
 
     @Test
     void runawayToolLoopForcesFinalTextAnswer() {
-        // maxToolIterations = 3; model keeps requesting tools
+        // maxToolIterations = 3; model keeps requesting tools with new args
         for (int i = 0; i < 3; i++) {
             llm.enqueue(LlmResponse.ofToolCalls(List.of(
-                    new ToolCall("search_venues", Map.of()))));
+                    new ToolCall("search_venues", Map.of("area", "Area" + i)))));
         }
         llm.enqueue(LlmResponse.ofText("Here is what I found so far."));
 
@@ -166,6 +166,24 @@ class BookingAssistantAgentTest {
         assertThat(finalRequest.tools()).isEmpty();
         assertThat(finalRequest.messages())
                 .anySatisfy(m -> assertThat(m.content()).contains("Tool budget exhausted"));
+    }
+
+    @Test
+    void duplicateToolCallIsNotReExecutedAndForcesAnswer() {
+        LlmResponse sameCall = LlmResponse.ofToolCalls(List.of(
+                new ToolCall("search_venues", Map.of("area", "Banani"))));
+        llm.enqueue(sameCall);
+        llm.enqueue(sameCall);                       // identical repeat
+        llm.enqueue(LlmResponse.ofText("GreenTurf Arena is your best option."));
+
+        AgentResponse response = agent.chat("s1", "u1", "book a turf in banani");
+
+        assertThat(response.reply()).contains("GreenTurf");
+        assertThat(response.toolsInvoked()).hasSize(1);   // executed only once
+        // duplicate was answered with a nudge instead of re-execution
+        LlmRequest finalRequest = llm.requests.get(llm.requests.size() - 1);
+        assertThat(finalRequest.messages())
+                .anySatisfy(m -> assertThat(String.valueOf(m.content())).contains("Duplicate call"));
     }
 
     @Test

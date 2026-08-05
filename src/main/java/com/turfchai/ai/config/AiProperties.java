@@ -8,11 +8,22 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.ai")
 public class AiProperties {
 
+    /** Which LLM is tried first: {@code huggingface} or {@code gemini}. */
+    private String primaryProvider = "huggingface";
+
     private final Gemini gemini = new Gemini();
     private final HuggingFace huggingface = new HuggingFace();
     private final Rag rag = new Rag();
     private final Memory memory = new Memory();
     private final Agent agent = new Agent();
+
+    public String getPrimaryProvider() {
+        return primaryProvider;
+    }
+
+    public void setPrimaryProvider(String primaryProvider) {
+        this.primaryProvider = primaryProvider;
+    }
 
     public Gemini getGemini() {
         return gemini;
@@ -83,14 +94,20 @@ public class AiProperties {
         }
     }
 
-    /** Fallback provider used when Gemini fails or hits its quota. */
+    /** Hugging Face Inference Router (OpenAI-compatible) settings. */
     public static class HuggingFace {
-        /** API key; when blank no fallback is registered. */
+        /** API key; when blank the provider is not registered. */
         private String apiKey = "";
         private String model = "meta-llama/Llama-3.3-70B-Instruct";
         /** OpenAI-compatible router endpoint. */
         private String baseUrl = "https://router.huggingface.co/v1";
         private int timeoutSeconds = 45;
+        /** Low temperature keeps tool arguments and policy answers precise. */
+        private double temperature = 0.3;
+        /** Nucleus sampling cap. */
+        private double topP = 0.9;
+        /** Reply length cap — keeps answers chat-sized and saves credits. */
+        private int maxTokens = 600;
 
         public String getApiKey() {
             return apiKey;
@@ -114,6 +131,30 @@ public class AiProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
+        }
+
+        public double getTemperature() {
+            return temperature;
+        }
+
+        public void setTemperature(double temperature) {
+            this.temperature = temperature;
+        }
+
+        public double getTopP() {
+            return topP;
+        }
+
+        public void setTopP(double topP) {
+            this.topP = topP;
+        }
+
+        public int getMaxTokens() {
+            return maxTokens;
+        }
+
+        public void setMaxTokens(int maxTokens) {
+            this.maxTokens = maxTokens;
         }
 
         public int getTimeoutSeconds() {

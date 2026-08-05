@@ -114,6 +114,9 @@ public class HuggingFaceLlmProvider implements LlmProvider {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", config.getModel());
         body.put("messages", messages);
+        body.put("temperature", config.getTemperature());
+        body.put("top_p", config.getTopP());
+        body.put("max_tokens", config.getMaxTokens());
         if (!request.tools().isEmpty()) {
             body.put("tools", request.tools().stream().map(this::toToolDefinition).toList());
         }

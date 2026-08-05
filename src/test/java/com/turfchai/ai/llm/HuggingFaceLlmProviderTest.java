@@ -30,6 +30,9 @@ class HuggingFaceLlmProviderTest {
                 List.of()));
 
         assertThat(body.get("model")).isEqualTo("meta-llama/Llama-3.3-70B-Instruct");
+        assertThat(body.get("temperature")).isEqualTo(0.3);
+        assertThat(body.get("top_p")).isEqualTo(0.9);
+        assertThat(body.get("max_tokens")).isEqualTo(600);
         List<Map<String, Object>> messages = (List<Map<String, Object>>) body.get("messages");
         assertThat(messages).extracting(m -> m.get("role"))
                 .containsExactly("system", "user", "assistant");

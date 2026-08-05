@@ -20,7 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The orchestrator. One turn:
@@ -84,6 +86,7 @@ public class BookingAssistantAgent {
         ToolContext toolContext = new ToolContext(sessionId, userId);
 
         List<String> toolsInvoked = new ArrayList<>();
+        Set<String> executedCalls = new HashSet<>();
         int totalTokens = 0;
 
         // Persist the user turn first so tool side effects and transcript
@@ -94,18 +97,29 @@ public class BookingAssistantAgent {
         totalTokens += response.usage().total();
 
         int iterations = 0;
+        boolean sawDuplicate = false;
         while (response.hasToolCalls()) {
             iterations++;
             for (ToolCall call : response.toolCalls()) {
+                String callKey = call.name() + ":" + toJsonSafe(call.arguments());
+                if (!executedCalls.add(callKey)) {
+                    // Identical repeat: don't re-execute; nudge the model to answer.
+                    sawDuplicate = true;
+                    messages.add(ChatMessage.assistantToolCall(call));
+                    messages.add(ChatMessage.tool(call.name(),
+                            "{\"success\":false,\"error\":\"Duplicate call - you already have this result above. Answer the user now.\"}"));
+                    continue;
+                }
                 toolsInvoked.add(call.name());
                 ToolResult result = toolRegistry.execute(call.name(), call.arguments(), toolContext);
                 messages.add(ChatMessage.assistantToolCall(call));
                 messages.add(ChatMessage.tool(call.name(), toJson(result)));
             }
-            if (iterations >= maxToolIterations) {
+            if (iterations >= maxToolIterations || sawDuplicate) {
                 // Force a final text answer: withhold tools so a tool-happy
                 // model must summarize what it has instead of looping.
-                log.warn("session={} hit max tool iterations ({}); forcing text answer", sessionId, maxToolIterations);
+                log.warn("session={} forcing text answer (iterations={}, duplicate={})",
+                        sessionId, iterations, sawDuplicate);
                 messages.add(ChatMessage.system(
                         "Tool budget exhausted. Answer the user now using only the tool results above."));
                 response = llmProvider.chat(new LlmRequest(messages, List.of()));
@@ -152,6 +166,14 @@ public class BookingAssistantAgent {
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize tool result", e);
             return "{\"success\":false,\"error\":\"internal serialization error\"}";
+        }
+    }
+
+    private String toJsonSafe(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            return String.valueOf(value);
         }
     }
 }

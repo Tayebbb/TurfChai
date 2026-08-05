@@ -90,9 +90,10 @@ public class AiConfiguration {
     }
 
     /**
-     * Provider chain: Gemini primary, Hugging Face fallback on retryable
-     * failures (quota/transport/5xx). Either can run alone; with neither
-     * key set the app still boots and chat returns 503.
+     * Provider chain ordered by {@code app.ai.primary-provider}, the other
+     * key acting as fallback on retryable failures (quota/transport/5xx).
+     * Either can run alone; with neither key set the app still boots and
+     * chat returns 503.
      */
     @Bean
     LlmProvider llmProvider(AiProperties properties,
@@ -110,8 +111,11 @@ public class AiConfiguration {
                 : null;
 
         if (gemini != null && huggingFace != null) {
-            log.info("LLM providers: gemini (primary) with huggingface fallback");
-            return new FallbackLlmProvider(gemini, huggingFace,
+            boolean hfFirst = "huggingface".equalsIgnoreCase(properties.getPrimaryProvider());
+            LlmProvider primary = hfFirst ? huggingFace : gemini;
+            LlmProvider secondary = hfFirst ? gemini : huggingFace;
+            log.info("LLM providers: {} (primary) with {} fallback", primary.name(), secondary.name());
+            return new FallbackLlmProvider(primary, secondary,
                     Duration.ofSeconds(properties.getAgent().getPrimaryCooldownSeconds()),
                     Clock.systemUTC());
         }
