@@ -1,0 +1,407 @@
+package com.turfchai.tournament.service;
+
+import com.turfchai.player.entity.User;
+import com.turfchai.tournament.entity.Tournament;
+import com.turfchai.tournament.entity.TournamentFixture;
+import com.turfchai.tournament.entity.TournamentPitchReservation;
+import com.turfchai.tournament.entity.TournamentTeam;
+import com.turfchai.tournament.repository.TournamentFixtureRepository;
+import com.turfchai.tournament.repository.TournamentPitchReservationRepository;
+import com.turfchai.tournament.repository.TournamentRepository;
+import com.turfchai.tournament.repository.TournamentTeamRepository;
+import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
+import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
+import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
+import com.turfchai.tournament.service.TournamentRequests.SlotRequest;
+import com.turfchai.tournament.service.TournamentViews.CostSummary;
+import com.turfchai.tournament.service.TournamentViews.FixtureView;
+import com.turfchai.tournament.service.TournamentViews.ReservationView;
+import com.turfchai.tournament.service.TournamentViews.TeamView;
+import com.turfchai.tournament.service.TournamentViews.TournamentView;
+import com.turfchai.venue.entity.Pitch;
+import com.turfchai.venue.entity.Venue;
+import com.turfchai.venue.repository.PitchRepository;
+import com.turfchai.venue.repository.VenueRepository;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Host tournament hub: tournament lifecycle, team registration with
+ * entry-fee tracking, multi-pitch slot reservation with conflict avoidance,
+ * and knockout fixture bracket generation.
+ */
+@Service
+public class TournamentService {
+
+    /** Bundle discount applied when a host books this many slots or more. */
+    static final int BUNDLE_DISCOUNT_MIN_SLOTS = 12;
+    static final BigDecimal BUNDLE_DISCOUNT_RATE = new BigDecimal("0.04");
+    static final BigDecimal DEPOSIT_RATE = new BigDecimal("0.40");
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final TournamentRepository tournaments;
+    private final TournamentTeamRepository teams;
+    private final TournamentFixtureRepository fixtures;
+    private final TournamentPitchReservationRepository reservations;
+    private final VenueRepository venues;
+    private final PitchRepository pitches;
+
+    public TournamentService(TournamentRepository tournaments,
+                             TournamentTeamRepository teams,
+                             TournamentFixtureRepository fixtures,
+                             TournamentPitchReservationRepository reservations,
+                             VenueRepository venues,
+                             PitchRepository pitches) {
+        this.tournaments = tournaments;
+        this.teams = teams;
+        this.fixtures = fixtures;
+        this.reservations = reservations;
+        this.venues = venues;
+        this.pitches = pitches;
+    }
+
+    // ------------------------------------------------------------------
+    // Lifecycle
+    // ------------------------------------------------------------------
+
+    @Transactional
+    public TournamentView create(User host, CreateTournamentRequest request) {
+        if (!request.windowEnd().isAfter(request.windowStart())) {
+            throw new IllegalArgumentException("windowEnd must be after windowStart");
+        }
+        Venue venue = venues.findBySlug(request.venueSlug())
+                .orElseThrow(() -> new IllegalArgumentException("Unknown venue: " + request.venueSlug()));
+
+        Tournament t = new Tournament();
+        t.setCode(nextCode());
+        t.setName(request.name().trim());
+        t.setHost(host);
+        t.setVenue(venue);
+        t.setTournamentDate(request.date());
+        t.setWindowStart(request.windowStart());
+        t.setWindowEnd(request.windowEnd());
+        t.setFormat(request.format());
+        t.setTeamCapacity(request.teamCapacity());
+        t.setEntryFeePerTeam(request.entryFeePerTeam());
+        t.setPrizePool(request.prizePool() == null ? BigDecimal.ZERO : request.prizePool());
+        t.setPrivacy(request.privacy() == null ? "open" : request.privacy());
+        t.setInviteCode("t/" + slugify(request.name()) + "-" + randomDigits(4));
+        t.setStatus("published");
+        t.setBalanceDueDate(request.date().minusDays(3));
+        return toView(tournaments.save(t));
+    }
+
+    @Transactional(readOnly = true)
+    public TournamentView get(String code) {
+        return toView(require(code));
+    }
+
+    // ------------------------------------------------------------------
+    // Teams
+    // ------------------------------------------------------------------
+
+    @Transactional
+    public TeamView registerTeam(String code, RegisterTeamRequest request) {
+        Tournament t = require(code);
+        long registered = teams.countByTournamentId(t.getId());
+        if (registered >= t.getTeamCapacity()) {
+            throw new TournamentConflictException("Tournament is full (" + t.getTeamCapacity() + " teams)");
+        }
+        if (teams.existsByTournamentIdAndNameIgnoreCase(t.getId(), request.name().trim())) {
+            throw new TournamentConflictException("A team named '" + request.name().trim() + "' is already registered");
+        }
+        TournamentTeam team = new TournamentTeam();
+        team.setTournament(t);
+        team.setName(request.name().trim());
+        team.setCaptainName(request.captainName());
+        try {
+            return toView(teams.saveAndFlush(team));
+        } catch (DataIntegrityViolationException e) {
+            throw new TournamentConflictException("A team named '" + request.name().trim() + "' is already registered");
+        }
+    }
+
+    /**
+     * Marks a team's entry fee as paid. Records tracking state only — actual
+     * payment capture belongs to the payments module.
+     */
+    @Transactional
+    public TeamView markEntryFeePaid(String code, Long teamId) {
+        Tournament t = require(code);
+        TournamentTeam team = teams.findById(teamId)
+                .filter(x -> x.getTournament().getId().equals(t.getId()))
+                .orElseThrow(() -> new TournamentNotFoundException("No team " + teamId + " in " + code));
+        team.setEntryFeeStatus("paid");
+        team.setEntryFeePaid(t.getEntryFeePerTeam());
+        return toView(team);
+    }
+
+    // ------------------------------------------------------------------
+    // Multi-pitch reservations
+    // ------------------------------------------------------------------
+
+    /**
+     * Reserves a batch of pitch/time slots for the tournament date. The whole
+     * batch is atomic: any conflict (existing reservation overlap, duplicate
+     * slot within the request, pitch from another venue) rejects the batch.
+     */
+    @Transactional
+    public TournamentView reserveSlots(String code, ReserveSlotsRequest request) {
+        Tournament t = require(code);
+        List<SlotRequest> slots = request.slots();
+
+        // In-request duplicate / overlap detection.
+        for (int i = 0; i < slots.size(); i++) {
+            SlotRequest a = slots.get(i);
+            if (!a.endTime().isAfter(a.startTime())) {
+                throw new IllegalArgumentException("Slot endTime must be after startTime");
+            }
+            for (int j = i + 1; j < slots.size(); j++) {
+                SlotRequest b = slots.get(j);
+                if (a.pitchId().equals(b.pitchId()) && overlaps(a, b)) {
+                    throw new IllegalArgumentException(
+                            "Request contains overlapping slots on pitch " + a.pitchId());
+                }
+            }
+        }
+
+        for (SlotRequest slot : slots) {
+            Pitch pitch = pitches.findById(slot.pitchId())
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown pitch: " + slot.pitchId()));
+            if (!pitch.getVenue().getId().equals(t.getVenue().getId())) {
+                throw new IllegalArgumentException(
+                        "Pitch " + slot.pitchId() + " does not belong to venue " + t.getVenue().getSlug());
+            }
+            List<TournamentPitchReservation> clashes = reservations.findOverlapping(
+                    pitch.getId(), t.getTournamentDate(), slot.startTime(), slot.endTime());
+            if (!clashes.isEmpty()) {
+                TournamentPitchReservation clash = clashes.get(0);
+                throw new PitchConflictException(
+                        "Pitch '" + pitch.getName() + "' is already reserved "
+                                + clash.getStartTime() + "-" + clash.getEndTime()
+                                + " on " + t.getTournamentDate());
+            }
+            TournamentPitchReservation r = new TournamentPitchReservation();
+            r.setTournament(t);
+            r.setPitch(pitch);
+            r.setSlotDate(t.getTournamentDate());
+            r.setStartTime(slot.startTime());
+            r.setEndTime(slot.endTime());
+            r.setPrice(slot.price());
+            reservations.save(r);
+        }
+        try {
+            reservations.flush();
+        } catch (DataIntegrityViolationException e) {
+            // Unique-constraint backstop for a concurrent reservation race.
+            throw new PitchConflictException("One of the requested slots was just taken");
+        }
+        t.setStatus("confirmed");
+        return toView(t);
+    }
+
+    // ------------------------------------------------------------------
+    // Fixture bracket generation
+    // ------------------------------------------------------------------
+
+    /**
+     * Generates a single-elimination first-round bracket from teams whose
+     * entry fee is paid, seeded in join order. When the paid-team count is
+     * not a power of two, the earliest-joined teams receive byes. Real
+     * matches are scheduled onto the tournament's reserved slots in
+     * chronological order — one match per reserved slot — so fixtures can
+     * never collide on a pitch.
+     */
+    @Transactional
+    public List<FixtureView> generateFixtures(String code) {
+        Tournament t = require(code);
+        List<TournamentTeam> paid = teams.findByTournamentIdOrderByJoinedAtAsc(t.getId()).stream()
+                .filter(x -> "paid".equals(x.getEntryFeeStatus()))
+                .toList();
+        if (paid.size() < 2) {
+            throw new TournamentConflictException(
+                    "Need at least 2 teams with paid entry fees to generate fixtures ("
+                            + paid.size() + " paid)");
+        }
+
+        List<TournamentPitchReservation> slots = reservations
+                .findByTournamentIdOrderBySlotDateAscStartTimeAsc(t.getId());
+
+        int bracketSize = Integer.highestOneBit(paid.size());
+        if (bracketSize < paid.size()) {
+            bracketSize <<= 1;
+        }
+        int byes = bracketSize - paid.size();
+        String round = roundLabel(bracketSize);
+        int realMatches = (bracketSize / 2) - byes;
+        if (slots.size() < realMatches) {
+            throw new TournamentConflictException(
+                    "Not enough reserved slots: " + realMatches + " matches need scheduling but only "
+                            + slots.size() + " slots are reserved");
+        }
+
+        fixtures.deleteByTournamentId(t.getId());
+        fixtures.flush();
+
+        List<TournamentFixture> generated = new ArrayList<>();
+        int matchNumber = 0;
+
+        // Earliest-joined teams get the byes.
+        for (int i = 0; i < byes; i++) {
+            TournamentFixture f = new TournamentFixture();
+            f.setTournament(t);
+            f.setRoundLabel(round);
+            f.setMatchNumber(++matchNumber);
+            f.setTeamA(paid.get(i));
+            f.setStatus("bye");
+            generated.add(f);
+        }
+        // Remaining teams are paired first-vs-last to spread seeds.
+        List<TournamentTeam> field = paid.subList(byes, paid.size());
+        int slotIdx = 0;
+        for (int lo = 0, hi = field.size() - 1; lo < hi; lo++, hi--) {
+            TournamentPitchReservation slot = slots.get(slotIdx++);
+            TournamentFixture f = new TournamentFixture();
+            f.setTournament(t);
+            f.setRoundLabel(round);
+            f.setMatchNumber(++matchNumber);
+            f.setTeamA(field.get(lo));
+            f.setTeamB(field.get(hi));
+            f.setPitch(slot.getPitch());
+            f.setStartTime(slot.getStartTime());
+            generated.add(f);
+        }
+        return fixtures.saveAll(generated).stream().map(this::toView).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FixtureView> listFixtures(String code) {
+        Tournament t = require(code);
+        return fixtures.findByTournamentIdOrderByStartTimeAscMatchNumberAsc(t.getId())
+                .stream().map(this::toView).toList();
+    }
+
+    // ------------------------------------------------------------------
+    // Internals
+    // ------------------------------------------------------------------
+
+    private Tournament require(String code) {
+        return tournaments.findByCode(code)
+                .orElseThrow(() -> new TournamentNotFoundException("No tournament: " + code));
+    }
+
+    static String roundLabel(int bracketSize) {
+        return switch (bracketSize) {
+            case 2 -> "Final";
+            case 4 -> "SF";
+            case 8 -> "QF";
+            case 16 -> "R16";
+            default -> "R" + bracketSize;
+        };
+    }
+
+    private static boolean overlaps(SlotRequest a, SlotRequest b) {
+        return a.startTime().isBefore(b.endTime()) && a.endTime().isAfter(b.startTime());
+    }
+
+    private String nextCode() {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String code = "TR-CUP-" + randomDigits(4);
+            if (!tournaments.existsByCode(code)) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("Could not allocate a tournament code");
+    }
+
+    private static String randomDigits(int n) {
+        StringBuilder sb = new StringBuilder(n);
+        for (int i = 0; i < n; i++) {
+            sb.append(RANDOM.nextInt(10));
+        }
+        return sb.toString();
+    }
+
+    private static String slugify(String s) {
+        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+    }
+
+    CostSummary costSummary(Tournament t) {
+        List<TournamentPitchReservation> rs = reservations
+                .findByTournamentIdOrderBySlotDateAscStartTimeAsc(t.getId());
+        BigDecimal slotTotal = rs.stream().map(TournamentPitchReservation::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal discount = rs.size() >= BUNDLE_DISCOUNT_MIN_SLOTS
+                ? slotTotal.multiply(BUNDLE_DISCOUNT_RATE).setScale(0, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        BigDecimal total = slotTotal.subtract(discount);
+        BigDecimal deposit = total.multiply(DEPOSIT_RATE).setScale(0, RoundingMode.HALF_UP);
+        return new CostSummary(rs.size(), slotTotal, discount, total, deposit, total.subtract(deposit));
+    }
+
+    private TournamentView toView(Tournament t) {
+        List<TeamView> teamViews = teams.findByTournamentIdOrderByJoinedAtAsc(t.getId())
+                .stream().map(this::toView).toList();
+        List<FixtureView> fixtureViews = fixtures
+                .findByTournamentIdOrderByStartTimeAscMatchNumberAsc(t.getId())
+                .stream().map(this::toView).toList();
+        List<ReservationView> reservationViews = reservations
+                .findByTournamentIdOrderBySlotDateAscStartTimeAsc(t.getId())
+                .stream()
+                .map(r -> new ReservationView(r.getId(), r.getPitch().getId(), r.getPitch().getName(),
+                        r.getSlotDate(), r.getStartTime(), r.getEndTime(), r.getPrice()))
+                .toList();
+        return new TournamentView(t.getId(), t.getCode(), t.getName(),
+                t.getVenue().getSlug(), t.getVenue().getName(),
+                t.getTournamentDate(), t.getWindowStart(), t.getWindowEnd(),
+                t.getFormat(), t.getTeamCapacity(), t.getEntryFeePerTeam(),
+                t.getPrizePool(), t.getPrivacy(), t.getInviteCode(),
+                t.getStatus(), t.getBalanceDueDate(),
+                teamViews, fixtureViews, reservationViews, costSummary(t));
+    }
+
+    private TeamView toView(TournamentTeam x) {
+        return new TeamView(x.getId(), x.getName(), x.getCaptainName(),
+                x.getEntryFeeStatus(), x.getEntryFeePaid());
+    }
+
+    private FixtureView toView(TournamentFixture f) {
+        return new FixtureView(f.getId(), f.getRoundLabel(), f.getMatchNumber(),
+                f.getPitch() == null ? null : f.getPitch().getName(),
+                f.getStartTime(),
+                f.getTeamA() == null ? null : f.getTeamA().getName(),
+                f.getTeamB() == null ? null : f.getTeamB().getName(),
+                f.getStatus());
+    }
+
+    /** 404 — unknown tournament or team. */
+    public static class TournamentNotFoundException extends RuntimeException {
+        public TournamentNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    /** 409 — pitch slot already reserved. */
+    public static class PitchConflictException extends RuntimeException {
+        public PitchConflictException(String message) {
+            super(message);
+        }
+    }
+
+    /** 409 — domain-state conflict (full tournament, duplicate team, etc.). */
+    public static class TournamentConflictException extends RuntimeException {
+        public TournamentConflictException(String message) {
+            super(message);
+        }
+    }
+}

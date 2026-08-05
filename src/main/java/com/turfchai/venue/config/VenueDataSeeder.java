@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -29,6 +30,7 @@ public class VenueDataSeeder {
     private static final Logger log = LoggerFactory.getLogger(VenueDataSeeder.class);
 
     @Bean
+    @Order(1)   // venues first — player and tournament seeders depend on them
     CommandLineRunner seedVenues(VenueRepository venues, SportRepository sports) {
         return args -> seed(venues, sports);
     }

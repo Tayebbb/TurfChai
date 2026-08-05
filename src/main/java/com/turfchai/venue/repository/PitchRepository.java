@@ -8,4 +8,6 @@ import java.util.List;
 public interface PitchRepository extends JpaRepository<Pitch, Long> {
 
     List<Pitch> findByVenueIdAndActiveTrue(Long venueId);
+
+    List<Pitch> findByVenueSlug(String slug);
 }
