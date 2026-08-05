@@ -9,6 +9,7 @@ import { Chip } from '@/components/ui/Chip';
 import { Photo } from '@/components/ui/Photo';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { searchVenues, toExploreCard } from '@/api/venues';
+import { getSavedVenues, toggleSavedVenue } from '@/api/players';
 import { exploreMapPins, exploreVenues as exploreVenuesFallback } from '@/data/venues';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
@@ -143,6 +144,30 @@ export default function ExplorePage() {
     setPage(0);
   };
 
+  // Saved-venue bookmarks (heart buttons); non-fatal if the API is down.
+  const [savedSlugs, setSavedSlugs] = useState(() => new Set());
+  useEffect(() => {
+    getSavedVenues()
+      .then((items) => setSavedSlugs(new Set(items.map((item) => item.slug))))
+      .catch(() => {});
+  }, []);
+
+  const onToggleSave = async (event, venue) => {
+    event.preventDefault(); // heart sits inside the venue card link
+    try {
+      const { saved } = await toggleSavedVenue(venue.id);
+      setSavedSlugs((current) => {
+        const next = new Set(current);
+        if (saved) next.add(venue.id);
+        else next.delete(venue.id);
+        return next;
+      });
+      showToast(saved ? `❤️ Saved ${venue.name}` : `Removed ${venue.name} from saved`);
+    } catch {
+      showToast('Could not update saved venues — try again');
+    }
+  };
+
   return (
     <>
       <PageTitle title="Explore Venues" />
@@ -257,7 +282,14 @@ export default function ExplorePage() {
                 <div className="vc-photo">
                   <Photo variant={venue.photoVariant} />
                   {venue.promo ? <span className="vc-promo">{venue.promo}</span> : null}
-                  <button className="vc-save" type="button" aria-label={`Save ${venue.name}`}>
+                  <button
+                    className="vc-save"
+                    type="button"
+                    aria-label={savedSlugs.has(venue.id) ? `Remove ${venue.name} from saved` : `Save ${venue.name}`}
+                    aria-pressed={savedSlugs.has(venue.id)}
+                    style={savedSlugs.has(venue.id) ? { color: 'var(--danger)' } : undefined}
+                    onClick={(event) => onToggleSave(event, venue)}
+                  >
                     {HeartIcon}
                   </button>
                 </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -12,6 +12,7 @@ import { Stars } from '@/components/ui/Stars';
 import { Verified } from '@/components/ui/Tags';
 import { similarVenues as similarVenuesFallback } from '@/data/venues';
 import { getVenue, searchVenues, toSimilarCard } from '@/api/venues';
+import { getSavedVenues, toggleSavedVenue } from '@/api/players';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -187,6 +188,24 @@ export default function VenuePage() {
   const rating = venue ? String(venue.rating) : '4.8';
   const reviewCount = venue ? venue.reviewCount : 214;
 
+  // Saved state for this venue's heart button.
+  const [isSaved, setIsSaved] = useState(false);
+  useEffect(() => {
+    getSavedVenues()
+      .then((items) => setIsSaved(items.some((item) => item.slug === venueId)))
+      .catch(() => {});
+  }, [venueId]);
+
+  const onToggleSave = async () => {
+    try {
+      const { saved } = await toggleSavedVenue(venueId);
+      setIsSaved(saved);
+      showToast(saved ? '❤️ Saved to favourites' : 'Removed from favourites');
+    } catch {
+      showToast('Could not update saved venues — try again');
+    }
+  };
+
   const selectedSlot = SLOTS.find((slot) => slot.id === slotId);
 
   if (detail.error && detail.error.status === 404) {
@@ -261,7 +280,11 @@ export default function VenuePage() {
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
-            <IconButton label="Save venue" onClick={() => showToast('Saved to favourites')}>
+            <IconButton
+              label={isSaved ? 'Remove from saved' : 'Save venue'}
+              onClick={onToggleSave}
+              style={isSaved ? { color: 'var(--danger)' } : undefined}
+            >
               <svg width="17" height="17" viewBox="0 0 24 24" strokeWidth="2" {...svgProps}>
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
