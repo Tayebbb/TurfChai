@@ -1,0 +1,190 @@
+﻿/* ============================================================
+   TurfChai Unified Console Theme â€” v1.0
+   One design language across player / solo / host / owner / admin
+   (liquid-glass everywhere, single shared stylesheet)
+   ============================================================ */
+
+/* ---------- Admin-style page shell ---------- */
+.admin-page-wrap{
+  max-width:1340px;margin:0 auto;padding:24px 32px 64px;
+  box-sizing:border-box;position:relative;z-index:1;
+}
+[data-theme="dark"] .admin-page-wrap{z-index:1}
+@media (max-width:900px){.admin-page-wrap{padding:18px 16px 56px}}
+
+/* ---------- SVG nav icon (shared) ---------- */
+.nav-icon{
+  width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;
+}
+
+/* ---------- Glass select (dashboard-style) ---------- */
+.select-glass{
+  appearance:none;
+  background-color:rgba(255,255,255,.06);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  padding:6px 32px 6px 14px;border-radius:999px;
+  border:1px solid var(--border-strong);color:var(--text);
+  font-size:13px;font-weight:600;cursor:pointer;outline:none;
+  transition:all 180ms ease;
+}
+.select-glass:hover,.select-glass:focus{border-color:var(--brand);background-color:rgba(255,255,255,.12)}
+
+/* ---------- Native selects get the same chevron everywhere ---------- */
+.select,select.input{
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371847A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+  padding-right:36px;
+  transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease),transform var(--dur) var(--ease);
+}
+.select:focus,select.input:focus{transform:scale(1.01)}
+
+/* ---------- KPI cards (dashboard-style) ---------- */
+.kpi-card{
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:22px;border-radius:20px;min-height:160px;
+}
+.kpi-card .btn-link{margin-top:14px;align-self:flex-start}
+.spark-bar{display:flex;align-items:flex-end;gap:3px;height:24px;margin-top:8px}
+.spark-bar div{flex:1;background:var(--brand);opacity:.35;border-radius:2px;transition:opacity 180ms ease,height 180ms ease}
+.spark-bar div:hover{opacity:1}
+.stat-chip{
+  padding:12px 18px;border-radius:14px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border-soft);
+  display:flex;flex-direction:column;gap:2px;
+}
+.stat-chip b{font-size:20px;font-weight:800;font-family:var(--font-display);line-height:1.2}
+.chart-container{position:relative;width:100%;height:320px;margin-top:16px}
+.chart-canvas{width:100%!important;height:100%!important;display:block}
+.user-breakdown-legend{display:flex;flex-direction:column;gap:12px;justify-content:center}
+.legend-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-radius:12px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border-soft);
+  transition:background 180ms ease;
+}
+.legend-item:hover{background:rgba(255,255,255,.08)}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px}
+.history-item{transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.history-item:hover{transform:translateY(-2px);border-color:var(--brand)!important;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+/* ---------- Universal surface upgrade: every card is liquid glass ---------- */
+.card,
+.card-flat,
+.glass-card,
+.kpi,
+.panel,
+.table-wrap,
+.venue-card,
+.game-card,
+.vc,
+.gc,
+.payopt,
+.earn-card,
+.redeem-card,
+.tier-card,
+.tp-card,
+.status-card,
+.stat-card,
+.full-card,
+.game-card-urgent,
+.booking-panel{
+  background:var(--glass-bg-strong)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  backdrop-filter:blur(20px) saturate(160%);
+  border:1px solid var(--glass-border)!important;
+  box-shadow:0 12px 32px rgba(0,0,0,.28),0 2px 6px rgba(0,0,0,.12)!important;
+  transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease),border-color var(--dur) var(--ease)!important;
+}
+[data-theme="light"] .card,
+[data-theme="light"] .card-flat,
+[data-theme="light"] .glass-card,
+[data-theme="light"] .kpi,
+[data-theme="light"] .panel,
+[data-theme="light"] .table-wrap,
+[data-theme="light"] .venue-card,
+[data-theme="light"] .game-card,
+[data-theme="light"] .vc,
+[data-theme="light"] .gc,
+[data-theme="light"] .payopt,
+[data-theme="light"] .earn-card,
+[data-theme="light"] .redeem-card,
+[data-theme="light"] .tier-card,
+[data-theme="light"] .tp-card,
+[data-theme="light"] .status-card,
+[data-theme="light"] .stat-card,
+[data-theme="light"] .full-card,
+[data-theme="light"] .game-card-urgent,
+[data-theme="light"] .booking-panel{
+  box-shadow:0 12px 30px rgba(10,30,20,.1),0 2px 6px rgba(10,30,20,.05)!important;
+}
+.card:hover,.card-flat:hover,.kpi:hover,.venue-card:hover,.game-card:hover,.vc:hover,.gc:hover,.payopt:hover{
+  transform:translateY(-2px);
+  box-shadow:0 16px 40px rgba(0,0,0,.36),0 4px 10px rgba(0,0,0,.16)!important;
+}
+[data-theme="light"] .card:hover,
+[data-theme="light"] .kpi:hover,
+[data-theme="light"] .venue-card:hover,
+[data-theme="light"] .game-card:hover,
+[data-theme="light"] .vc:hover,
+[data-theme="light"] .gc:hover,
+[data-theme="light"] .payopt:hover{
+  box-shadow:0 16px 38px rgba(10,30,20,.14),0 4px 10px rgba(10,30,20,.06)!important;
+}
+/* keep inner table / chip rows crisp on glass */
+.table-wrap .table th{background:var(--surface-2)}
+.table-wrap .table tbody tr:hover{background:var(--surface-2)}
+.venue-card .body,.game-card,.card,.glass-card,.kpi,.panel{position:relative}
+.vc-photo,.vc .photo,.gc .photo{background-size:cover;background-position:center}
+
+/* Preserve selected/accent states over the glass surface */
+.payopt:has(input:checked){
+  background:var(--brand-soft)!important;
+  box-shadow:0 0 0 1.5px var(--brand),0 12px 32px rgba(0,0,0,.28)!important;
+}
+[data-theme="dark"] .payopt:has(input:checked){background:rgba(34,197,94,.18)!important}
+.gc-almost-full,.game-card-urgent{
+  border-color:rgba(251,191,36,.35)!important;
+  background:linear-gradient(135deg,var(--glass-bg-strong) 0%,rgba(251,191,36,.06) 100%)!important;
+}
+.gc-almost-full:hover,.game-card-urgent:hover{border-color:rgba(251,191,36,.6)!important}
+.tier-card.current,.tier-card.locked,.tp-card.current{background:var(--glass-bg-strong)!important}
+.datebox.on,.slot.selected,.chip.on{box-shadow:0 6px 18px rgba(0,0,0,.22)}
+
+/* ---------- Topbar: single dark-glass treatment everywhere ---------- */
+.topbar{
+  background:rgba(10,15,11,.75);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);
+  backdrop-filter:blur(22px) saturate(180%);
+  border-bottom:1px solid var(--glass-border);
+  box-shadow:0 2px 16px rgba(0,0,0,.18);
+}
+[data-theme="light"] .topbar{
+  background:rgba(255,255,255,.72);
+  box-shadow:0 2px 16px rgba(10,30,20,.06);
+}
+.topbar .brand{color:var(--text)}
+.topbar .navlinks{
+  background:rgba(255,255,255,.06);
+  border-color:var(--glass-border);
+}
+[data-theme="light"] .topbar .navlinks{background:rgba(255,255,255,.72)}
+.topbar .navlinks a:hover{background:rgba(255,255,255,.12)}
+[data-theme="light"] .topbar .navlinks a:hover{background:rgba(10,30,20,.05)}
+.topbar .navlinks a.active{background:var(--brand);color:#06130B}
+[data-theme="light"] .topbar .navlinks a.active{background:var(--brand-soft);color:var(--brand-600)}
+
+/* ---------- Sidebar (owner console) unified glass ---------- */
+.sidebar{
+  background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  backdrop-filter:blur(20px) saturate(160%);
+  border-right:1px solid var(--glass-border);
+}
+.sidebar .sidenav a.active{background:var(--brand);color:#06130B}
+[data-theme="light"] .sidebar .sidenav a.active{background:var(--brand-soft);color:var(--brand-600)}
+
+/* ---------- Global ambient orbs injected by turfchai.js ---------- */
+
