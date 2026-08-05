@@ -16,7 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 /** Seeds the demo player matching the frontend's `currentPlayer` persona (test profile only). */
 @Configuration
-@Profile("test")
+@Profile({"dev", "test"})
 public class PlayerDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerDataSeeder.class);

@@ -27,7 +27,7 @@ import java.util.Map;
  * Test seed matching the sample venues (test profile only).
  */
 @Configuration
-@Profile("test")
+@Profile({"dev", "test"})
 public class VenueDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(VenueDataSeeder.class);

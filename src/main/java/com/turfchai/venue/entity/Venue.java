@@ -62,6 +62,7 @@ public class Venue {
 
     /** Lifecycle status per the baseline schema, e.g. LIVE. */
     @Column(length = 30)
+    @Builder.Default
     private String status = "LIVE";
 
     @Column(nullable = false, length = 120)
@@ -80,12 +81,15 @@ public class Venue {
     private BigDecimal lng;
 
     @Column(name = "rating_avg", nullable = false, precision = 3, scale = 2)
+    @Builder.Default
     private BigDecimal ratingAvg = BigDecimal.ZERO;
 
     @Column(name = "review_count", nullable = false)
+    @Builder.Default
     private int reviewCount = 0;
 
     @Column(name = "is_verified", nullable = false)
+    @Builder.Default
     private boolean verified = false;
 
     /** Marketing badge shown on cards, e.g. "Buy 5 get 1 free". */
@@ -100,18 +104,23 @@ public class Venue {
     private String amenities;
 
     @Column(name = "open_time", nullable = false)
+    @Builder.Default
     private LocalTime openTime = LocalTime.of(6, 0);
 
     @Column(name = "close_time", nullable = false)
+    @Builder.Default
     private LocalTime closeTime = LocalTime.of(23, 0);
 
     @Column(nullable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Pitch> pitches = new ArrayList<>();
 
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<SportPricingRule> pricingRules = new ArrayList<>();
 
     public void addPitch(Pitch pitch) {
