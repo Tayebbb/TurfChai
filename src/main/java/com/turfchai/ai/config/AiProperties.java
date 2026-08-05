@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AiProperties {
 
     /** Which LLM is tried first: {@code huggingface} or {@code gemini}. */
-    private String primaryProvider = "huggingface";
+    private String primaryProvider = "gemini";
 
     private final Gemini gemini = new Gemini();
     private final HuggingFace huggingface = new HuggingFace();
@@ -48,7 +48,7 @@ public class AiProperties {
     public static class Gemini {
         /** API key; when blank the app boots but chat requests return 503. */
         private String apiKey = "";
-        private String model = "gemini-2.0-flash";
+        private String model = "gemini-flash-latest";
         private String embeddingModel = "gemini-embedding-001";
         private String baseUrl = "https://generativelanguage.googleapis.com/v1beta";
         private int timeoutSeconds = 30;
