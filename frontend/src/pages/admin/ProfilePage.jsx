@@ -152,3 +152,139 @@ export default function ProfilePage() {
             </button>
           </form>
         </section>
+
+        {/* Right Column: Security Credentials & Activity */}
+        <div className="stack" style={{ gap: 24 }}>
+          <section className="card" style={{ padding: 24, borderRadius: 20 }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800 }}>
+              Security Credentials
+            </h3>
+            <div className="stack-sm" style={{ gap: 12 }}>
+              <div
+                className="panel between"
+                style={{
+                  padding: 14,
+                  borderRadius: 14,
+                  border: '1px solid var(--border-soft)',
+                  background: 'rgba(255,255,255,0.01)',
+                }}
+              >
+                <div>
+                  <b className="small" style={{ color: 'var(--text)' }}>
+                    Password
+                  </b>
+                  <div className="tiny subtle" style={{ marginTop: 2 }}>
+                    Last changed 42 days ago
+                  </div>
+                </div>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  type="button"
+                  onClick={() => showToast('Password change flow initiated 🔒')}
+                >
+                  Change Password
+                </button>
+              </div>
+
+              <div
+                className="panel between"
+                style={{
+                  padding: 14,
+                  borderRadius: 14,
+                  border: '1px solid var(--border-soft)',
+                  background: 'rgba(255,255,255,0.01)',
+                }}
+              >
+                <div>
+                  <b className="small" style={{ color: 'var(--text)' }}>
+                    Two-Factor Authentication (2FA)
+                  </b>
+                  <div className="tiny subtle" style={{ marginTop: 2 }}>
+                    Authenticator App (Required)
+                  </div>
+                </div>
+                <span className="badge green nodot">Enabled ✓</span>
+              </div>
+
+              <div
+                className="panel between"
+                style={{
+                  padding: 14,
+                  borderRadius: 14,
+                  border: '1px solid var(--border-soft)',
+                  background: 'rgba(255,255,255,0.01)',
+                }}
+              >
+                <div>
+                  <b className="small" style={{ color: 'var(--text)' }}>
+                    Active Admin Sessions
+                  </b>
+                  <div className="tiny subtle" style={{ marginTop: 2 }}>
+                    2 Devices (Chrome Windows, Mobile App)
+                  </div>
+                </div>
+                <button
+                  className="btn btn-sm btn-ghost-danger"
+                  type="button"
+                  onClick={() => showToast('Other sessions terminated')}
+                >
+                  Revoke Others
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Recent Log Activity */}
+          <section className="card" style={{ padding: 24, borderRadius: 20 }}>
+            <div className="between" style={{ marginBottom: 16, alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>My Recent Activity</h3>
+              <Link
+                className="btn btn-sm btn-tertiary"
+                to={paths.admin.activity}
+                style={{ fontWeight: 700 }}
+              >
+                Full History →
+              </Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {RECENT_ACTIVITY.map((item, index) => (
+                <div
+                  className="tline-item"
+                  key={item.id}
+                  style={index === RECENT_ACTIVITY.length - 1 ? { marginBottom: 0 } : undefined}
+                >
+                  <b className="small" style={{ color: 'var(--text)' }}>
+                    {item.title}
+                  </b>
+                  <p className="tiny muted" style={{ margin: '2px 0 0' }}>
+                    {item.when}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {/* Saved Confirmation Modal */}
+      <Overlay
+        isOpen={profileSaved.isOpen}
+        onClose={profileSaved.close}
+        title="Profile Updated"
+        hideHeader
+        className="center"
+      >
+        <div className="check-anim" aria-hidden="true">
+          ✓
+        </div>
+        <h3 style={{ marginBottom: 8 }}>Profile Updated</h3>
+        <p className="muted small" style={{ marginBottom: 16 }}>
+          Your personal administrative profile settings have been updated.
+        </p>
+        <button className="btn btn-primary btn-block" type="button" onClick={profileSaved.close}>
+          Done
+        </button>
+      </Overlay>
+    </>
+  );
+}
