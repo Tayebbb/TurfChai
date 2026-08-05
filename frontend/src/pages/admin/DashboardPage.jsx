@@ -599,7 +599,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="row" style={{ gap: 16, marginBottom: 14 }}>
+          <div className="row admin-wrap-mobile" style={{ gap: 16, marginBottom: 14 }}>
             <div>
               <span className="tiny subtle">Total User Base</span>
               <b style={{ display: 'block', fontSize: 22, fontWeight: 800 }}>41,270</b>
@@ -649,6 +649,7 @@ export default function DashboardPage() {
           </div>
 
           <div
+            className="admin-stack-mobile"
             style={{
               display: 'grid',
               gridTemplateColumns: '180px 1fr',

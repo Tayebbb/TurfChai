@@ -180,6 +180,7 @@ export default function UserGrowthPage() {
       </div>
 
       <div
+        className="admin-stack-mobile"
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
