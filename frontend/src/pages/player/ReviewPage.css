@@ -1,0 +1,32 @@
+.rate-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border)
+}
+
+.rate-row:last-child {
+    border-bottom: none
+}
+
+.starpick {
+    display: flex;
+    gap: 2px;
+    font-size: 22px;
+    cursor: pointer
+}
+
+.starpick button {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #E8A93C;
+    padding: 2px;
+    line-height: 1
+}
+
+.starpick button.off {
+    color: var(--border-strong)
+}
