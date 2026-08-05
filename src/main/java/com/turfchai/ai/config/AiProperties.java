@@ -38,7 +38,7 @@ public class AiProperties {
         /** API key; when blank the app boots but chat requests return 503. */
         private String apiKey = "";
         private String model = "gemini-2.0-flash";
-        private String embeddingModel = "text-embedding-004";
+        private String embeddingModel = "gemini-embedding-001";
         private String baseUrl = "https://generativelanguage.googleapis.com/v1beta";
         private int timeoutSeconds = 30;
 

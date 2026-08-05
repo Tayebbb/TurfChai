@@ -13,11 +13,11 @@ import java.util.Map;
 
 /**
  * {@link EmbeddingProvider} backed by the Gemini {@code embedContent} API
- * (text-embedding-004, 768 dimensions).
+ * (gemini-embedding-001, 3072 dimensions).
  */
 public class GeminiEmbeddingProvider implements EmbeddingProvider {
 
-    private static final int DIMENSION = 768;
+    private static final int DIMENSION = 3072;
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
