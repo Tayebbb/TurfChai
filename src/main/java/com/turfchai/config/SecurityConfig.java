@@ -56,6 +56,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/**",
+                                // Admin 2FA login steps (step 1 issues no token;
+                                // step 2 returns the JWT after code verification):
+                                "/api/v1/admin/auth/login",
+                                "/api/v1/admin/auth/login/verify",
                                 "/api/v1/health",
                                 "/api/v1/solo/open-games",
                                 "/api/v1/solo/open-games/*",
