@@ -1,0 +1,44 @@
+﻿/* ---------- Landing hero (centered) ---------- */
+.hero.centered{text-align:center}
+.hero.centered h1,.hero.centered .lede{margin-left:auto;margin-right:auto}
+.hero.centered h1{max-width:780px;font-size:clamp(34px,5.6vw,56px)}
+.hero .accent{background:linear-gradient(92deg,var(--brand-700),var(--brand) 55%,var(--mint));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-search{
+  max-width:820px;margin:30px auto 0;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);padding:14px;display:flex;flex-direction:column;gap:12px;
+  box-shadow:var(--shadow-md);text-align:left;
+}
+.hs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.hs-cell{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.hs-cell span{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.hs-cell b{font-size:14px;font-weight:600;color:var(--text)}
+.hero-links{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:20px;font-size:13.5px;font-weight:600}
+.statrow{display:flex;justify-content:center;gap:clamp(28px,6vw,64px);flex-wrap:wrap;margin-top:46px}
+.stat{text-align:center}
+.stat b{display:block;font-size:24px;font-weight:800;font-family:var(--font-display);color:var(--brand-600);font-variant-numeric:tabular-nums}
+[data-theme="dark"] .stat b{color:var(--brand)}
+.stat span{font-size:12.5px;color:var(--text-3);font-weight:600}
+@media (max-width:640px){.hs-grid{grid-template-columns:1fr 1fr}.statrow{gap:24px}}
+
+/* ---------- Landing sections (centered) ---------- */
+.section-head{text-align:center;margin-bottom:24px}
+.section-head h2{margin-bottom:2px}
+.section-head .sub{color:var(--text-3);font-size:13.5px;margin:0}
+.card.center{display:flex;flex-direction:column;align-items:center;text-align:center}
+.cta-band{text-align:center;padding:46px 28px;border-radius:var(--r-hero)}
+.footer .row-wrap a{display:inline-block;padding:3px 8px}
+
+/* ---------- Back button (glass pill) ---------- */
+.btn-back{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 16px 8px 12px;border-radius:999px;
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%);
+  color:var(--text-2);font-size:13.5px;font-weight:600;text-decoration:none;
+  margin-bottom:16px;
+  transition:color var(--dur) var(--ease),border-color var(--dur) var(--ease),transform var(--dur) var(--ease);
+}
+.btn-back:hover{color:var(--text);border-color:var(--border-strong);text-decoration:none;transform:translateX(-2px)}
+.btn-back .arr{font-size:15px;line-height:1;color:var(--brand-600)}
+[data-theme="dark"] .btn-back .arr{color:var(--brand)}
+
