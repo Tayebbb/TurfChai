@@ -120,9 +120,9 @@ export default function DashboardPage() {
 
       <div className="main-header">
         <div>
-          <h1>Good evening, {currentOwner.shortName} 🏟️</h1>
+          <h1>Good evening, {currentOwner?.shortName ?? 'Owner'} 🏟️</h1>
           <span className="subtle small">
-            {currentOwner.venue} · {currentOwner.area} · <Badge tone="green">Live</Badge>
+            {currentOwner?.venue ?? '—'} · {currentOwner?.area ?? '—'} · <Badge tone="green">Live</Badge>
           </span>
         </div>
         <div className="row">
