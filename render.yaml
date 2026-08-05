@@ -1,16 +1,12 @@
 services:
   - type: web
     name: turfchai-backend
-    env: java
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/turfchai-0.0.1-SNAPSHOT.jar
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/health
     autoDeploy: true
 
     envVars:
-      - key: JAVA_VERSION
-        value: 21
-
       - key: SPRING_PROFILES_ACTIVE
         value: prod
 
