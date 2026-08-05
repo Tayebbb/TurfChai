@@ -243,9 +243,7 @@ export default function DashboardPage() {
 
       <div className="main-header" style={{ marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>
-            Platform Overview
-          </h1>
+          <h1>Platform Overview</h1>
           <span className="subtle small">Welcome back, Nadia Amin · Super Admin Executive Console</span>
         </div>
         <div className="row" style={{ gap: 10 }}>
