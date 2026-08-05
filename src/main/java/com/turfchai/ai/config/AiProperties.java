@@ -20,7 +20,7 @@ public class AiProperties {
     private static Endpoint defaultOpenRouter() {
         Endpoint e = new Endpoint();
         e.setBaseUrl("https://openrouter.ai/api/v1");
-        e.setModel("meta-llama/llama-3.3-70b-instruct:free");
+        e.setModel("google/gemma-4-31b-it:free");
         return e;
     }
 
@@ -64,6 +64,8 @@ public class AiProperties {
         /** API key; when blank the provider is not registered. */
         private String apiKey = "";
         private String model = "";
+        /** Alternate models tried in order when the primary is rate-limited (OpenRouter routing). */
+        private java.util.List<String> fallbackModels = java.util.List.of();
         private String baseUrl = "";
         private int timeoutSeconds = 45;
         /** Low temperature keeps tool arguments and policy answers precise. */
@@ -87,6 +89,14 @@ public class AiProperties {
 
         public void setModel(String model) {
             this.model = model;
+        }
+
+        public java.util.List<String> getFallbackModels() {
+            return fallbackModels;
+        }
+
+        public void setFallbackModels(java.util.List<String> fallbackModels) {
+            this.fallbackModels = fallbackModels;
         }
 
         public String getBaseUrl() {

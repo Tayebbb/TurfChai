@@ -115,6 +115,14 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", config.getModel());
+        if (!config.getFallbackModels().isEmpty()) {
+            // OpenRouter routing: tried in order when the primary model is
+            // rate-limited or unavailable.
+            List<String> routing = new ArrayList<>();
+            routing.add(config.getModel());
+            routing.addAll(config.getFallbackModels());
+            body.put("models", routing);
+        }
         body.put("messages", messages);
         body.put("temperature", config.getTemperature());
         body.put("top_p", config.getTopP());
@@ -180,7 +188,13 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
             log.debug("{} requested {} tool call(s)", providerName, toolCalls.size());
             return new LlmResponse(null, toolCalls, usage);
         }
-        return new LlmResponse(message.path("content").asText(""), List.of(), usage);
+        String content = message.path("content").asText("");
+        if (content.isBlank()) {
+            // Reasoning models sometimes emit answers outside `content`;
+            // retryable so the fallback provider gets a chance.
+            throw new LlmException(providerName + " returned an empty reply", null, true);
+        }
+        return new LlmResponse(content, List.of(), usage);
     }
 
     private Map<String, Object> parseArguments(String json) {
