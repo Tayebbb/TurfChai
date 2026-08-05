@@ -1,0 +1,215 @@
+/* ---------- Chips & badges ---------- */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, var(--surface), var(--surface-2));
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(10, 30, 20, .04);
+    transition: all var(--dur) var(--ease);
+    position: relative;
+    overflow: hidden;
+}
+
+.chip::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, .35) 45%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform .6s var(--ease);
+}
+
+.chip:hover {
+    border-color: var(--brand);
+    color: var(--brand-600);
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(10, 30, 20, .08)
+}
+
+.chip:hover::before {
+    transform: translateX(120%)
+}
+
+.chip.on {
+    background: linear-gradient(135deg, var(--brand), var(--brand-700));
+    border-color: var(--brand);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(14, 122, 74, .22);
+}
+
+[data-theme="dark"] .chip.on {
+    color: #07130D
+}
+
+.chiprow {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch
+}
+
+.chiprow::-webkit-scrollbar {
+    display: none
+}
+
+.filter-band {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--surface), var(--surface-2));
+    box-shadow: var(--shadow-sm);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2.5px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none
+}
+
+.badge.green {
+    background: var(--brand-soft);
+    color: var(--brand-600)
+}
+
+[data-theme="dark"] .badge.green {
+    color: var(--brand)
+}
+
+.badge.amber {
+    background: var(--warn-soft);
+    color: var(--warn)
+}
+
+.badge.red {
+    background: var(--danger-soft);
+    color: var(--danger)
+}
+
+.badge.blue {
+    background: var(--info-soft);
+    color: var(--info)
+}
+
+.badge.purple {
+    background: #EDE4FF;
+    color: #6D3FC4
+}
+
+[data-theme="dark"] .badge.purple {
+    background: rgba(167, 139, 250, .16);
+    color: #C4B5FD
+}
+
+.badge.gray {
+    background: var(--surface-3);
+    color: var(--text-2)
+}
+
+.badge.nodot::before {
+    display: none
+}
+
+.verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--info-soft);
+    color: var(--info);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.skill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 6px;
+    background: var(--surface-3);
+    color: var(--text-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+/* ---------- Photos (placeholder art) ---------- */
+.photo {
+    border-radius: var(--r-md);
+    background: linear-gradient(135deg, #1D7A4E, #0E5A38 55%, #12472F);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, .75);
+    font-size: 26px
+}
+
+.photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, .18));
+}
+
+.photo.alt1 {
+    background: linear-gradient(135deg, #2C8A5C, #155F3D 60%, #0E4A2F)
+}
+
+.photo.alt2 {
+    background: linear-gradient(135deg, #177253, #0C5138 55%, #123B2A)
+}
+
+.photo.alt3 {
+    background: linear-gradient(135deg, #3E9367, #1C6C46 60%, #124D31)
+}
+
+.photo.court {
+    background: linear-gradient(135deg, #2E6DA6, #1D4E7E 60%, #153A5F)
+}
+
+.photo.map {
+    background: linear-gradient(135deg, #DFE9E3, #CBDCD2);
+    color: var(--text-2);
+    font-size: 15px;
+    font-weight: 600
+}
+
+[data-theme="dark"] .photo.map {
+    background: linear-gradient(135deg, #1E2A24, #16211C);
+    color: var(--text-2)
+}
+
+.photo.map::after {
+    background: none
+}
