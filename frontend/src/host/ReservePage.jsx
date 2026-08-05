@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { Overlay } from '@/components/modals/Overlay';
-import { ramadanCup } from '@/data/tournaments';
 import { useApi } from '@/hooks/useApi';
 import {
   DEMO_TOURNAMENT_CODE,
@@ -57,21 +56,22 @@ export default function ReservePage() {
         balanceDue: formatDate(live.balanceDueDate),
       }
     : {
-        venue: 'Mirpur Sports City',
-        when: 'Sat 23 Aug · 8:00 AM – 6:00 PM',
-        slots: '14 slots · Pitches A, B, D (+ C partial)',
-        slotCount: 14,
-        slotTotal: ramadanCup.slotTotal,
-        discount: ramadanCup.discount,
-        total: ramadanCup.total,
-        deposit: ramadanCup.deposit,
-        balance: ramadanCup.balance,
-        balanceDue: ramadanCup.balanceDue,
+        // Neutral placeholders while loading or when the API is unreachable.
+        venue: '—',
+        when: '—',
+        slots: 'No slots reserved yet',
+        slotCount: 0,
+        slotTotal: '—',
+        discount: '—',
+        total: '—',
+        deposit: '—',
+        balance: '—',
+        balanceDue: '—',
       };
 
   // Form mirrors the live tournament once it loads; edits stay local.
   const [nameOverride, setNameOverride] = useState(null);
-  const name = nameOverride ?? live?.name ?? ramadanCup.name;
+  const name = nameOverride ?? live?.name ?? '';
   const setName = setNameOverride;
   const [formatOverride, setFormatOverride] = useState(null);
   const format =
@@ -272,7 +272,7 @@ export default function ReservePage() {
         <h3>{name} is booked!</h3>
         <p className="muted small">
           Deposit {summary.deposit} due via {method}. Reservation{' '}
-          <b className="num">{live?.code ?? ramadanCup.id}</b> holds {summary.slotCount} slots at{' '}
+          <b className="num">{live?.code ?? code}</b> holds {summary.slotCount} slots at{' '}
           {summary.venue} — payment capture arrives with the payments service.
         </p>
         <div className="stack-sm" style={{ marginTop: 12 }}>

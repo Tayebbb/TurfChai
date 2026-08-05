@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { KpiCard } from '@/components/cards/KpiCard';
-import { ramadanCup, tournamentFixtures } from '@/data/tournaments';
 import { useApi } from '@/hooks/useApi';
 import {
   DEMO_TOURNAMENT_CODE,
@@ -66,18 +65,20 @@ export default function TournamentPage() {
         balanceDue: formatDate(live.balanceDueDate),
       }
     : {
-        name: ramadanCup.name,
-        venue: ramadanCup.venue,
-        date: ramadanCup.date,
-        window: ramadanCup.window,
-        code: ramadanCup.id,
-        teamsLabel: '13/16 teams',
-        balance: ramadanCup.balance,
-        deposit: ramadanCup.deposit,
-        balanceDue: ramadanCup.balanceDue,
+        // Neutral placeholders while loading or when the API is unreachable;
+        // the demo fixtures module is empty in deployed builds.
+        name: 'Tournament',
+        venue: '—',
+        date: '—',
+        window: '—',
+        code: code,
+        teamsLabel: '—',
+        balance: '—',
+        deposit: '—',
+        balanceDue: '—',
       };
 
-  const paidTeams = live ? live.teams.filter((team) => team.entryFeeStatus === 'paid').length : 0;
+  const paidTeams = live ? live.teams.filter((team) => team.entryFeeStatus === 'PAID').length : 0;
   const feesCollected = live
     ? live.teams.reduce((sum, team) => sum + Number(team.entryFeePaid), 0)
     : 0;
@@ -116,14 +117,14 @@ export default function TournamentPage() {
   const scheduleRows = live
     ? live.fixtures.map((fixture) => ({
         id: String(fixture.id),
-        time: fixture.status === 'bye' ? '—' : formatTime(fixture.startTime),
+        time: fixture.status === 'BYE' ? '—' : formatTime(fixture.startTime),
         pitch: fixture.pitchName ? fixture.pitchName.replace('Pitch ', '') : '—',
         fixture:
-          fixture.status === 'bye'
+          fixture.status === 'BYE'
             ? `${fixture.roundLabel} · ${fixture.teamA} — bye`
             : `${fixture.roundLabel} · ${fixture.teamA} vs ${fixture.teamB}`,
       }))
-    : tournamentFixtures;
+    : [];
 
   const teamChips = live
     ? [
@@ -226,7 +227,7 @@ export default function TournamentPage() {
                 <i style={{ width: `${depositPct}%` }} />
               </div>
               <div className="between small">
-                <span className="muted">Deposit paid · bKash TXN {ramadanCup.depositTxn}</span>
+                <span className="muted">Deposit · recorded by the organiser</span>
                 <b className="num">{header.deposit} ✓</b>
               </div>
               <div className="between small" style={{ marginTop: 4 }}>

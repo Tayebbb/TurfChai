@@ -47,3 +47,8 @@ export function getSavedVenues() {
 export function toggleSavedVenue(venueSlug) {
   return apiSend('POST', `/api/v1/players/me/saved-venues/${encodeURIComponent(venueSlug)}`);
 }
+
+/** DELETE — idempotent removal; use this for explicit "remove" actions. */
+export function removeSavedVenue(venueSlug) {
+  return apiSend('DELETE', `/api/v1/players/me/saved-venues/${encodeURIComponent(venueSlug)}`);
+}

@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { Input, Select } from '@/components/forms/Field';
 import { Stepper } from '@/components/navigation/Stepper';
 import { Chip } from '@/components/ui/Chip';
-import { updateMyProfile } from '@/api/players';
-import { currentPlayer } from '@/data/users';
+import { getMyProfile, updateMyProfile } from '@/api/players';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -40,13 +39,29 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [step] = useState('about');
-  const [name, setName] = useState(currentPlayer?.name ?? '');
+  const [name, setName] = useState('');
   const [area, setArea] = useState('Dhanmondi');
   const [role, setRole] = useState('captain');
   const [saving, setSaving] = useState(false);
   const sports = useFilterChips(['⚽ Football', '🏏 Cricket']);
   const times = useFilterChips(['Evening', 'Late night', 'Weekends']);
   const skill = useFilterChips(['Intermediate']);
+
+  // Prefill from the saved profile so onboarding never overwrites it blindly.
+  useEffect(() => {
+    let cancelled = false;
+    getMyProfile()
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        if (profile.fullName) setName(profile.fullName);
+        if (profile.area) setArea(profile.area.split(',')[0].trim());
+        if (profile.playerRole) setRole(profile.playerRole);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const stripEmoji = (label) => label.replace(/^[^\p{L}]+/u, '').trim();
 
@@ -62,11 +77,11 @@ export default function OnboardingPage() {
         preferredTimes: [...times.active],
       });
       showToast('✅ Profile saved — welcome to TurfChai!');
-    } catch {
-      showToast('Could not save profile — you can update it anytime from Settings');
+      navigate(paths.player.home);
+    } catch (error) {
+      showToast(error?.message ?? 'Could not save profile — please try again');
     } finally {
       setSaving(false);
-      navigate(paths.player.home);
     }
   };
 
