@@ -4,6 +4,7 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { Photo } from '@/components/ui/Photo';
 import { holdSlot } from '@/api/bookings';
+import { getToken } from '@/api/client';
 import { checkout } from '@/api/payments';
 import { getMyPoints } from '@/api/rewards';
 import { useApi } from '@/hooks/useApi';
@@ -122,6 +123,11 @@ export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const slotId = searchParams.get('slotId');
 
+  // Browsing checkout is open to everyone; holding and confirming a slot are
+  // the only actions that need an identity.
+  const signedIn = Boolean(getToken());
+  const signInHref = `${paths.auth}?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
+
   const [method, setMethod] = useState('BKASH');
   const [understood, setUnderstood] = useState(true);
   const [applyWallet, setApplyWallet] = useState(false);
@@ -179,11 +185,11 @@ export default function CheckoutPage() {
   // no reason to send it twice).
   const holdRequestedForRef = useRef(null);
   useEffect(() => {
-    if (slotId && holdRequestedForRef.current !== slotId) {
+    if (signedIn && slotId && holdRequestedForRef.current !== slotId) {
       holdRequestedForRef.current = slotId;
       acquireHold();
     }
-  }, [slotId, acquireHold]);
+  }, [signedIn, slotId, acquireHold]);
 
   const { label: lockLabel } = useCountdown(lockSeconds, {
     onExpire:
@@ -193,6 +199,10 @@ export default function CheckoutPage() {
   });
 
   const attemptPayment = async (simulateFailure) => {
+    if (!signedIn) {
+      navigate(signInHref);
+      return;
+    }
     if (!slotId || busy || hold.state !== 'held') return;
     setBusy(true);
     setPayError(null);
@@ -226,8 +236,9 @@ export default function CheckoutPage() {
   const onPay = () => attemptPayment(false);
   const onSimulateFailure = () => attemptPayment(true);
 
-  const lockText =
-    hold.state === 'holding'
+  const lockText = !signedIn
+    ? 'Sign in to hold this slot'
+    : hold.state === 'holding'
       ? 'Locking your slot…'
       : hold.state === 'held'
         ? lockLabel
@@ -481,16 +492,21 @@ export default function CheckoutPage() {
               id="pay-cta"
               onClick={onPay}
               loading={busy}
-              disabled={hold.state !== 'held' || !understood}
+              disabled={signedIn && (hold.state !== 'held' || !understood)}
               style={{ marginTop: 16 }}
             >
-              Pay {bdt(dueNow)} with {methodLabel}
+              {signedIn ? `Pay ${bdt(dueNow)} with ${methodLabel}` : 'Sign in to confirm this booking'}
             </Button>
+            {!signedIn ? (
+              <p className="subtle small" style={{ margin: '8px 0 0', textAlign: 'center' }}>
+                Browsing is open to everyone — we only need an account to hold the slot in your name.
+              </p>
+            ) : null}
             <Button
               variant="tertiary"
               block
               onClick={onSimulateFailure}
-              disabled={hold.state !== 'held' || busy}
+              disabled={!signedIn || hold.state !== 'held' || busy}
               style={{ marginTop: 6, fontSize: 13 }}
             >
               Simulate failed payment
