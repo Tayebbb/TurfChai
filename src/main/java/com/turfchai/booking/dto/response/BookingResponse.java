@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 @Data
@@ -28,6 +31,24 @@ public class BookingResponse {
 
     @Schema(description = "Current booking status", example = "CONFIRMED")
     private String status;
+
+    @Schema(description = "ID of the venue booked", example = "3")
+    private Long venueId;
+
+    @Schema(description = "ID of the pitch booked", example = "1")
+    private Long pitchId;
+
+    @Schema(description = "Date of the booked slot", example = "2026-08-08")
+    private LocalDate bookingDate;
+
+    @Schema(description = "Start time of the booked slot", example = "19:30:00")
+    private LocalTime startTime;
+
+    @Schema(description = "End time of the booked slot", example = "21:00:00")
+    private LocalTime endTime;
+
+    @Schema(description = "Net amount for this booking", example = "2500.00")
+    private BigDecimal netAmount;
 
     @Schema(description = "When the booking was created", example = "2026-08-06T18:00:00+06:00")
     private OffsetDateTime createdAt;
