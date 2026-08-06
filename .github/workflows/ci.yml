@@ -106,3 +106,13 @@ jobs:
         run: |
           kill "$(cat app.pid)" 2>/dev/null || true
           wait "$(cat app.pid)" 2>/dev/null || true
+
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, boot-smoke]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Trigger Render deploy hook
+        run: |
+          curl -fsSL -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
