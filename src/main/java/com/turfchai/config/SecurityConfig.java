@@ -12,7 +12,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -50,7 +49,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -61,6 +60,9 @@ public class SecurityConfig {
                                 "/api/v1/admin/auth/login",
                                 "/api/v1/admin/auth/login/verify",
                                 "/api/v1/health",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/api/v1/solo/open-games",
                                 "/api/v1/solo/open-games/*",
                                 "/api/v1/solo/open-games/*/members",
@@ -72,8 +74,13 @@ public class SecurityConfig {
                                 "/api/v1/venues/**",
                                 "/api/v1/players/**",
                                 "/api/v1/tournaments/**",
-                                "/api/v1/host/tournaments/**"
+                                "/api/v1/host/tournaments/**",
+                                // Public promo code validation (used by checkout UI)
+                                "/api/v1/promotions/validate-code"
                         ).permitAll()
+                        // Media upload & owner management require authentication
+                        .requestMatchers("/api/v1/media/**").authenticated()
+                        .requestMatchers("/api/v1/owner/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

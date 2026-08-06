@@ -1,5 +1,5 @@
 -- ============================================================================
--- V3: Admins (access control for the Owner & Admin Console)
+-- V4: Admins (access control for the Owner & Admin Console)
 --
 --   * `admins` holds admin-specific metadata. Identity/auth stays in `users`
 --     (users.role = ADMIN | SUPER_ADMIN is the source of truth).

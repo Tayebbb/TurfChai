@@ -23,7 +23,6 @@ public class KnowledgeRetriever {
 
     private final ClasspathDocumentLoader documentLoader;
     private final TextChunker chunker;
-    private final EmbeddingProvider primaryProvider;
     private final EmbeddingProvider fallbackProvider;
     private final VectorStore vectorStore;
     private final int topK;
@@ -41,7 +40,6 @@ public class KnowledgeRetriever {
             double minScore) {
         this.documentLoader = documentLoader;
         this.chunker = chunker;
-        this.primaryProvider = primaryProvider;
         this.fallbackProvider = fallbackProvider;
         this.vectorStore = vectorStore;
         this.topK = topK;

@@ -22,6 +22,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -230,8 +232,11 @@ class BookingRestControllerTest {
         pitchRepository.save(pitch);
         return slotRepository.save(Slot.builder()
                 .pitch(pitch)
+                .venueId(venue.getId())
+                .slotDate(LocalDate.of(2026, 8, 8))
                 .startTime(LocalTime.of(10, 0))
                 .endTime(LocalTime.of(11, 0))
+                .price(BigDecimal.valueOf(2550))
                 .status(SlotStatus.AVAILABLE)
                 .build());
     }

@@ -1,5 +1,5 @@
 -- ============================================================================
--- V4: Player-facing tournament registration (additive)
+-- V6: Player-facing tournament registration (additive)
 -- ============================================================================
 
 ALTER TABLE tournament_teams

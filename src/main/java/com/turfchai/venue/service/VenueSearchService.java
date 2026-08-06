@@ -3,7 +3,6 @@ package com.turfchai.venue.service;
 import com.turfchai.venue.dto.PagedResponse;
 import com.turfchai.venue.dto.VenueDetailDto;
 import com.turfchai.venue.dto.VenueSummaryDto;
-import com.turfchai.venue.entity.Sport;
 import com.turfchai.venue.entity.SportPricingRule;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
@@ -43,7 +42,7 @@ public class VenueSearchService {
                 .toList();
         if ("distance".equalsIgnoreCase(sort) && criteria.nearLat() != null) {
             items = items.stream()
-                    .sorted(Comparator.comparing(VenueSummaryDto::distanceKm,
+                    .sorted(Comparator.comparing((VenueSummaryDto v) -> v.distanceKm(),
                             Comparator.nullsLast(Comparator.naturalOrder())))
                     .toList();
         }
@@ -62,13 +61,13 @@ public class VenueSearchService {
 
     private VenueSummaryDto toSummary(Venue venue, VenueSearchCriteria criteria) {
         SportPricingRule cheapest = venue.getPricingRules().stream()
-                .filter(SportPricingRule::isActive)
-                .min(Comparator.comparing(SportPricingRule::getRate))
+                .filter(rule -> rule != null && rule.isActive())
+                .min(Comparator.comparing((SportPricingRule rule) -> rule.getRate()))
                 .orElse(null);
 
         List<String> sports = venue.getPitches().stream()
                 .flatMap(pitch -> pitch.getSports().stream())
-                .map(Sport::getSlug)
+                .map(sport -> sport.getSlug())
                 .distinct()
                 .toList();
 
@@ -103,11 +102,11 @@ public class VenueSearchService {
                 .map(pitch -> new VenueDetailDto.PitchDto(
                         pitch.getId(), pitch.getName(), pitch.getFormat(), pitch.getSurfaceType(),
                         pitch.getLighting(), pitch.getMaxPlayers(), pitch.isIndoor(),
-                        pitch.getSports().stream().map(Sport::getSlug).toList()))
+                        pitch.getSports().stream().map(sport -> sport.getSlug()).toList()))
                 .toList();
 
         List<VenueDetailDto.PricingRuleDto> pricing = venue.getPricingRules().stream()
-                .filter(SportPricingRule::isActive)
+                .filter(rule -> rule != null && rule.isActive())
                 .map(rule -> new VenueDetailDto.PricingRuleDto(
                         rule.getSport().getSlug(), rule.getWindowType(), rule.getRate(),
                         rule.getSlotDurationMin(), rule.getWindowStart(), rule.getWindowEnd()))
@@ -137,7 +136,10 @@ public class VenueSearchService {
         if (csv == null || csv.isBlank()) {
             return List.of();
         }
-        return Arrays.stream(csv.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        return Arrays.stream(csv.split(","))
+                .map(s -> s == null ? "" : s.trim())
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     private static double haversineKm(BigDecimal lat1, BigDecimal lng1, BigDecimal lat2, BigDecimal lng2) {

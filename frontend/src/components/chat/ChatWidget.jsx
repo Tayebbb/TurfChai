@@ -6,7 +6,7 @@ import './ChatWidget.css';
 const GREETING = {
   id: 'greeting',
   role: 'assistant',
-  text: 'Salam! I’m **Chai**, your TurfChai assistant.\nAsk me to find a turf, check prices, or explain a booking policy.',
+  text: 'Salam! I’m **TurfBondhu**, your TurfChai assistant.\nAsk me to find a turf, check prices, or explain a booking policy.',
 };
 
 const SUGGESTIONS = [
@@ -27,19 +27,13 @@ function errorMessage(error) {
   return 'Couldn’t reach the assistant — check your connection and that the backend is running.';
 }
 
-const DropletIcon = () => (
+const FootballIcon = () => (
   <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-    <path
-      d="M12 2.5c3.6 4.2 6.5 7.7 6.5 11.1A6.5 6.5 0 0 1 12 20.5a6.5 6.5 0 0 1-6.5-6.9C5.5 10.2 8.4 6.7 12 2.5z"
-      fill="currentColor"
-    />
-    <path
-      d="M9.4 13.9c0-1.6 1.1-3.1 2.3-4.6"
-      fill="none"
-      stroke="rgba(255,255,255,.65)"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-    />
+    <circle cx="12" cy="12" r="9.4" fill="currentColor" />
+    <g fill="none" stroke="#0b3b26" strokeWidth="1.35" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M12 8.9l2.95 2.14-1.13 3.47h-3.64L9.05 11.04 12 8.9z" fill="#0b3b26" />
+      <path d="M12 8.9V2.6M14.95 11.04l5.99-1.94M13.82 14.51l3.71 5.09M10.18 14.51L6.47 19.6M9.05 11.04L3.06 9.1" />
+    </g>
   </svg>
 );
 
@@ -127,7 +121,7 @@ export function ChatWidget() {
         className={`chat-launcher${open ? ' is-open' : ''}`}
         aria-expanded={open}
         aria-controls="chat-panel"
-        aria-label={open ? 'Close the TurfChai assistant' : 'Open the TurfChai assistant'}
+        aria-label={open ? 'Close the TurfBondhu assistant' : 'Open the TurfBondhu assistant'}
         onClick={() => setOpen((value) => !value)}
       >
         <span className="chat-launcher-glow" aria-hidden="true" />
@@ -142,7 +136,7 @@ export function ChatWidget() {
             />
           </svg>
         ) : (
-          <DropletIcon />
+          <FootballIcon />
         )}
       </button>
 
@@ -152,15 +146,15 @@ export function ChatWidget() {
           className="chat-panel"
           role="dialog"
           aria-modal="false"
-          aria-label="TurfChai assistant"
+          aria-label="TurfBondhu assistant"
           ref={panelRef}
         >
           <header className="chat-head">
             <span className="chat-avatar" aria-hidden="true">
-              <DropletIcon />
+              <FootballIcon />
             </span>
             <div className="chat-head-text">
-              <b>Chai</b>
+              <b>TurfBondhu</b>
               <span>Booking assistant</span>
             </div>
             <button type="button" className="chat-ghost" onClick={startOver}>

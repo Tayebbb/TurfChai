@@ -33,8 +33,50 @@ export default function ReviewPage() {
   const [body, setBody] = useState(DEFAULT_REVIEW);
   const [parentReview, setParentReview] = useState(false);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   /** Sets one category to the clicked star value. */
   const rate = (id, value) => setRatings((prev) => ({ ...prev, [id]: value }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const payload = {
+      bookingId: 1, // Mocked booking ID
+      userId: 1,    // Mocked user ID
+      venueId: 1,   // Mocked venue ID
+      overallRating: ratings.overall,
+      subRatings: {
+        surface: ratings.surface,
+        lighting: ratings.lighting,
+        cleanliness: ratings.cleanliness,
+        amenities: ratings.amenities,
+        safety: ratings.safety,
+        youth: ratings.youth
+      },
+      comment: body,
+      parentReview: parentReview
+    };
+
+    try {
+      const response = await fetch("http://localhost:8080/api/v1/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      
+      if (response.ok) {
+        published.open();
+      } else {
+        showToast("Failed to submit review.");
+      }
+    } catch {
+      showToast("Network error. Could not submit review.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -153,8 +195,14 @@ export default function ReviewPage() {
             </span>
           </label>
 
-          <Button variant="primary" size="lg" block onClick={published.open}>
-            Submit review
+          <Button 
+            variant="primary" 
+            size="lg" 
+            block 
+            onClick={handleSubmit} 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Submit review"}
           </Button>
         </div>
       </main>

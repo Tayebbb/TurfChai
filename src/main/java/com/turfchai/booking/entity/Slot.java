@@ -20,6 +20,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
@@ -46,6 +48,15 @@ public class Slot {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "pitch_id", nullable = false)
     private Pitch pitch;
+
+    @Column(name = "venue_id", nullable = false)
+    private Long venueId;
+
+    @Column(name = "slot_date", nullable = false)
+    private LocalDate slotDate;
+
+    @Column(name = "price", nullable = false)
+    private BigDecimal price;
 
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
