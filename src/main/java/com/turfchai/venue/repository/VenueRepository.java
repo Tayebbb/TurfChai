@@ -9,13 +9,12 @@ import java.util.Optional;
 
 public interface VenueRepository extends JpaRepository<Venue, Long>, JpaSpecificationExecutor<Venue> {
 
-    // collections load lazily inside the read-only service transaction
+    // Player-facing lookups
     Optional<Venue> findBySlug(String slug);
-
     boolean existsBySlug(String slug);
-
-    // Open-games / LFG module lookups (moved from the deleted stub repository)
     Optional<Venue> findByVenueCode(String venueCode);
-
     List<Venue> findByArea(String area);
+
+    // Owner-facing lookups
+    List<Venue> findByOwnerId(Long ownerUserId);
 }
