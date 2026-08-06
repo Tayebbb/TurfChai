@@ -78,6 +78,23 @@ class BookingServiceTest {
     }
 
     @Test
+    @DisplayName("holdSlot refreshes the caller's own still-active hold instead of failing")
+    void holdSlot_refreshesOwnActiveHold() {
+        OffsetDateTime originalExpiry = OffsetDateTime.now().plusMinutes(4);
+        slot.setStatus(SlotStatus.HELD);
+        slot.setHeldByUserId(USER_ID);
+        slot.setHoldExpiresAt(originalExpiry);
+        when(slotRepository.findByIdForUpdate(SLOT_ID)).thenReturn(Optional.of(slot));
+
+        bookingService.holdSlot(USER_ID, SLOT_ID);
+
+        assertEquals(SlotStatus.HELD, slot.getStatus());
+        assertEquals(USER_ID, slot.getHeldByUserId());
+        assertTrue(slot.getHoldExpiresAt().isAfter(originalExpiry));
+        verify(slotRepository).save(slot);
+    }
+
+    @Test
     @DisplayName("holdSlot succeeds when the existing hold has expired")
     void holdSlot_succeeds_whenExistingHoldExpired() {
         slot.setStatus(SlotStatus.HELD);
