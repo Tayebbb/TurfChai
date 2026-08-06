@@ -6,6 +6,8 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { listPayouts } from '@/api/payouts';
+import { useApi } from '@/hooks/useApi';
 import './DashboardPage.css';
 
 const GRID_COLOR = 'rgba(255,255,255,0.06)';
@@ -202,17 +204,20 @@ export default function DashboardPage() {
     [series],
   );
 
+  const { data: payoutsList } = useApi(() => listPayouts('SETTLED'), []);
+
   const totals = useMemo(() => {
     const gmv = sum(series.gmv);
     const bookings = sum(series.bookings);
+    const realPayouts = payoutsList?.reduce((sum, p) => sum + p.netAmount, 0) || Math.round(gmv * 0.9);
     return {
       gmv,
       bookings,
       fee: Math.round(gmv * 0.1),
-      payouts: Math.round(gmv * 0.9),
+      payouts: realPayouts,
       aov: Math.round(gmv / bookings),
     };
-  }, [series]);
+  }, [series, payoutsList]);
 
   const userGrowthData = useMemo(() => {
     const datasets = [];
