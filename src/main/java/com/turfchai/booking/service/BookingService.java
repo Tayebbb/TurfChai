@@ -36,7 +36,7 @@ public class BookingService {
      * An expired hold left behind by a previous user can be re-acquired.
      */
     @Transactional
-    public void holdSlot(Long userId, Long slotId) {
+    public OffsetDateTime holdSlot(Long userId, Long slotId) {
         Slot slot = slotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + slotId));
 
@@ -46,11 +46,12 @@ public class BookingService {
                 && slot.getHoldExpiresAt().isBefore(now);
 
         if (slot.getStatus() == SlotStatus.AVAILABLE || expiredHold) {
+            OffsetDateTime heldUntil = now.plusMinutes(HOLD_DURATION_MINUTES);
             slot.setStatus(SlotStatus.HELD);
             slot.setHeldByUserId(userId);
-            slot.setHoldExpiresAt(now.plusMinutes(HOLD_DURATION_MINUTES));
+            slot.setHoldExpiresAt(heldUntil);
             slotRepository.save(slot);
-            return;
+            return heldUntil;
         }
         throw new SlotUnavailableException("Slot is not available for booking");
     }

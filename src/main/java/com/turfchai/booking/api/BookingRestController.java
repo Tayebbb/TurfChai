@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -36,8 +37,8 @@ public class BookingRestController {
     public ResponseEntity<Map<String, Object>> holdSlot(
             Authentication authentication,
             @Valid @RequestBody HoldSlotRequest request) {
-        bookingService.holdSlot(currentUserId(authentication), request.getSlotId());
-        return ResponseEntity.ok(Map.of("slotId", request.getSlotId(), "status", "HELD"));
+        OffsetDateTime heldUntil = bookingService.holdSlot(currentUserId(authentication), request.getSlotId());
+        return ResponseEntity.ok(Map.of("slotId", request.getSlotId(), "heldUntil", heldUntil));
     }
 
     /** Confirms the caller's hold and creates a booking. */
