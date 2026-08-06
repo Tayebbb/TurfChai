@@ -100,14 +100,6 @@ The application utilizes Infrastructure as Code (IaC) via `render.yaml` for zero
 
 ---
 
-## 🤖 For AI Agents
-
-We actively employ AI coding assistants to develop this repository. If you are an AI agent (Cursor, Claude Code, Aider, etc.) reading this, please immediately refer to the **`AGENTS.md`** files located in the customization roots (e.g., `Mugdho/AGENTS.md` or `.agents/`). 
-
-These files are generated using the [GenerateAgents.md by originalankur](https://github.com/originalankur/GenerateAgents.md) standard (strict style). They contain mandatory architectural constraints, project coding rules, and critical anti-patterns extracted from our Git history that you **must** strictly adhere to before executing any workspace modifications.
-
----
-
 ## 🧪 Testing and Verification
 
 The backend utilizes an in-memory `H2` database during the test phase to completely prevent local Postgres pollution. Seeders are heavily isolated using `@Profile("test")`.
