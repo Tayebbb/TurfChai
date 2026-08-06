@@ -9,11 +9,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,6 +47,27 @@ public class BookingRestController {
             @Valid @RequestBody HoldSlotRequest request) {
         Booking booking = bookingService.confirmBooking(currentUserId(authentication), request.getSlotId());
         return ResponseEntity.ok(toResponse(booking));
+    }
+
+    /** Cancels a booking owned by the caller (or an admin/owner role). */
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancelBooking(Authentication authentication, @PathVariable Long id) {
+        bookingService.cancelBooking(currentUserId(authentication), id);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BookingResponse> getBooking(Authentication authentication, @PathVariable Long id) {
+        return ResponseEntity.ok(toResponse(bookingService.getBooking(currentUserId(authentication), id)));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<BookingResponse>> listBookings(Authentication authentication) {
+        List<BookingResponse> bookings = bookingService.listUserBookings(currentUserId(authentication))
+                .stream()
+                .map(this::toResponse)
+                .toList();
+        return ResponseEntity.ok(bookings);
     }
 
     private Long currentUserId(Authentication authentication) {
