@@ -1,5 +1,5 @@
 -- ============================================================================
--- V9: Promotions table & venue slug / photos_csv back-fill
+-- V10: Promotions table & venue slug / photos_csv back-fill
 -- ============================================================================
 
 -- 1. Add slug column to venues if missing (the JPA entity now requires it)
