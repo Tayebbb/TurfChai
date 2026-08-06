@@ -109,87 +109,47 @@ const INITIAL_PITCHES = [
   },
 ];
 
-const SPORT_SLOT_SUMMARY = [
+/** One base price per sport — peak/off-peak comes from the pricing model, not the owner. */
+const INITIAL_SPORT_PRICING = [
   {
     id: 'football',
     title: '⚽ Football',
-    detail: '90 min slots · 10m buffer',
     tone: 'blue',
-    price: '৳2,200/slot',
+    duration: '90',
+    buffer: '10',
+    basePrice: 2200,
   },
   {
     id: 'futsal',
     title: '🥅 Futsal',
-    detail: '60 min slots · 10m buffer',
     tone: 'green',
-    price: '৳1,500/slot',
+    duration: '60',
+    buffer: '10',
+    basePrice: 1500,
   },
   {
     id: 'cricket',
     title: '🏏 Cricket',
-    detail: '120 min slots · 15m buffer',
     tone: 'amber',
-    price: '৳3,000/slot',
+    duration: '120',
+    buffer: '15',
+    basePrice: 3000,
   },
   {
     id: 'badminton',
     title: '🏸 Badminton',
-    detail: '40 min slots · 5m buffer',
     tone: '',
     style: {
       background: 'var(--info-soft)',
       color: 'var(--info)',
     },
-    price: '৳1,000/slot',
+    duration: '40',
+    buffer: '5',
+    basePrice: 1000,
   },
 ];
 
-const PRICING_RULES = [
-  {
-    id: 'fb-off',
-    sport: '⚽ Football',
-    window: '6:00 AM – 4:00 PM',
-    tag: {
-      tone: 'blue',
-      text: 'Off-peak',
-    },
-    days: 'Every day',
-    rate: '90m · ৳1,700',
-  },
-  {
-    id: 'fb-peak',
-    sport: '⚽ Football',
-    window: '4:00 PM – 11:00 PM',
-    tag: {
-      tone: 'amber',
-      text: 'Peak',
-    },
-    days: 'Sun–Thu',
-    rate: '90m · ৳2,200',
-  },
-  {
-    id: 'fs-peak',
-    sport: '🥅 Futsal',
-    window: '4:00 PM – 11:00 PM',
-    tag: {
-      tone: 'amber',
-      text: 'Peak',
-    },
-    days: 'Fri–Sat',
-    rate: '60m · ৳1,500',
-  },
-  {
-    id: 'ck-full',
-    sport: '🏏 Cricket',
-    window: '6:00 AM – 11:00 PM',
-    tag: {
-      tone: 'amber',
-      text: 'Full day',
-    },
-    days: 'Fri–Sat',
-    rate: '120m · ৳3,000',
-  },
-];
+const bdt = (value) => `৳${Number(value).toLocaleString('en-US')}`;
 
 const HOURS = [
   {
@@ -310,12 +270,34 @@ export default function VenueSetupPage() {
   const [allowSplit, setAllowSplit] = useState(true);
 
   const [slotDraft, setSlotDraft] = useState({
-    sport: 'Football',
+    sport: 'football',
     duration: '90',
     buffer: '10',
-    offpeak: '৳1,700',
-    peak: '৳2,200',
+    basePrice: '2200',
   });
+
+  const [sportPricing, setSportPricing] = useState(INITIAL_SPORT_PRICING);
+
+  function openSlotSettings() {
+    const current = sportPricing[0];
+    setSlotDraft({
+      sport: current.id,
+      duration: current.duration,
+      buffer: current.buffer,
+      basePrice: String(current.basePrice),
+    });
+    slotModal.open();
+  }
+
+  function selectSlotSport(id) {
+    const current = sportPricing.find((sport) => sport.id === id);
+    setSlotDraft({
+      sport: id,
+      duration: current.duration,
+      buffer: current.buffer,
+      basePrice: String(current.basePrice),
+    });
+  }
 
   function openAddPitch() {
     setEditingId(null);
@@ -375,9 +357,19 @@ export default function VenueSetupPage() {
   }
 
   function saveSlotSettings() {
-    showToast(
-      `${slotDraft.sport} slots set to ${slotDraft.duration} min with ${slotDraft.buffer} min buffer ✓`,
+    const basePrice = Math.max(0, Math.round(Number(String(slotDraft.basePrice).replace(/[^\d.]/g, '')) || 0));
+    if (!basePrice) {
+      showToast('Enter a base price for this sport');
+      return;
+    }
+    setSportPricing((current) =>
+      current.map((sport) =>
+        sport.id === slotDraft.sport
+          ? { ...sport, duration: slotDraft.duration, buffer: slotDraft.buffer, basePrice }
+          : sport,
+      ),
     );
+    showToast(`Base price saved — TurfChai will price each slot around ${bdt(basePrice)} ✓`);
     slotModal.close();
   }
 
@@ -607,7 +599,8 @@ export default function VenueSetupPage() {
                   margin: '6px 0 10px',
                 }}
               >
-                Different sports have different slot times &amp; pricing rules
+                Set one base price per sport. TurfChai prices each slot around it automatically —
+                peak evenings, weekends, holidays, weather and how full the pitch already is.
               </p>
 
               <div
@@ -617,7 +610,7 @@ export default function VenueSetupPage() {
                   marginBottom: 12,
                 }}
               >
-                {SPORT_SLOT_SUMMARY.map((sport) => (
+                {sportPricing.map((sport) => (
                   <div
                     className="panel between"
                     key={sport.id}
@@ -625,7 +618,9 @@ export default function VenueSetupPage() {
                     <div>
                       <b className="small">{sport.title}</b>
 
-                      <div className="tiny subtle">{sport.detail}</div>
+                      <div className="tiny subtle">
+                        {sport.duration} min slots · {sport.buffer}m buffer
+                      </div>
                     </div>
 
                     <Badge
@@ -633,7 +628,7 @@ export default function VenueSetupPage() {
                       dot={false}
                       style={sport.style}
                     >
-                      {sport.price}
+                      {bdt(sport.basePrice)} base
                     </Badge>
                   </div>
                 ))}
@@ -645,47 +640,51 @@ export default function VenueSetupPage() {
                     <tr>
                       <th>Sport</th>
 
-                      <th>Window</th>
+                      <th>Slot duration</th>
 
-                      <th>Days</th>
+                      <th>Handover buffer</th>
 
-                      <th className="num">Slot duration &amp; price</th>
+                      <th className="num">Base price</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {PRICING_RULES.map((rule) => (
-                      <tr key={rule.id}>
-                        <td>{rule.sport}</td>
+                    {sportPricing.map((sport) => (
+                      <tr key={sport.id}>
+                        <td>{sport.title}</td>
 
-                        <td>
-                          {rule.window}{' '}
+                        <td>{sport.duration} min</td>
 
-                          <Badge
-                            tone={rule.tag.tone}
-                            dot={false}
-                          >
-                            {rule.tag.text}
-                          </Badge>
-                        </td>
+                        <td>{sport.buffer} min</td>
 
-                        <td>{rule.days}</td>
-
-                        <td className="num">{rule.rate}</td>
+                        <td className="num">{bdt(sport.basePrice)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
+              <Alert
+                tone="info"
+                icon="🤖"
+                title="Peak and off-peak are set for you"
+                style={{
+                  marginTop: 12,
+                }}
+              >
+                The pricing model adjusts every slot from your base price using the hour, day,
+                public holidays, how far ahead the booking is, live occupancy and the forecast for
+                your turf&apos;s exact location.
+              </Alert>
+
               <Button
                 size="sm"
                 style={{
                   marginTop: 10,
                 }}
-                onClick={slotModal.open}
+                onClick={openSlotSettings}
               >
-                Edit slot durations &amp; pricing rules
+                Edit slot durations &amp; base prices
               </Button>
             </section>
 
@@ -1027,7 +1026,7 @@ export default function VenueSetupPage() {
       <Overlay
         isOpen={slotModal.isOpen}
         onClose={slotModal.close}
-        title="Configure Slot Times & Rates by Sport"
+        title="Slot times & base price by sport"
         maxWidth={520}
       >
         <p
@@ -1036,7 +1035,8 @@ export default function VenueSetupPage() {
             margin: '4px 0 12px',
           }}
         >
-          Set custom slot duration and buffer times for each sport offered at your venue.
+          Set the slot length and one base price per sport. You do not set peak and off-peak rates —
+          the pricing model moves each slot around your base price on its own.
         </p>
 
         <Field
@@ -1046,15 +1046,16 @@ export default function VenueSetupPage() {
           <Select
             id="spSportSelect"
             value={slotDraft.sport}
-            onChange={(event) => setSlotDraft((current) => ({ ...current, sport: event.target.value }))}
+            onChange={(event) => selectSlotSport(event.target.value)}
           >
-            <option value="Football">⚽ Football</option>
-
-            <option value="Futsal">🥅 Futsal</option>
-
-            <option value="Cricket">🏏 Cricket</option>
-
-            <option value="Badminton">🏸 Badminton</option>
+            {sportPricing.map((sport) => (
+              <option
+                key={sport.id}
+                value={sport.id}
+              >
+                {sport.title}
+              </option>
+            ))}
           </Select>
         </Field>
 
@@ -1103,45 +1104,28 @@ export default function VenueSetupPage() {
           </Field>
         </div>
 
-        <div
-          className="field"
+        <Field
+          label="Base price per slot (৳)"
+          htmlFor="spBasePrice"
+        >
+          <Input
+            className="num"
+            id="spBasePrice"
+            inputMode="numeric"
+            value={slotDraft.basePrice}
+            onChange={(event) => setSlotDraft((current) => ({ ...current, basePrice: event.target.value }))}
+          />
+        </Field>
+
+        <p
+          className="tiny subtle"
           style={{
-            marginTop: 8,
+            margin: '-4px 0 0',
           }}
         >
-          <label>Slot Pricing Rates</label>
-
-          <div
-            className="grid2"
-            style={{
-              gap: 10,
-            }}
-          >
-            <div>
-              <span className="tiny subtle">Off-Peak Rate (6 AM – 4 PM)</span>
-
-              <Input
-                className="num"
-                id="spOffpeak"
-                aria-label="Off-peak rate"
-                value={slotDraft.offpeak}
-                onChange={(event) => setSlotDraft((current) => ({ ...current, offpeak: event.target.value }))}
-              />
-            </div>
-
-            <div>
-              <span className="tiny subtle">Peak Rate (4 PM – 11 PM)</span>
-
-              <Input
-                className="num"
-                id="spPeak"
-                aria-label="Peak rate"
-                value={slotDraft.peak}
-                onChange={(event) => setSlotDraft((current) => ({ ...current, peak: event.target.value }))}
-              />
-            </div>
-          </div>
-        </div>
+          A quiet weekday morning may sell below this; a Friday evening in good weather may sell
+          above it. You always keep your revenue share of whatever the slot sells for.
+        </p>
 
         <div
           className="stack-sm"
@@ -1154,7 +1138,7 @@ export default function VenueSetupPage() {
             block
             onClick={saveSlotSettings}
           >
-            Save sport slot settings ✓
+            Save base price ✓
           </Button>
 
           <Button
