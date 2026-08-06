@@ -14,6 +14,7 @@
 
   /* ── Detail layout ── */
   .detail-grid{display:grid;grid-template-columns:1fr 368px;gap:28px;align-items:start}
+  .detail-grid>*{min-width:0}
   @media(max-width:1000px){.detail-grid{grid-template-columns:1fr;gap:18px}}
 
   /* ── Sections ── frosted panels instead of hairline dividers */
@@ -59,6 +60,7 @@
   .collapse-btn{
     width:100%;display:flex;align-items:center;justify-content:space-between;
     background:none;border:none;padding:0;cursor:pointer;font-family:inherit;text-align:left;
+    color:var(--text);
   }
   .collapse-btn .chevron{transition:transform .22s ease;flex:none;color:var(--text-3)}
   .collapse-btn[aria-expanded="true"] .chevron{transform:rotate(180deg)}
