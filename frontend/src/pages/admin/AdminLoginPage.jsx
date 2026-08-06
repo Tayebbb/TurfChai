@@ -39,10 +39,11 @@ const ChipIcon = () => (
   </svg>
 );
 
-const LockIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+const EyeIcon = ({ off = false }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+    <circle cx="12" cy="12" r="3" />
+    {off && <path d="M3 3l18 18" />}
   </svg>
 );
 
@@ -58,6 +59,7 @@ export default function AdminLoginPage() {
   const [step, setStep] = useState('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -239,15 +241,45 @@ export default function AdminLoginPage() {
               </Field>
 
               <Field label="Password" htmlFor="pw">
-                <Input
-                  id="pw"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter password"
-                  required
-                  autoComplete="current-password"
-                />
+                <div style={{ position: 'relative' }}>
+                  <Input
+                    id="pw"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Enter password"
+                    required
+                    autoComplete="current-password"
+                    style={{ paddingRight: 44 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                    style={{
+                      position: 'absolute',
+                      right: 6,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 34,
+                      height: 34,
+                      border: 'none',
+                      borderRadius: 10,
+                      background: 'transparent',
+                      color: 'var(--text-3)',
+                      cursor: 'pointer',
+                      transition: 'color 180ms cubic-bezier(.4, 0, .2, 1)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)'; }}
+                  >
+                    <EyeIcon off={showPassword} />
+                  </button>
+                </div>
               </Field>
 
               <div className="between" style={{ marginBottom: 20 }}>
@@ -365,20 +397,6 @@ export default function AdminLoginPage() {
               </Button>
             </form>
           )}
-
-          <div
-            style={{
-              marginTop: 20,
-              paddingTop: 16,
-              borderTop: '1px solid var(--border)',
-              textAlign: 'center',
-            }}
-          >
-            <p className="tiny" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontWeight: 600 }}>
-              <LockIcon />
-              Protected by 2FA &amp; Audit Logging
-            </p>
-          </div>
         </Card>
       </div>
     </>
