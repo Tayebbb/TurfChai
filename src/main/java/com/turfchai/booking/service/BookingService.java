@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -99,13 +100,8 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new SlotUnavailableException("Booking not found with id: " + bookingId));
 
-        boolean isOwner = userId != null && userId.equals(booking.getUserId());
-        if (!isOwner) {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new AccessDeniedException("You do not have permission to cancel this booking"));
-            if (!isAdminOrOwner(user.getRole())) {
-                throw new AccessDeniedException("You do not have permission to cancel this booking");
-            }
+        if (!canAccess(userId, booking)) {
+            throw new AccessDeniedException("You do not have permission to cancel this booking");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
@@ -116,6 +112,32 @@ public class BookingService {
 
         bookingRepository.save(booking);
         slotRepository.save(slot);
+    }
+
+    /** Returns a booking only to its owner or an admin/owner role. */
+    @Transactional(readOnly = true)
+    public Booking getBooking(Long userId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new SlotUnavailableException("Booking not found with id: " + bookingId));
+        if (!canAccess(userId, booking)) {
+            throw new SlotUnavailableException("Booking not found with id: " + bookingId);
+        }
+        return booking;
+    }
+
+    /** Lists the caller's own bookings. */
+    @Transactional(readOnly = true)
+    public List<Booking> listUserBookings(Long userId) {
+        return bookingRepository.findByUserId(userId);
+    }
+
+    private boolean canAccess(Long userId, Booking booking) {
+        if (userId != null && userId.equals(booking.getUserId())) {
+            return true;
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AccessDeniedException("You do not have permission to access this booking"));
+        return isAdminOrOwner(user.getRole());
     }
 
     private boolean isAdminOrOwner(RoleType role) {
