@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 
@@ -41,36 +40,11 @@ export function Button({
   if (to && !disabled) {
     return (
       <Link className={classes} to={to} {...rest}>
-=======
-import { Link } from "react-router-dom";
-
-export function Button({
-  children,
-  variant = "primary",
-  size,
-  block = false,
-  to,
-  className = "",
-  disabled,
-  onClick,
-  ...props
-}) {
-  const baseClass = "btn";
-  const variantClass = variant ? `btn-${variant}` : "";
-  const sizeClass = size ? `btn-${size}` : "";
-  const blockClass = block ? "btn-block" : "";
-  const combinedClasses = `${baseClass} ${variantClass} ${sizeClass} ${blockClass} ${className}`.trim();
-
-  if (to) {
-    return (
-      <Link to={to} className={combinedClasses} {...props}>
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
         {children}
       </Link>
     );
   }
 
-<<<<<<< HEAD
   if (href && !disabled) {
     return (
       <a className={classes} href={href} {...rest}>
@@ -81,16 +55,6 @@ export function Button({
 
   return (
     <button className={classes} type={type} disabled={disabled || loading} {...rest}>
-=======
-  return (
-    <button
-      type="button"
-      className={combinedClasses}
-      disabled={disabled}
-      onClick={onClick}
-      {...props}
-    >
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
       {children}
     </button>
   );

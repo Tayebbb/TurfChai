@@ -285,11 +285,7 @@ export default function UserSegmentsPage() {
       </div>
 
       <div className="grid4" style={{ gap: 20, marginBottom: 28 }}>
-<<<<<<< HEAD
-        {KPIS.map((kpi, index) => (
-=======
         {kpis.map((kpi) => (
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
           <div className="liquid-glass kpi-card" key={kpi.id}>
             <div>
               <div className="between">

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { cn } from '@/utils/cn';
 
 /** Horizontal progress bar. `value` is 0–100. */
@@ -41,13 +40,6 @@ export function Ring({ value = 0, caption, size = 96, children }) {
         {children ?? `${Math.round(clamped)}%`}
         {caption ? <span>{caption}</span> : null}
       </div>
-=======
-export function Progress({ value = 0, max = 100, className = "" }) {
-  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
-  return (
-    <div className={`progress-bar ${className}`.trim()} style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 99, overflow: "hidden" }}>
-      <div style={{ width: `${percentage}%`, height: "100%", background: "var(--brand-500)", borderRadius: 99 }} />
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
     </div>
   );
 }
