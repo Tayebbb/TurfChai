@@ -4,12 +4,15 @@ import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.entity.BookingStatus;
 import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
+import com.turfchai.booking.dto.response.BookingResponse;
 import com.turfchai.booking.exception.SlotUnavailableException;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.model.User;
 import com.turfchai.model.enums.RoleType;
 import com.turfchai.repository.UserRepository;
+import com.turfchai.venue.repository.PitchRepository;
+import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,8 @@ public class BookingService {
     private final SlotRepository slotRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final VenueRepository venueRepository;
+    private final PitchRepository pitchRepository;
 
     /**
      * Acquires a 5-minute hold on a slot. The row is locked with
@@ -149,6 +154,41 @@ public class BookingService {
     @Transactional(readOnly = true)
     public List<Booking> listUserBookings(Long userId) {
         return bookingRepository.findByUserId(userId);
+    }
+
+    /**
+     * Full view of a booking. The venue and pitch names are resolved here so
+     * the booking screens can render without a second round trip per card.
+     */
+    @Transactional(readOnly = true)
+    public BookingResponse toResponse(Booking booking) {
+        var venue = booking.getVenueId() == null
+                ? null
+                : venueRepository.findById(booking.getVenueId()).orElse(null);
+        var pitch = booking.getPitchId() == null
+                ? null
+                : pitchRepository.findById(booking.getPitchId()).orElse(null);
+
+        return BookingResponse.builder()
+                .id(booking.getId())
+                .bookingCode(booking.getBookingCode())
+                .slotId(booking.getSlot() != null ? booking.getSlot().getId() : null)
+                .userId(booking.getUserId())
+                .status(booking.getStatus() != null ? booking.getStatus().name() : null)
+                .venueId(booking.getVenueId())
+                .venueName(venue != null ? venue.getName() : null)
+                .venueSlug(venue != null ? venue.getSlug() : null)
+                .venueArea(venue != null ? venue.getArea() : null)
+                .pitchId(booking.getPitchId())
+                .pitchName(pitch != null ? pitch.getName() : null)
+                .bookingDate(booking.getBookingDate())
+                .startTime(booking.getStartTime())
+                .endTime(booking.getEndTime())
+                .amount(booking.getGrossAmount())
+                .checkedInAt(booking.getCheckedInAt())
+                .createdAt(booking.getCreatedAt())
+                .updatedAt(booking.getUpdatedAt())
+                .build();
     }
 
     private boolean canAccess(Long userId, Booking booking) {

@@ -68,7 +68,7 @@ public class BookingRestController {
             Authentication authentication,
             @Valid @RequestBody HoldSlotRequest request) {
         Booking booking = bookingService.confirmBooking(currentUserId(authentication), request.getSlotId());
-        return ResponseEntity.ok(toResponse(booking));
+        return ResponseEntity.ok(bookingService.toResponse(booking));
     }
 
     /** Cancels a booking owned by the caller (or an admin/owner role). */
@@ -95,7 +95,8 @@ public class BookingRestController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBooking(Authentication authentication, @PathVariable Long id) {
-        return ResponseEntity.ok(toResponse(bookingService.getBooking(currentUserId(authentication), id)));
+        return ResponseEntity
+                .ok(bookingService.toResponse(bookingService.getBooking(currentUserId(authentication), id)));
     }
 
     @Operation(summary = "List the caller's bookings", description = "Returns all bookings belonging to the authenticated user.")
@@ -107,7 +108,7 @@ public class BookingRestController {
     public ResponseEntity<List<BookingResponse>> listBookings(Authentication authentication) {
         List<BookingResponse> bookings = bookingService.listUserBookings(currentUserId(authentication))
                 .stream()
-                .map(this::toResponse)
+                .map(bookingService::toResponse)
                 .toList();
         return ResponseEntity.ok(bookings);
     }
@@ -115,17 +116,5 @@ public class BookingRestController {
     private Long currentUserId(Authentication authentication) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         return principal.getId();
-    }
-
-    private BookingResponse toResponse(Booking booking) {
-        return BookingResponse.builder()
-                .id(booking.getId())
-                .bookingCode(booking.getBookingCode())
-                .slotId(booking.getSlot() != null ? booking.getSlot().getId() : null)
-                .userId(booking.getUserId())
-                .status(booking.getStatus() != null ? booking.getStatus().name() : null)
-                .createdAt(booking.getCreatedAt())
-                .updatedAt(booking.getUpdatedAt())
-                .build();
     }
 }
