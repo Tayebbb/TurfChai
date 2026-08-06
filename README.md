@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://www.vectorstock.com/royalty-free-vector/turf-logo-icon-vector-29376371?text=TurfChai" alt="TurfChai Logo" width="120" height="120" />
+  <img src="https://imgs.search.brave.com/fgKPklsN_hnm7dzwFeayJTwIo0kBSonXFsAHg9bMtoM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9zdGF0/aWMudmVjdGVlenku/Y29tL3N5c3RlbS9y/ZXNvdXJjZXMvdGh1/bWJuYWlscy8wMDcv/MTY3LzE2Ni9zbWFs/bC9zb2NjZXItZmll/bGQtaWNvbi1sb2dv/LWRlc2lnbi12ZWN0/b3IuanBn?text=TurfChai" alt="TurfChai Logo" width="120" height="120" />
   <h1>TurfChai</h1>
   <p><em>The ultimate full-stack platform for booking sports turfs, hosting tournaments, and organizing open pickup games in Dhaka, Bangladesh.</em></p>
 
