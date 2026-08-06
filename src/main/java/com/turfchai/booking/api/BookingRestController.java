@@ -5,6 +5,7 @@ import com.turfchai.booking.dto.response.BookingResponse;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.service.BookingService;
 import com.turfchai.security.UserPrincipal;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/bookings")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class BookingRestController {
 
     private final BookingService bookingService;

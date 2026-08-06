@@ -1,11 +1,12 @@
 package com.turfchai.repository;
 
-import com.turfchai.domain.User;
+import com.turfchai.model.User;
+import com.turfchai.model.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * Aggregation queries supporting admin analytics endpoints.
@@ -27,24 +28,24 @@ public interface AnalyticsRepository extends JpaRepository<User, Long> {
      * Used for daily / weekly new-registration counts.
      */
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :from AND u.createdAt < :to")
-    long countNewUsersInPeriod(@Param("from") ZonedDateTime from,
-                               @Param("to") ZonedDateTime to);
+    long countNewUsersInPeriod(@Param("from") OffsetDateTime from,
+            @Param("to") OffsetDateTime to);
 
-    /** Active users: status = 'active' and not suspended. */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.status = 'active' AND u.isSuspended = false")
+    /** Active users: status = 'ACTIVE' (or 'active') and not suspended. */
+    @Query("SELECT COUNT(u) FROM User u WHERE UPPER(u.status) = 'ACTIVE' AND u.isSuspended = false")
     long countActiveUsers();
 
     // ── User segments ──────────────────────────────────────────────────────
 
-    /** Players with status = 'active'. */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.role = 'player' AND u.status = 'active'")
+    /** Players with status = 'ACTIVE' (or 'active'). */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role = com.turfchai.model.enums.RoleType.PLAYER AND UPPER(u.status) = 'ACTIVE'")
     long countActivePlayers();
 
-    /** Hosts / owners with status = 'active'. */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.role IN ('host', 'owner') AND u.status = 'active'")
+    /** Hosts / owners with status = 'ACTIVE' (or 'active'). */
+    @Query("SELECT COUNT(u) FROM User u WHERE (u.role = com.turfchai.model.enums.RoleType.HOST OR u.role = com.turfchai.model.enums.RoleType.OWNER) AND UPPER(u.status) = 'ACTIVE'")
     long countActiveHosts();
 
-    /** Users with status NOT 'active' (pending, suspended, deleted). */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.status <> 'active'")
+    /** Users with status NOT 'ACTIVE' or suspended. */
+    @Query("SELECT COUNT(u) FROM User u WHERE UPPER(u.status) <> 'ACTIVE' OR u.isSuspended = true")
     long countInactiveUsers();
 }

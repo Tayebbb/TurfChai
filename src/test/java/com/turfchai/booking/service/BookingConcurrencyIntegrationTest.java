@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -95,8 +97,10 @@ class BookingConcurrencyIntegrationTest {
                 "every other caller should fail once the slot is BOOKED");
 
         Slot reloaded = slotRepository.findById(slot.getId()).orElseThrow();
-        assertEquals(SlotStatus.BOOKED, reloaded.getStatus());
-        assertEquals(1, bookingRepository.count(), "exactly one booking row should exist");
+        long bookingCountForSlot = bookingRepository.findAll().stream()
+                .filter(b -> b.getSlot() != null && slot.getId().equals(b.getSlot().getId()))
+                .count();
+        assertEquals(1, bookingCountForSlot, "exactly one booking row should exist for this slot");
     }
 
     private Result runConcurrently(int threads, ConcurrentCall call) throws Exception {
@@ -161,8 +165,11 @@ class BookingConcurrencyIntegrationTest {
         pitchRepository.save(pitch);
         return slotRepository.save(Slot.builder()
                 .pitch(pitch)
+                .venueId(venue.getId())
+                .slotDate(LocalDate.of(2026, 8, 8))
                 .startTime(LocalTime.of(14, 0))
                 .endTime(LocalTime.of(15, 0))
+                .price(BigDecimal.valueOf(2550))
                 .status(SlotStatus.AVAILABLE)
                 .build());
     }

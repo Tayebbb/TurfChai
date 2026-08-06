@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.Locale;
  * <h3>Fallback / seed behaviour</h3>
  * When the H2 in-memory database is empty (total users = 0 or very low) the
  * service enriches the response with realistic static values, mirroring the
- * demo data already shown in the frontend prototype.  This keeps the charts
+ * demo data already shown in the frontend prototype. This keeps the charts
  * meaningful during local development without needing a populated database.
  */
 @Service
@@ -57,7 +57,7 @@ public class AdminAnalyticsService {
                 : Math.round((activeUsers * 1000.0 / totalUsers)) / 10.0;
 
         // Last 24 h new signups
-        ZonedDateTime now = ZonedDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now();
         long newUsersToday = analyticsRepository.countNewUsersInPeriod(
                 now.minusDays(1), now);
 
@@ -65,8 +65,8 @@ public class AdminAnalyticsService {
         List<String> labels = new ArrayList<>();
         List<Long> counts = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
-            ZonedDateTime dayStart = now.minusDays(i).toLocalDate().atStartOfDay(now.getZone());
-            ZonedDateTime dayEnd = dayStart.plusDays(1);
+            OffsetDateTime dayStart = now.minusDays(i).toLocalDate().atStartOfDay().atOffset(now.getOffset());
+            OffsetDateTime dayEnd = dayStart.plusDays(1);
             labels.add(dayStart.getDayOfWeek()
                     .getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
             counts.add(analyticsRepository.countNewUsersInPeriod(dayStart, dayEnd));
@@ -89,10 +89,10 @@ public class AdminAnalyticsService {
     public RevenueDto getRevenue() {
         // Realistic monthly demo data (matches the frontend prototype)
         List<String> labels = List.of("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug");
-        List<Long> gmv      = List.of(3820000L, 4150000L, 4400000L, 4780000L,
-                                      5100000L, 5350000L, 5600000L, 5920000L);
+        List<Long> gmv = List.of(3820000L, 4150000L, 4400000L, 4780000L,
+                5100000L, 5350000L, 5600000L, 5920000L);
         List<Long> bookings = List.of(14200L, 15400L, 16100L, 17500L,
-                                      18900L, 19800L, 20700L, 21900L);
+                18900L, 19800L, 20700L, 21900L);
 
         long totalGmv = gmv.stream().mapToLong(Long::longValue).sum();
         long totalBookings = bookings.stream().mapToLong(Long::longValue).sum();
@@ -110,8 +110,8 @@ public class AdminAnalyticsService {
             return buildSeedSegmentsDto();
         }
 
-        long players  = analyticsRepository.countActivePlayers();
-        long hosts    = analyticsRepository.countActiveHosts();
+        long players = analyticsRepository.countActivePlayers();
+        long hosts = analyticsRepository.countActiveHosts();
         long inactive = analyticsRepository.countInactiveUsers();
 
         // avg LTV: simplified as (total bookings revenue / total users)
@@ -125,7 +125,7 @@ public class AdminAnalyticsService {
 
     private GrowthDto buildSeedGrowthDto() {
         List<String> labels = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
-        List<Long>   counts = List.of(142L, 178L, 165L, 192L, 214L, 258L, 248L);
+        List<Long> counts = List.of(142L, 178L, 165L, 192L, 214L, 258L, 248L);
         return new GrowthDto(41270L, 248L, 89.4, 84.2, labels, counts);
     }
 
