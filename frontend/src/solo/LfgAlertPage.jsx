@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Overlay } from '@/components/modals/Overlay';
 import { Switch } from '@/components/forms/Toggles';
+import { createLfgAlert, deleteLfgAlert, fetchUserLfgAlerts, updateLfgAlertStatus } from '@/api/lfgAlerts';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -44,6 +45,71 @@ export default function LfgAlertPage() {
   const [date, setDate] = useState(DATES[0]);
   const [time, setTime] = useState(TIMES[0]);
   const [alertEnabled, setAlertEnabled] = useState(true);
+  const [activeAlertId, setActiveAlertId] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAlerts() {
+      try {
+        const alerts = await fetchUserLfgAlerts(1);
+        if (isMounted && Array.isArray(alerts) && alerts.length > 0) {
+          const first = alerts[0];
+          setActiveAlertId(first.id);
+          setAlertEnabled(first.status === 'ACTIVE');
+        }
+      } catch (err) {
+        console.warn('Could not load user LFG alerts from API:', err);
+      }
+    }
+    loadAlerts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleCreateAlert = async () => {
+    alertSet.open();
+    try {
+      const result = await createLfgAlert({
+        userId: 1,
+        area: area.split(' ')[0],
+        preferredDate: '2026-08-07',
+        timeWindow: time,
+        skillLevel: skill.toUpperCase(),
+        preferredRole: 'Any',
+      });
+      if (result?.id) {
+        setActiveAlertId(result.id);
+      }
+    } catch (err) {
+      console.warn('Failed to create alert via API:', err);
+    }
+  };
+
+  const handleToggleAlert = async (e) => {
+    const checked = e.target.checked;
+    setAlertEnabled(checked);
+    if (activeAlertId) {
+      try {
+        await updateLfgAlertStatus(activeAlertId, 1, checked ? 'ACTIVE' : 'PAUSED');
+      } catch (err) {
+        console.warn('Failed to update alert status via API:', err);
+      }
+    }
+  };
+
+  const handleDeleteAlert = async () => {
+    showToast('Alert deleted — undo? (30s)');
+    if (activeAlertId) {
+      try {
+        await deleteLfgAlert(activeAlertId, 1);
+        setActiveAlertId(null);
+      } catch (err) {
+        console.warn('Failed to delete alert via API:', err);
+      }
+    }
+  };
+
 
   return (
     <>
@@ -131,7 +197,7 @@ export default function LfgAlertPage() {
                 ))}
               </div>
             </div>
-            <button className="btn btn-primary btn-block" type="button" onClick={alertSet.open}>
+            <button className="btn btn-primary btn-block" type="button" onClick={handleCreateAlert}>
               🔔 Set availability alert
             </button>
           </div>
@@ -157,12 +223,12 @@ export default function LfgAlertPage() {
                     <Switch
                       label="Alert enabled"
                       checked={alertEnabled}
-                      onChange={(event) => setAlertEnabled(event.target.checked)}
+                      onChange={handleToggleAlert}
                     />
                     <button
                       className="btn btn-sm btn-ghost-danger"
                       type="button"
-                      onClick={() => showToast('Alert deleted — undo? (30s)')}
+                      onClick={handleDeleteAlert}
                     >
                       Delete
                     </button>

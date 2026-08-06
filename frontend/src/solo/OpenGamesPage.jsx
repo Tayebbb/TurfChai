@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
-import { fullGame, openGames } from '@/data/games';
+import { fullGame, openGames as mockOpenGames } from '@/data/games';
+import { fetchOpenGames } from '@/api/openGames';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -64,6 +65,54 @@ const HERO_STATS = [
   { id: 'urgent', value: '4', line1: 'Urgent', line2: 'Slots' },
 ];
 
+function mapBackendGame(apiGame) {
+  const spotsLeft = apiGame.spotsLeft ?? ((apiGame.capacity || 10) - (apiGame.filledCount || 0));
+  const variant = spotsLeft <= 2 ? 'urgent' : spotsLeft <= 4 ? 'almost-full' : 'open';
+  const fillTone = spotsLeft <= 2 ? 'urgent' : 'open';
+  const fillWidth = `${Math.round(((apiGame.filledCount || 0) / (apiGame.capacity || 10)) * 100)}%`;
+  const skillLabel = apiGame.skillLevel
+    ? apiGame.skillLevel.charAt(0).toUpperCase() + apiGame.skillLevel.slice(1).toLowerCase()
+    : 'Intermediate';
+
+  return {
+    id: apiGame.id,
+    name: apiGame.title || 'Open Game',
+    venue: apiGame.venueName ? `${apiGame.venueName}${apiGame.area ? ` · ${apiGame.area}` : ''}` : 'Local Turf',
+    sport: 'football',
+    sportIcon: '⚽',
+    skill: skillLabel.toLowerCase(),
+    skillLabel,
+    price: apiGame.pricePerPlayer || 280,
+    variant,
+    status: {
+      text: apiGame.status === 'OPEN' ? 'OPEN' : apiGame.status || 'OPEN',
+      tone: spotsLeft <= 2 ? 'red' : 'green',
+    },
+    joinBadge: { text: 'Instant join', tone: 'green' },
+    metaParts: [
+      apiGame.gameDate || 'Tonight',
+      apiGame.startTime ? `${apiGame.startTime.substring(0, 5)}–${(apiGame.endTime || '').substring(0, 5)}` : '9:00 PM',
+    ],
+    host: {
+      initials: (apiGame.organizerName || 'Host').substring(0, 2).toUpperCase(),
+      name: apiGame.organizerName || 'Host',
+      rating: '4.9★',
+    },
+    fillNote: spotsLeft === 1 ? 'Needs 1 player' : `${spotsLeft} spots left`,
+    fillNoteTone: spotsLeft <= 2 ? 'danger' : 'warn',
+    fillTone,
+    fillWidth,
+    avatars: (apiGame.members || []).map((m, idx) => ({
+      id: m.userId || idx,
+      initials: (m.userName || 'P').substring(0, 2).toUpperCase(),
+    })),
+    playersNote: `${apiGame.filledCount || 0} of ${apiGame.capacity || 10} joined`,
+    cta: { label: 'Join match →', variant: 'primary' },
+    search: `${apiGame.title} ${apiGame.venueName} ${apiGame.area}`.toLowerCase(),
+    section: variant,
+  };
+}
+
 function formatUrgency(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -89,7 +138,7 @@ function Highlight({ text, query }) {
 
 function matchesFilters(game, query, filters) {
   if (query) {
-    const haystack = `${game.name} ${game.venue} ${game.sport} ${game.skill} ${game.search}`.toLowerCase();
+    const haystack = `${game.name} ${game.venue} ${game.sport} ${game.skill} ${game.search || ''}`.toLowerCase();
     if (!haystack.includes(query)) return false;
   }
   if (filters.sport && game.sport !== filters.sport) return false;
@@ -193,6 +242,29 @@ export default function OpenGamesPage() {
   const [chips, setChips] = useState(INITIAL_CHIPS);
   const [filters, setFilters] = useState({});
   const [filled, setFilled] = useState(false);
+  const [games, setGames] = useState(mockOpenGames);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadGames() {
+      try {
+        const apiGames = await fetchOpenGames();
+        if (isMounted && Array.isArray(apiGames) && apiGames.length > 0) {
+          const mapped = apiGames.map(mapBackendGame);
+          setGames(mapped);
+        }
+      } catch (err) {
+        console.warn('Backend API request failed, using local games:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    loadGames();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Mirrors the prototype's 0% → target fill-bar sweep on first paint.
   useEffect(() => {
@@ -203,9 +275,10 @@ export default function OpenGamesPage() {
   const normalisedQuery = query.trim().toLowerCase();
 
   const visibleGames = useMemo(
-    () => openGames.filter((game) => matchesFilters(game, normalisedQuery, filters)),
-    [normalisedQuery, filters],
+    () => games.filter((game) => matchesFilters(game, normalisedQuery, filters)),
+    [games, normalisedQuery, filters],
   );
+
   const fullVisible = matchesFilters(fullGame, normalisedQuery, filters);
 
   const visibleCount = visibleGames.length + (fullVisible ? 1 : 0);
