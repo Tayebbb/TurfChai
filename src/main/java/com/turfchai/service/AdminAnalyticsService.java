@@ -54,7 +54,7 @@ public class AdminAnalyticsService {
         }
         long pendingRequests = turfRequestRepository.findByStatusOrderByCreatedAtAsc("PENDING").size();
         long activeTurfs = venueRepository.count();
-        long adminAccounts = adminRepository.count();
+        long adminAccounts = analyticsRepository.countAdminUsers();
         return new DashboardStatsDto(pendingRequests, activeTurfs, totalUsers, adminAccounts);
     }
 

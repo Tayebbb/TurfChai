@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1")
-@CrossOrigin(origins = "*") // For local Vite frontend
+@CrossOrigin(originPatterns = "*") // For local Vite frontend
 public class ReviewRestController {
 
     private final ReviewService reviewService;

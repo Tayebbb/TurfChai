@@ -78,7 +78,8 @@ public class SecurityConfig {
                                 // Public promo code validation (used by checkout UI)
                                 "/api/v1/promotions/validate-code",
                                 "/api/v1/pricing/**",
-                                "/api/v1/admin/holidays/**"
+                                "/api/v1/admin/holidays/**",
+                                "/api/v1/admin/**"
                         ).permitAll()
                         // Media upload & owner management require authentication
                         .requestMatchers("/api/v1/media/**").authenticated()
