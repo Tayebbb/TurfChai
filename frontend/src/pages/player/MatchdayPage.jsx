@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
+import { QrCode } from "@/components/common/QrCode";
 import { Button } from "@/components/buttons/Button";
 import { fridayBooking } from "@/data/bookings";
 import { useToast } from "@/hooks/useToast";
@@ -18,6 +19,9 @@ const TEAM_AVATARS = [
 export default function MatchdayPage() {
   const { showToast } = useToast();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
+
+  // Scanning the ticket opens this booking, so any phone camera is a valid reader.
+  const ticketUrl = `${window.location.origin}${paths.player.bookingDetail(fridayBooking.ref)}`;
 
   const handleCheckIn = async () => {
     try {
@@ -68,10 +72,9 @@ export default function MatchdayPage() {
           </div>
 
           <div className="center" style={{ padding: 20 }}>
-            <div
-              className="qr"
-              role="img"
-              aria-label="Check-in QR code for booking TC-48291"
+            <QrCode
+              value={ticketUrl}
+              label={`Check-in QR code for booking ${fridayBooking.ref}`}
             />
             <b
               className="num"
