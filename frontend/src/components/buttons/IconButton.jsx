@@ -29,6 +29,7 @@ export function IconButton({ label, notify = false, className, to, href, childre
 export function IconButton({
   children,
   label,
+  notify,
   onClick,
   className = "",
   ...props
@@ -36,7 +37,7 @@ export function IconButton({
   return (
     <button
       type="button"
-      className={`icon-btn ${className}`.trim()}
+      className={`icon-btn${notify ? ' notify' : ''} ${className}`.trim()}
       aria-label={label}
       onClick={onClick}
       {...props}
@@ -46,3 +47,4 @@ export function IconButton({
     </button>
   );
 }
+
