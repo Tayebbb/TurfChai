@@ -87,7 +87,8 @@ class BookingRestControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"slotId\":" + slot.getId() + "}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("HELD"));
+                .andExpect(jsonPath("$.slotId").value(slot.getId()))
+                .andExpect(jsonPath("$.heldUntil").exists());
     }
 
     @Test
