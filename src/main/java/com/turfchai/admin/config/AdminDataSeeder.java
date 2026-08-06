@@ -18,9 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Map;
 
-/** Seeds the demo super admin (dev/test profiles only). */
+/** Seeds the demo super admin (dev/test/ci profiles only — never prod). */
 @Configuration
-@Profile({"dev", "test"})
+@Profile({"dev", "test", "ci"})
 public class AdminDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDataSeeder.class);
