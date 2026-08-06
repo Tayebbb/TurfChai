@@ -70,62 +70,9 @@ const USER_SEGMENTS = [
   { id: 'hosts', label: 'Hosts' },
 ];
 
-const BREAKDOWN_LEGEND = [
-  {
-    id: 'players',
-    color: '#22c55e',
-    name: 'Players',
-    description: 'Regular turf bookers',
-    count: '34,200',
-    share: '82.9%',
-    tone: 'green',
-  },
-  {
-    id: 'hosts',
-    color: '#3b82f6',
-    name: 'Turf Hosts',
-    description: 'Venue & pitch managers',
-    count: '4,850',
-    share: '11.8%',
-    tone: 'blue',
-  },
-  {
-    id: 'solo',
-    color: '#a855f7',
-    name: 'Solo Players',
-    description: 'Looking for game (LFG)',
-    count: '2,220',
-    share: '5.3%',
-    tone: 'yellow',
-  },
-];
+// BREAKDOWN_LEGEND is now computed dynamically from live API data (see useMemo below)
 
-const AUDIT_LOG = [
-  {
-    id: 'tr-1039',
-    tag: 'APPROVAL',
-    tone: 'blue',
-    title: 'TR-1039 · GreenTurf Annex Approved',
-    detail: 'Verified venue ownership documents · By Farid Hasan',
-    when: 'Today 6:24 PM',
-  },
-  {
-    id: 'p-38112',
-    tag: 'MODERATION',
-    tone: 'red',
-    title: 'Player #38112 Suspended (No-Show Repeat)',
-    detail: 'Automated temporary ban policy applied · By Nadia Amin',
-    when: 'Today 4:02 PM',
-  },
-  {
-    id: 'v-0077',
-    tag: 'AUTOMATION',
-    tone: 'yellow',
-    title: 'Venue #77 Payout Flagged for Review',
-    detail: 'Refund ratio spike detected (> 4.2% threshold)',
-    when: 'Today 11:30 AM',
-  },
-];
+// AUDIT_LOG is now fetched live from the backend (see useApi below)
 
 const EARNINGS_OPTIONS = {
   plugins: { legend: { display: false } },
@@ -150,17 +97,7 @@ const USER_GROWTH_OPTIONS = {
   },
 };
 
-const BREAKDOWN_DATA = {
-  labels: ['Players', 'Turf Hosts', 'Solo Players'],
-  datasets: [
-    {
-      data: [82.9, 11.8, 5.3],
-      backgroundColor: ['#22c55e', '#3b82f6', '#a855f7'],
-      borderWidth: 0,
-      spacing: 4,
-    },
-  ],
-};
+// BREAKDOWN_DATA is now computed dynamically from live API data (see useMemo below)
 
 const BREAKDOWN_OPTIONS = {
   cutout: '72%',
@@ -251,10 +188,68 @@ export default function DashboardPage() {
   const { data: statsRes } = useApi(() => api('/admin/analytics/dashboard'));
   const stats = statsRes?.data || statsRes;
 
-  const pendingRequestsCount = stats?.pendingRequests ?? 4;
-  const activeTurfsCount = stats?.activeTurfs ?? 128;
-  const registeredUsersCount = stats?.registeredUsers ?? 41270;
-  const adminAccountsCount = stats?.adminAccounts ?? 5;
+  const pendingRequestsCount = stats?.pendingRequests ?? 0;
+  const activeTurfsCount = stats?.activeTurfs ?? 0;
+  const registeredUsersCount = stats?.registeredUsers ?? 0;
+  const adminAccountsCount = stats?.adminAccounts ?? 0;
+
+  // Live segments for breakdown card
+  const { data: segRes } = useApi(() => api('/admin/analytics/segments'), []);
+  const seg = segRes?.data || segRes;
+
+  const breakdownLegend = useMemo(() => {
+    if (!seg) return [];
+    const total = seg.totalUsers || 1;
+    const soloCount = Math.max(0, total - (seg.playerCount || 0) - (seg.hostCount || 0));
+    return [
+      { id: 'players', color: '#22c55e', name: 'Players', description: 'Regular turf bookers',
+        count: (seg.playerCount || 0).toLocaleString('en-IN'),
+        share: ((seg.playerCount || 0) / total * 100).toFixed(1) + '%', tone: 'green' },
+      { id: 'hosts', color: '#3b82f6', name: 'Turf Hosts', description: 'Venue & pitch managers',
+        count: (seg.hostCount || 0).toLocaleString('en-IN'),
+        share: ((seg.hostCount || 0) / total * 100).toFixed(1) + '%', tone: 'blue' },
+      { id: 'solo', color: '#a855f7', name: 'Solo Players', description: 'Looking for game (LFG)',
+        count: soloCount.toLocaleString('en-IN'),
+        share: (soloCount / total * 100).toFixed(1) + '%', tone: 'yellow' },
+    ];
+  }, [seg]);
+
+  const breakdownData = useMemo(() => {
+    if (!seg) return { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, spacing: 4 }] };
+    const total = seg.totalUsers || 1;
+    const soloCount = Math.max(0, total - (seg.playerCount || 0) - (seg.hostCount || 0));
+    return {
+      labels: ['Players', 'Turf Hosts', 'Solo Players'],
+      datasets: [{
+        data: [
+          +((seg.playerCount || 0) / total * 100).toFixed(1),
+          +((seg.hostCount || 0) / total * 100).toFixed(1),
+          +(soloCount / total * 100).toFixed(1),
+        ],
+        backgroundColor: ['#22c55e', '#3b82f6', '#a855f7'],
+        borderWidth: 0,
+        spacing: 4,
+      }],
+    };
+  }, [seg]);
+
+  // Live audit log for Recent Activity card
+  const { data: auditRes } = useApi(() => api('/admin/audit-log?page=0&size=5'), []);
+  const rawAuditContent = auditRes?.data?.content || auditRes?.content || [];
+
+  const auditLog = useMemo(() => rawAuditContent.map((entry) => {
+    const when = entry.createdAt
+      ? new Date(entry.createdAt).toLocaleString('en-BD', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })
+      : '';
+    return {
+      id: String(entry.id),
+      tag: (entry.action || '').toUpperCase().replace(/\s+/g, '_'),
+      tone: entry.actionTone || 'blue',
+      title: `${entry.target ? entry.target + ' · ' : ''}${entry.action}`,
+      detail: `${entry.details || ''} · By ${entry.adminName || 'System'}`,
+      when,
+    };
+  }), [rawAuditContent]);
 
   return (
     <>
@@ -620,18 +615,20 @@ export default function DashboardPage() {
           <div className="row admin-wrap-mobile" style={{ gap: 16, marginBottom: 14 }}>
             <div>
               <span className="tiny subtle">Total User Base</span>
-              <b style={{ display: 'block', fontSize: 22, fontWeight: 800 }}>41,270</b>
+              <b style={{ display: 'block', fontSize: 22, fontWeight: 800 }}>
+                {growthDto ? (growthDto.totalUsers || 0).toLocaleString('en-IN') : '—'}
+              </b>
             </div>
             <div style={{ borderLeft: '1px solid var(--border-soft)', paddingLeft: 16 }}>
               <span className="tiny subtle">Active Ratio</span>
               <b style={{ display: 'block', fontSize: 22, fontWeight: 800, color: 'var(--mint)' }}>
-                89.4%
+                {growthDto ? (growthDto.activeRatio || 0).toFixed(1) + '%' : '—'}
               </b>
             </div>
             <div style={{ borderLeft: '1px solid var(--border-soft)', paddingLeft: 16 }}>
-              <span className="tiny subtle">Monthly Growth</span>
+              <span className="tiny subtle">New Today</span>
               <b style={{ display: 'block', fontSize: 22, fontWeight: 800, color: 'var(--brand-600)' }}>
-                +14.8%
+                +{growthDto ? (growthDto.newUsersToday || 0) : '—'}
               </b>
             </div>
           </div>
@@ -663,7 +660,7 @@ export default function DashboardPage() {
               </div>
               <span className="subtle small">Distribution across player roles &amp; venue partners</span>
             </div>
-            <span className="badge green nodot">41,270 Verified</span>
+            <span className="badge green nodot">{seg ? (seg.totalUsers || 0).toLocaleString('en-IN') : '—'} Total</span>
           </div>
 
           <div
@@ -679,7 +676,7 @@ export default function DashboardPage() {
             <div style={{ position: 'relative', width: 170, height: 170, margin: '0 auto' }}>
               <ChartCanvas
                 type="doughnut"
-                data={BREAKDOWN_DATA}
+                data={breakdownData}
                 options={BREAKDOWN_OPTIONS}
                 height={170}
                 label="User distribution across players, hosts and solo players"
@@ -694,14 +691,14 @@ export default function DashboardPage() {
                 }}
               >
                 <span style={{ fontSize: 20, fontWeight: 800, display: 'block', lineHeight: 1 }}>
-                  41.2K
+                  {seg ? ((seg.totalUsers || 0) / 1000).toFixed(1) + 'K' : '—'}
                 </span>
                 <span style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700 }}>USERS</span>
               </div>
             </div>
 
             <div className="user-breakdown-legend">
-              {BREAKDOWN_LEGEND.map((item) => (
+              {breakdownLegend.map((item) => (
                 <div className="legend-item" key={item.id}>
                   <div>
                     <span className="legend-dot" style={{ background: item.color }} />
@@ -728,7 +725,7 @@ export default function DashboardPage() {
             <Icon name="activity" style={{ color: 'var(--brand)', width: 20, height: 20 }} />
             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Recent Platform Audit Log</h3>
             <span className="subtle small" style={{ marginLeft: 8 }}>
-              1,862 Bookings Today · GMV ৳38.4L
+              {stats?.pendingRequests ?? 0} Pending · {activeTurfsCount} Venues Live
             </span>
           </div>
           <Link className="btn btn-sm btn-tertiary" to={paths.admin.activity} style={{ fontWeight: 700 }}>
@@ -737,7 +734,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="stack-sm" style={{ gap: 10 }}>
-          {AUDIT_LOG.map((entry) => (
+          {auditLog.length === 0 && (
+            <span className="tiny subtle" style={{ padding: '10px 0', display: 'block' }}>No activity yet.</span>
+          )}
+          {auditLog.map((entry) => (
             <div
               className="history-item between"
               key={entry.id}
