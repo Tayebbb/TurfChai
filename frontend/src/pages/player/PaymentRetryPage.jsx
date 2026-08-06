@@ -1,102 +1,64 @@
+import { useSearchParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
-import { useCountdown } from "@/hooks/useCountdown";
 import { paths } from "@/routes/paths";
 
-const CONSEQUENCES = [
-  {
-    id: "released",
-    state: "fail",
-    title: "Held slot released",
-    body: "The 7:30 PM slot returns to live availability for everyone.",
-  },
-  {
-    id: "no-charge",
-    state: "pending",
-    title: "No charge, no booking",
-    body: "Nothing is recorded against your account or reliability score.",
-  },
-  {
-    id: "rebook",
-    title: "We'll help you rebook",
-    body: "You'll be returned to search with the nearest alternative slots highlighted.",
-  },
-];
-
+/**
+ * There is no payment gateway behind TurfChai yet, so no payment can fail and
+ * there is nothing to retry. This page only exists to catch old links: it
+ * explains that, and hands the slot back to checkout when the link carried one.
+ */
 export default function PaymentRetryPage() {
-  const { label } = useCountdown(147);
+  const [searchParams] = useSearchParams();
+  const slotId = searchParams.get("slotId");
+  const venue = searchParams.get("venue");
+  const date = searchParams.get("date");
+
+  const checkoutHref = slotId
+    ? `${paths.player.checkout}?slotId=${encodeURIComponent(slotId)}` +
+      (venue ? `&venue=${encodeURIComponent(venue)}` : "") +
+      (date ? `&date=${encodeURIComponent(date)}` : "")
+    : null;
 
   return (
     <>
-      <PageTitle title="Payment failed" />
+      <PageTitle title="Payment" />
       <main
         className="wrap-form"
         id="main"
         style={{ paddingTop: 48, paddingBottom: 64 }}
       >
-        <div className="center" style={{ marginBottom: 14 }}>
-          <span
-            className="lock-timer"
-            role="timer"
-            aria-label="Slot hold expires in"
-          >
-            🔒 Hold expires in <span>{label}</span>
-          </span>
-        </div>
-
         <div className="card center" style={{ padding: "32px 24px" }}>
-          <div className="fail-anim" aria-hidden="true">
-            ✕
-          </div>
-          <span className="badge red">Payment failed</span>
+          <span className="badge gray">No payment taken</span>
           <h1 style={{ fontSize: 22, marginTop: 10 }}>
-            Your bKash payment didn&apos;t go through
+            TurfChai doesn&apos;t process payments yet
           </h1>
           <p
             className="muted small"
-            style={{ maxWidth: 340, margin: "0 auto 4px" }}
+            style={{ maxWidth: 380, margin: "0 auto 4px" }}
           >
-            bKash reported <b>insufficient balance</b> for ৳2,550. You have not
-            been charged.
+            There is no card, bKash or Nagad charge anywhere in the booking flow, so there is no
+            failed payment to retry. Confirming a slot books it in your name and records the
+            amount — you settle it with the venue.
           </p>
-          <p
-            className="subtle small"
-            style={{ maxWidth: 340, margin: "0 auto" }}
-          >
-            Your slot — <b>Kick Off Arena, Fri 8 Aug, 7:30 PM</b> — is still
-            held. If you don&apos;t retry before the timer ends, the hold is
-            released and the slot becomes available to others.
+          <p className="subtle small" style={{ maxWidth: 380, margin: "0 auto" }}>
+            {slotId
+              ? "The slot from your link is below. Slot holds last 5 minutes, so it may need re-locking."
+              : "Pick a slot on a venue page to start a booking."}
           </p>
           <div className="stack-sm" style={{ marginTop: 20 }}>
-            <Button
-              variant="primary"
-              size="lg"
-              block
-              to={paths.player.checkout}
-            >
-              Retry payment
+            {checkoutHref ? (
+              <Button variant="primary" size="lg" block to={checkoutHref}>
+                Back to checkout
+              </Button>
+            ) : null}
+            <Button variant="secondary" block to={paths.player.explore}>
+              Browse venues
             </Button>
-            <Button variant="secondary" block to={paths.player.checkout}>
-              Choose another payment method
-            </Button>
-            <Button variant="tertiary" block to={paths.player.explore}>
-              Give up the slot &amp; see alternatives
+            <Button variant="tertiary" block to={paths.player.bookings}>
+              My bookings
             </Button>
           </div>
-        </div>
-
-        <div className="card" style={{ marginTop: 16 }}>
-          <h4>If the hold expires</h4>
-          <ul className="tline" style={{ marginTop: 10 }}>
-            {CONSEQUENCES.map((item) => (
-              <li className={item.state} key={item.id}>
-                <b className="small">{item.title}</b>
-                <p className="tiny muted" style={{ margin: 0 }}>
-                  {item.body}
-                </p>
-              </li>
-            ))}
-          </ul>
         </div>
       </main>
     </>
