@@ -6,7 +6,7 @@ import './ChatWidget.css';
 const GREETING = {
   id: 'greeting',
   role: 'assistant',
-  text: 'Salam! I’m **Chai**, your TurfChai assistant.\nAsk me to find a turf, check prices, or explain a booking policy.',
+  text: 'Salam! I’m **TurfBondhu**, your TurfChai assistant.\nAsk me to find a turf, check prices, or explain a booking policy.',
 };
 
 const SUGGESTIONS = [
@@ -121,7 +121,7 @@ export function ChatWidget() {
         className={`chat-launcher${open ? ' is-open' : ''}`}
         aria-expanded={open}
         aria-controls="chat-panel"
-        aria-label={open ? 'Close the TurfChai assistant' : 'Open the TurfChai assistant'}
+        aria-label={open ? 'Close the TurfBondhu assistant' : 'Open the TurfBondhu assistant'}
         onClick={() => setOpen((value) => !value)}
       >
         <span className="chat-launcher-glow" aria-hidden="true" />
@@ -146,7 +146,7 @@ export function ChatWidget() {
           className="chat-panel"
           role="dialog"
           aria-modal="false"
-          aria-label="TurfChai assistant"
+          aria-label="TurfBondhu assistant"
           ref={panelRef}
         >
           <header className="chat-head">
@@ -154,7 +154,7 @@ export function ChatWidget() {
               <FootballIcon />
             </span>
             <div className="chat-head-text">
-              <b>Chai</b>
+              <b>TurfBondhu</b>
               <span>Booking assistant</span>
             </div>
             <button type="button" className="chat-ghost" onClick={startOver}>

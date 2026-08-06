@@ -6,7 +6,6 @@ import com.turfchai.dto.response.JoinOpenGameResponse;
 import com.turfchai.dto.response.OpenGameResponse;
 import com.turfchai.exception.*;
 import com.turfchai.model.*;
-import com.turfchai.model.enums.GameMembershipStatus;
 import com.turfchai.model.enums.OpenGameStatus;
 import com.turfchai.model.enums.RoleType;
 import com.turfchai.model.enums.SkillLevel;

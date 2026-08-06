@@ -72,6 +72,6 @@ class ToolRegistryTest {
     void specsCanBeScopedByAllowList() {
         ToolRegistry registry = new ToolRegistry(List.of(
                 tool("a", ToolResult.ok(1)), tool("b", ToolResult.ok(2))));
-        assertThat(registry.specs(List.of("a"))).extracting(ToolSpec::name).containsExactly("a");
+        assertThat(registry.specs(List.of("a"))).extracting(spec -> spec.name()).containsExactly("a");
     }
 }

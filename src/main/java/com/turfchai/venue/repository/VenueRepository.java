@@ -17,4 +17,8 @@ public interface VenueRepository extends JpaRepository<Venue, Long>, JpaSpecific
 
     // Owner-facing lookups
     List<Venue> findByOwnerId(Long ownerUserId);
+
+    // Weather sync
+    @org.springframework.data.jpa.repository.Query(value = "SELECT DISTINCT grid_lat, grid_lon FROM venues WHERE status = 'LIVE' AND grid_lat IS NOT NULL AND grid_lon IS NOT NULL", nativeQuery = true)
+    List<Object[]> findDistinctGridCoordinates();
 }

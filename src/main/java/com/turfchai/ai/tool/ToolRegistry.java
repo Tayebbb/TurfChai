@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -38,12 +39,17 @@ public class ToolRegistry {
     }
 
     public List<ToolSpec> specs() {
-        return tools.values().stream().map(Tool::spec).toList();
+        return tools.values().stream()
+                .map(t -> t.spec())
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     /** Specs restricted to an allow-list (planner scoping). */
     public List<ToolSpec> specs(List<String> allowedNames) {
-        return specs().stream().filter(s -> allowedNames.contains(s.name())).toList();
+        return specs().stream()
+                .filter(s -> s != null && allowedNames.contains(s.name()))
+                .toList();
     }
 
     public ToolResult execute(String name, Map<String, Object> arguments, ToolContext context) {

@@ -4,10 +4,8 @@ import com.turfchai.player.api.UserProfileRestController;
 import com.turfchai.model.User;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.tournament.config.TournamentDataSeeder;
-import com.turfchai.tournament.repository.TournamentFixtureRepository;
-import com.turfchai.tournament.repository.TournamentPitchReservationRepository;
 import com.turfchai.tournament.repository.TournamentRepository;
-import com.turfchai.tournament.repository.TournamentTeamRepository;
+import com.turfchai.tournament.repository.TournamentFixtureRepository;
 import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
 import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
@@ -45,11 +43,7 @@ class TournamentServiceTest {
     @Autowired
     private TournamentRepository tournaments;
     @Autowired
-    private TournamentTeamRepository teams;
-    @Autowired
     private TournamentFixtureRepository fixtures;
-    @Autowired
-    private TournamentPitchReservationRepository reservations;
     @Autowired
     private UserRepository users;
     @Autowired

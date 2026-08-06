@@ -4,7 +4,7 @@ import com.turfchai.dto.analytics.GrowthDto;
 import com.turfchai.dto.analytics.RevenueDto;
 import com.turfchai.dto.analytics.SegmentsDto;
 import com.turfchai.repository.AnalyticsRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.turfchai.booking.repository.BookingRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -12,6 +12,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +38,9 @@ class AdminAnalyticsServiceTest {
 
     @Mock
     private AnalyticsRepository analyticsRepository;
+
+    @Mock
+    private BookingRepository bookingRepository;
 
     @InjectMocks
     private AdminAnalyticsService analyticsService;
@@ -91,23 +96,27 @@ class AdminAnalyticsServiceTest {
     // ── Revenue tests ──────────────────────────────────────────────────────
 
     @Test
-    void getRevenue_alwaysReturnsEightMonthSeries() {
-        RevenueDto dto = analyticsService.getRevenue();
+    void getRevenue_alwaysReturnsTwelveMonthSeries() {
+        when(bookingRepository.findAll()).thenReturn(Collections.emptyList());
+        RevenueDto dto = analyticsService.getRevenue(2026, "monthly");
 
         assertNotNull(dto);
-        assertEquals(8, dto.getLabels().size());
-        assertEquals(8, dto.getGmv().size());
-        assertEquals(8, dto.getBookings().size());
-        assertTrue(dto.getTotalGmv() > 0, "Total GMV should be positive");
-        assertTrue(dto.getTotalBookings() > 0, "Total bookings should be positive");
+        assertEquals(12, dto.getLabels().size());
+        assertEquals(12, dto.getGmv().size());
+        assertEquals(12, dto.getBookings().size());
+        assertEquals(0, dto.getTotalGmv(), "Total GMV should be 0 when empty");
+        assertEquals(0, dto.getTotalBookings(), "Total bookings should be 0 when empty");
         assertNotNull(dto.getGrowthPercent());
     }
 
     @Test
     void getRevenue_totalGmv_matchesSumOfSeries() {
-        RevenueDto dto = analyticsService.getRevenue();
+        when(bookingRepository.findAll()).thenReturn(Collections.emptyList());
+        RevenueDto dto = analyticsService.getRevenue(2026, "monthly");
 
-        long expectedSum = dto.getGmv().stream().mapToLong(Long::longValue).sum();
+        long expectedSum = dto.getGmv().stream()
+                .mapToLong(value -> Objects.requireNonNull(value).longValue())
+                .sum();
         assertEquals(expectedSum, dto.getTotalGmv());
     }
 

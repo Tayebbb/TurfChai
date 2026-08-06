@@ -1,7 +1,6 @@
 package com.turfchai.repository;
 
 import com.turfchai.model.User;
-import com.turfchai.model.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

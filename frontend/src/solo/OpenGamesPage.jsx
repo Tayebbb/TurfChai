@@ -1,6 +1,10 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
+import { Button } from '@/components/buttons/Button';
+import { IconButton } from '@/components/buttons/IconButton';
+import { Overlay } from '@/components/modals/Overlay';
+import { Chip } from '@/components/ui/Chip';
 import { fullGame, openGames } from '@/data/games';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useDisclosure } from '@/hooks/useDisclosure';
@@ -42,7 +46,6 @@ const FILTER_GROUPS = [
   {
     id: 'other',
     title: 'Other',
-    last: true,
     options: [
       { group: 'join', value: 'instant', label: '⚡ Instant join' },
       { group: 'price', value: '300', label: 'Under ৳300' },
@@ -336,46 +339,31 @@ export default function OpenGamesPage() {
               </select>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-              <button
-                className="btn btn-secondary btn-sm"
-                type="button"
-                onClick={filterModal.open}
-                style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border-strong)',
-                  borderRadius: 10,
-                  height: 36,
-                  padding: '0 14px',
-                }}
-              >
+            <div className="og-filter-row">
+              <button className="filters-btn" type="button" aria-label="Open filters" onClick={filterModal.open}>
                 <svg
-                  width="14"
-                  height="14"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2.5"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={{ marginRight: 6 }}
+                  aria-hidden="true"
                 >
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                  <line x1="4" y1="21" x2="4" y2="14" />
+                  <line x1="4" y1="10" x2="4" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12" y2="3" />
+                  <line x1="20" y1="21" x2="20" y2="16" />
+                  <line x1="20" y1="12" x2="20" y2="3" />
+                  <line x1="1" y1="14" x2="7" y2="14" />
+                  <line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="17" y1="16" x2="23" y2="16" />
                 </svg>
                 Filters
-                <span
-                  className="badge brand"
-                  style={{
-                    display: activeFilterCount > 0 ? 'inline-block' : 'none',
-                    marginLeft: 8,
-                    padding: '2px 6px',
-                    fontSize: 11,
-                    minWidth: 20,
-                    textAlign: 'center',
-                  }}
-                >
-                  {activeFilterCount}
-                </span>
+                {activeFilterCount > 0 ? <span className="filters-btn-count">{activeFilterCount}</span> : null}
               </button>
               <span className="og-result-count" aria-live="polite">
                 {visibleCount > 0 ? `${visibleCount} game${visibleCount === 1 ? '' : 's'}` : ''}
@@ -484,72 +472,57 @@ export default function OpenGamesPage() {
           </div>
         </div>
 
-        {/* ═══ FILTER MODAL ═══ */}
-        <div
-          className={filterModal.isOpen ? 'filter-modal-overlay open' : 'filter-modal-overlay'}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) filterModal.close();
-          }}
-        >
-          <div className="filter-modal-content glass">
-            <div
-              className="between"
-              style={{ paddingBottom: 16, borderBottom: '1px solid var(--border-strong)', marginBottom: 20 }}
-            >
-              <h3 style={{ margin: 0, fontSize: 18 }}>Filter Games</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                aria-label="Close filters"
-                onClick={filterModal.close}
-                style={{ border: 'none', background: 'transparent' }}
+        {/* ═══ FILTER DRAWER ═══ */}
+        <Overlay isOpen={filterModal.isOpen} onClose={filterModal.close} title="Filters" mode="drawer" hideHeader>
+          <div className="between">
+            <h3>Filters</h3>
+            <IconButton label="Close filters" onClick={filterModal.close}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ overflowY: 'auto', paddingRight: 4 }}>
-              {FILTER_GROUPS.map((group) => (
-                <div key={group.id}>
-                  <div className="filter-group-title">{group.title}</div>
-                  <div className="filter-chip-grid" style={group.last ? { marginBottom: 0 } : undefined}>
-                    {group.options.map((option) => {
-                      const groupId = option.group ?? group.id;
-                      const on = chips[groupId] === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          className={on ? 'chip on' : 'chip'}
-                          type="button"
-                          onClick={() => toggleChip(groupId, option.value)}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: 12,
-                marginTop: 24,
-                paddingTop: 20,
-                borderTop: '1px solid var(--border-strong)',
-              }}
-            >
-              <button className="btn btn-secondary" type="button" style={{ flex: 1 }} onClick={resetAll}>
-                Reset
-              </button>
-              <button className="btn btn-primary" type="button" style={{ flex: 2 }} onClick={filterModal.close}>
-                Show Results
-              </button>
-            </div>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </IconButton>
           </div>
-        </div>
+
+          {FILTER_GROUPS.map((group) => (
+            <div className="field" key={group.id}>
+              <label>{group.title}</label>
+              <div className="row-wrap">
+                {group.options.map((option) => {
+                  const groupId = option.group ?? group.id;
+                  return (
+                    <Chip
+                      key={option.value}
+                      active={chips[groupId] === option.value}
+                      onToggle={() => toggleChip(groupId, option.value)}
+                    >
+                      {option.label}
+                    </Chip>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div className="row" style={{ marginTop: 16 }}>
+            <Button variant="tertiary" onClick={resetAll}>
+              Reset
+            </Button>
+            <Button variant="primary" block onClick={filterModal.close}>
+              Show results
+            </Button>
+          </div>
+        </Overlay>
       </main>
     </>
   );
