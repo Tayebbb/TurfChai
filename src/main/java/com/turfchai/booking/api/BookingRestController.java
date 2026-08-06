@@ -5,7 +5,11 @@ import com.turfchai.booking.dto.response.BookingResponse;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.service.BookingService;
 import com.turfchai.security.UserPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,11 +34,19 @@ import java.util.Map;
 @RequestMapping("/api/v1/bookings")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Bookings", description = "Slot hold and booking lifecycle endpoints")
 public class BookingRestController {
 
     private final BookingService bookingService;
 
     /** Acquires a 5-minute hold on a slot. */
+    @Operation(summary = "Hold a slot", description = "Acquires a 5-minute exclusive hold on the given slot so it can be confirmed into a booking.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Slot held; returns slotId and the heldUntil expiry timestamp"),
+            @ApiResponse(responseCode = "400", description = "Validation failed (missing slotId)"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+            @ApiResponse(responseCode = "409", description = "Slot not found or not available for booking")
+    })
     @PostMapping("/hold-slot")
     public ResponseEntity<Map<String, Object>> holdSlot(
             Authentication authentication,
@@ -44,6 +56,13 @@ public class BookingRestController {
     }
 
     /** Confirms the caller's hold and creates a booking. */
+    @Operation(summary = "Confirm hold and create booking", description = "Converts the caller's active hold on the slot into a confirmed booking with a generated booking code.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Booking created and returned"),
+            @ApiResponse(responseCode = "400", description = "Validation failed (missing slotId)"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+            @ApiResponse(responseCode = "409", description = "Slot not found, or hold is invalid, not owned by the caller, or expired")
+    })
     @PostMapping
     public ResponseEntity<BookingResponse> createBooking(
             Authentication authentication,
@@ -53,17 +72,37 @@ public class BookingRestController {
     }
 
     /** Cancels a booking owned by the caller (or an admin/owner role). */
+    @Operation(summary = "Cancel a booking", description = "Cancels the caller's booking and releases its slot back to available. Requires the booking owner or an admin/owner role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Booking cancelled"),
+            @ApiResponse(responseCode = "400", description = "Invalid booking id in path"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+            @ApiResponse(responseCode = "403", description = "Caller does not own the booking and is not an admin/owner"),
+            @ApiResponse(responseCode = "409", description = "Booking not found")
+    })
     @PostMapping("/{id}/cancel")
     public ResponseEntity<Void> cancelBooking(Authentication authentication, @PathVariable Long id) {
         bookingService.cancelBooking(currentUserId(authentication), id);
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Get a booking", description = "Returns a booking to its owner, or to an admin/owner role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Booking returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid booking id in path"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+            @ApiResponse(responseCode = "409", description = "Booking not found or caller is not allowed to view it")
+    })
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBooking(Authentication authentication, @PathVariable Long id) {
         return ResponseEntity.ok(toResponse(bookingService.getBooking(currentUserId(authentication), id)));
     }
 
+    @Operation(summary = "List the caller's bookings", description = "Returns all bookings belonging to the authenticated user.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "List of the caller's bookings"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
     @GetMapping
     public ResponseEntity<List<BookingResponse>> listBookings(Authentication authentication) {
         List<BookingResponse> bookings = bookingService.listUserBookings(currentUserId(authentication))

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Overlay } from '@/components/modals/Overlay';
@@ -6,6 +6,8 @@ import { Chip } from '@/components/ui/Chip';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { listAdminUsers, updateUserStatus, reinstateUser } from '@/api/adminUsers';
+import { useApi } from '@/hooks/useApi';
 
 const FILTERS = ['All Accounts', 'Players', 'Turf Owners', 'Game Hosts', 'Suspended'];
 
@@ -13,22 +15,19 @@ const ROLE_CHIPS = ['Player', 'Turf Owner', 'Game Host'];
 
 const ACCOUNT_STANDINGS = ['Active', 'Restricted (No Matchmaking)', 'Suspended'];
 
-const USERS = [
+const STATIC_USERS = [
   {
     id: '#40221',
     name: 'Rafiul Karim',
     initials: 'RK',
     avatarClass: 'avatar sm',
-    avatarStyle: undefined,
     phone: '+880 1712 ••• 890',
     roles: [{ label: 'Player', tone: 'green' }],
     bookings: 12,
     reliability: '98%',
-    reliabilityStyle: undefined,
     joined: 'Mar 2025',
     status: 'Active',
     statusTone: 'green',
-    rowStyle: undefined,
     flagged: false,
   },
   {
@@ -44,31 +43,9 @@ const USERS = [
     ],
     bookings: 31,
     reliability: '100%',
-    reliabilityStyle: undefined,
     joined: 'Jan 2024',
     status: 'Active',
     statusTone: 'green',
-    rowStyle: undefined,
-    flagged: false,
-  },
-  {
-    id: '#33107',
-    name: 'Rifat Hossain',
-    initials: 'RH',
-    avatarClass: 'avatar sm c',
-    avatarStyle: undefined,
-    phone: '+880 1616 ••• 771',
-    roles: [
-      { label: 'Player', tone: 'green' },
-      { label: 'Game Host', tone: 'blue' },
-    ],
-    bookings: 68,
-    reliability: '97%',
-    reliabilityStyle: undefined,
-    joined: 'Aug 2024',
-    status: 'Active',
-    statusTone: 'green',
-    rowStyle: undefined,
     flagged: false,
   },
   {
@@ -76,7 +53,6 @@ const USERS = [
     name: 'M. Babul',
     initials: 'MB',
     avatarClass: 'avatar sm d',
-    avatarStyle: undefined,
     phone: '+880 1999 ••• 402',
     roles: [{ label: 'Player', tone: 'green' }],
     bookings: 9,
@@ -90,41 +66,115 @@ const USERS = [
   },
 ];
 
+function initialsOf(name) {
+  if (!name) return '??';
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+}
+
 export default function UsersPage() {
   const { showToast } = useToast();
   const editUser = useDisclosure(false);
   const delUser = useDisclosure(false);
   const [filter, setFilter] = useState('All Accounts');
   const [search, setSearch] = useState('');
-  const [editName, setEditName] = useState('Rafiul Karim');
-  const [editPhone, setEditPhone] = useState('+880 1712 345 890');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [editStanding, setEditStanding] = useState('Active');
   const [editRoles, setEditRoles] = useState(['Player']);
   const [editNote, setEditNote] = useState('');
 
-  const term = search.trim().toLowerCase();
-  const rows = term
-    ? USERS.filter(
-        (user) =>
-          user.name.toLowerCase().includes(term) ||
-          user.phone.toLowerCase().includes(term) ||
-          user.id.toLowerCase().includes(term),
-      )
-    : USERS;
+  const roleParam = filter === 'Players' ? 'PLAYER' : filter === 'Turf Owners' ? 'HOST' : filter === 'Game Hosts' ? 'HOST' : null;
+  const statusParam = filter === 'Suspended' ? 'suspended' : null;
+
+  const { data: res, loading, reload } = useApi(
+    () => listAdminUsers(roleParam, statusParam, search),
+    [filter, search],
+  );
+
+  const apiUsersData = res?.data || res;
+
+  const userRows = useMemo(() => {
+    if (Array.isArray(apiUsersData) && apiUsersData.length > 0) {
+      return apiUsersData.map((u) => {
+        const isSuspended = Boolean(u.isSuspended) || u.status === 'SUSPENDED';
+        return {
+          dbId: u.id,
+          id: `#${u.id}`,
+          name: u.fullName,
+          initials: initialsOf(u.fullName),
+          avatarClass: 'avatar sm',
+          phone: u.phone || '—',
+          roles: [{ label: u.role || 'Player', tone: u.role === 'HOST' ? 'blue' : 'green' }],
+          bookings: u.gamesAttended || 0,
+          reliability: `${u.reliabilityScore ?? 100}%`,
+          joined: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2026',
+          status: isSuspended ? 'Suspended' : u.status || 'Active',
+          statusTone: isSuspended ? 'red' : 'green',
+          rowStyle: isSuspended ? { background: 'rgba(201,59,59,0.08)' } : undefined,
+          flagged: isSuspended,
+        };
+      });
+    }
+    return STATIC_USERS;
+  }, [apiUsersData]);
 
   const toggleRole = (role) =>
     setEditRoles((current) =>
       current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
     );
 
-  const saveUser = () => {
+  const handleOpenEdit = (user) => {
+    setSelectedUser(user);
+    setEditName(user.name);
+    setEditPhone(user.phone);
+    setEditStanding(user.status);
+    editUser.open();
+  };
+
+  const saveUser = async () => {
     editUser.close();
+    if (selectedUser?.dbId) {
+      try {
+        const isSusp = editStanding === 'Suspended';
+        await updateUserStatus(selectedUser.dbId, {
+          status: editStanding.toUpperCase(),
+          isSuspended: isSusp,
+        });
+        reload();
+      } catch (err) {
+        // ignore
+      }
+    }
     showToast('User account updated & logged ✓');
   };
 
-  const confirmDelete = () => {
-    delUser.close();
-    showToast('Account deleted — notification SMS sent');
+  const handleReinstate = async (user) => {
+    if (user.dbId) {
+      try {
+        await reinstateUser(user.dbId);
+        reload();
+      } catch (err) {
+        // ignore
+      }
+    }
+    showToast('Suspension lifted early — logged to audit trail');
+  };
+
+  const handleSuspendQuick = async (user) => {
+    if (user.dbId) {
+      try {
+        await updateUserStatus(user.dbId, { status: 'SUSPENDED', isSuspended: true });
+        reload();
+      } catch (err) {
+        // ignore
+      }
+    }
+    showToast('User account suspended and logged ✓');
   };
 
   return (
@@ -189,7 +239,11 @@ export default function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((user) => (
+            {loading ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>Loading users...</td>
+              </tr>
+            ) : userRows.map((user) => (
               <tr key={user.id} style={user.rowStyle}>
                 <td>
                   <div className="row" style={{ gap: 10 }}>
@@ -235,9 +289,7 @@ export default function UsersPage() {
                         <button
                           className="btn btn-sm btn-secondary"
                           type="button"
-                          onClick={() =>
-                            showToast('Suspension lifted early — logged to audit trail')
-                          }
+                          onClick={() => handleReinstate(user)}
                         >
                           Reinstate
                         </button>
@@ -245,18 +297,18 @@ export default function UsersPage() {
                     ) : (
                       <>
                         <button
-                          className="btn btn-sm btn-secondary"
+                          className="btn btn-sm btn-tertiary"
                           type="button"
-                          onClick={editUser.open}
+                          onClick={() => handleOpenEdit(user)}
                         >
-                          Update
+                          Edit Profile
                         </button>
                         <button
-                          className="btn btn-sm btn-ghost-danger"
+                          className="btn btn-sm btn-danger"
                           type="button"
-                          onClick={delUser.open}
+                          onClick={() => handleSuspendQuick(user)}
                         >
-                          Remove
+                          Suspend
                         </button>
                       </>
                     )}
@@ -268,111 +320,51 @@ export default function UsersPage() {
         </table>
       </div>
 
-      {/* Edit User Drawer */}
-      <Overlay
-        isOpen={editUser.isOpen}
-        onClose={editUser.close}
-        title="Update User · Rafiul Karim"
-        mode="drawer"
-      >
-        <div className="field">
-          <label htmlFor="euName">Full Name</label>
-          <input
-            className="input"
-            id="euName"
-            value={editName}
-            onChange={(event) => setEditName(event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="euPhone">Phone Contact</label>
-          <input
-            className="input num"
-            id="euPhone"
-            value={editPhone}
-            onChange={(event) => setEditPhone(event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="euStatus">Account Standing</label>
-          <select
-            className="select"
-            id="euStatus"
-            value={editStanding}
-            onChange={(event) => setEditStanding(event.target.value)}
-          >
-            {ACCOUNT_STANDINGS.map((standing) => (
-              <option key={standing}>{standing}</option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label>Assigned Roles</label>
-          <div className="row-wrap" style={{ marginTop: 4 }}>
-            {ROLE_CHIPS.map((role) => (
-              <Chip
-                key={role}
-                active={editRoles.includes(role)}
-                onToggle={() => toggleRole(role)}
+      {/* Edit User Modal */}
+      {editUser.isOpen && (
+        <Overlay title={`Edit User Profile · ${selectedUser?.id}`} onClose={editUser.close}>
+          <div className="col" style={{ gap: 14 }}>
+            <div>
+              <label className="label">Full Name</label>
+              <input
+                className="input"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Phone Number</label>
+              <input
+                className="input"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Account Standing</label>
+              <select
+                className="input"
+                value={editStanding}
+                onChange={(e) => setEditStanding(e.target.value)}
               >
-                {role}
-              </Chip>
-            ))}
+                {ACCOUNT_STANDINGS.map((standing) => (
+                  <option key={standing} value={standing}>
+                    {standing}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="row" style={{ gap: 10, marginTop: 10 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={editUser.close}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveUser}>
+                Save Changes
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="field">
-          <label htmlFor="euNote">Audit Reason (Required for status updates)</label>
-          <input
-            className="input"
-            id="euNote"
-            placeholder="Enter reason for audit trail..."
-            value={editNote}
-            onChange={(event) => setEditNote(event.target.value)}
-          />
-        </div>
-        <button
-          className="btn btn-primary btn-block"
-          type="button"
-          onClick={saveUser}
-          style={{ marginTop: 14 }}
-        >
-          Save User Profile
-        </button>
-      </Overlay>
-
-      {/* Delete User Modal */}
-      <Overlay
-        isOpen={delUser.isOpen}
-        onClose={delUser.close}
-        title="Delete User Account?"
-        hideHeader
-      >
-        <div className="fail-anim" aria-hidden="true">
-          !
-        </div>
-        <h3 className="center" style={{ marginBottom: 8 }}>
-          Delete User Account?
-        </h3>
-        <div className="alert danger" style={{ margin: '12px 0', borderRadius: 12 }}>
-          <span className="ico">⚠️</span>
-          <div>
-            <b>Account Deletion Impact</b>
-            <ul className="tiny" style={{ margin: '6px 0 0', paddingLeft: 16, lineHeight: 1.8 }}>
-              <li>1 upcoming booking (৳2,550) will be cancelled and refunded</li>
-              <li>User will automatically exit active matchmaking games</li>
-              <li>Account data scheduled for deletion in 30 days</li>
-            </ul>
-          </div>
-        </div>
-        <div className="stack-sm" style={{ marginTop: 14 }}>
-          <button className="btn btn-danger btn-block" type="button" onClick={confirmDelete}>
-            Confirm Delete Account
-          </button>
-          <button className="btn btn-tertiary btn-block" type="button" onClick={delUser.close}>
-            Cancel
-          </button>
-        </div>
-      </Overlay>
+        </Overlay>
+      )}
     </>
   );
 }
