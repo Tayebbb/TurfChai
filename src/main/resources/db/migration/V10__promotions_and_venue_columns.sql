@@ -40,10 +40,23 @@ UPDATE promotions SET label = title WHERE label IS NULL;
 ALTER TABLE promotions ALTER COLUMN code SET NOT NULL;
 ALTER TABLE promotions ALTER COLUMN label SET NOT NULL;
 
-ALTER TABLE promotions ADD CONSTRAINT IF NOT EXISTS uq_promotions_venue_code UNIQUE (venue_id, code);
-ALTER TABLE promotions ADD CONSTRAINT IF NOT EXISTS ck_promotions_percent_range CHECK (
-    discount_type <> 'PERCENT' OR discount_value BETWEEN 0 AND 100
-);
+-- PostgreSQL has no "ADD CONSTRAINT IF NOT EXISTS"; guard with DO blocks
+-- (safe on fresh DBs and on DBs where the old V10 content already ran).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_promotions_venue_code') THEN
+        ALTER TABLE promotions ADD CONSTRAINT uq_promotions_venue_code UNIQUE (venue_id, code);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_promotions_percent_range') THEN
+        ALTER TABLE promotions ADD CONSTRAINT ck_promotions_percent_range CHECK (
+            discount_type <> 'PERCENT' OR discount_value BETWEEN 0 AND 100
+        );
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_promotions_venue ON promotions (venue_id) WHERE is_active = TRUE;
 CREATE INDEX IF NOT EXISTS idx_promotions_code ON promotions (code) WHERE is_active = TRUE;
