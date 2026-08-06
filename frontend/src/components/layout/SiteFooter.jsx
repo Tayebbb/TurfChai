@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Link } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { paths } from '@/routes/paths';
@@ -23,12 +22,6 @@ export function SiteFooter() {
           </div>
         </div>
       </div>
-=======
-export function SiteFooter() {
-  return (
-    <footer className="footer" style={{ padding: "32px 20px", textAlign: "center" }}>
-      <p className="muted small">© 2026 TurfChai · Dhaka, Bangladesh</p>
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
     </footer>
   );
 }

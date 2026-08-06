@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { cn } from '@/utils/cn';
 
 /** Standard content card. */
@@ -25,22 +24,5 @@ export function LiquidCard({ as: Tag = 'div', className, children, ...rest }) {
     <Tag className={cn('liquid-glass', className)} {...rest}>
       {children}
     </Tag>
-=======
-export { Card } from "@/components/ui/Card";
-
-export function GlassCard({ children, className = "", ...props }) {
-  return (
-    <div className={`glass glass-card ${className}`.trim()} {...props}>
-      {children}
-    </div>
-  );
-}
-
-export function LiquidCard({ children, className = "", ...props }) {
-  return (
-    <div className={`glass glass-card liquid-card ${className}`.trim()} {...props}>
-      {children}
-    </div>
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
   );
 }

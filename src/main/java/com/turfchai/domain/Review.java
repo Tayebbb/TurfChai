@@ -1,5 +1,8 @@
 package com.turfchai.domain;
 
+import com.turfchai.booking.entity.Booking;
+import com.turfchai.model.User;
+import com.turfchai.venue.entity.Venue;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Check;
 import org.hibernate.annotations.JdbcTypeCode;

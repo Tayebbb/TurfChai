@@ -80,6 +80,13 @@ public class BookingService {
                 .slot(slot)
                 .userId(userId)
                 .status(BookingStatus.CONFIRMED)
+                .venueId(slot.getVenueId())
+                .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
+                .bookingDate(slot.getSlotDate())
+                .startTime(slot.getStartTime())
+                .endTime(slot.getEndTime())
+                .grossAmount(slot.getPrice())
+                .netAmount(slot.getPrice())
                 .build();
         return bookingRepository.save(booking);
     }

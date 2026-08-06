@@ -176,6 +176,10 @@
   .mappin:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(0,0,0,.2)}
   .mappin.hot{background:var(--brand);color:#fff}
   [data-theme="dark"] .mappin.hot{color:#04120A}
+  .map-unavailable{
+    display:grid;place-items:center;text-align:center;
+    padding:24px;font-size:13px;font-weight:600;color:var(--text-3);
+  }
   @media(max-width:1000px){.split{grid-template-columns:1fr}.mapbox{display:none}}
 
   /* ── No-results nudge ── */

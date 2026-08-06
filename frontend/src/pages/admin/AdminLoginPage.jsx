@@ -28,7 +28,6 @@ export default function AdminLoginPage() {
 
   const [challenge, setChallenge] = useState('');
   const [sentTo, setSentTo] = useState('');
-  const [ttlSeconds, setTtlSeconds] = useState(300);
   const [devCode, setDevCode] = useState(null);
   const [code, setCode] = useState('');
   const [remaining, setRemaining] = useState(0);
@@ -53,7 +52,6 @@ export default function AdminLoginPage() {
       const response = await adminLogin({ email: email.trim(), password });
       setChallenge(response.challenge);
       setSentTo(response.sentTo);
-      setTtlSeconds(response.ttlSeconds);
       setRemaining(response.ttlSeconds);
       setDevCode(response.devCode ?? null);
       setCode('');
@@ -70,7 +68,6 @@ export default function AdminLoginPage() {
       const response = await adminLogin({ email: email.trim(), password });
       setChallenge(response.challenge);
       setSentTo(response.sentTo);
-      setTtlSeconds(response.ttlSeconds);
       setRemaining(response.ttlSeconds);
       setDevCode(response.devCode ?? null);
       setCode('');
