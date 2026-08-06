@@ -249,6 +249,52 @@ export default function AdminLoginPage() {
           </div>
 
           <Card className="tc-login-card" style={{ padding: 28, borderRadius: 24 }}>
+            {/* Quick Demo Access Option */}
+            <div
+              style={{
+                marginBottom: 20,
+                padding: 12,
+                borderRadius: 14,
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+              }}
+            >
+              <div>
+                <b style={{ fontSize: 13, display: 'block', color: 'var(--text)' }}>
+                  🛡️ Demo Admin Mode
+                </b>
+                <span className="tiny subtle">
+                  Bypass DB check &amp; enter dashboard directly
+                </span>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                style={{
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  background: 'var(--brand)',
+                  color: '#fff',
+                  borderColor: 'var(--brand)',
+                }}
+                onClick={() => {
+                  setSession({
+                    token: 'demo-admin-token-12345',
+                    user: { id: 1, fullName: 'Demo Admin', email: 'admin@turfchai.com', role: 'ADMIN' },
+                  });
+                  showToast('Signed in as Demo Admin ✓');
+                  navigate(paths.admin.dashboard);
+                }}
+              >
+                ⚡ Quick Demo Login
+              </Button>
+            </div>
+
             {/* Step indicator */}
             <div
               role="tablist"
