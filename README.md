@@ -97,12 +97,13 @@ npm run dev
 
 ---
 
-## ☁️ Cloud Deployment (Render)
+## ☁️ Cloud Deployment (Render & Vercel)
 
 The application utilizes Infrastructure as Code (IaC) via `render.yaml` for zero-downtime deployments.
-- The `turfchai-backend` web service auto-deploys via a custom Docker container.
-- Flyway migrations are securely run using the managed Render PostgreSQL `connectionString`.
-- Sensitive variables (like `JWT_SECRET`, `OPENROUTER_API_KEY`) are dynamically injected in production.
+- **Frontend Live Demo**: The frontend is continuously deployed to Vercel and can be accessed at **[https://turf-chai.vercel.app/](https://turf-chai.vercel.app/)**.
+- **Backend API**: The `turfchai-backend` web service auto-deploys via a custom Docker container on Render.
+- **Database**: Flyway migrations are securely run using the managed Render PostgreSQL `connectionString`.
+- **Secrets**: Sensitive variables (like `JWT_SECRET`, `OPENROUTER_API_KEY`) are dynamically injected in production.
 
 ---
 

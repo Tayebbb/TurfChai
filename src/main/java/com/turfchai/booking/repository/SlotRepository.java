@@ -30,4 +30,8 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
     @Query("SELECT s FROM Slot s JOIN FETCH s.pitch WHERE s.venueId = :venueId AND s.slotDate = :slotDate "
             + "ORDER BY s.startTime ASC")
     List<Slot> findByVenueIdAndSlotDateOrderByStartTimeAsc(@Param("venueId") Long venueId, @Param("slotDate") LocalDate slotDate);
+
+    /** Single-slot lookup with the pitch fetched eagerly, for callers outside a transaction. */
+    @Query("SELECT s FROM Slot s JOIN FETCH s.pitch WHERE s.id = :id")
+    Optional<Slot> findByIdWithPitch(@Param("id") Long id);
 }

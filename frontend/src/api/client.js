@@ -51,12 +51,19 @@ export function clearSession() {
   notifySessionChange();
 }
 
+/**
+ * A rejected token means the session is over, not that the page is off
+ * limits: every player screen renders signed-out, so we clear the session
+ * and let the UI fall back. Only the admin console, which has nothing to
+ * show without an identity, is sent to its login.
+ */
 function handleUnauthorized() {
-  const onAdminRoute = window.location.pathname.startsWith('/admin');
-  const loginPath = onAdminRoute ? '/admin/login' : '/auth';
-  if (window.location.pathname === loginPath) return;
   clearSession();
-  window.location.assign(loginPath);
+
+  const onAdminRoute = window.location.pathname.startsWith('/admin');
+  if (!onAdminRoute) return;
+  if (window.location.pathname === '/admin/login') return;
+  window.location.assign('/admin/login');
 }
 
 function resolveUrl(path) {

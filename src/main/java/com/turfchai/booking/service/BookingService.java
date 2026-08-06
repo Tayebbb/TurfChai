@@ -4,12 +4,15 @@ import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.entity.BookingStatus;
 import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
+import com.turfchai.booking.dto.response.BookingResponse;
 import com.turfchai.booking.exception.SlotUnavailableException;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.model.User;
 import com.turfchai.model.enums.RoleType;
 import com.turfchai.repository.UserRepository;
+import com.turfchai.venue.repository.PitchRepository;
+import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,8 @@ public class BookingService {
     private final SlotRepository slotRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final VenueRepository venueRepository;
+    private final PitchRepository pitchRepository;
 
     /**
      * Acquires a 5-minute hold on a slot. The row is locked with
@@ -103,6 +108,62 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    /**
+     * Creates (or reuses) a {@link BookingStatus#PENDING} booking for the
+     * caller's active hold, ahead of a payment attempt. Unlike
+     * {@link #confirmBooking}, the slot is left {@code HELD} — payment
+     * gates confirmation, so the existing 5-minute hold/cleanup-job
+     * lifecycle keeps governing the slot until {@link #finalizeConfirmedBooking}
+     * runs. Idempotent per user+slot: a retried payment attempt (e.g. after
+     * a declined card) reuses the same pending booking rather than creating
+     * a duplicate row.
+     */
+    @Transactional
+    public Booking createPendingBooking(Long userId, Long slotId) {
+        Slot slot = slotRepository.findByIdForUpdate(slotId)
+                .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + slotId));
+
+        if (!isOwnedActiveHold(slot, userId)) {
+            throw new SlotUnavailableException("Slot hold is invalid, not owned by this user, or has expired");
+        }
+
+        return bookingRepository.findBySlotIdAndUserIdAndStatus(slotId, userId, BookingStatus.PENDING)
+                .orElseGet(() -> bookingRepository.save(Booking.builder()
+                        .bookingCode(generateBookingCode())
+                        .slot(slot)
+                        .userId(userId)
+                        .status(BookingStatus.PENDING)
+                        .venueId(slot.getVenueId())
+                        .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
+                        .bookingDate(slot.getSlotDate())
+                        .startTime(slot.getStartTime())
+                        .endTime(slot.getEndTime())
+                        .grossAmount(slot.getPrice())
+                        .netAmount(slot.getPrice())
+                        .build()));
+    }
+
+    /**
+     * The second half of what {@link #confirmBooking} does in one step:
+     * flips a {@link BookingStatus#PENDING} booking (created via
+     * {@link #createPendingBooking} ahead of a payment attempt) to
+     * {@code CONFIRMED} and its slot to {@code BOOKED}, once payment has
+     * actually succeeded.
+     */
+    @Transactional
+    public void finalizeConfirmedBooking(Booking booking) {
+        Slot slot = slotRepository.findByIdForUpdate(booking.getSlot().getId())
+                .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + booking.getSlot().getId()));
+
+        slot.setStatus(SlotStatus.BOOKED);
+        slot.setHeldByUserId(null);
+        slot.setHoldExpiresAt(null);
+        slotRepository.save(slot);
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+    }
+
     private boolean isOwnedActiveHold(Slot slot, Long userId) {
         return slot.getStatus() == SlotStatus.HELD
                 && userId != null
@@ -149,6 +210,42 @@ public class BookingService {
     @Transactional(readOnly = true)
     public List<Booking> listUserBookings(Long userId) {
         return bookingRepository.findByUserId(userId);
+    }
+
+    /**
+     * Full view of a booking. The venue and pitch names are resolved here so
+     * the booking screens can render without a second round trip per card.
+     */
+    @Transactional(readOnly = true)
+    public BookingResponse toResponse(Booking booking) {
+        var venue = booking.getVenueId() == null
+                ? null
+                : venueRepository.findById(booking.getVenueId()).orElse(null);
+        var pitch = booking.getPitchId() == null
+                ? null
+                : pitchRepository.findById(booking.getPitchId()).orElse(null);
+
+        return BookingResponse.builder()
+                .id(booking.getId())
+                .bookingCode(booking.getBookingCode())
+                .slotId(booking.getSlot() != null ? booking.getSlot().getId() : null)
+                .userId(booking.getUserId())
+                .status(booking.getStatus() != null ? booking.getStatus().name() : null)
+                .venueId(booking.getVenueId())
+                .venueName(venue != null ? venue.getName() : null)
+                .venueSlug(venue != null ? venue.getSlug() : null)
+                .venueArea(venue != null ? venue.getArea() : null)
+                .pitchId(booking.getPitchId())
+                .pitchName(pitch != null ? pitch.getName() : null)
+                .bookingDate(booking.getBookingDate())
+                .startTime(booking.getStartTime())
+                .endTime(booking.getEndTime())
+                .amount(booking.getGrossAmount())
+                .netAmount(booking.getNetAmount())
+                .checkedInAt(booking.getCheckedInAt())
+                .createdAt(booking.getCreatedAt())
+                .updatedAt(booking.getUpdatedAt())
+                .build();
     }
 
     private boolean canAccess(Long userId, Booking booking) {

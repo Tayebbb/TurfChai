@@ -342,7 +342,11 @@ export default function VenuePage() {
   const [slotWarn, setSlotWarn] = useState(false);
 
   const selectedSlot = slots.find((slot) => slot.id === slotId);
-  const checkoutHref = selectedSlot ? `${paths.player.checkout}?slotId=${selectedSlot.id}` : null;
+  // Checkout has no slot-by-id endpoint, so it re-reads the slot from this
+  // venue's day list — hence the venue slug and date travel with the slotId.
+  const checkoutHref = selectedSlot
+    ? `${paths.player.checkout}?slotId=${selectedSlot.id}&venue=${encodeURIComponent(venueId)}&date=${encodeURIComponent(dateId)}`
+    : null;
 
   const handleBookClick = (e) => {
     if (!selectedSlot) {

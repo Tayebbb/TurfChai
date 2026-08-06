@@ -6,6 +6,8 @@ import { Section, SectionTitle } from '@/components/layout/Section';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
+import { getToken } from '@/api/client';
+import { paths } from '@/routes/paths';
 import { getMyPoints, getRewardActivity, getRewardProducts, redeemReward } from '@/api/rewards';
 import './RewardsPage.css';
 
@@ -64,9 +66,14 @@ export default function RewardsPage() {
   const [redeemingId, setRedeemingId] = useState(null);
   const [lastRedemption, setLastRedemption] = useState(null);
 
-  const points = useApi(() => getMyPoints(), []);
+  // Visitors get the catalog and the tier ladder; balance, progress and the
+  // points ledger only exist once there is someone to attribute them to.
+  const signedIn = Boolean(getToken());
+  const signInHref = `${paths.auth}?next=${encodeURIComponent(paths.player.rewards)}`;
+
+  const points = useApi(() => (signedIn ? getMyPoints() : Promise.resolve(null)), [signedIn]);
   const products = useApi(() => getRewardProducts(), []);
-  const activity = useApi(() => getRewardActivity(30), []);
+  const activity = useApi(() => (signedIn ? getRewardActivity(30) : Promise.resolve([])), [signedIn]);
 
   const reloadAll = () => {
     points.reload();
@@ -89,7 +96,9 @@ export default function RewardsPage() {
   };
 
   const loading = points.loading || products.loading || activity.loading;
-  const error = points.error || products.error || activity.error;
+  // A rejected token just means the session lapsed mid-read: fall back to the
+  // visitor view instead of blanking a page that is mostly public.
+  const error = products.error ?? [points.error, activity.error].find((e) => e && e.status !== 401) ?? null;
 
   if (loading) {
     return (
@@ -124,12 +133,12 @@ export default function RewardsPage() {
   }
 
   const summary = points.data;
-  const currentTierMeta = TIER_LADDER.find((t) => t.name === summary.currentTier?.name) ?? TIER_LADDER[0];
+  const currentTierMeta = TIER_LADDER.find((t) => t.name === summary?.currentTier?.name) ?? TIER_LADDER[0];
   const currentOrder = TIER_ORDER[currentTierMeta.name] ?? 0;
-  const nextTier = summary.nextTier;
-  const atTopTier = !nextTier;
-  const progressPercent = atTopTier ? 100 : (summary.progressPercent ?? 0);
-  const walletText = `৳${formatNumber(summary.walletBalance)}`;
+  const nextTier = summary?.nextTier;
+  const atTopTier = Boolean(summary) && !nextTier;
+  const progressPercent = atTopTier ? 100 : (summary?.progressPercent ?? 0);
+  const walletText = `৳${formatNumber(summary?.walletBalance)}`;
 
   return (
     <>
@@ -140,76 +149,99 @@ export default function RewardsPage() {
             <h1 style={{ fontSize: 24, margin: 0 }}>Rewards</h1>
             <span className="subtle">Loyalty points · member tiers · play, earn, redeem</span>
           </div>
-          <span className="badge amber">
-            {currentTierMeta.glyph} {currentTierMeta.label} member
-          </span>
+          {summary ? (
+            <span className="badge amber">
+              {currentTierMeta.glyph} {currentTierMeta.label} member
+            </span>
+          ) : null}
         </div>
 
-        {/* Status header */}
-        <Section style={{ marginTop: 0 }}>
-          <div className="glass glass-card status-card">
-            <div className="row">
-              <span className={`tier-ico ${currentTierMeta.name.toLowerCase()}`}>{currentTierMeta.glyph}</span>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 22 }}>You&apos;re a {currentTierMeta.label} member</h2>
-                <span className="subtle">
-                  {atTopTier ? "You've reached the top tier" : `Keep playing to climb to ${nextTier.name.charAt(0)}${nextTier.name.slice(1).toLowerCase()}`}
-                </span>
+        {summary ? (
+          <>
+            {/* Status header */}
+            <Section style={{ marginTop: 0 }}>
+              <div className="glass glass-card status-card">
+                <div className="row">
+                  <span className={`tier-ico ${currentTierMeta.name.toLowerCase()}`}>{currentTierMeta.glyph}</span>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: 22 }}>You&apos;re a {currentTierMeta.label} member</h2>
+                    <span className="subtle">
+                      {atTopTier ? "You've reached the top tier" : `Keep playing to climb to ${nextTier.name.charAt(0)}${nextTier.name.slice(1).toLowerCase()}`}
+                    </span>
+                  </div>
+                </div>
+                <div className="status-balance">
+                  <span className="lbl">Current balance</span>
+                  <b>{formatNumber(summary.balance)}</b> <small>pts</small>
+                  <div className="wallet-line">
+                    💳 <span className="num">{walletText}</span> in redeemed rewards
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="status-balance">
-              <span className="lbl">Current balance</span>
-              <b>{formatNumber(summary.balance)}</b> <small>pts</small>
-              <div className="wallet-line">
-                💳 <span className="num">{walletText}</span> in redeemed rewards
-              </div>
-            </div>
-          </div>
-        </Section>
+            </Section>
 
-        {/* Tier progress */}
-        <Section style={{ marginTop: 28 }}>
-          <div className="glass glass-card tp-card">
-            <div className="tp-head">
-              <div>
-                <span className="badge amber nodot">
-                  {atTopTier ? currentTierMeta.label : `${currentTierMeta.label} → ${nextTier.name.charAt(0)}${nextTier.name.slice(1).toLowerCase()}`}
-                </span>
-                <h2>
+            {/* Tier progress */}
+            <Section style={{ marginTop: 28 }}>
+              <div className="glass glass-card tp-card">
+                <div className="tp-head">
+                  <div>
+                    <span className="badge amber nodot">
+                      {atTopTier ? currentTierMeta.label : `${currentTierMeta.label} → ${nextTier.name.charAt(0)}${nextTier.name.slice(1).toLowerCase()}`}
+                    </span>
+                    <h2>
+                      {atTopTier
+                        ? `${formatNumber(summary.balance)} pts · top tier reached`
+                        : `${formatNumber(summary.balance)} / ${formatNumber(nextTier.minPoints)} pts to ${nextTier.name.charAt(0)}${nextTier.name.slice(1).toLowerCase()}`}
+                    </h2>
+                  </div>
+                  <span className="badge green nodot">{progressPercent}% there</span>
+                </div>
+                <div className="tp-track-wrap">
+                  <div
+                    className="tp-track"
+                    role="progressbar"
+                    aria-valuenow={progressPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={atTopTier ? 'Top tier reached' : `Progress to ${nextTier.name} tier`}
+                  >
+                    <i className="tp-fill" style={{ width: `${progressPercent}%` }} />
+                    <span className="tp-mark on" style={{ left: '0%' }} aria-hidden="true">
+                      {currentTierMeta.glyph}
+                    </span>
+                    {!atTopTier ? (
+                      <span className="tp-mark" style={{ left: '100%' }} aria-hidden="true">
+                        {TIER_LADDER.find((t) => t.name === nextTier.name)?.glyph}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <p className="subtle center" style={{ margin: '20px auto 0', maxWidth: 520 }}>
                   {atTopTier
-                    ? `${formatNumber(summary.balance)} pts · top tier reached`
-                    : `${formatNumber(summary.balance)} / ${formatNumber(nextTier.minPoints)} pts to ${nextTier.name.charAt(0)}${nextTier.name.slice(1).toLowerCase()}`}
-                </h2>
+                    ? 'You get every perk TurfChai offers — priority booking + the biggest discount.'
+                    : 'Reach the next tier to unlock priority booking + bigger discounts.'}
+                </p>
               </div>
-              <span className="badge green nodot">{progressPercent}% there</span>
-            </div>
-            <div className="tp-track-wrap">
-              <div
-                className="tp-track"
-                role="progressbar"
-                aria-valuenow={progressPercent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={atTopTier ? 'Top tier reached' : `Progress to ${nextTier.name} tier`}
-              >
-                <i className="tp-fill" style={{ width: `${progressPercent}%` }} />
-                <span className="tp-mark on" style={{ left: '0%' }} aria-hidden="true">
-                  {currentTierMeta.glyph}
-                </span>
-                {!atTopTier ? (
-                  <span className="tp-mark" style={{ left: '100%' }} aria-hidden="true">
-                    {TIER_LADDER.find((t) => t.name === nextTier.name)?.glyph}
+            </Section>
+          </>
+        ) : (
+          <Section style={{ marginTop: 0 }}>
+            <div className="glass glass-card status-card">
+              <div className="row">
+                <span className="tier-ico gold">🥇</span>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 22 }}>Earn points every time you play</h2>
+                  <span className="subtle">
+                    Sign in to see your balance, tier progress and redeemed rewards.
                   </span>
-                ) : null}
+                </div>
               </div>
+              <Button variant="primary" to={signInHref}>
+                Sign in
+              </Button>
             </div>
-            <p className="subtle center" style={{ margin: '20px auto 0', maxWidth: 520 }}>
-              {atTopTier
-                ? 'You get every perk TurfChai offers — priority booking + the biggest discount.'
-                : 'Reach the next tier to unlock priority booking + bigger discounts.'}
-            </p>
-          </div>
-        </Section>
+          </Section>
+        )}
 
         {/* Tier overview */}
         <Section>
@@ -219,8 +251,8 @@ export default function RewardsPage() {
           <div className="grid3" style={{ alignItems: 'start' }}>
             {TIER_LADDER.map((tier) => {
               const order = TIER_ORDER[tier.name];
-              const isCurrent = order === currentOrder;
-              const isLocked = order > currentOrder;
+              const isCurrent = Boolean(summary) && order === currentOrder;
+              const isLocked = Boolean(summary) && order > currentOrder;
               const badge = isCurrent
                 ? { tone: 'green', label: 'Current tier' }
                 : isLocked
@@ -292,7 +324,11 @@ export default function RewardsPage() {
                   {formatNumber(product.costPoints)} <small>pts</small>
                 </div>
                 <span className="rc-note">{product.description}</span>
-                {product.locked ? (
+                {!signedIn ? (
+                  <Button variant="secondary" to={signInHref}>
+                    Sign in to redeem
+                  </Button>
+                ) : product.locked ? (
                   <span className="redeem-lock">🔒 {formatNumber(product.pointsToUnlock)} pts to go</span>
                 ) : (
                   <Button
@@ -309,38 +345,40 @@ export default function RewardsPage() {
         </Section>
 
         {/* Recent points activity */}
-        <Section>
-          <SectionTitle title="Recent points activity">
-            <span className="subtle small">Last 30 entries</span>
-          </SectionTitle>
-          <div className="glass glass-card" style={{ padding: '4px 20px' }}>
-            {activity.data.length === 0 ? (
-              <p className="subtle" style={{ padding: '16px 0' }}>
-                No activity yet — book a turf to start earning points.
-              </p>
-            ) : (
-              <div className="act-list">
-                {activity.data.map((entry) => {
-                  const meta = REASON_META[entry.reason];
-                  const isMinus = entry.delta < 0;
-                  return (
-                    <div className="act-row" key={entry.id}>
-                      <span className={isMinus ? 'act-ico minus' : 'act-ico'}>{meta?.glyph ?? '✨'}</span>
-                      <div>
-                        <b>{entry.note || meta?.label || entry.reason}</b>
-                        <div className="when">{formatWhen(entry.createdAt)}</div>
+        {signedIn ? (
+          <Section>
+            <SectionTitle title="Recent points activity">
+              <span className="subtle small">Last 30 entries</span>
+            </SectionTitle>
+            <div className="glass glass-card" style={{ padding: '4px 20px' }}>
+              {activity.data.length === 0 ? (
+                <p className="subtle" style={{ padding: '16px 0' }}>
+                  No activity yet — book a turf to start earning points.
+                </p>
+              ) : (
+                <div className="act-list">
+                  {activity.data.map((entry) => {
+                    const meta = REASON_META[entry.reason];
+                    const isMinus = entry.delta < 0;
+                    return (
+                      <div className="act-row" key={entry.id}>
+                        <span className={isMinus ? 'act-ico minus' : 'act-ico'}>{meta?.glyph ?? '✨'}</span>
+                        <div>
+                          <b>{entry.note || meta?.label || entry.reason}</b>
+                          <div className="when">{formatWhen(entry.createdAt)}</div>
+                        </div>
+                        <b className={isMinus ? 'act-val minus' : 'act-val'}>
+                          {isMinus ? '' : '+'}
+                          {entry.delta}
+                        </b>
                       </div>
-                      <b className={isMinus ? 'act-val minus' : 'act-val'}>
-                        {isMinus ? '' : '+'}
-                        {entry.delta}
-                      </b>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </Section>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Section>
+        ) : null}
       </main>
 
       {/* Redeem success modal */}
