@@ -16,6 +16,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Per-(venue, sport) slot pricing window. Read-side: discovery uses the
@@ -50,11 +51,18 @@ public class SportPricingRule {
     @Column(nullable = false)
     private int slotDurationMin = 60;
 
+    @Column(name = "buffer_min", nullable = false)
+    private int bufferMin = 10;
+
     @Column(nullable = false)
     private LocalTime windowStart = LocalTime.of(6, 0);
 
     @Column(nullable = false)
     private LocalTime windowEnd = LocalTime.of(23, 0);
+
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.ARRAY)
+    @Column(name = "days_of_week")
+    private List<Integer> daysOfWeek = List.of(1, 2, 3, 4, 5, 6, 7);
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
