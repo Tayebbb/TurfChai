@@ -1,6 +1,7 @@
 package com.turfchai.repository;
 
 import com.turfchai.model.User;
+import com.turfchai.model.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,21 +31,21 @@ public interface AnalyticsRepository extends JpaRepository<User, Long> {
     long countNewUsersInPeriod(@Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to);
 
-    /** Active users: status = 'ACTIVE' and not suspended. */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.status = 'ACTIVE' AND u.isSuspended = false")
+    /** Active users: status = 'ACTIVE' (or 'active') and not suspended. */
+    @Query("SELECT COUNT(u) FROM User u WHERE UPPER(u.status) = 'ACTIVE' AND u.isSuspended = false")
     long countActiveUsers();
 
     // ── User segments ──────────────────────────────────────────────────────
 
-    /** Players with status = 'ACTIVE'. */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.role IN (com.turfchai.model.enums.RoleType.PLAYER, com.turfchai.model.enums.RoleType.SOLO_PLAYER) AND u.status = 'ACTIVE'")
+    /** Players with status = 'ACTIVE' (or 'active'). */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role = com.turfchai.model.enums.RoleType.PLAYER AND UPPER(u.status) = 'ACTIVE'")
     long countActivePlayers();
 
-    /** Hosts / owners with status = 'ACTIVE'. */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.role IN (com.turfchai.model.enums.RoleType.HOST, com.turfchai.model.enums.RoleType.OWNER) AND u.status = 'ACTIVE'")
+    /** Hosts / owners with status = 'ACTIVE' (or 'active'). */
+    @Query("SELECT COUNT(u) FROM User u WHERE (u.role = com.turfchai.model.enums.RoleType.HOST OR u.role = com.turfchai.model.enums.RoleType.OWNER) AND UPPER(u.status) = 'ACTIVE'")
     long countActiveHosts();
 
-    /** Users with status NOT 'ACTIVE' (pending, suspended, deleted). */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.status <> 'ACTIVE'")
+    /** Users with status NOT 'ACTIVE' or suspended. */
+    @Query("SELECT COUNT(u) FROM User u WHERE UPPER(u.status) <> 'ACTIVE' OR u.isSuspended = true")
     long countInactiveUsers();
 }

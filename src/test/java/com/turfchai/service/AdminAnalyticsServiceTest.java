@@ -20,13 +20,15 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for {@link AdminAnalyticsService}.
  *
- * <p>Tests cover:</p>
+ * <p>
+ * Tests cover:
+ * </p>
  * <ul>
- *   <li>Seed-data fallback when the database is below the threshold</li>
- *   <li>Live-data path when the repository returns real counts</li>
- *   <li>Active-ratio calculation correctness</li>
- *   <li>Revenue always returns a non-empty series (demo data)</li>
- *   <li>Segment counts are forwarded from the repository</li>
+ * <li>Seed-data fallback when the database is below the threshold</li>
+ * <li>Live-data path when the repository returns real counts</li>
+ * <li>Active-ratio calculation correctness</li>
+ * <li>Revenue always returns a non-empty series (demo data)</li>
+ * <li>Segment counts are forwarded from the repository</li>
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)

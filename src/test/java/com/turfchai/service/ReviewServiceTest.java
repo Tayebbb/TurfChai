@@ -3,11 +3,11 @@ package com.turfchai.service;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.domain.Review;
-import com.turfchai.model.User;
-import com.turfchai.venue.entity.Venue;
 import com.turfchai.dto.ReviewDto;
+import com.turfchai.model.User;
 import com.turfchai.repository.ReviewRepository;
 import com.turfchai.repository.UserRepository;
+import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,7 +55,7 @@ public class ReviewServiceTest {
 
         booking = new Booking();
         booking.setId(1L);
-        booking.setUserId(user.getId());
+        booking.setUserId(1L);
 
         dto = new ReviewDto();
         dto.setBookingId(1L);
