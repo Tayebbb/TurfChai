@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/buttons/Button';
-import { LiquidCard } from '@/components/cards/Card';
+import { Card } from '@/components/cards/Card';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Field, Input } from '@/components/forms/Field';
 import { useBodyClass } from '@/hooks/useBodyClass';
@@ -15,6 +15,41 @@ const formatSeconds = (total) => {
   const seconds = total % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 };
+
+const ShieldIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
+
+const KeyIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
+    <circle cx="7.5" cy="15.5" r="4.5" />
+    <path d="M21 2l-9.6 9.6" />
+    <path d="M15.5 7.5l3 3L22 7l-3-3" />
+  </svg>
+);
+
+const ChipIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
+    <rect x="4" y="4" width="16" height="16" rx="3" />
+    <rect x="9" y="9" width="6" height="6" />
+    <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
+    <rect x="3" y="11" width="18" height="11" rx="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const STEPS = [
+  { id: 'credentials', label: 'Credentials' },
+  { id: 'otp', label: 'Verify code' },
+];
 
 export default function AdminLoginPage() {
   const { showToast } = useToast();
@@ -74,7 +109,7 @@ export default function AdminLoginPage() {
       setRemaining(response.ttlSeconds);
       setDevCode(response.devCode ?? null);
       setCode('');
-      showToast('A new verification code was sent ✉️');
+      showToast('A new verification code was sent');
     } catch (error) {
       showToast(error?.message || 'Could not resend the code', { duration: 5000 });
     } finally {
@@ -92,7 +127,7 @@ export default function AdminLoginPage() {
     try {
       const response = await adminVerifyLogin({ challenge, code });
       setSession(response);
-      showToast(`Welcome back, ${response.user?.fullName ?? 'Admin'} ✓`);
+      showToast(`Welcome back, ${response.user?.fullName ?? 'Admin'}`);
       navigate(paths.admin.dashboard);
     } catch (error) {
       const message = error?.message || 'Invalid verification code';
@@ -105,6 +140,8 @@ export default function AdminLoginPage() {
       setIsVerifying(false);
     }
   };
+
+  const stepIndex = STEPS.findIndex((s) => s.id === step);
 
   return (
     <>
@@ -119,9 +156,11 @@ export default function AdminLoginPage() {
           justifyContent: 'center',
           paddingTop: 40,
           paddingBottom: 40,
+          maxWidth: 480,
         }}
       >
-        <div className="center" style={{ marginBottom: 24 }}>
+        {/* Brand + heading (mirrors the shared auth page) */}
+        <div className="center" style={{ marginBottom: 24, textAlign: 'center' }}>
           <Link
             className="brand"
             to={paths.landing}
@@ -141,26 +180,52 @@ export default function AdminLoginPage() {
           <h1 style={{ fontSize: 24, marginTop: 12, marginBottom: 4, fontWeight: 800 }}>
             Admin Portal
           </h1>
-          <p className="subtle small">Restricted access · Authorized personnel only</p>
+          <p className="subtle small" style={{ margin: 0 }}>
+            Restricted access · Authorized personnel only
+          </p>
         </div>
 
-        <LiquidCard style={{ padding: 28, borderRadius: 24 }}>
-          {/* Alert message */}
+        <Card style={{ padding: 24, borderRadius: 20 }}>
+          {/* Step indicator */}
           <div
-            className="alert danger"
-            style={{ marginBottom: 18, borderRadius: 12, background: 'rgba(201,59,59,0.12)' }}
+            role="tablist"
+            aria-label="Sign in steps"
+            className="seg"
+            style={{ display: 'flex', gap: 6, padding: 6, borderRadius: 14, marginBottom: 20 }}
           >
-            <span className="ico">⚠️</span>
-            <div>
-              <b style={{ display: 'block', marginBottom: 2 }}>Authentication Required</b>
-              <span className="small">
-                Enter your admin credentials to access the management console.
-              </span>
-            </div>
+            {STEPS.map((item, index) => (
+              <div
+                key={item.id}
+                role="tab"
+                aria-selected={step === item.id}
+                aria-disabled={index > stepIndex}
+                className={step === item.id ? 'on' : undefined}
+                style={{
+                  flex: 1,
+                  padding: '8px 6px',
+                  borderRadius: 10,
+                  fontWeight: 700,
+                  fontSize: 12.5,
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  opacity: index > stepIndex ? 0.45 : 1,
+                }}
+              >
+                {index + 1}. {item.label}
+              </div>
+            ))}
           </div>
 
           {step === 'credentials' && (
             <form onSubmit={handleCredentials}>
+              <div className="alert info" style={{ marginBottom: 18 }}>
+                <ShieldIcon />
+                <div>
+                  <b style={{ display: 'block', marginBottom: 2 }}>Authentication Required</b>
+                  <span className="small">Enter your admin credentials to access the management console.</span>
+                </div>
+              </div>
+
               <Field label="Work Email" htmlFor="em">
                 <Input
                   id="em"
@@ -173,8 +238,7 @@ export default function AdminLoginPage() {
                 />
               </Field>
 
-              <div className="field" style={{ marginBottom: 18 }}>
-                <label htmlFor="pw">Password</label>
+              <Field label="Password" htmlFor="pw">
                 <Input
                   id="pw"
                   type="password"
@@ -184,7 +248,7 @@ export default function AdminLoginPage() {
                   required
                   autoComplete="current-password"
                 />
-              </div>
+              </Field>
 
               <div className="between" style={{ marginBottom: 20 }}>
                 <label className="checkline" style={{ margin: 0, cursor: 'pointer' }}>
@@ -200,7 +264,7 @@ export default function AdminLoginPage() {
                   href="#forgot-password"
                   onClick={(event) => {
                     event.preventDefault();
-                    showToast('Password reset link sent to work email ✉️');
+                    showToast('Password reset link sent to work email');
                   }}
                 >
                   Forgot password?
@@ -222,11 +286,8 @@ export default function AdminLoginPage() {
 
           {step === 'otp' && (
             <form onSubmit={handleVerify}>
-              <div
-                className="alert"
-                style={{ marginBottom: 16, borderRadius: 12, background: 'rgba(76,161,120,0.12)' }}
-              >
-                <span className="ico">🔐</span>
+              <div className="alert ok" style={{ marginBottom: 16 }}>
+                <KeyIcon />
                 <div>
                   <b style={{ display: 'block', marginBottom: 2 }}>Two-Factor Verification</b>
                   <span className="small">
@@ -236,16 +297,13 @@ export default function AdminLoginPage() {
               </div>
 
               {devCode && (
-                <div
-                  className="alert"
-                  style={{ marginBottom: 16, borderRadius: 12, background: 'rgba(120,144,201,0.14)' }}
-                >
-                  <span className="ico">🧪</span>
+                <div className="alert info" style={{ marginBottom: 16 }} role="status" aria-live="polite">
+                  <ChipIcon />
                   <div>
                     <b style={{ display: 'block', marginBottom: 2 }}>Demo mode</b>
                     <span className="small">
                       No SMTP configured — your verification code is{' '}
-                      <b style={{ letterSpacing: 1.5 }}>{devCode}</b>
+                      <b style={{ letterSpacing: 1.5, fontVariantNumeric: 'tabular-nums' }}>{devCode}</b>
                     </span>
                   </div>
                 </div>
@@ -261,7 +319,7 @@ export default function AdminLoginPage() {
                   value={code}
                   onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="••••••"
-                  style={{ textAlign: 'center', fontSize: 24, letterSpacing: 8, fontWeight: 700 }}
+                  style={{ textAlign: 'center', fontSize: 24, letterSpacing: 8, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
                   required
                   autoFocus
                 />
@@ -270,7 +328,8 @@ export default function AdminLoginPage() {
               <div className="between" style={{ marginBottom: 20 }}>
                 <button
                   type="button"
-                  className="small subtle linklike"
+                  className="small subtle"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                   onClick={() => {
                     setStep('credentials');
                     setChallenge('');
@@ -281,7 +340,8 @@ export default function AdminLoginPage() {
                 </button>
                 <button
                   type="button"
-                  className="small subtle linklike"
+                  className="small subtle"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                   onClick={handleResend}
                   disabled={isResending || remaining > 0}
                 >
@@ -314,11 +374,12 @@ export default function AdminLoginPage() {
               textAlign: 'center',
             }}
           >
-            <p className="tiny subtle" style={{ margin: 0 }}>
-              🔒 Protected by 2FA &amp; Audit Logging
+            <p className="tiny" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontWeight: 600 }}>
+              <LockIcon />
+              Protected by 2FA &amp; Audit Logging
             </p>
           </div>
-        </LiquidCard>
+        </Card>
       </div>
     </>
   );
