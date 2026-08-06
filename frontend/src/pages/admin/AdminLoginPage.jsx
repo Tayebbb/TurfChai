@@ -43,7 +43,6 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [challenge, setChallenge] = useState('');
-  const [ttlSeconds, setTtlSeconds] = useState(300);
   const [code, setCode] = useState('');
   const [remaining, setRemaining] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -72,7 +71,6 @@ export default function AdminLoginPage() {
     try {
       const response = await adminLogin({ email: email.trim(), password });
       setChallenge(response.challenge);
-      setTtlSeconds(response.ttlSeconds);
       setRemaining(response.ttlSeconds);
       setCode('');
       setStep('otp');
@@ -87,7 +85,6 @@ export default function AdminLoginPage() {
     try {
       const response = await adminLogin({ email: email.trim(), password });
       setChallenge(response.challenge);
-      setTtlSeconds(response.ttlSeconds);
       setRemaining(response.ttlSeconds);
       setCode('');
       otpRefs.current[0]?.focus();
