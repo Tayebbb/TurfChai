@@ -14,5 +14,7 @@ VALUES
     (gen_random_uuid(), 'Rafiul Karim',  'rafi@turfchai.com',     '+8801712000002',
      '$2b$10$CuAr2DLoNIRrx0NHMWj1Gei3AIhOg.ajUq08yDuOJmLMSENzBGEaW', 'PLAYER', 'ACTIVE', 'RK', 98,  now()),
     (gen_random_uuid(), 'Mahmud Hasan',  'mahmud@turfchai.com',   '+8801712000003',
-     '$2b$10$Z39KwFEwghZd12G2ItcKZuTQ3PgdOtY4PQiGojO1R3F80BDn4mUDW', 'OWNER',  'ACTIVE', 'MH', 100, now())
+     '$2b$10$Z39KwFEwghZd12G2ItcKZuTQ3PgdOtY4PQiGojO1R3F80BDn4mUDW', 'OWNER',  'ACTIVE', 'MH', 100, now()),
+    (gen_random_uuid(), 'Shahadat Hossain', 'shahadat.cse.20230104008@aust.edu', '+8801712000008',
+     '$2b$10$DsjEpTEmJHlGAoythZLb5eiQVUzOk4bUn2RW5ZrEyLNop7oqZtZb2', 'ADMIN',  'ACTIVE', 'SH', 100, now())
 ON CONFLICT (email) DO NOTHING;

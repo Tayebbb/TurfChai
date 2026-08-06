@@ -1,6 +1,7 @@
 package com.turfchai.controller;
 
 import com.turfchai.dto.ApiResponse;
+import com.turfchai.dto.analytics.DashboardStatsDto;
 import com.turfchai.dto.analytics.GrowthDto;
 import com.turfchai.dto.analytics.RevenueDto;
 import com.turfchai.dto.analytics.SegmentsDto;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -23,9 +25,10 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>These endpoints are consumed by the Admin Dashboard, UserGrowthPage, and
  * UserSegmentsPage frontend components.</p>
  */
+
 @RestController
 @RequestMapping("/api/v1/admin/analytics")
-@CrossOrigin(origins = "*") // For local Vite frontend
+@CrossOrigin(origins = "*")
 public class AdminAnalyticsRestController {
 
     private final AdminAnalyticsService analyticsService;
@@ -34,30 +37,26 @@ public class AdminAnalyticsRestController {
         this.analyticsService = analyticsService;
     }
 
-    /**
-     * Returns user growth KPIs and a 7-day daily signup series.
-     * Consumed by {@code UserGrowthPage} to render the signup chart and KPI cards.
-     */
+    @GetMapping("/dashboard")
+    public ResponseEntity<ApiResponse<DashboardStatsDto>> getDashboardStats() {
+        DashboardStatsDto dto = analyticsService.getDashboardStats();
+        return ResponseEntity.ok(ApiResponse.ok(dto));
+    }
+
     @GetMapping("/growth")
     public ResponseEntity<ApiResponse<GrowthDto>> getGrowth() {
         GrowthDto dto = analyticsService.getGrowth();
         return ResponseEntity.ok(ApiResponse.ok(dto));
     }
 
-    /**
-     * Returns monthly GMV and booking-count arrays for the Admin Dashboard
-     * earnings chart.
-     */
     @GetMapping("/revenue")
-    public ResponseEntity<ApiResponse<RevenueDto>> getRevenue() {
-        RevenueDto dto = analyticsService.getRevenue();
+    public ResponseEntity<ApiResponse<RevenueDto>> getRevenue(
+            @RequestParam(required = false, defaultValue = "2026") int year,
+            @RequestParam(required = false, defaultValue = "monthly") String timeframe) {
+        RevenueDto dto = analyticsService.getRevenue(year, timeframe);
         return ResponseEntity.ok(ApiResponse.ok(dto));
     }
 
-    /**
-     * Returns user segment breakdown for the UserSegmentsPage donut chart
-     * and KPI stat cards.
-     */
     @GetMapping("/segments")
     public ResponseEntity<ApiResponse<SegmentsDto>> getSegments() {
         SegmentsDto dto = analyticsService.getSegments();

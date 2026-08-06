@@ -1,5 +1,6 @@
 package com.turfchai.venue.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -59,6 +60,7 @@ public class Venue {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id")
+    @JsonIgnore
     private com.turfchai.model.User owner;
 
     /** Lifecycle status: DRAFT | PENDING_LISTING | LIVE | SUSPENDED | REJECTED */
@@ -201,10 +203,12 @@ public class Venue {
 
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonIgnore
     private List<Pitch> pitches = new ArrayList<>();
 
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonIgnore
     private List<SportPricingRule> pricingRules = new ArrayList<>();
 
     // ── Helper mutators ───────────────────────────────────────────────────
