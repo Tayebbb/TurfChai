@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -163,8 +165,11 @@ class BookingConcurrencyIntegrationTest {
         pitchRepository.save(pitch);
         return slotRepository.save(Slot.builder()
                 .pitch(pitch)
+                .venueId(venue.getId())
+                .slotDate(LocalDate.of(2026, 8, 8))
                 .startTime(LocalTime.of(14, 0))
                 .endTime(LocalTime.of(15, 0))
+                .price(BigDecimal.valueOf(2550))
                 .status(SlotStatus.AVAILABLE)
                 .build());
     }
