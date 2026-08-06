@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
+import { Icon } from '@/components/common/Icon';
 import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
@@ -101,7 +102,7 @@ export function PlayerLayout({ withFooter = false }) {
         trailing={
           <button type="button" onClick={profile.open}>
             <span className="ico" aria-hidden="true">
-              👤
+              <Icon name="profile" />
             </span>
             Profile
           </button>

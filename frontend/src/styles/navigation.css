@@ -181,7 +181,20 @@
 
 .bottomnav .ico {
     font-size: 20px;
-    line-height: 1
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.bottomnav .ico .nav-icon {
+    width: 21px;
+    height: 21px;
+}
+
+.bottomnav a.active .ico .nav-icon {
+    stroke-width: 2.4;
 }
 
 @media (max-width:820px) {
@@ -474,4 +487,4 @@ body.sidebar-open .sidebar-backdrop {
 }
 [data-theme="dark"] .seg button.on {
     color: #07130D;
-}
+}
