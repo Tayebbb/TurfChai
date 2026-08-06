@@ -3,6 +3,7 @@ package com.turfchai.booking.api;
 import com.turfchai.booking.dto.request.HoldSlotRequest;
 import com.turfchai.booking.dto.response.BookingResponse;
 import com.turfchai.booking.entity.Booking;
+import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.booking.service.BookingService;
 import com.turfchai.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,11 +40,17 @@ import java.util.Map;
 public class BookingRestController {
 
     private final BookingService bookingService;
+    private final SlotRepository slotRepository;
 
-    /** Acquires a 5-minute hold on a slot. */
+    /**
+     * Acquires a 5-minute hold on a slot. The response is enriched with the
+     * slot's price/date/time (and venue/pitch ids) — additive on top of the
+     * original {@code slotId}/{@code heldUntil} shape — so checkout can show
+     * a real price before charging the caller, instead of a hardcoded one.
+     */
     @Operation(summary = "Hold a slot", description = "Acquires a 5-minute exclusive hold on the given slot so it can be confirmed into a booking.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Slot held; returns slotId and the heldUntil expiry timestamp"),
+            @ApiResponse(responseCode = "200", description = "Slot held; returns slotId, heldUntil, and the slot's price/date/time"),
             @ApiResponse(responseCode = "400", description = "Validation failed (missing slotId)"),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
             @ApiResponse(responseCode = "409", description = "Slot not found or not available for booking")
@@ -52,7 +60,20 @@ public class BookingRestController {
             Authentication authentication,
             @Valid @RequestBody HoldSlotRequest request) {
         OffsetDateTime heldUntil = bookingService.holdSlot(currentUserId(authentication), request.getSlotId());
-        return ResponseEntity.ok(Map.of("slotId", request.getSlotId(), "heldUntil", heldUntil));
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("slotId", request.getSlotId());
+        body.put("heldUntil", heldUntil);
+        slotRepository.findByIdWithPitch(request.getSlotId()).ifPresent(slot -> {
+            body.put("price", slot.getPrice());
+            body.put("venueId", slot.getVenueId());
+            body.put("pitchId", slot.getPitch() != null ? slot.getPitch().getId() : null);
+            body.put("pitchName", slot.getPitch() != null ? slot.getPitch().getName() : null);
+            body.put("slotDate", slot.getSlotDate());
+            body.put("startTime", slot.getStartTime());
+            body.put("endTime", slot.getEndTime());
+        });
+        return ResponseEntity.ok(body);
     }
 
     /** Confirms the caller's hold and creates a booking. */

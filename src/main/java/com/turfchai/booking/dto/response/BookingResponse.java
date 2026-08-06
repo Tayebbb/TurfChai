@@ -62,6 +62,9 @@ public class BookingResponse {
     @Schema(description = "Amount payable for the slot", example = "2500.00")
     private BigDecimal amount;
 
+    @Schema(description = "Net amount for this booking", example = "2500.00")
+    private BigDecimal netAmount;
+
     @Schema(description = "When the player checked in at the gate")
     private OffsetDateTime checkedInAt;
 

@@ -1,16 +1,13 @@
 /**
- * Unified REST client.
+ * Unified REST client for TurfChai.
  *
- * Two call styles coexist during integration:
- *  - `api(path, options)` — auth-module style: paths relative to /api/v1,
- *    normalizes `message` error bodies, manages the JWT session.
- *  - `apiGet` / `apiSend` — discovery/profile/tournament style: absolute
- *    /api/v1/... paths against the backend origin, `error` bodies, URL params.
- * Both attach the bearer token when a session exists.
+ * Base URL is resolved from `import.meta.env.VITE_API_BASE_URL` or `import.meta.env.VITE_BACKEND_ORIGIN`.
+ * In production (Vercel), points to https://turfchai.onrender.com
+ * In local development, defaults to http://localhost:8080.
  */
 
 const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_ORIGIN || '';
-const BACKEND_ORIGIN = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, '') : '';
+export const API_BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:8080' : '');
 const DEFAULT_PREFIX = import.meta.env.VITE_API_BASE ?? '/api/v1';
 
 const TOKEN_KEY = 'turfchai.auth.token';
@@ -22,18 +19,24 @@ function notifySessionChange() {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem('turfchai_token') || localStorage.getItem('token');
 }
 
 export function setSession({ token, user }) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem('turfchai_token', token);
+  }
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.setItem('turfchai_user', JSON.stringify(user));
+  }
   notifySessionChange();
 }
 
 export function getUser() {
   try {
-    const raw = localStorage.getItem(USER_KEY);
+    const raw = localStorage.getItem(USER_KEY) || localStorage.getItem('turfchai_user');
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -43,31 +46,26 @@ export function getUser() {
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem('turfchai_token');
+  localStorage.removeItem('turfchai_user');
   notifySessionChange();
 }
 
-/**
- * A 401 on a request that carried a token means the session died server-side
- * (expired, or — as happens a lot in local dev — the backend restarted and
- * wiped the in-memory DB the token's user id pointed at). Without this, a
- * dead token just sits in localStorage and every subsequent call fails the
- * same way. Clears the session and sends the user to login instead.
- */
 function handleUnauthorized() {
   const onAdminRoute = window.location.pathname.startsWith('/admin');
   const loginPath = onAdminRoute ? '/admin/login' : '/auth';
-  if (window.location.pathname === loginPath) return; // avoid redirect loop
+  if (window.location.pathname === loginPath) return;
   clearSession();
   window.location.assign(loginPath);
 }
 
 function resolveUrl(path) {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  if (BACKEND_ORIGIN) {
+  if (API_BASE_URL) {
     if (cleanPath.startsWith('/api/')) {
-      return `${BACKEND_ORIGIN}${cleanPath}`;
+      return `${API_BASE_URL}${cleanPath}`;
     }
-    return `${BACKEND_ORIGIN}${DEFAULT_PREFIX}${cleanPath}`;
+    return `${API_BASE_URL}${DEFAULT_PREFIX}${cleanPath}`;
   }
   if (cleanPath.startsWith('/api/')) {
     return cleanPath;
@@ -76,8 +74,7 @@ function resolveUrl(path) {
 }
 
 /**
- * Thin fetch wrapper: attaches the bearer token and normalizes error bodies.
- * Throws an Error with the backend `message` when the response is not OK.
+ * Fetch wrapper for API calls.
  */
 export async function api(path, { method = 'GET', body, token = true } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -120,6 +117,17 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
   return contentType.includes('application/json') ? response.json() : response.text();
 }
 
+/**
+ * Alias for apiFetch used by openGames and lfgAlerts modules.
+ */
+export async function apiFetch(endpoint, options = {}) {
+  return api(endpoint, {
+    method: options.method || 'GET',
+    body: options.body ? JSON.parse(options.body) : undefined,
+    headers: options.headers,
+  });
+}
+
 export class ApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -148,7 +156,7 @@ async function throwApiError(response) {
   throw new ApiError(response.status, message);
 }
 
-/** GET with URL params against the backend origin (path includes /api/v1). */
+/** GET with URL params against backend origin */
 export async function apiGet(path, params = {}) {
   const fullUrlString = resolveUrl(path);
   const url = new URL(fullUrlString, window.location.origin);
@@ -166,7 +174,7 @@ export async function apiGet(path, params = {}) {
   return response.json();
 }
 
-/** Mutating request against the backend origin (path includes /api/v1). */
+/** Mutating request against backend origin */
 export async function apiSend(method, path, body) {
   const url = resolveUrl(path);
   const response = await fetch(url, {

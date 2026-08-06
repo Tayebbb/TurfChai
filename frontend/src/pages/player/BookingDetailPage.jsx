@@ -3,29 +3,49 @@ import { useParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
-import {
-  cancelBooking,
-  formatBookingDate,
-  formatTimeRange,
-  formatTimestamp,
-  getBooking,
-} from "@/api/bookings";
+import { getBooking } from "@/api/bookings";
+import { getPaymentsForBooking, getRefundPreview, cancelAndRefund } from "@/api/payments";
 import { getUser } from "@/api/client";
 import { useApi } from "@/hooks/useApi";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
-import { formatBdt } from "@/utils/format";
 import "./BookingDetailPage.css";
-
-/** Statuses that still hold a live slot. */
-const CANCELLABLE = ["CONFIRMED", "PENDING"];
 
 const STATUS_BADGE = {
   CONFIRMED: { label: "Confirmed", className: "badge green" },
   PENDING: { label: "Pending", className: "badge amber" },
-  COMPLETED: { label: "Completed", className: "badge green" },
-  CANCELLED: { label: "Cancelled", className: "badge gray" },
+  CANCELLED: { label: "Cancelled", className: "badge" },
 };
+
+const PAYMENT_TYPE_LABEL = {
+  BOOKING: "Booking payment",
+  REFUND: "Refund",
+};
+
+const bdt = (value) =>
+  value == null ? "—" : `৳${Math.round(Number(value)).toLocaleString("en-IN")}`;
+
+function formatTime(time) {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m ? `${hour}:${String(m).padStart(2, "0")} ${suffix}` : `${hour} ${suffix}`;
+}
+
+function formatDate(isoDate) {
+  if (!isoDate) return "";
+  return new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function formatDateTime(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
 
 export default function BookingDetailPage() {
   const { bookingId } = useParams();
@@ -35,6 +55,17 @@ export default function BookingDetailPage() {
   const { data: booking, loading, error, reload } = useApi(
     () => getBooking(bookingId),
     [bookingId],
+  );
+
+  const paymentsApi = useApi(
+    () => (bookingId ? getPaymentsForBooking(bookingId) : Promise.resolve([])),
+    [bookingId],
+  );
+  const payments = paymentsApi.data ?? [];
+
+  const refundPreviewApi = useApi(
+    () => (bookingId && booking?.status === "CONFIRMED" ? getRefundPreview(bookingId) : Promise.resolve(null)),
+    [bookingId, booking?.status],
   );
 
   const currentUser = getUser();
@@ -48,9 +79,14 @@ export default function BookingDetailPage() {
   const onCancel = async () => {
     setCancelling(true);
     try {
-      await cancelBooking(bookingId);
-      showToast("Booking cancelled — your slot has been released");
+      const result = await cancelAndRefund(bookingId);
+      showToast(
+        result.refundAmount > 0
+          ? `Booking cancelled — ${bdt(result.refundAmount)} refund recorded`
+          : "Booking cancelled — no refund under this venue's policy at this time",
+      );
       reload();
+      paymentsApi.reload();
     } catch (cancelError) {
       showToast(cancelError.message || "Could not cancel this booking");
     } finally {
@@ -72,29 +108,15 @@ export default function BookingDetailPage() {
   }
 
   if (error) {
-    const unauthorized = error.status === 401;
     return (
       <>
         <PageTitle title="Booking" />
         <main className="wrap" id="main" style={{ paddingTop: 20, maxWidth: 1000 }}>
           <div className="card" style={{ padding: 24 }}>
-            <h1 style={{ fontSize: 20, marginBottom: 6 }}>
-              {unauthorized
-                ? "Sign in to view this booking"
-                : "Could not load this booking"}
-            </h1>
+            <h1 style={{ fontSize: 20, marginBottom: 6 }}>Could not load this booking</h1>
             <p className="subtle">{error.message}</p>
             <div className="row" style={{ marginTop: 12 }}>
-              {unauthorized ? (
-                <Button variant="primary" to={paths.auth}>
-                  Sign in
-                </Button>
-              ) : (
-                <Button variant="secondary" onClick={reload}>
-                  Try again
-                </Button>
-              )}
-              <Button variant="tertiary" to={paths.player.bookings}>
+              <Button variant="secondary" to={paths.player.bookings}>
                 My bookings
               </Button>
             </div>
@@ -104,40 +126,40 @@ export default function BookingDetailPage() {
     );
   }
 
-  const status = String(booking?.status ?? "").toUpperCase();
-  const code = booking?.bookingCode || `#${booking?.id ?? ""}`;
-  const title =
-    [booking?.venueName, booking?.pitchName].filter(Boolean).join(" · ") ||
-    "Booking";
-  const timeRange = formatTimeRange(booking?.startTime, booking?.endTime);
-  const bookedAt = formatTimestamp(booking?.createdAt);
-  const checkedInAt = formatTimestamp(booking?.checkedInAt);
-  const updatedAt = formatTimestamp(booking?.updatedAt);
+  const code = booking?.bookingCode || "—";
+  const createdAt = booking?.createdAt ? new Date(booking.createdAt).toLocaleString() : "";
+  const playTime =
+    booking?.startTime && booking?.endTime
+      ? `${formatTime(booking.startTime)} – ${formatTime(booking.endTime)}`
+      : "—";
 
   const facts = [
-    { id: "date", label: "DATE", value: formatBookingDate(booking) },
-    { id: "play", label: "PLAY TIME", value: timeRange, num: true },
-    { id: "pitch", label: "PITCH", value: booking?.pitchName ?? "—" },
-    { id: "venue", label: "VENUE", value: booking?.venueName ?? "—" },
-    { id: "area", label: "AREA", value: booking?.venueArea ?? "—" },
-    { id: "code", label: "BOOKING CODE", value: code, num: true },
+    { id: "date", label: "DATE", value: formatDate(booking?.bookingDate) || "—" },
+    { id: "play", label: "PLAY TIME", value: playTime, num: true },
+    { id: "handover", label: "ARRIVE BY", value: "10 min early" },
   ];
 
-  // Only events the backend actually records get a timeline entry.
+  // Chronological, oldest first: booking created -> each payment/refund in order.
   const timeline = [
-    bookedAt && { id: "created", title: "Booking created", when: bookedAt },
-    checkedInAt && {
-      id: "checkin",
-      title: "Checked in at the gate",
-      when: checkedInAt,
-    },
-    status === "CANCELLED" &&
-      updatedAt && {
-        id: "cancelled",
-        title: "Booking cancelled · slot released",
-        when: updatedAt,
-      },
-  ].filter(Boolean);
+    { id: "created", title: "Booking created", when: formatDateTime(booking?.createdAt) },
+    ...payments
+        .slice()
+        .reverse()
+        .map((p) => ({
+          id: `payment-${p.id}`,
+          title:
+            p.type === "REFUND"
+              ? `Refund of ${bdt(p.amount)} recorded`
+              : p.status === "SUCCESS"
+                ? `${p.method} payment received — ${bdt(p.amount)}`
+                : `${p.method} payment declined — ${bdt(p.amount)}`,
+          when: `${formatDateTime(p.paidAt || p.createdAt)}${p.txnReference ? ` · ${p.txnReference}` : ""}`,
+          state: p.status === "FAILED" ? "pending" : undefined,
+        })),
+  ];
+
+  const successfulPayment = payments.find((p) => p.type === "BOOKING" && p.status === "SUCCESS");
+  const refundPayment = payments.find((p) => p.type === "REFUND");
 
   return (
     <>
@@ -159,10 +181,9 @@ export default function BookingDetailPage() {
           style={{ flexWrap: "wrap", gap: 10, marginBottom: 16 }}
         >
           <div>
-            <h1 style={{ fontSize: 24, marginBottom: 2 }}>{title}</h1>
+            <h1 style={{ fontSize: 24, marginBottom: 2 }}>Booking {code}</h1>
             <span className="subtle">
-              Booking <b className="num">{code}</b>
-              {bookedAt ? ` · booked ${bookedAt}` : ""}
+              {createdAt ? `Booked ${createdAt}` : ""}
             </span>
           </div>
           <div className="row-wrap">
@@ -185,73 +206,117 @@ export default function BookingDetailPage() {
                 ))}
               </div>
               <div className="row" style={{ marginTop: 12 }}>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  to={paths.player.matchdayFor(booking.id)}
-                >
+                <Button size="sm" variant="primary" to={paths.player.matchday}>
                   Open match-day ticket
                 </Button>
-                {booking?.venueSlug ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    to={paths.player.venue(booking.venueSlug)}
-                  >
-                    View venue
-                  </Button>
-                ) : null}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => showToast("Directions opened 🗺️")}
+                >
+                  Directions
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => showToast("Calling venue 📞")}
+                >
+                  Contact venue
+                </Button>
               </div>
             </section>
 
             {/* Timeline */}
-            {timeline.length ? (
-              <section className="card">
-                <h3>Timeline</h3>
-                <ul className="tline" style={{ marginTop: 10 }}>
-                  {timeline.map((entry) => (
-                    <li key={entry.id}>
-                      <b className="small">{entry.title}</b>
-                      <div className="when">{entry.when}</div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
+            <section className="card">
+              <h3>Timeline</h3>
+              <ul className="tline" style={{ marginTop: 10 }}>
+                {timeline.map((entry) => (
+                  <li className={entry.state} key={entry.id}>
+                    <b className="small">{entry.title}</b>
+                    <div className="when">{entry.when}</div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {/* Transactions */}
+            <section className="card">
+              <h3>Transactions</h3>
+              {payments.length === 0 ? (
+                <p className="subtle small" style={{ marginTop: 8 }}>
+                  {paymentsApi.loading ? "Loading…" : "No payments recorded yet."}
+                </p>
+              ) : (
+                <div
+                  className="table-wrap"
+                  style={{ marginTop: 8, border: "none" }}
+                >
+                  <table className="table" style={{ minWidth: 480 }}>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Detail</th>
+                        <th>Method</th>
+                        <th className="num">Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((row) => (
+                        <tr key={row.id}>
+                          <td>{formatDate((row.paidAt || row.createdAt || "").slice(0, 10))}</td>
+                          <td>{PAYMENT_TYPE_LABEL[row.type] ?? row.type}</td>
+                          <td>{row.method}</td>
+                          <td className="num">{bdt(row.amount)}</td>
+                          <td>
+                            <span className={row.status === "SUCCESS" ? "badge green" : "badge"}>
+                              {row.status === "SUCCESS" ? "Paid" : row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
 
           <aside className="stack">
             <div className="glass glass-card">
               <h4>Payment summary</h4>
-              <div className="pricerow total">
-                <span>Slot amount</span>
-                <span className="num">{formatBdt(booking?.amount)}</span>
+              <div className="pricerow">
+                <span>Slot</span>
+                <span className="num">{bdt(booking?.netAmount)}</span>
               </div>
-              <p className="subtle tiny" style={{ margin: "8px 0 0" }}>
-                The slot price recorded on this booking. No payment breakdown is
-                stored for it.
-              </p>
+              {refundPayment ? (
+                <div className="pricerow">
+                  <span className="neg">Refunded</span>
+                  <span className="num neg">−{bdt(refundPayment.amount)}</span>
+                </div>
+              ) : null}
+              <div className="pricerow total">
+                <span>{refundPayment ? "Net paid" : "Total paid"}</span>
+                <span className="num">
+                  {bdt(
+                    successfulPayment
+                      ? Number(successfulPayment.amount) - Number(refundPayment?.amount ?? 0)
+                      : booking?.netAmount,
+                  )}
+                </span>
+              </div>
             </div>
             <div className="card">
-              <h4>Check-in</h4>
+              <h4>Cancellation policy</h4>
               <p className="small muted" style={{ margin: "4px 0 10px" }}>
-                {checkedInAt
-                  ? `Checked in ${checkedInAt}.`
-                  : "Not checked in yet — show your QR code at the gate."}
+                {booking?.status !== "CONFIRMED"
+                  ? "This booking can no longer be cancelled."
+                  : refundPreviewApi.data
+                    ? `Cancelling now refunds ${refundPreviewApi.data.refundPercent}% (${bdt(refundPreviewApi.data.refundAmount)}), per this venue's policy.`
+                    : "Loading refund policy…"}
               </p>
-              <Button
-                size="sm"
-                variant="secondary"
-                block
-                to={paths.player.matchdayFor(booking.id)}
-              >
-                Open ticket
-              </Button>
-            </div>
-            <div className="card">
-              <h4>Manage booking</h4>
               <div className="stack-sm">
-                {isOwner && CANCELLABLE.includes(status) ? (
+                {isOwner && booking?.status === "CONFIRMED" ? (
                   <Button
                     size="sm"
                     variant="ghostDanger"
@@ -263,11 +328,16 @@ export default function BookingDetailPage() {
                     Cancel booking
                   </Button>
                 ) : (
-                  <p className="small muted" style={{ margin: 0 }}>
-                    {status === "CANCELLED"
-                      ? "This booking is cancelled and its slot has been released."
-                      : "This booking can no longer be changed."}
-                  </p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    block
+                    onClick={() =>
+                      showToast("Replacement request posted to Open Games 📣")
+                    }
+                  >
+                    Find replacement player
+                  </Button>
                 )}
               </div>
             </div>

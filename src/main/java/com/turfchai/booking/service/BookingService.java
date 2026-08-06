@@ -108,6 +108,62 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    /**
+     * Creates (or reuses) a {@link BookingStatus#PENDING} booking for the
+     * caller's active hold, ahead of a payment attempt. Unlike
+     * {@link #confirmBooking}, the slot is left {@code HELD} — payment
+     * gates confirmation, so the existing 5-minute hold/cleanup-job
+     * lifecycle keeps governing the slot until {@link #finalizeConfirmedBooking}
+     * runs. Idempotent per user+slot: a retried payment attempt (e.g. after
+     * a declined card) reuses the same pending booking rather than creating
+     * a duplicate row.
+     */
+    @Transactional
+    public Booking createPendingBooking(Long userId, Long slotId) {
+        Slot slot = slotRepository.findByIdForUpdate(slotId)
+                .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + slotId));
+
+        if (!isOwnedActiveHold(slot, userId)) {
+            throw new SlotUnavailableException("Slot hold is invalid, not owned by this user, or has expired");
+        }
+
+        return bookingRepository.findBySlotIdAndUserIdAndStatus(slotId, userId, BookingStatus.PENDING)
+                .orElseGet(() -> bookingRepository.save(Booking.builder()
+                        .bookingCode(generateBookingCode())
+                        .slot(slot)
+                        .userId(userId)
+                        .status(BookingStatus.PENDING)
+                        .venueId(slot.getVenueId())
+                        .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
+                        .bookingDate(slot.getSlotDate())
+                        .startTime(slot.getStartTime())
+                        .endTime(slot.getEndTime())
+                        .grossAmount(slot.getPrice())
+                        .netAmount(slot.getPrice())
+                        .build()));
+    }
+
+    /**
+     * The second half of what {@link #confirmBooking} does in one step:
+     * flips a {@link BookingStatus#PENDING} booking (created via
+     * {@link #createPendingBooking} ahead of a payment attempt) to
+     * {@code CONFIRMED} and its slot to {@code BOOKED}, once payment has
+     * actually succeeded.
+     */
+    @Transactional
+    public void finalizeConfirmedBooking(Booking booking) {
+        Slot slot = slotRepository.findByIdForUpdate(booking.getSlot().getId())
+                .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + booking.getSlot().getId()));
+
+        slot.setStatus(SlotStatus.BOOKED);
+        slot.setHeldByUserId(null);
+        slot.setHoldExpiresAt(null);
+        slotRepository.save(slot);
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+    }
+
     private boolean isOwnedActiveHold(Slot slot, Long userId) {
         return slot.getStatus() == SlotStatus.HELD
                 && userId != null
@@ -185,6 +241,7 @@ public class BookingService {
                 .startTime(booking.getStartTime())
                 .endTime(booking.getEndTime())
                 .amount(booking.getGrossAmount())
+                .netAmount(booking.getNetAmount())
                 .checkedInAt(booking.getCheckedInAt())
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())

@@ -1,50 +1,78 @@
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { QrCode } from "@/components/common/QrCode";
 import { Button } from "@/components/buttons/Button";
-import {
-  bookingStart,
-  formatBookingDate,
-  formatTimeRange,
-  getBooking,
-} from "@/api/bookings";
-import { getVenue } from "@/api/venues";
+import { getBooking } from "@/api/bookings";
+import { getPaymentsForBooking } from "@/api/payments";
 import { useApi } from "@/hooks/useApi";
+import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
-import { formatBdt } from "@/utils/format";
 
-const STATUS_BADGE = {
-  CONFIRMED: { label: "Confirmed", className: "badge green" },
-  PENDING: { label: "Pending", className: "badge amber" },
-  COMPLETED: { label: "Completed", className: "badge green" },
-  CANCELLED: { label: "Cancelled", className: "badge gray" },
-};
+const bdt = (value) =>
+  value == null ? null : `৳${Math.round(Number(value)).toLocaleString("en-IN")}`;
+
+/** '18:00:00' -> '6:00 PM' */
+function formatTime(time) {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m ? `${hour}:${String(m).padStart(2, "0")} ${suffix}` : `${hour} ${suffix}`;
+}
+
+function formatDate(isoDate) {
+  if (!isoDate) return "";
+  return new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
 
 export default function BookingSuccessPage() {
+  const { showToast } = useToast();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get("bookingId");
+  // Points earned this booking is an event, not a booking-level fact — the
+  // checkout call already returned it, so it rides along via navigation
+  // state instead of a dedicated endpoint. Falls back gracefully (no badge)
+  // if this page is reached directly (e.g. a reload or a bookmarked link).
+  const location = useLocation();
+  const pointsEarned = location.state?.pointsEarned;
 
-  const { data: booking, loading, error, reload } = useApi(
-    () => (bookingId ? getBooking(bookingId) : Promise.reject(new Error("No booking reference"))),
+  const {
+    data: booking,
+    loading,
+    error,
+  } = useApi(
+    () =>
+      bookingId
+        ? getBooking(bookingId)
+        : Promise.reject(new Error("No booking reference")),
     [bookingId],
   );
 
-  // Only used for the map link — the booking itself has no coordinates.
-  const venueSlug = booking?.venueSlug ?? null;
-  const { data: venue } = useApi(
-    () => (venueSlug ? getVenue(venueSlug) : Promise.resolve(null)),
-    [venueSlug],
+  const paymentsApi = useApi(
+    () => (bookingId ? getPaymentsForBooking(bookingId) : Promise.resolve([])),
+    [bookingId],
   );
+  const successfulPayment = (paymentsApi.data ?? []).find((p) => p.status === "SUCCESS");
 
   if (!bookingId) {
     return (
       <>
         <PageTitle title="Booking confirmed" />
-        <main className="wrap-form" id="main" style={{ paddingTop: 40, paddingBottom: 64 }}>
+        <main
+          className="wrap-form"
+          id="main"
+          style={{ paddingTop: 40, paddingBottom: 64 }}
+        >
           <div className="center" style={{ marginBottom: 20 }}>
             <span className="badge green">Booking confirmed</span>
             <h1 style={{ fontSize: 24, marginTop: 10 }}>Booking created 🎉</h1>
-            <p className="subtle">Your booking reference will appear here shortly.</p>
+            <p className="subtle">
+              Your booking reference will appear here shortly.
+            </p>
           </div>
           <div className="row" style={{ justifyContent: "center" }}>
             <Button variant="primary" to={paths.player.bookings}>
@@ -60,7 +88,11 @@ export default function BookingSuccessPage() {
     return (
       <>
         <PageTitle title="Booking confirmed" />
-        <main className="wrap-form" id="main" style={{ paddingTop: 40, paddingBottom: 64 }}>
+        <main
+          className="wrap-form"
+          id="main"
+          style={{ paddingTop: 40, paddingBottom: 64 }}
+        >
           <p className="subtle" role="status">
             Loading your booking…
           </p>
@@ -70,26 +102,20 @@ export default function BookingSuccessPage() {
   }
 
   if (error) {
-    const unauthorized = error.status === 401;
     return (
       <>
         <PageTitle title="Booking confirmed" />
-        <main className="wrap-form" id="main" style={{ paddingTop: 40, paddingBottom: 64 }}>
+        <main
+          className="wrap-form"
+          id="main"
+          style={{ paddingTop: 40, paddingBottom: 64 }}
+        >
           <div className="card" style={{ padding: 24 }}>
             <h1 style={{ fontSize: 20, marginBottom: 6 }}>
-              {unauthorized ? "Sign in to view this booking" : "Could not load your booking"}
+              Could not load your booking
             </h1>
             <p className="subtle">{error.message}</p>
             <div className="row" style={{ marginTop: 12 }}>
-              {unauthorized ? (
-                <Button variant="primary" to={paths.auth}>
-                  Sign in
-                </Button>
-              ) : (
-                <Button variant="primary" onClick={reload}>
-                  Try again
-                </Button>
-              )}
               <Button variant="secondary" to={paths.player.bookings}>
                 My bookings
               </Button>
@@ -100,19 +126,16 @@ export default function BookingSuccessPage() {
     );
   }
 
-  const badge = STATUS_BADGE[String(booking?.status ?? "").toUpperCase()] ?? STATUS_BADGE.CONFIRMED;
-  const code = booking?.bookingCode || (booking?.id ? `#${booking.id}` : "—");
+  const status = booking?.status === "CANCELLED" ? "Cancelled" : "Confirmed";
+  const code = booking?.bookingCode || "—";
   const ticketUrl = `${window.location.origin}${paths.player.bookingDetail(bookingId)}`;
-  const start = bookingStart(booking);
-  const weekday = start ? start.toLocaleDateString("en-GB", { weekday: "long" }) : null;
-  const timeRange = formatTimeRange(booking?.startTime, booking?.endTime);
-  const title =
-    [booking?.venueName, booking?.pitchName].filter(Boolean).join(" · ") || "Your booking";
-  const amount = booking?.amount != null ? formatBdt(booking.amount) : null;
-  const directionsUrl =
-    venue?.lat != null && venue?.lng != null
-      ? `https://www.openstreetmap.org/directions?to=${venue.lat}%2C${venue.lng}`
-      : null;
+  const playTime =
+    booking?.startTime && booking?.endTime
+      ? `${formatTime(booking.startTime)} – ${formatTime(booking.endTime)}`
+      : "—";
+  const paymentSummary = successfulPayment
+    ? `Payment of ${bdt(successfulPayment.amount)} received via ${successfulPayment.method}.`
+    : "Payment received.";
 
   return (
     <>
@@ -126,43 +149,37 @@ export default function BookingSuccessPage() {
           <div className="check-anim" aria-hidden="true">
             ✓
           </div>
-          <span className={badge.className}>Booking {badge.label.toLowerCase()}</span>
+          <span className="badge green">Booking {status}</span>
           <h1 style={{ fontSize: 24, marginTop: 10 }}>
-            {weekday ? `You're playing ${weekday}! 🎉` : "Your slot is booked 🎉"}
+            You&apos;re all set! 🎉
           </h1>
-          <p className="subtle">
-            {booking?.venueName ?? "The venue"} can see your booking.
-            {amount ? ` The slot is ${amount} — nothing was charged online, settle it with the venue.` : ""}
-          </p>
+          <p className="subtle">{paymentSummary} The venue can see your booking &amp; payment.</p>
         </div>
 
         <div className="ticket">
           <div className="head">
             <div className="between">
-              <b style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>{title}</b>
+              <b style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>
+                Booking {code}
+              </b>
             </div>
-            {booking?.venueArea ? (
-              <div className="muted small" style={{ marginTop: 2 }}>
-                {booking.venueArea}
-              </div>
-            ) : null}
           </div>
           <div style={{ padding: "18px 20px" }}>
             <div className="grid3" style={{ gap: 12 }}>
               <div>
                 <span className="tiny subtle">DATE</span>
                 <br />
-                <b>{formatBookingDate(booking)}</b>
+                <b>{formatDate(booking?.bookingDate) || "—"}</b>
               </div>
               <div>
                 <span className="tiny subtle">PLAY TIME</span>
                 <br />
-                <b className="num">{timeRange}</b>
+                <b className="num">{playTime}</b>
               </div>
               <div>
-                <span className="tiny subtle">AMOUNT</span>
+                <span className="tiny subtle">ARRIVE BY</span>
                 <br />
-                <b className="num">{amount ?? "—"}</b>
+                <b className="num">10 min early</b>
               </div>
             </div>
           </div>
@@ -178,7 +195,7 @@ export default function BookingSuccessPage() {
                 {code}
               </b>
               <div className="row-wrap" style={{ marginTop: 6 }}>
-                <span className={badge.className}>{badge.label}</span>
+                <span className="badge green">Paid in full</span>
               </div>
             </div>
             <QrCode
@@ -190,21 +207,24 @@ export default function BookingSuccessPage() {
         </div>
 
         <div className="grid2" style={{ marginTop: 16, gap: 10 }}>
-          <Button
-            variant="primary"
-            to={booking?.id ? paths.player.bookingDetail(booking.id) : paths.player.bookings}
-          >
-            View booking
+          <Button variant="primary" to={paths.player.splitPayment}>
+            👥 Split with team
           </Button>
-          {directionsUrl ? (
-            <Button variant="secondary" href={directionsUrl} target="_blank" rel="noopener noreferrer">
-              Directions
-            </Button>
-          ) : (
-            <Button variant="secondary" to={paths.player.bookings}>
-              My bookings
-            </Button>
-          )}
+          <Button variant="secondary" to={paths.player.splitPayment}>
+            Invite teammates
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => showToast("Added to your calendar 📅")}
+          >
+            Add to calendar
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => showToast("Opening directions 🗺️")}
+          >
+            Directions
+          </Button>
         </div>
         <div
           className="row"
@@ -212,26 +232,39 @@ export default function BookingSuccessPage() {
         >
           <Button
             variant="tertiary"
-            to={booking?.id ? `${paths.player.review}?bookingId=${booking.id}` : paths.player.review}
+            to={
+              booking?.id
+                ? paths.player.bookingDetail(booking.id)
+                : paths.player.bookings
+            }
           >
-            Leave a review after you play
+            View booking
+          </Button>
+          <Button
+            variant="tertiary"
+            onClick={() => showToast("Contact the venue from My Bookings 📞")}
+          >
+            Contact venue
           </Button>
         </div>
 
         <div className="card" style={{ marginTop: 16 }}>
-          <h4>At the gate</h4>
+          <h4>Arrival &amp; handover</h4>
           <p className="small muted" style={{ margin: "4px 0 0" }}>
-            Show your QR or the reference <b>{code}</b>
-            {timeRange !== "—" ? (
-              <>
-                {" "}
-                — your pitch is yours from <b>{timeRange}</b>
-              </>
-            ) : null}
-            . Splitting the bill with your team is not available yet, so the booking stays in your
-            name.
+            Show your QR or reference <b>{code}</b> at the gate. Arrive 10 minutes
+            early for handover.
           </p>
         </div>
+
+        {pointsEarned ? (
+          <div className="alert ok" style={{ marginTop: 12 }}>
+            <span className="ico">🏅</span>
+            <div>
+              <b>You earned {pointsEarned} points for this booking</b> — check your
+              balance on the Rewards page.
+            </div>
+          </div>
+        ) : null}
       </main>
     </>
   );
