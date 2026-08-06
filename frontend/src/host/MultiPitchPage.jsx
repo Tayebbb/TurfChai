@@ -59,7 +59,7 @@ export default function MultiPitchPage() {
 
   const addSlot = async (pitch, window) => {
     try {
-      await reserveSlots(DEMO_TOURNAMENT_CODE, [
+      await reserveSlots(code, [
         { pitchId: pitch.id, startTime: window.start, endTime: window.end },
       ]);
       showToast(`Added ${pitch.name} ${formatTime(window.start)} — conflict check passed ✓`);
@@ -87,7 +87,7 @@ export default function MultiPitchPage() {
       return;
     }
     try {
-      await reserveSlots(DEMO_TOURNAMENT_CODE, free);
+      await reserveSlots(code, free);
       showToast(`⚡ Full day reserved — ${free.length} extra slots added ✓`);
       tournament.reload();
     } catch (error) {

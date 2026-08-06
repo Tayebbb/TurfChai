@@ -7,6 +7,7 @@ import { Section, SectionHead } from '@/components/layout/Section';
 import { Badge } from '@/components/ui/Badge';
 import { Photo } from '@/components/ui/Photo';
 import { paths } from '@/routes/paths';
+import './LandingPage.css';
 
 const SEARCH_CELLS = [
   { id: 'location', label: '📍 Location', value: 'Dhanmondi' },

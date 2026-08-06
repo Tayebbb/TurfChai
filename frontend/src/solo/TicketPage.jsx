@@ -103,7 +103,7 @@ export default function TicketPage() {
               </span>
             ))}
             <span className="avatar" style={{ background: 'var(--brand)', color: '#fff' }}>
-              {currentPlayer.initials}
+              {currentPlayer?.initials ?? '??'}
             </span>
           </div>
           <p className="subtle tiny" style={{ margin: '8px 0 0' }}>

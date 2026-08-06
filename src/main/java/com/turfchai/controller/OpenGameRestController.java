@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -25,6 +26,7 @@ public class OpenGameRestController {
     private final OpenGameService openGameService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
     public ResponseEntity<OpenGameResponse> createOpenGame(@Valid @RequestBody CreateOpenGameRequest request) {
         OpenGameResponse response = openGameService.createOpenGame(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -52,6 +54,7 @@ public class OpenGameRestController {
     }
 
     @PostMapping("/{id}/join")
+    @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
     public ResponseEntity<JoinOpenGameResponse> joinOpenGame(
             @PathVariable Long id,
             @Valid @RequestBody JoinOpenGameRequest request) {
@@ -60,6 +63,7 @@ public class OpenGameRestController {
     }
 
     @PostMapping("/{id}/members/{userId}/attendance")
+    @PreAuthorize("hasAnyRole('HOST','OWNER','ADMIN')")
     public ResponseEntity<Void> updateAttendance(
             @PathVariable Long id,
             @PathVariable Long userId,

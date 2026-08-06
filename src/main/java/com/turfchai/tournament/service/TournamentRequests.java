@@ -1,6 +1,7 @@
 package com.turfchai.tournament.service;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -27,7 +28,8 @@ public final class TournamentRequests {
             @NotNull LocalDate date,
             @NotNull LocalTime windowStart,
             @NotNull LocalTime windowEnd,
-            @NotBlank @Pattern(regexp = "5_a_side|6_a_side|7_a_side|9_a_side|knockout") String format,
+            @NotBlank @Pattern(regexp = "5_a_side|6_a_side|7_a_side|knockout",
+                    message = "must be one of 5_a_side, 6_a_side, 7_a_side, knockout") String format,
             @Min(2) @Max(64) int teamCapacity,
             @NotNull @DecimalMin("0") BigDecimal entryFeePerTeam,
             @DecimalMin("0") BigDecimal prizePool,
@@ -46,5 +48,17 @@ public final class TournamentRequests {
     }
 
     public record ReserveSlotsRequest(@NotEmpty List<@Valid SlotRequest> slots) {
+    }
+
+    /** Player-facing registration for a tournament. */
+    public record RegisterPlayerRequest(
+            @NotBlank @Size(max = 100) String teamName,
+            @Size(max = 100) String captainName,
+            @Size(max = 20) String contactPhone,
+            @Size(max = 120) String emergencyContact,
+            @Size(max = 8) String jerseyNumber,
+            @Pattern(regexp = "BEGINNER|INTERMEDIATE|ADVANCED|ALL_LEVELS|") String skillLevel,
+            @Size(max = 500) String medicalNotes,
+            @AssertTrue(message = "must accept the tournament rules") boolean agreedToRules) {
     }
 }

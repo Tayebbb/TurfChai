@@ -5,7 +5,7 @@ import { Button } from '@/components/buttons/Button';
 import { Input, Select } from '@/components/forms/Field';
 import { Chip } from '@/components/ui/Chip';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { getMyProfile, getSavedVenues, toggleSavedVenue, updateMyProfile } from '@/api/players';
+import { getMyProfile, getSavedVenues, removeSavedVenue, updateMyProfile } from '@/api/players';
 import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -94,7 +94,7 @@ function ProfileForm({ initial, savedVenues, reloadSaved, showToast }) {
 
   const removeSaved = async (slug, name) => {
     try {
-      await toggleSavedVenue(slug);
+      await removeSavedVenue(slug);
       reloadSaved();
       showToast(`Removed ${name} from saved venues`);
     } catch {

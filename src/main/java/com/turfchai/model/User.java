@@ -46,6 +46,20 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "two_factor_enabled", nullable = false)
+    @Builder.Default
+    private Boolean twoFactorEnabled = false;
+
+    @Column(name = "two_factor_secret")
+    private String twoFactorSecret;
+
+    @Column(name = "failed_login_count", nullable = false)
+    @Builder.Default
+    private Integer failedLoginCount = 0;
+
+    @Column(name = "locked_until")
+    private OffsetDateTime lockedUntil;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     @Builder.Default

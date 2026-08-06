@@ -1,0 +1,72 @@
+package com.turfchai.booking.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.OffsetDateTime;
+
+/**
+ * A booking against a single slot. Maps to the V1 {@code bookings} table:
+ * the user column exists there as {@code booker_user_id}, and
+ * {@code booking_code} / {@code status} / {@code created_at} /
+ * {@code updated_at} were already present.
+ */
+@Entity
+@Table(name = "bookings")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Booking {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "booking_code", nullable = false, unique = true, length = 14)
+    private String bookingCode;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "slot_id", nullable = false)
+    private Slot slot;
+
+    @Column(name = "booker_user_id", nullable = false)
+    private Long userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    @Builder.Default
+    private BookingStatus status = BookingStatus.PENDING;
+
+    @Column(name = "checked_in_at")
+    private OffsetDateTime checkedInAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private OffsetDateTime createdAt = OffsetDateTime.now();
+
+    @Column(name = "updated_at", nullable = false)
+    @Builder.Default
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
+
+    @PreUpdate
+    public void onUpdate() {
+        this.updatedAt = OffsetDateTime.now();
+    }
+}

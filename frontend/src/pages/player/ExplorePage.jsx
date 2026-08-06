@@ -306,7 +306,7 @@ export default function ExplorePage() {
             {!search.loading && venues.map((venue) => (
               <Link key={venue.id} className="vc" to={paths.player.venue(venue.id)} aria-label={venue.cardLabel}>
                 <div className="vc-photo">
-                  <Photo variant={venue.photoVariant} />
+                  <Photo variant={venue.photoVariant} glyph={venue.glyph} />
                   {venue.promo ? <span className="vc-promo">{venue.promo}</span> : null}
                   <button
                     className="vc-save"

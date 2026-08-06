@@ -33,4 +33,10 @@ public class PlayerApiExceptionHandler {
     public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
     }
+
+    /** Malformed JSON is a client error, not a 500. */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, String>> handleUnreadable(Exception e) {
+        return ResponseEntity.badRequest().body(Map.of("error", "invalid request body"));
+    }
 }
