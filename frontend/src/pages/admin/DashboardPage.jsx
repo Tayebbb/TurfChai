@@ -168,7 +168,7 @@ const BREAKDOWN_OPTIONS = {
 };
 
 const formatBdtIn = (amount) => `৳${amount.toLocaleString('en-IN')}`;
-const sum = (values) => values.reduce((total, value) => total + value, 0);
+
 
 export default function DashboardPage() {
   const { showToast } = useToast();
