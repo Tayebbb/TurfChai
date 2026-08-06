@@ -54,7 +54,7 @@ public class Slot {
     private LocalTime endTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private SlotStatus status = SlotStatus.AVAILABLE;
 

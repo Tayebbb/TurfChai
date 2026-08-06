@@ -50,7 +50,7 @@ public class Booking {
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
     private BookingStatus status = BookingStatus.PENDING;
 
