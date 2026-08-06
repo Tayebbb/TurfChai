@@ -1,32 +1,9 @@
-import { apiGet } from './client';
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080';
+import { apiGet, apiSend } from './client';
 
 /**
  * Player profile + saved venues endpoints. Identity is the seeded demo
  * player until authentication lands (X-User-Id header slot reserved).
  */
-
-async function apiSend(method, path, body) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    let message = `Request failed (${response.status})`;
-    try {
-      const data = await response.json();
-      if (data?.error) message = data.error;
-    } catch {
-      /* non-JSON body */
-    }
-    const error = new Error(message);
-    error.status = response.status;
-    throw error;
-  }
-  return response.status === 204 ? null : response.json();
-}
 
 /** GET /api/v1/players/me */
 export function getMyProfile() {

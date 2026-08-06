@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { PageTitle } from '@/components/common/PageTitle';
+import { apiGet } from '@/api/client';
 import { paths } from '@/routes/paths';
 import './UserGrowthPage.css';
-
-const API_BASE = 'http://localhost:8080/api/v1/admin/analytics';
 
 // ── Static fallback (shown while loading or on network error) ──────────────
 const FALLBACK_KPIS = [
@@ -77,9 +76,7 @@ export default function UserGrowthPage() {
 
     async function fetchGrowth() {
       try {
-        const res = await fetch(`${API_BASE}/growth`);
-        if (!res.ok) return;
-        const json = await res.json();
+        const json = await apiGet('/api/v1/admin/analytics/growth');
         if (!json.success || !json.data) return;
 
         if (cancelled) return;
