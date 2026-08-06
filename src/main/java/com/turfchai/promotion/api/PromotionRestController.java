@@ -1,0 +1,102 @@
+package com.turfchai.promotion.api;
+
+import com.turfchai.promotion.dto.AppliedDiscountResponse;
+import com.turfchai.promotion.dto.CreatePromotionRequest;
+import com.turfchai.promotion.dto.PromotionDto;
+import com.turfchai.promotion.dto.ValidatePromoCodeRequest;
+import com.turfchai.promotion.service.PromotionService;
+import com.turfchai.security.UserPrincipal;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Promotion REST API.
+ *
+ * <pre>
+ * POST   /api/v1/owner/venues/{venueId}/promotions          — create promo
+ * GET    /api/v1/owner/venues/{venueId}/promotions          — list venue promos (owner)
+ * PATCH  /api/v1/owner/venues/{venueId}/promotions/{id}     — toggle active / update label
+ * DELETE /api/v1/owner/venues/{venueId}/promotions/{id}     — delete
+ *
+ * POST   /api/v1/promotions/validate-code                   — validate + calculate discount (public)
+ * </pre>
+ */
+@RestController
+@RequestMapping("/api/v1")
+public class PromotionRestController {
+
+    private final PromotionService promotionService;
+
+    public PromotionRestController(PromotionService promotionService) {
+        this.promotionService = promotionService;
+    }
+
+    // ── Owner endpoints ────────────────────────────────────────────────────
+
+    @PostMapping("/owner/venues/{venueId}/promotions")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','SUPER_ADMIN')")
+    public PromotionDto createPromotion(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long venueId,
+            @Valid @RequestBody CreatePromotionRequest request) {
+        return promotionService.createPromotion(principal.getId(), venueId, request);
+    }
+
+    @GetMapping("/owner/venues/{venueId}/promotions")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','SUPER_ADMIN')")
+    public List<PromotionDto> listPromotions(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long venueId) {
+        return promotionService.listByVenue(principal.getId(), venueId);
+    }
+
+    @PatchMapping("/owner/venues/{venueId}/promotions/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','SUPER_ADMIN')")
+    public PromotionDto updatePromotion(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long venueId,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        Boolean active = body.containsKey("active") ? (Boolean) body.get("active") : null;
+        String label = body.containsKey("label") ? (String) body.get("label") : null;
+        return promotionService.updatePromotion(principal.getId(), venueId, id, active, label);
+    }
+
+    @DeleteMapping("/owner/venues/{venueId}/promotions/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','SUPER_ADMIN')")
+    public void deletePromotion(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long venueId,
+            @PathVariable Long id) {
+        promotionService.deletePromotion(principal.getId(), venueId, id);
+    }
+
+    // ── Public checkout endpoint ───────────────────────────────────────────
+
+    @PostMapping("/promotions/validate-code")
+    public ResponseEntity<AppliedDiscountResponse> validateCode(
+            @Valid @RequestBody ValidatePromoCodeRequest request) {
+        AppliedDiscountResponse result = promotionService.validateAndApply(request);
+        return result.valid()
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(result);
+    }
+}
