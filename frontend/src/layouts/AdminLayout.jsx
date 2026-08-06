@@ -9,7 +9,7 @@ import { Topbar } from '@/components/navigation/Topbar';
 import { Overlay } from '@/components/modals/Overlay';
 import { Badge } from '@/components/ui/Badge';
 import { adminAlerts } from '@/data/admin';
-import { getUser } from '@/api/client';
+import { clearSession, getUser } from '@/api/client';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { cn } from '@/utils/cn';
 import { paths } from '@/routes/paths';
@@ -56,7 +56,12 @@ export function AdminLayout() {
             {adminInitials}
             <span className="admin-online" aria-hidden="true" />
           </IconButton>
-          <IconButton className="admin-ico admin-logout" label="Sign Out" to={paths.auth}>
+          <IconButton
+            className="admin-ico admin-logout"
+            label="Sign Out"
+            to={paths.auth}
+            onClick={() => clearSession()}
+          >
             <Icon name="logout" />
           </IconButton>
         </div>

@@ -13,8 +13,8 @@ import { Panel } from '@/components/ui/Panel';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PLAYER_BOTTOM_NAV, PLAYER_NAV_LINKS } from '@/constants/navigation';
-import { playerNotifications } from '@/data/notifications';
 import { getMyProfile } from '@/api/players';
+import { getNotifications, getUnreadCount, markAllRead } from '@/api/notifications';
 import { clearSession } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
 import { useBodyClass } from '@/hooks/useBodyClass';
@@ -30,6 +30,22 @@ export function PlayerLayout({ withFooter = false }) {
   const profile = useDisclosure(false);
   const navigate = useNavigate();
   useBodyClass('has-bottomnav');
+
+  const { data: notifData, reload: reloadNotifs } = useApi(getNotifications, []);
+  const { data: unreadData, reload: reloadUnread } = useApi(getUnreadCount, []);
+  
+  const notificationsList = notifData || [];
+  const unreadCount = unreadData?.count || 0;
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead();
+      reloadNotifs();
+      reloadUnread();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const me = useApi(() => getMyProfile(), []);
   const player = me.data;
@@ -54,8 +70,8 @@ export function PlayerLayout({ withFooter = false }) {
       <Topbar brand={<Brand to={paths.player.home} />} links={PLAYER_NAV_LINKS}>
         <ThemeToggle />
         <IconButton
-          label={`Notifications, ${playerNotifications.length} unread`}
-          notify
+          label={`Notifications, ${unreadCount} unread`}
+          notify={unreadCount > 0}
           onClick={notifications.open}
         >
           <span aria-hidden="true">🔔</span>
@@ -98,16 +114,30 @@ export function PlayerLayout({ withFooter = false }) {
         title="Notifications"
         mode="drawer"
       >
-        <div className="stack-sm" style={{ marginTop: 12 }}>
-          {playerNotifications.map((item) => (
-            <Panel key={item.id}>
-              <b>{item.title}</b>
-              <p className="small muted" style={{ margin: '2px 0 0' }}>
-                {item.body}
-              </p>
-              <span className="tiny subtle">{item.when}</span>
-            </Panel>
-          ))}
+        <div className="between" style={{ padding: '0 16px', marginTop: 12 }}>
+          <b style={{ fontSize: 18 }}>Notifications</b>
+          {unreadCount > 0 && (
+            <button type="button" className="btn btn-tertiary btn-sm" onClick={handleMarkAllRead}>
+              Mark all read
+            </button>
+          )}
+        </div>
+        <div className="stack-sm" style={{ marginTop: 12, padding: '0 16px' }}>
+          {notificationsList.length === 0 ? (
+            <div className="subtle center" style={{ padding: '40px 0' }}>No notifications yet.</div>
+          ) : (
+            notificationsList.map((item) => (
+              <Panel key={item.id} style={{ opacity: item.isRead ? 0.6 : 1 }}>
+                <b>{item.title}</b>
+                <p className="small muted" style={{ margin: '2px 0 0' }}>
+                  {item.body}
+                </p>
+                <span className="tiny subtle">
+                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+                </span>
+              </Panel>
+            ))
+          )}
         </div>
       </Overlay>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -167,11 +167,17 @@ export default function CheckoutPage() {
     return acquireHold();
   };
 
+  // Guards the one-shot hold-on-mount against firing twice for the same
+  // slotId — React StrictMode double-invokes effects in dev, and without
+  // this the second call would race the first hold-slot request (the
+  // backend now tolerates a duplicate hold from the same user, but there's
+  // no reason to send it twice).
+  const holdRequestedForRef = useRef(null);
   useEffect(() => {
-    // One-shot hold on mount; setState only fires from async .then/.catch
-    // callbacks (external API state), which the rule explicitly permits.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (slotId) acquireHold();
+    if (slotId && holdRequestedForRef.current !== slotId) {
+      holdRequestedForRef.current = slotId;
+      acquireHold();
+    }
   }, [slotId, acquireHold]);
 
   const { label: lockLabel } = useCountdown(lockSeconds, {

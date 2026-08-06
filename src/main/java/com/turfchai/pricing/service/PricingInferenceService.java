@@ -10,14 +10,17 @@ import com.turfchai.pricing.repository.HolidayRepository;
 import com.turfchai.pricing.repository.WeatherForecastGridRepository;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -33,24 +36,46 @@ public class PricingInferenceService {
     private final HolidayRepository holidayRepository;
     private final WeatherForecastGridRepository weatherForecastGridRepository;
 
-    private OrtEnvironment env;
-    private OrtSession session;
+    private volatile OrtEnvironment env;
+    private volatile OrtSession session;
 
-    @PostConstruct
-    public void init() throws Exception {
+    /**
+     * Lazily loads the ONNX pricing model via file stream or direct file path.
+     * Prevents loading the model into JVM heap byte arrays, avoiding OutOfMemoryError
+     * on memory-constrained deployments (such as Render free/starter tiers).
+     */
+    private synchronized void ensureModelLoaded() throws Exception {
+        if (session != null) {
+            return;
+        }
+
+        log.info("Initializing ONNX pricing model environment lazily...");
         env = OrtEnvironment.getEnvironment();
         ClassPathResource resource = new ClassPathResource("ml_models/pricing_model.onnx");
-        byte[] modelArray = resource.getInputStream().readAllBytes();
-        session = env.createSession(modelArray, new OrtSession.SessionOptions());
-        log.info("ONNX pricing model loaded successfully.");
+
+        File modelFile;
+        if (resource.isFile()) {
+            modelFile = resource.getFile();
+        } else {
+            modelFile = File.createTempFile("pricing_model_", ".onnx");
+            modelFile.deleteOnExit();
+            try (InputStream is = resource.getInputStream()) {
+                Files.copy(is, modelFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+
+        session = env.createSession(modelFile.getAbsolutePath(), new OrtSession.SessionOptions());
+        log.info("ONNX pricing model loaded successfully from file path: {}", modelFile.getAbsolutePath());
     }
 
     public PricingQuoteResponse getQuote(PricingQuoteRequest request) throws Exception {
+        ensureModelLoaded();
+
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(() -> new IllegalArgumentException("Venue not found"));
 
         LocalDateTime dt = request.getBookingDateTime();
-        
+
         // 1. day
         float day = dt.getDayOfMonth();
         // 2. month

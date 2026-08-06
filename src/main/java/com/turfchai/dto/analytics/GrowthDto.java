@@ -36,6 +36,15 @@ public class GrowthDto {
     /** Daily new-user counts aligned with {@link #signupLabels}. */
     private List<Long> signupCounts;
 
+    /** Month labels for the 6-month growth chart (e.g. "Mar", "Apr", ...). */
+    private List<String> growthMonths;
+
+    /** Monthly new player counts for the 6-month growth chart. */
+    private List<Long> growthPlayers;
+
+    /** Monthly new host counts for the 6-month growth chart. */
+    private List<Long> growthHosts;
+
     // ── Constructors ──────────────────────────────────────────────────────
 
     public GrowthDto() {}
@@ -70,4 +79,13 @@ public class GrowthDto {
 
     public List<Long> getSignupCounts() { return signupCounts; }
     public void setSignupCounts(List<Long> signupCounts) { this.signupCounts = signupCounts; }
+
+    public List<String> getGrowthMonths() { return growthMonths; }
+    public void setGrowthMonths(List<String> growthMonths) { this.growthMonths = growthMonths; }
+
+    public List<Long> getGrowthPlayers() { return growthPlayers; }
+    public void setGrowthPlayers(List<Long> growthPlayers) { this.growthPlayers = growthPlayers; }
+
+    public List<Long> getGrowthHosts() { return growthHosts; }
+    public void setGrowthHosts(List<Long> growthHosts) { this.growthHosts = growthHosts; }
 }
