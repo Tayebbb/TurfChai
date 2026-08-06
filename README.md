@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150?text=TurfChai" alt="TurfChai Logo" width="120" height="120" />
+  <img src="https://github.com/SHOEBILL04/TurfChai/blob/main/frontend/public/icons.svg?text=TurfChai" alt="TurfChai Logo" width="120" height="120" />
   <h1>TurfChai</h1>
   <p><em>The ultimate full-stack platform for booking sports turfs, hosting tournaments, and organizing open pickup games in Dhaka, Bangladesh.</em></p>
 
