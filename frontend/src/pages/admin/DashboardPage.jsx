@@ -6,6 +6,9 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { listPayouts } from '@/api/payouts';
+import { api, getUser } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 import './DashboardPage.css';
 
 const GRID_COLOR = 'rgba(255,255,255,0.06)';
@@ -66,10 +69,6 @@ const USER_SEGMENTS = [
   { id: 'players', label: 'Players' },
   { id: 'hosts', label: 'Hosts' },
 ];
-
-const GROWTH_MONTHS = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
-const GROWTH_PLAYERS = [2400, 2900, 3400, 3900, 4200, 4800];
-const GROWTH_HOSTS = [320, 410, 490, 560, 620, 710];
 
 const BREAKDOWN_LEGEND = [
   {
@@ -178,15 +177,17 @@ export default function DashboardPage() {
   const [year, setYear] = useState('2026');
   const [userSegment, setUserSegment] = useState('all');
 
-  const series = EARNINGS_DATA[timeframe][year];
+  const { data: revRes } = useApi(() => api(`/admin/analytics/revenue?year=${year}&timeframe=${timeframe}`), [year, timeframe]);
+  const revenueDto = revRes?.data || revRes;
+  const series = revenueDto || { labels: [], gmv: [], bookings: [], totalGmv: 0, totalBookings: 0, growthPercent: '0%' };
 
   const earningsData = useMemo(
     () => ({
-      labels: series.labels,
+      labels: series.labels || [],
       datasets: [
         {
           label: 'GMV',
-          data: series.gmv,
+          data: series.gmv || [],
           borderColor: '#22c55e',
           backgroundColor: 'rgba(34, 197, 94, 0.22)',
           borderWidth: 3.5,
@@ -202,24 +203,31 @@ export default function DashboardPage() {
     [series],
   );
 
+  const { data: payoutsList } = useApi(() => listPayouts('SETTLED'), []);
+
   const totals = useMemo(() => {
-    const gmv = sum(series.gmv);
-    const bookings = sum(series.bookings);
+    const gmv = series.totalGmv || 0;
+    const bookings = series.totalBookings || 0;
+    const realPayouts = payoutsList?.reduce((sum, p) => sum + p.netAmount, 0) || Math.round(gmv * 0.9);
     return {
       gmv,
       bookings,
       fee: Math.round(gmv * 0.1),
-      payouts: Math.round(gmv * 0.9),
-      aov: Math.round(gmv / bookings),
+      payouts: realPayouts,
+      aov: bookings > 0 ? Math.round(gmv / bookings) : 0,
+      growth: series.growthPercent || '+0.0%'
     };
-  }, [series]);
+  }, [series, payoutsList]);
+
+  const { data: growthRes } = useApi(() => api('/admin/analytics/growth'), []);
+  const growthDto = growthRes?.data || growthRes;
 
   const userGrowthData = useMemo(() => {
     const datasets = [];
     if (userSegment !== 'hosts') {
       datasets.push({
         label: 'Players',
-        data: GROWTH_PLAYERS,
+        data: growthDto?.growthPlayers || [],
         backgroundColor: '#22c55e',
         barThickness: 14,
         borderRadius: { topLeft: 4, topRight: 4 },
@@ -228,14 +236,25 @@ export default function DashboardPage() {
     if (userSegment !== 'players') {
       datasets.push({
         label: 'Hosts',
-        data: GROWTH_HOSTS,
+        data: growthDto?.growthHosts || [],
         backgroundColor: '#3b82f6',
         barThickness: 14,
         borderRadius: { topLeft: 4, topRight: 4 },
       });
     }
-    return { labels: GROWTH_MONTHS, datasets };
-  }, [userSegment]);
+    return { labels: growthDto?.growthMonths || [], datasets };
+  }, [userSegment, growthDto]);
+
+  const sessionUser = getUser();
+  const userName = sessionUser?.fullName || 'Nadia Amin';
+
+  const { data: statsRes } = useApi(() => api('/admin/analytics/dashboard'));
+  const stats = statsRes?.data || statsRes;
+
+  const pendingRequestsCount = stats?.pendingRequests ?? 4;
+  const activeTurfsCount = stats?.activeTurfs ?? 128;
+  const registeredUsersCount = stats?.registeredUsers ?? 41270;
+  const adminAccountsCount = stats?.adminAccounts ?? 5;
 
   return (
     <>
@@ -244,7 +263,7 @@ export default function DashboardPage() {
       <div className="main-header" style={{ marginBottom: 24 }}>
         <div>
           <h1>Platform Overview</h1>
-          <span className="subtle small">Welcome back, Nadia Amin · Super Admin Executive Console</span>
+          <span className="subtle small">Welcome back, {userName} · Super Admin Executive Console</span>
         </div>
         <div className="row" style={{ gap: 10 }}>
           <button
@@ -272,10 +291,10 @@ export default function DashboardPage() {
               className="value num"
               style={{ color: 'var(--warn)', fontSize: 36, display: 'block', margin: '6px 0 2px' }}
             >
-              <CountUp to={4} />
+              <CountUp to={pendingRequestsCount} />
             </b>
             <span className="delta down" style={{ fontSize: 12 }}>
-              Oldest request: 3 days ago
+              Awaiting verification
             </span>
           </div>
           <Link className="btn btn-sm btn-primary btn-link" to={paths.admin.turfRequests}>
@@ -292,10 +311,10 @@ export default function DashboardPage() {
               <Icon name="pin" style={{ color: 'var(--brand)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              <CountUp to={128} delay={120} />
+              <CountUp to={activeTurfsCount} delay={120} />
             </b>
             <span className="delta up" style={{ fontSize: 12 }}>
-              ▲ 6 venues added this month
+              ▲ Venues on platform
             </span>
           </div>
           <Link className="btn btn-sm btn-secondary btn-link" to={paths.admin.turfs}>
@@ -312,10 +331,10 @@ export default function DashboardPage() {
               <Icon name="users" style={{ color: 'var(--info)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              <CountUp to={41270} delay={240} />
+              <CountUp to={registeredUsersCount} delay={240} />
             </b>
             <span className="delta up" style={{ fontSize: 12 }}>
-              ▲ 1,140 registered this week
+              ▲ Cumulative user base
             </span>
           </div>
           <Link className="btn btn-sm btn-secondary btn-link" to={paths.admin.users}>
@@ -332,7 +351,7 @@ export default function DashboardPage() {
               <Icon name="shield" style={{ color: 'var(--mint)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              <CountUp to={5} delay={360} />
+              <CountUp to={adminAccountsCount} delay={360} />
             </b>
             <span className="delta nodot" style={{ color: 'var(--mint)', fontSize: 12 }}>
               Super Admin privileges active
@@ -426,7 +445,7 @@ export default function DashboardPage() {
                 {formatBdtIn(totals.gmv)}
               </b>
               <span className="tiny delta up" style={{ display: 'inline-block', marginTop: 4 }}>
-                ▲ {series.growth} vs prev period
+                ▲ {totals.growth} vs prev period
               </span>
             </div>
 

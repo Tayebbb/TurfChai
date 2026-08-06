@@ -30,7 +30,7 @@ export default function MatchdayPage() {
       } else {
         showToast("Check-in failed. Please try again.");
       }
-    } catch (err) {
+    } catch {
       showToast("Network error. Could not check in.");
     }
   };

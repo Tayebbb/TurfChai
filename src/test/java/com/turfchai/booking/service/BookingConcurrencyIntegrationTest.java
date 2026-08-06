@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +65,6 @@ class BookingConcurrencyIntegrationTest {
     @DisplayName("only one of 16 concurrent hold-slot calls wins a single AVAILABLE slot")
     void holdSlot_allowsExactlyOneConcurrentWinner() throws Exception {
         Slot slot = freshAvailableSlot();
-        List<User> users = users(THREAD_COUNT);
 
         Result result = runConcurrently(THREAD_COUNT, (user) ->
                 bookingService.holdSlot(user.getId(), slot.getId()));
@@ -94,7 +95,6 @@ class BookingConcurrencyIntegrationTest {
         assertEquals(THREAD_COUNT - 1, result.slotUnavailable.get(),
                 "every other caller should fail once the slot is BOOKED");
 
-        Slot reloaded = slotRepository.findById(slot.getId()).orElseThrow();
         long bookingCountForSlot = bookingRepository.findAll().stream()
                 .filter(b -> b.getSlot() != null && slot.getId().equals(b.getSlot().getId()))
                 .count();
@@ -123,13 +123,13 @@ class BookingConcurrencyIntegrationTest {
             }
         })).toList();
 
-        workers.forEach(Thread::start);
+        workers.forEach(worker -> worker.start());
         assertTrue(ready.await(10, TimeUnit.SECONDS), "not all threads became ready");
         start.countDown();
         for (Thread worker : workers) {
             worker.join(30_000);
         }
-        assertFalse(workers.stream().anyMatch(Thread::isAlive), "a worker thread did not finish");
+        assertFalse(workers.stream().anyMatch(w -> w != null && w.isAlive()), "a worker thread did not finish");
 
         return new Result(successes, slotUnavailable, failures);
     }
@@ -163,8 +163,11 @@ class BookingConcurrencyIntegrationTest {
         pitchRepository.save(pitch);
         return slotRepository.save(Slot.builder()
                 .pitch(pitch)
+                .venueId(venue.getId())
+                .slotDate(LocalDate.of(2026, 8, 8))
                 .startTime(LocalTime.of(14, 0))
                 .endTime(LocalTime.of(15, 0))
+                .price(BigDecimal.valueOf(2550))
                 .status(SlotStatus.AVAILABLE)
                 .build());
     }

@@ -1,43 +1,61 @@
 package com.turfchai.service;
 
+import com.turfchai.dto.analytics.DashboardStatsDto;
 import com.turfchai.dto.analytics.GrowthDto;
 import com.turfchai.dto.analytics.RevenueDto;
 import com.turfchai.dto.analytics.SegmentsDto;
+import com.turfchai.booking.entity.Booking;
+import com.turfchai.booking.entity.BookingStatus;
+import com.turfchai.booking.repository.BookingRepository;
+import com.turfchai.model.User;
+import com.turfchai.model.enums.RoleType;
+import com.turfchai.repository.AdminRepository;
 import com.turfchai.repository.AnalyticsRepository;
+import com.turfchai.repository.TurfRequestRepository;
+import com.turfchai.venue.repository.VenueRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Computes admin analytics KPIs and time-series data for the Admin Dashboard,
- * User Growth, and User Segments pages.
- *
- * <h3>Fallback / seed behaviour</h3>
- * When the H2 in-memory database is empty (total users = 0 or very low) the
- * service enriches the response with realistic static values, mirroring the
- * demo data already shown in the frontend prototype.  This keeps the charts
- * meaningful during local development without needing a populated database.
- */
 @Service
 @Transactional(readOnly = true)
 public class AdminAnalyticsService {
 
-    /**
-     * Threshold below which seed data is blended into the response.
-     * A real deployment will always exceed this.
-     */
     private static final long SEED_THRESHOLD = 10;
 
     private final AnalyticsRepository analyticsRepository;
+    private final TurfRequestRepository turfRequestRepository;
+    private final VenueRepository venueRepository;
+    private final AdminRepository adminRepository;
+    private final BookingRepository bookingRepository;
 
-    public AdminAnalyticsService(AnalyticsRepository analyticsRepository) {
+    public AdminAnalyticsService(
+            AnalyticsRepository analyticsRepository,
+            TurfRequestRepository turfRequestRepository,
+            VenueRepository venueRepository,
+            AdminRepository adminRepository,
+            BookingRepository bookingRepository) {
         this.analyticsRepository = analyticsRepository;
+        this.turfRequestRepository = turfRequestRepository;
+        this.venueRepository = venueRepository;
+        this.adminRepository = adminRepository;
+        this.bookingRepository = bookingRepository;
+    }
+
+    public DashboardStatsDto getDashboardStats() {
+        long totalUsers = analyticsRepository.countTotalUsers();
+        if (totalUsers < SEED_THRESHOLD) {
+            return new DashboardStatsDto(4, 128, 41270, 5);
+        }
+        long pendingRequests = turfRequestRepository.findByStatusOrderByCreatedAtAsc("PENDING").size();
+        long activeTurfs = venueRepository.count();
+        long adminAccounts = adminRepository.count();
+        return new DashboardStatsDto(pendingRequests, activeTurfs, totalUsers, adminAccounts);
     }
 
     // ── Public API ─────────────────────────────────────────────────────────
@@ -57,7 +75,7 @@ public class AdminAnalyticsService {
                 : Math.round((activeUsers * 1000.0 / totalUsers)) / 10.0;
 
         // Last 24 h new signups
-        ZonedDateTime now = ZonedDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now();
         long newUsersToday = analyticsRepository.countNewUsersInPeriod(
                 now.minusDays(1), now);
 
@@ -65,39 +83,117 @@ public class AdminAnalyticsService {
         List<String> labels = new ArrayList<>();
         List<Long> counts = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
-            ZonedDateTime dayStart = now.minusDays(i).toLocalDate().atStartOfDay(now.getZone());
-            ZonedDateTime dayEnd = dayStart.plusDays(1);
+            OffsetDateTime dayStart = now.minusDays(i).toLocalDate().atStartOfDay().atOffset(now.getOffset());
+            OffsetDateTime dayEnd = dayStart.plusDays(1);
             labels.add(dayStart.getDayOfWeek()
                     .getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
             counts.add(analyticsRepository.countNewUsersInPeriod(dayStart, dayEnd));
         }
 
-        return new GrowthDto(totalUsers, newUsersToday, activeRatio,
+        // 6-month growth charts
+        List<String> growthMonths = new ArrayList<>();
+        List<Long> growthPlayers = new ArrayList<>();
+        List<Long> growthHosts = new ArrayList<>();
+        
+        List<User> allUsers = analyticsRepository.findAll();
+        for (int i = 5; i >= 0; i--) {
+            OffsetDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).toLocalDate().atStartOfDay().atOffset(now.getOffset());
+            OffsetDateTime monthEnd = monthStart.plusMonths(1);
+            growthMonths.add(monthStart.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+            
+            long pCount = allUsers.stream()
+                .filter(u -> u.getCreatedAt().isAfter(monthStart) && u.getCreatedAt().isBefore(monthEnd))
+                .filter(u -> u.getRole() == RoleType.PLAYER)
+                .count();
+            
+            long hCount = allUsers.stream()
+                .filter(u -> u.getCreatedAt().isAfter(monthStart) && u.getCreatedAt().isBefore(monthEnd))
+                .filter(u -> u.getRole() == RoleType.HOST || u.getRole() == RoleType.OWNER)
+                .count();
+                
+            growthPlayers.add(pCount);
+            growthHosts.add(hCount);
+        }
+
+        GrowthDto dto = new GrowthDto(totalUsers, newUsersToday, activeRatio,
                 84.2, // retentionRate — requires cohort analysis beyond simple counts
                 labels, counts);
+        dto.setGrowthMonths(growthMonths);
+        dto.setGrowthPlayers(growthPlayers);
+        dto.setGrowthHosts(growthHosts);
+        return dto;
     }
 
     /**
-     * Returns monthly GMV + booking-count time-series for the earnings chart.
-     * <p>
-     * For dev/demo purposes the revenue data is always demo data because
-     * booking net_amount is not yet aggregated via JPQL in this version
-     * (the bookings table lacks a full revenue model in the minimal entity).
-     * The endpoint is wired and ready for a live query replacement.
-     * </p>
+     * Returns GMV + booking-count time-series for the earnings chart.
+     * Replaced demo data with real data queries.
      */
-    public RevenueDto getRevenue() {
-        // Realistic monthly demo data (matches the frontend prototype)
-        List<String> labels = List.of("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug");
-        List<Long> gmv      = List.of(3820000L, 4150000L, 4400000L, 4780000L,
-                                      5100000L, 5350000L, 5600000L, 5920000L);
-        List<Long> bookings = List.of(14200L, 15400L, 16100L, 17500L,
-                                      18900L, 19800L, 20700L, 21900L);
+    public RevenueDto getRevenue(int year, String timeframe) {
+        List<Booking> allBookings = bookingRepository.findAll();
+        
+        List<String> labels = new ArrayList<>();
+        List<Long> gmv = new ArrayList<>();
+        List<Long> bookings = new ArrayList<>();
+        
+        long totalGmv = 0;
+        long totalBookings = 0;
+        long lastYearGmv = 0;
+        
+        if ("weekly".equalsIgnoreCase(timeframe)) {
+            // Compute last 7 days including today
+            OffsetDateTime now = OffsetDateTime.now();
+            for (int i = 6; i >= 0; i--) {
+                OffsetDateTime dayStart = now.minusDays(i).toLocalDate().atStartOfDay().atOffset(now.getOffset());
+                OffsetDateTime dayEnd = dayStart.plusDays(1);
+                labels.add(dayStart.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+                
+                long dailyGmv = 0;
+                long dailyBookings = 0;
+                
+                for (Booking b : allBookings) {
+                    if (b.getStatus() == BookingStatus.CONFIRMED &&
+                        b.getCreatedAt().isAfter(dayStart) && b.getCreatedAt().isBefore(dayEnd)) {
+                        dailyGmv += b.getNetAmount().longValue();
+                        dailyBookings++;
+                    }
+                }
+                gmv.add(dailyGmv);
+                bookings.add(dailyBookings);
+                totalGmv += dailyGmv;
+                totalBookings += dailyBookings;
+            }
+        } else {
+            // Monthly for the given year
+            for (int month = 1; month <= 12; month++) {
+                labels.add(OffsetDateTime.now().withMonth(month).getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+                long monthlyGmv = 0;
+                long monthlyBookings = 0;
+                for (Booking b : allBookings) {
+                    if (b.getStatus() == BookingStatus.CONFIRMED && b.getCreatedAt().getYear() == year && b.getCreatedAt().getMonthValue() == month) {
+                        monthlyGmv += b.getNetAmount().longValue();
+                        monthlyBookings++;
+                    } else if (b.getStatus() == BookingStatus.CONFIRMED && b.getCreatedAt().getYear() == year - 1) {
+                        // Gather last year total for growth calculation (simplistic)
+                        lastYearGmv += b.getNetAmount().longValue();
+                    }
+                }
+                gmv.add(monthlyGmv);
+                bookings.add(monthlyBookings);
+                totalGmv += monthlyGmv;
+                totalBookings += monthlyBookings;
+            }
+        }
+        
+        // Simple growth % for demo
+        String growth = "+0.0%";
+        if (totalGmv > 0 && lastYearGmv > 0) {
+            double pct = ((double)totalGmv - lastYearGmv) / lastYearGmv * 100;
+            growth = (pct >= 0 ? "+" : "") + String.format("%.1f", pct) + "%";
+        } else if (totalGmv > 0) {
+            growth = "+100%";
+        }
 
-        long totalGmv = gmv.stream().mapToLong(Long::longValue).sum();
-        long totalBookings = bookings.stream().mapToLong(Long::longValue).sum();
-
-        return new RevenueDto(labels, gmv, bookings, "+24.6%", totalGmv, totalBookings);
+        return new RevenueDto(labels, gmv, bookings, growth, totalGmv, totalBookings);
     }
 
     /**
@@ -110,8 +206,8 @@ public class AdminAnalyticsService {
             return buildSeedSegmentsDto();
         }
 
-        long players  = analyticsRepository.countActivePlayers();
-        long hosts    = analyticsRepository.countActiveHosts();
+        long players = analyticsRepository.countActivePlayers();
+        long hosts = analyticsRepository.countActiveHosts();
         long inactive = analyticsRepository.countInactiveUsers();
 
         // avg LTV: simplified as (total bookings revenue / total users)
@@ -125,7 +221,7 @@ public class AdminAnalyticsService {
 
     private GrowthDto buildSeedGrowthDto() {
         List<String> labels = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
-        List<Long>   counts = List.of(142L, 178L, 165L, 192L, 214L, 258L, 248L);
+        List<Long> counts = List.of(142L, 178L, 165L, 192L, 214L, 258L, 248L);
         return new GrowthDto(41270L, 248L, 89.4, 84.2, labels, counts);
     }
 

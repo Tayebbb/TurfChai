@@ -1,18 +1,13 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
 import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
+import { api } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 
-const API_BASE = 'http://localhost:8080/api/v1/admin/analytics';
-
-function fmt(n) {
-  return Number(n).toLocaleString('en-IN');
-}
-
-const FALLBACK_KPIS = [
+const KPIS = [
   {
     id: 'players',
     label: 'Active Players',
@@ -28,7 +23,7 @@ const FALLBACK_KPIS = [
     label: 'Verified Hosts',
     icon: 'pin',
     color: 'var(--info)',
-    value: '4,850',
+    value: '1,280',
     deltaClass: 'delta nodot',
     deltaStyle: { color: 'var(--info)', fontSize: 12 },
     deltaText: 'Registered venue partners',
@@ -55,7 +50,7 @@ const FALLBACK_KPIS = [
   },
 ];
 
-const FALLBACK_DONUT_DATA = {
+const DONUT_DATA = {
   labels: ['Players', 'Hosts', 'Inactive'],
   datasets: [
     {
@@ -67,32 +62,39 @@ const FALLBACK_DONUT_DATA = {
   ],
 };
 
-function buildDonutData(players, hosts, inactive) {
-  const total = players + hosts + inactive || 1;
-  return {
-    labels: ['Players', 'Hosts', 'Inactive'],
-    datasets: [{
-      data: [
-        Math.round(players * 100 / total),
-        Math.round(hosts * 100 / total),
-        Math.round(inactive * 100 / total),
-      ],
-      backgroundColor: ['#22C55E', '#60A5FA', '#FBBF24'],
-      borderWidth: 0,
-      spacing: 4,
-    }],
-  };
-}
-
 const DONUT_OPTIONS = {
   cutout: '71%',
   plugins: { legend: { display: false } },
 };
 
-const FALLBACK_SHARE_LEGEND = [
-  { id: 'players', dot: 'var(--brand)', name: 'Players',  note: 'Regular turf bookers',    count: '34,200', share: '83%', shareTone: 'green' },
-  { id: 'hosts',   dot: 'var(--info)',  name: 'Hosts',    note: 'Venue & pitch managers',   count: '4,850',  share: '3%',  shareTone: 'blue' },
-  { id: 'inactive',dot: 'var(--warn)', name: 'Inactive', note: 'No activity in 30 days',   count: '5,790',  share: '14%', shareTone: 'amber' },
+const SHARE_LEGEND = [
+  {
+    id: 'players',
+    dot: 'var(--brand)',
+    name: 'Players',
+    note: 'Regular turf bookers',
+    count: '34,200',
+    share: '83%',
+    shareTone: 'green',
+  },
+  {
+    id: 'hosts',
+    dot: 'var(--info)',
+    name: 'Hosts',
+    note: 'Venue & pitch managers',
+    count: '1,280',
+    share: '3%',
+    shareTone: 'blue',
+  },
+  {
+    id: 'inactive',
+    dot: 'var(--warn)',
+    name: 'Inactive',
+    note: 'No activity in 30 days',
+    count: '5,790',
+    share: '14%',
+    shareTone: 'amber',
+  },
 ];
 
 const PLAYER_TIERS = [
@@ -220,47 +222,52 @@ const BARE_TABLE_WRAP = {
 };
 
 export default function UserSegmentsPage() {
-  const [kpis, setKpis] = useState(FALLBACK_KPIS);
-  const [donutData, setDonutData] = useState(FALLBACK_DONUT_DATA);
-  const [shareLegend, setShareLegend] = useState(FALLBACK_SHARE_LEGEND);
-  const [totalLabel, setTotalLabel] = useState('41.2K');
-  const [isLive, setIsLive] = useState(false);
+  const { data: res } = useApi(() => api('/admin/analytics/segments'));
+  const segments = res?.data || res;
 
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchSegments() {
-      try {
-        const res = await fetch(`${API_BASE}/segments`);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!json.success || !json.data) return;
-        if (cancelled) return;
-        const d = json.data;
-        const total = d.totalUsers;
-
-        setKpis([
-          { id: 'players',  label: 'Active Players',     icon: 'users',  color: 'var(--brand)',    value: fmt(d.playerCount),                  deltaClass: 'delta up',    deltaStyle: { fontSize: 12 }, deltaText: 'Regular turf bookers' },
-          { id: 'hosts',    label: 'Verified Hosts',      icon: 'pin',    color: 'var(--info)',     value: fmt(d.hostCount),                    deltaClass: 'delta nodot', deltaStyle: { color: 'var(--info)', fontSize: 12 }, deltaText: 'Registered venue partners' },
-          { id: 'inactive', label: 'Inactive Accounts',   icon: 'alert',  color: 'var(--warn)',    value: fmt(d.inactiveCount),                deltaClass: 'delta down',  deltaStyle: { fontSize: 12 }, deltaText: 'No activity in 30 days' },
-          { id: 'ltv',      label: 'Avg Lifetime Value',  icon: 'money',  color: 'var(--brand-600)',value: `৳${fmt(d.avgLifetimeValueBdt)}`,    deltaClass: 'delta nodot', deltaStyle: { color: 'var(--text-3)', fontSize: 12 }, deltaText: 'Per registered cohort' },
-        ]);
-
-        setDonutData(buildDonutData(d.playerCount, d.hostCount, d.inactiveCount));
-
-        const t = d.playerCount + d.hostCount + d.inactiveCount || 1;
-        setShareLegend([
-          { id: 'players',  dot: 'var(--brand)', name: 'Players',  note: 'Regular turf bookers',  count: fmt(d.playerCount),   share: `${Math.round(d.playerCount * 100 / t)}%`,   shareTone: 'green' },
-          { id: 'hosts',    dot: 'var(--info)',  name: 'Hosts',    note: 'Venue & pitch managers', count: fmt(d.hostCount),     share: `${Math.round(d.hostCount * 100 / t)}%`,     shareTone: 'blue' },
-          { id: 'inactive', dot: 'var(--warn)', name: 'Inactive', note: 'No activity in 30 days', count: fmt(d.inactiveCount), share: `${Math.round(d.inactiveCount * 100 / t)}%`, shareTone: 'amber' },
-        ]);
-
-        setTotalLabel(total >= 1000 ? `${(total / 1000).toFixed(1)}K` : String(total));
-        setIsLive(true);
-      } catch { /* fallback data stays */ }
-    }
-    fetchSegments();
-    return () => { cancelled = true; };
-  }, []);
+  const kpiData = [
+    {
+      id: 'players',
+      label: 'Active Players',
+      icon: 'users',
+      color: 'var(--brand)',
+      value: segments?.activePlayers ? Number(segments.activePlayers) : 34200,
+      deltaClass: 'delta up',
+      deltaStyle: { fontSize: 12 },
+      deltaText: 'Regular turf bookers',
+    },
+    {
+      id: 'hosts',
+      label: 'Verified Hosts',
+      icon: 'pin',
+      color: 'var(--info)',
+      value: segments?.activeHosts ? Number(segments.activeHosts) : 1280,
+      deltaClass: 'delta nodot',
+      deltaStyle: { color: 'var(--info)', fontSize: 12 },
+      deltaText: 'Registered venue partners',
+    },
+    {
+      id: 'inactive',
+      label: 'Inactive Accounts',
+      icon: 'alert',
+      color: 'var(--warn)',
+      value: segments?.inactiveUsers ? Number(segments.inactiveUsers) : 5790,
+      deltaClass: 'delta down',
+      deltaStyle: { fontSize: 12 },
+      deltaText: 'No activity in 30 days',
+    },
+    {
+      id: 'ltv',
+      label: 'Avg Lifetime Value',
+      icon: 'money',
+      color: 'var(--brand-600)',
+      value: segments?.avgLtv ? Number(segments.avgLtv) : 4250,
+      prefix: '৳',
+      deltaClass: 'delta nodot',
+      deltaStyle: { color: 'var(--text-3)', fontSize: 12 },
+      deltaText: 'Per registered cohort',
+    },
+  ];
 
   return (
     <>
@@ -285,7 +292,7 @@ export default function UserSegmentsPage() {
       </div>
 
       <div className="grid4" style={{ gap: 20, marginBottom: 28 }}>
-        {kpis.map((kpi) => (
+        {kpiData.map((kpi, index) => (
           <div className="liquid-glass kpi-card" key={kpi.id}>
             <div>
               <div className="between">
@@ -298,7 +305,8 @@ export default function UserSegmentsPage() {
                 className="value num"
                 style={{ color: kpi.color, fontSize: 36, display: 'block', margin: '6px 0 2px' }}
               >
-                <CountUp to={Number(kpi.value.replace(/,/g, ''))} delay={index * 120} />
+                {kpi.prefix && kpi.prefix}
+                <CountUp to={typeof kpi.value === 'number' ? kpi.value : Number(String(kpi.value).replace(/[^0-9.]/g, ''))} delay={index * 120} />
               </b>
               <span className={kpi.deltaClass} style={kpi.deltaStyle}>
                 {kpi.deltaText}
@@ -333,10 +341,10 @@ export default function UserSegmentsPage() {
             <div style={{ position: 'relative', width: 170, height: 170, margin: '0 auto' }}>
               <ChartCanvas
                 type="doughnut"
-                data={donutData}
+                data={DONUT_DATA}
                 options={DONUT_OPTIONS}
                 height={170}
-                label="User distribution by segment"
+                label="User distribution: 83% Players, 3% Hosts, 14% Inactive"
               />
               <div
                 style={{
@@ -357,7 +365,7 @@ export default function UserSegmentsPage() {
                     fontFamily: 'var(--font-display)',
                   }}
                 >
-                  {totalLabel}
+                  41.2K
                 </span>
                 <span
                   style={{
@@ -373,8 +381,7 @@ export default function UserSegmentsPage() {
             </div>
 
             <div className="user-breakdown-legend">
-              {isLive && <span className="badge blue nodot" style={{ fontSize: 10, marginBottom: 8, display: 'inline-block' }}>Live</span>}
-              {shareLegend.map((item) => (
+              {SHARE_LEGEND.map((item) => (
                 <div className="legend-item" key={item.id}>
                   <div>
                     <span className="legend-dot" style={{ background: item.dot }}></span>

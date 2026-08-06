@@ -1,5 +1,6 @@
 -- ============================================================================
 -- V8: Enforce at most one active booking per slot at the database level
+-- V9: Enforce at most one active booking per slot at the database level
 --
 -- The application's pessimistic row lock (SlotRepository#findByIdForUpdate)
 -- plus the optimistic @Version on slots are the primary concurrency controls.
@@ -14,3 +15,9 @@
 CREATE UNIQUE INDEX IF NOT EXISTS uq_bookings_active_slot
     ON bookings (slot_id)
     WHERE status IN ('CONFIRMED', 'PAID', 'PARTIALLY_PAID');
+CREATE UNIQUE INDEX
+IF NOT EXISTS uq_bookings_active_slot
+    ON bookings
+(slot_id)
+    WHERE status IN
+('CONFIRMED', 'PAID', 'PARTIALLY_PAID');

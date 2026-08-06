@@ -13,9 +13,13 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Per-(venue, sport) slot pricing window. Read-side: discovery uses the
@@ -50,11 +54,20 @@ public class SportPricingRule {
     @Column(nullable = false)
     private int slotDurationMin = 60;
 
+    /** Changeover gap after a slot. V1 constrains this to 5, 10 or 15. */
+    @Column(name = "buffer_min", nullable = false)
+    private int bufferMin = 10;
+
     @Column(nullable = false)
     private LocalTime windowStart = LocalTime.of(6, 0);
 
     @Column(nullable = false)
     private LocalTime windowEnd = LocalTime.of(23, 0);
+
+    /** ISO day numbers the rule applies on (1 = Monday … 7 = Sunday). */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "days_of_week", nullable = false)
+    private List<Integer> daysOfWeek = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6, 7));
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true;

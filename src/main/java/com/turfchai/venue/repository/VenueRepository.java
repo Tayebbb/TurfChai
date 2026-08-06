@@ -9,13 +9,16 @@ import java.util.Optional;
 
 public interface VenueRepository extends JpaRepository<Venue, Long>, JpaSpecificationExecutor<Venue> {
 
-    // collections load lazily inside the read-only service transaction
+    // Player-facing lookups
     Optional<Venue> findBySlug(String slug);
-
     boolean existsBySlug(String slug);
-
-    // Open-games / LFG module lookups (moved from the deleted stub repository)
     Optional<Venue> findByVenueCode(String venueCode);
-
     List<Venue> findByArea(String area);
+
+    // Owner-facing lookups
+    List<Venue> findByOwnerId(Long ownerUserId);
+
+    // Weather sync
+    @org.springframework.data.jpa.repository.Query(value = "SELECT DISTINCT grid_lat, grid_lon FROM venues WHERE status = 'LIVE' AND grid_lat IS NOT NULL AND grid_lon IS NOT NULL", nativeQuery = true)
+    List<Object[]> findDistinctGridCoordinates();
 }

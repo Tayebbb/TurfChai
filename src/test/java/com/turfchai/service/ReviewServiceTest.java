@@ -79,7 +79,7 @@ public class ReviewServiceTest {
 
         assertNotNull(saved);
         assertEquals(4, saved.getOverallRating());
-        
+
         verify(venueRepository).save(venue);
         assertEquals(new BigDecimal("4.5"), venue.getRatingAvg());
         assertEquals(2, venue.getReviewCount());

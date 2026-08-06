@@ -1,13 +1,11 @@
 package com.turfchai.repository;
 
 import com.turfchai.model.User;
-import com.turfchai.model.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 
 /**
  * Aggregation queries supporting admin analytics endpoints.
@@ -29,8 +27,8 @@ public interface AnalyticsRepository extends JpaRepository<User, Long> {
      * Used for daily / weekly new-registration counts.
      */
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :from AND u.createdAt < :to")
-    long countNewUsersInPeriod(@Param("from") ZonedDateTime from,
-                               @Param("to") ZonedDateTime to);
+    long countNewUsersInPeriod(@Param("from") OffsetDateTime from,
+            @Param("to") OffsetDateTime to);
 
     /** Active users: status = 'ACTIVE' (or 'active') and not suspended. */
     @Query("SELECT COUNT(u) FROM User u WHERE UPPER(u.status) = 'ACTIVE' AND u.isSuspended = false")

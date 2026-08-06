@@ -1,0 +1,151 @@
+/* ── Profile hero ── */
+.ps-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 22px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Brand wash behind the avatar row */
+.ps-hero-banner {
+  height: 92px;
+  background:
+    radial-gradient(120% 160% at 12% 0%, var(--brand-soft) 0%, transparent 60%),
+    linear-gradient(120deg, var(--brand-600) 0%, var(--brand) 55%, var(--brand-700) 100%);
+  opacity: 0.9;
+}
+[data-theme='dark'] .ps-hero-banner { opacity: 0.55; }
+
+.ps-hero-body {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 0 22px 20px;
+  margin-top: -34px;
+  flex-wrap: wrap;
+}
+
+/* Avatar sits in a conic completion ring */
+.ps-ring {
+  --pct: 0;
+  flex: none;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--brand) calc(var(--pct) * 1%), var(--surface-3) 0);
+  box-shadow: 0 6px 22px rgba(10, 60, 38, 0.28);
+}
+.ps-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--brand-600);
+  background: var(--surface);
+  border: 3px solid var(--surface);
+}
+[data-theme='dark'] .ps-avatar { color: var(--brand); }
+
+.ps-hero-text { min-width: 0; flex: 1; padding-bottom: 4px; }
+.ps-hero-text h1 {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ps-hero-text p { margin: 3px 0 0; font-size: 13px; color: var(--text-3); }
+
+.ps-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.ps-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--brand-600);
+  background: var(--brand-soft);
+  text-transform: capitalize;
+}
+[data-theme='dark'] .ps-tag { color: var(--brand); }
+.ps-tag.muted { color: var(--text-3); background: var(--surface-3); }
+
+/* Completion strip under the hero */
+.ps-progress { padding: 0 22px 20px; }
+.ps-progress-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 7px;
+}
+.ps-progress-top b { color: var(--text); font-size: 13px; }
+.ps-progress-bar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.ps-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--brand-600));
+  transition: width 0.5s ease;
+}
+.ps-missing { margin: 8px 0 0; font-size: 12px; color: var(--text-3); line-height: 1.55; }
+
+/* ── Form ── */
+.ps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+@media (max-width: 620px) { .ps-grid { grid-template-columns: 1fr; } }
+
+.ps-legend {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: -6px 0 14px;
+  line-height: 1.55;
+}
+
+.ps-bio { min-height: 92px; resize: vertical; line-height: 1.55; }
+.ps-count {
+  display: block;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Sticky save bar ── */
+.ps-savebar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+}
+[data-theme='dark'] .ps-savebar { box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5); }
+.ps-savebar-note { font-size: 12.5px; font-weight: 600; color: var(--text-2); margin-right: auto; }
+.ps-savebar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-progress-bar i { transition: none; }
+}

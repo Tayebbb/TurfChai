@@ -10,7 +10,7 @@ import { Photo } from '@/components/ui/Photo';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { searchVenues, toExploreCard } from '@/api/venues';
 import { getSavedVenues, toggleSavedVenue } from '@/api/players';
-import { exploreMapPins, exploreVenues as exploreVenuesFallback } from '@/data/venues';
+import { exploreVenues as exploreVenuesFallback } from '@/data/venues';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useFilterChips } from '@/hooks/useFilterChips';
@@ -436,21 +436,16 @@ export default function ExplorePage() {
               </Suspense>
             </div>
           ) : (
-            <div
-              className="mapbox photo map"
-              role="img"
-              aria-label="Map of Dhanmondi area showing venue prices"
-            >
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Dhanmondi · map view</span>
-              {exploreMapPins.map((pin) => (
-                <span
-                  key={pin.id}
-                  className={pin.hot ? 'mappin hot' : 'mappin'}
-                  style={{ top: pin.top, left: pin.left }}
-                >
-                  {pin.price}
+            <div className="mapbox photo map map-unavailable" role="status">
+              {search.loading ? (
+                <span>Loading map…</span>
+              ) : (
+                <span>
+                  {search.error
+                    ? 'Map unavailable — venue locations could not be loaded.'
+                    : 'No venues to show on the map for these filters.'}
                 </span>
-              ))}
+              )}
             </div>
           )}
         </div>

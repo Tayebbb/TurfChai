@@ -34,6 +34,14 @@ public class BookingService {
      * Acquires a 5-minute hold on a slot. The row is locked with
      * PESSIMISTIC_WRITE so concurrent hold attempts serialize on the DB row.
      * An expired hold left behind by a previous user can be re-acquired.
+     * <p>
+     * Re-entrant for the caller's own active hold: a second call from the
+     * same user before it expires refreshes the 5-minute window instead of
+     * failing. This is the common case in practice — a duplicate mount
+     * effect (React StrictMode double-invokes effects in dev), a retried
+     * request, or the user re-opening checkout for the same slot — not just
+     * a contrived edge case, so it must succeed rather than 409.
+     * </p>
      */
     @Transactional
     public OffsetDateTime holdSlot(Long userId, Long slotId) {
@@ -44,8 +52,12 @@ public class BookingService {
         boolean expiredHold = slot.getStatus() == SlotStatus.HELD
                 && slot.getHoldExpiresAt() != null
                 && slot.getHoldExpiresAt().isBefore(now);
+        boolean ownActiveHold = slot.getStatus() == SlotStatus.HELD
+                && userId != null
+                && userId.equals(slot.getHeldByUserId())
+                && !expiredHold;
 
-        if (slot.getStatus() == SlotStatus.AVAILABLE || expiredHold) {
+        if (slot.getStatus() == SlotStatus.AVAILABLE || expiredHold || ownActiveHold) {
             OffsetDateTime heldUntil = now.plusMinutes(HOLD_DURATION_MINUTES);
             slot.setStatus(SlotStatus.HELD);
             slot.setHeldByUserId(userId);
@@ -80,6 +92,13 @@ public class BookingService {
                 .slot(slot)
                 .userId(userId)
                 .status(BookingStatus.CONFIRMED)
+                .venueId(slot.getVenueId())
+                .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
+                .bookingDate(slot.getSlotDate())
+                .startTime(slot.getStartTime())
+                .endTime(slot.getEndTime())
+                .grossAmount(slot.getPrice())
+                .netAmount(slot.getPrice())
                 .build();
         return bookingRepository.save(booking);
     }
