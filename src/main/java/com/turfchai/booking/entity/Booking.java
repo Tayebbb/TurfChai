@@ -18,6 +18,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 /**
@@ -48,6 +51,27 @@ public class Booking {
 
     @Column(name = "booker_user_id", nullable = false)
     private Long userId;
+
+    @Column(name = "venue_id", nullable = false)
+    private Long venueId;
+
+    @Column(name = "pitch_id", nullable = false)
+    private Long pitchId;
+
+    @Column(name = "booking_date", nullable = false)
+    private LocalDate bookingDate;
+
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
+
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
+
+    @Column(name = "gross_amount", nullable = false)
+    private BigDecimal grossAmount;
+
+    @Column(name = "net_amount", nullable = false)
+    private BigDecimal netAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
