@@ -231,7 +231,16 @@
 
 .avatar.c {
     background: #FBEEDD;
-    color: #9A6A0A
+    color: #8A5D07
+}
+
+.avatar.brand {
+    background: var(--brand);
+    color: #fff
+}
+
+[data-theme="dark"] .avatar.brand {
+    color: #06130B
 }
 
 .avatar.d {

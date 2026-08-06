@@ -426,7 +426,7 @@ export default function PaymentsPage() {
                       <span
                         className="sport-tag"
                         key={key}
-                        style={{ background: sport.tagBg, color: sport.color }}
+                        style={{ background: sport.tagBg }}
                       >
                         <span className="sport-tag-dot" style={{ background: sport.color }} />
                         {sport.name}
