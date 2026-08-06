@@ -24,7 +24,7 @@ class InMemoryConversationMemoryTest {
             memory.append("s1", ChatMessage.user("m" + i));
         }
         assertThat(memory.history("s1"))
-                .extracting(ChatMessage::content)
+                .extracting(message -> message.content())
                 .containsExactly("m3", "m4", "m5");
     }
 

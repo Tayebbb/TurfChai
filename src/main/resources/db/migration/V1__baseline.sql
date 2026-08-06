@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     bio                 TEXT,
 
     -- Reliability & moderation
-    reliability_score   SMALLINT NOT NULL DEFAULT 100
+    reliability_score   INTEGER NOT NULL DEFAULT 100
                         CHECK (reliability_score BETWEEN 0 AND 100),
     games_attended      INTEGER NOT NULL DEFAULT 0,
     games_no_show       INTEGER NOT NULL DEFAULT 0,

@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
+import { QrCode } from '@/components/common/QrCode';
 import { Alert } from '@/components/ui/Alert';
 import { Switch } from '@/components/forms/Toggles';
 import { fridayNightRoster } from '@/data/games';
 import { useToast } from '@/hooks/useToast';
 import { currentPlayer } from '@/data/users';
 import { paths } from '@/routes/paths';
+
+const TICKET_CODE = 'OG-7734-RK';
 
 const TICKET_FACTS = [
   { id: 'tonight', label: 'TONIGHT', value: <b className="num">9:00–10:30 PM</b> },
@@ -17,6 +20,8 @@ const TICKET_FACTS = [
 export default function TicketPage() {
   const { showToast } = useToast();
   const [reminder, setReminder] = useState(true);
+
+  const ticketUrl = `${window.location.origin}${paths.solo.ticket}?code=${TICKET_CODE}`;
 
   return (
     <>
@@ -45,9 +50,9 @@ export default function TicketPage() {
             <div className="muted small">Kick Off Arena · Pitch 2 · Dhanmondi 27</div>
           </div>
           <div className="center" style={{ padding: 18 }}>
-            <div className="qr" role="img" aria-label="Match ticket QR code" />
+            <QrCode value={ticketUrl} label={`Match ticket QR code for ${TICKET_CODE}`} />
             <b className="num" style={{ fontSize: 18, letterSpacing: '.08em', display: 'block', marginTop: 10 }}>
-              OG-7734-RK
+              {TICKET_CODE}
             </b>
           </div>
           <div className="perf" />
@@ -102,8 +107,8 @@ export default function TicketPage() {
                 {player.initials}
               </span>
             ))}
-            <span className="avatar" style={{ background: 'var(--brand)', color: '#fff' }}>
-              {currentPlayer.initials}
+            <span className="avatar brand">
+              {currentPlayer?.initials ?? '??'}
             </span>
           </div>
           <p className="subtle tiny" style={{ margin: '8px 0 0' }}>

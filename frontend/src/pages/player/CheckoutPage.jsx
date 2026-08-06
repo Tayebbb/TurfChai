@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { Photo } from '@/components/ui/Photo';
-import { fridayBooking } from '@/data/bookings';
+import { holdSlot, createBooking } from '@/api/bookings';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -125,12 +125,112 @@ const POLICY = [
   },
 ];
 
+const secondsUntil = (heldUntil) =>
+  Math.max(0, Math.round((new Date(heldUntil).getTime() - Date.now()) / 1000));
+
 export default function CheckoutPage() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const slotId = searchParams.get('slotId');
+
   const [option, setOption] = useState('full');
   const [method, setMethod] = useState('bkash');
   const [understood, setUnderstood] = useState(true);
-  const { label: lockLabel } = useCountdown(293);
+  const [hold, setHold] = useState(() =>
+    slotId ? { state: 'holding', heldUntil: null, message: '' } : { state: 'idle', heldUntil: null, message: '' },
+  );
+  const [lockSeconds, setLockSeconds] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  const acquireHold = useCallback(async () => {
+    try {
+      const result = await holdSlot(slotId);
+      setHold({ state: 'held', heldUntil: result.heldUntil, message: '' });
+      setLockSeconds(secondsUntil(result.heldUntil));
+      return true;
+    } catch (error) {
+      const taken = error.status === 409;
+      setHold({
+        state: 'error',
+        heldUntil: null,
+        message: taken
+          ? 'This slot was just taken by someone else. Please choose another time.'
+          : error.message || 'Could not lock this slot. Please try again.',
+      });
+      return false;
+    }
+  }, [slotId]);
+
+  const rehold = async () => {
+    setHold({ state: 'holding', heldUntil: null, message: '' });
+    return acquireHold();
+  };
+
+  // Guards the one-shot hold-on-mount against firing twice for the same
+  // slotId — React StrictMode double-invokes effects in dev, and without
+  // this the second call would race the first hold-slot request (the
+  // backend now tolerates a duplicate hold from the same user, but there's
+  // no reason to send it twice).
+  const holdRequestedForRef = useRef(null);
+  useEffect(() => {
+    if (slotId && holdRequestedForRef.current !== slotId) {
+      holdRequestedForRef.current = slotId;
+      acquireHold();
+    }
+  }, [slotId, acquireHold]);
+
+  const { label: lockLabel } = useCountdown(lockSeconds, {
+    onExpire:
+      hold.state === 'held'
+        ? () => setHold({ state: 'expired', heldUntil: null, message: 'Your 5-minute hold expired.' })
+        : undefined,
+  });
+
+  const onPay = async () => {
+    if (!slotId || busy || hold.state !== 'held') return;
+    setBusy(true);
+    try {
+      const booking = await createBooking(slotId);
+      navigate(`${paths.player.bookingSuccess}?bookingId=${booking.id}`);
+    } catch (error) {
+      if (error.status === 409) {
+        showToast('Slot was taken while you were paying — locking it again');
+        const reheld = await rehold();
+        if (!reheld) showToast('Slot is no longer available — please pick another time slot');
+      } else {
+        showToast(error.message || 'Payment could not be completed — try again');
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const lockText =
+    hold.state === 'holding'
+      ? 'Locking your slot…'
+      : hold.state === 'held'
+        ? lockLabel
+        : hold.state === 'expired'
+          ? 'Hold expired'
+          : 'Slot unavailable';
+
+  if (!slotId) {
+    return (
+      <>
+        <PageTitle title="Checkout" />
+        <main className="wrap" id="main" style={{ paddingTop: 60, maxWidth: 640, paddingBottom: 60 }}>
+          <h1 style={{ fontSize: 24, marginBottom: 6 }}>No slot selected</h1>
+          <p className="subtle">
+            Pick a venue and time slot first, then come back here to confirm your booking.
+          </p>
+          <Link className="btn btn-primary" to={paths.player.explore}>
+            Browse venues
+          </Link>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -168,9 +268,28 @@ export default function CheckoutPage() {
               <rect x="3" y="11" width="18" height="11" rx="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            Slot locked &middot; <span>{lockLabel}</span>
+            Slot locked &middot; <span>{lockText}</span>
           </div>
         </div>
+
+        {hold.state === 'error' || hold.state === 'expired' ? (
+          <div className="alert warn" role="status" style={{ marginBottom: 20 }}>
+            <span className="ico">⚠️</span>
+            <div>
+              <b>{hold.state === 'expired' ? 'Hold expired' : 'Slot unavailable'}</b>
+              {hold.message}
+              <Button
+                size="sm"
+                variant="secondary"
+                style={{ marginLeft: 10 }}
+                onClick={rehold}
+                disabled={hold.state === 'holding'}
+              >
+                Re-lock slot
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         <h1 style={{ fontSize: 26, margin: '10px 0 4px' }}>Confirm and pay</h1>
         <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28 }}>
@@ -295,7 +414,7 @@ export default function CheckoutPage() {
                 <Photo />
               </div>
               <div>
-                <div className="co-venue-name">{fridayBooking.venue}</div>
+                <div className="co-venue-name">Kick Off Arena</div>
                 <div className="co-venue-sub">Pitch 2 &middot; 7-a-side &middot; Dhanmondi 27</div>
               </div>
             </div>
@@ -303,15 +422,15 @@ export default function CheckoutPage() {
             <div className="co-detail">
               <div className="co-detail-row">
                 <span className="co-detail-label">Date</span>
-                <span className="co-detail-value">{fridayBooking.date}</span>
+                <span className="co-detail-value">Fri 8 Aug</span>
               </div>
               <div className="co-detail-row">
                 <span className="co-detail-label">Play time</span>
-                <span className="co-detail-value num">{fridayBooking.playTimeSpaced}</span>
+                <span className="co-detail-value num">7:30 – 9:00 PM</span>
               </div>
               <div className="co-detail-row">
                 <span className="co-detail-label">Arrive by</span>
-                <span className="co-detail-value">{fridayBooking.arriveBy}</span>
+                <span className="co-detail-value">7:20 PM</span>
               </div>
             </div>
 
@@ -348,13 +467,21 @@ export default function CheckoutPage() {
 
             <div className="pricerow total">
               <span className="pr-label">Due now</span>
-              <span className="pr-val num">{fridayBooking.total}</span>
+              <span className="pr-val num">৳2,550</span>
             </div>
             <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 16px' }}>
               Remaining balance after payment: ৳0
             </p>
 
-            <Button variant="primary" size="lg" block to={paths.player.bookingSuccess} id="pay-cta">
+            <Button
+              variant="primary"
+              size="lg"
+              block
+              id="pay-cta"
+              onClick={onPay}
+              loading={busy}
+              disabled={hold.state !== 'held' || !understood}
+            >
               Pay ৳2,550 with bKash
             </Button>
             <Button

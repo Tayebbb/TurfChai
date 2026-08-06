@@ -8,12 +8,12 @@ export const PLAYER_NAV_LINKS = [
   { to: paths.player.rewards, label: 'Rewards' },
 ];
 
-/** Mobile bottom bar shown under 820px for player/solo/host. */
+/** Mobile bottom bar shown under 820px for player/solo/host. `icon` is an `Icon` name. */
 export const PLAYER_BOTTOM_NAV = [
-  { to: paths.player.home, label: 'Home', icon: '🏠', end: true },
-  { to: paths.player.explore, label: 'Explore', icon: '🔍' },
-  { to: paths.solo.openGames, label: 'Open Games', icon: '⚽' },
-  { to: paths.player.bookings, label: 'Bookings', icon: '📅' },
+  { to: paths.player.home, label: 'Home', icon: 'home', end: true },
+  { to: paths.player.explore, label: 'Explore', icon: 'search' },
+  { to: paths.solo.openGames, label: 'Open Games', icon: 'ball' },
+  { to: paths.player.bookings, label: 'Bookings', icon: 'calendar' },
 ];
 
 /** Marketing topbar on the public landing page. */

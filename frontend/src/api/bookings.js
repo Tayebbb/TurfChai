@@ -1,0 +1,35 @@
+import { api } from './client';
+
+/**
+ * Booking engine endpoints. All routes live under /api/v1/bookings/** and
+ * require a bearer token, which the shared client attaches automatically.
+ */
+
+/**
+ * GET /api/v1/venues/{venueId}/slots?date=YYYY-MM-DD — a venue's bookable
+ * slots for one day. Public (no auth) — same as venue browsing — so a
+ * player can see availability before logging in.
+ */
+export function getVenueSlots(venueId, date) {
+  return api(`/venues/${encodeURIComponent(venueId)}/slots?date=${encodeURIComponent(date)}`, { token: false });
+}
+
+/** POST /api/v1/bookings/hold-slot — acquires a 5-minute hold. */
+export function holdSlot(slotId) {
+  return api('/bookings/hold-slot', { method: 'POST', body: { slotId } });
+}
+
+/** POST /api/v1/bookings — confirms the caller's hold into a booking. */
+export function createBooking(slotId) {
+  return api('/bookings', { method: 'POST', body: { slotId } });
+}
+
+/** GET /api/v1/bookings/{id} — booking detail for the owner/admin. */
+export function getBooking(id) {
+  return api(`/bookings/${encodeURIComponent(id)}`);
+}
+
+/** POST /api/v1/bookings/{id}/cancel — cancels a booking the caller owns. */
+export function cancelBooking(id) {
+  return api(`/bookings/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
+}

@@ -1,41 +1,20 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { PageTitle } from '@/components/common/PageTitle';
+import { apiGet } from '@/api/client';
 import { paths } from '@/routes/paths';
 import './UserGrowthPage.css';
 
-const KPIS = [
-  {
-    id: 'total',
-    label: 'TOTAL REGISTERED',
-    value: '41,270',
-    valueColor: undefined,
-    note: 'Cumulative users',
-  },
-  {
-    id: 'new',
-    label: 'NEW REGISTRATIONS',
-    value: '+248 Today',
-    valueColor: 'var(--brand-600)',
-    note: 'Daily growth velocity',
-  },
-  {
-    id: 'active',
-    label: 'ACTIVE RATIO',
-    value: '89.4%',
-    valueColor: 'var(--mint)',
-    note: '36,890 active MAU',
-  },
-  {
-    id: 'retention',
-    label: 'RETENTION RATE',
-    value: '84.2%',
-    valueColor: 'var(--info)',
-    note: '30-day user return',
-  },
+// ── Static fallback (shown while loading or on network error) ──────────────
+const FALLBACK_KPIS = [
+  { id: 'total',     label: 'TOTAL REGISTERED',   value: '41,270',    valueColor: undefined,                note: 'Cumulative users' },
+  { id: 'new',       label: 'NEW REGISTRATIONS',   value: '+248 Today', valueColor: 'var(--brand-600)',       note: 'Daily growth velocity' },
+  { id: 'active',    label: 'ACTIVE RATIO',        value: '89.4%',     valueColor: 'var(--mint)',            note: '36,890 active MAU' },
+  { id: 'retention', label: 'RETENTION RATE',      value: '84.2%',     valueColor: 'var(--info)',            note: '30-day user return' },
 ];
 
-const SIGNUP_DATA = {
+const FALLBACK_SIGNUP_DATA = {
   labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   datasets: [
     {
@@ -53,6 +32,22 @@ const SIGNUP_DATA = {
   ],
 };
 
+const CHANNELS = [
+  { id: 'organic',  channel: 'Organic Search',       users: '12,450', conversion: '4.8%', cac: '৳0' },
+  { id: 'appstore', channel: 'App Store Referral',    users: '10,820', conversion: '6.2%', cac: '৳12' },
+  { id: 'meta',     channel: 'Meta/Facebook Ads',     users: '9,240',  conversion: '2.9%', cac: '৳85' },
+  { id: 'tiktok',   channel: 'TikTok campaigns',      users: '5,410',  conversion: '3.4%', cac: '৳60' },
+  { id: 'invites',  channel: 'Direct Invites',         users: '3,350',  conversion: '8.5%', cac: '৳5' },
+];
+
+const SIGNUP_STREAM = [
+  { id: 'U-88902', name: 'Riazul Islam',      role: 'Player', roleTone: 'green', area: 'Dhanmondi',    referral: 'Meta Ads',        joined: '2 mins ago' },
+  { id: 'U-88901', name: 'Asif Abdullah',     role: 'Player', roleTone: 'green', area: 'Mohammadpur',  referral: 'Organic Search',  joined: '14 mins ago' },
+  { id: 'U-88898', name: 'Sheikh Turf Arena', role: 'Host',   roleTone: 'blue',  area: 'Mirpur 11',    referral: 'Direct Referral', joined: '38 mins ago' },
+  { id: 'U-88897', name: 'Zamil Rahman',      role: 'Player', roleTone: 'green', area: 'Uttara',       referral: 'Direct Invite',   joined: '1 hour ago' },
+  { id: 'U-88894', name: 'Tamim Anwar',       role: 'Player', roleTone: 'green', area: 'Khilgaon',     referral: 'TikTok Campaign', joined: '2 hours ago' },
+];
+
 const SIGNUP_OPTIONS = {
   plugins: { legend: { display: false } },
   scales: {
@@ -61,71 +56,94 @@ const SIGNUP_OPTIONS = {
   },
 };
 
-const CHANNELS = [
-  { id: 'organic', channel: 'Organic Search', users: '12,450', conversion: '4.8%', cac: '৳0' },
-  { id: 'appstore', channel: 'App Store Referral', users: '10,820', conversion: '6.2%', cac: '৳12' },
-  { id: 'meta', channel: 'Meta/Facebook Ads', users: '9,240', conversion: '2.9%', cac: '৳85' },
-  { id: 'tiktok', channel: 'TikTok campaigns', users: '5,410', conversion: '3.4%', cac: '৳60' },
-  { id: 'invites', channel: 'Direct Invites', users: '3,350', conversion: '8.5%', cac: '৳5' },
-];
+const BARE_TABLE_WRAP = { padding: 0, borderRadius: 12, background: 'transparent', border: 0, boxShadow: 'none' };
 
-const SIGNUP_STREAM = [
-  {
-    id: 'U-88902',
-    name: 'Riazul Islam',
-    role: 'Player',
-    roleTone: 'green',
-    area: 'Dhanmondi',
-    referral: 'Meta Ads',
-    joined: '2 mins ago',
-  },
-  {
-    id: 'U-88901',
-    name: 'Asif Abdullah',
-    role: 'Player',
-    roleTone: 'green',
-    area: 'Mohammadpur',
-    referral: 'Organic Search',
-    joined: '14 mins ago',
-  },
-  {
-    id: 'U-88898',
-    name: 'Sheikh Turf Arena',
-    role: 'Host',
-    roleTone: 'blue',
-    area: 'Mirpur 11',
-    referral: 'Direct Referral',
-    joined: '38 mins ago',
-  },
-  {
-    id: 'U-88897',
-    name: 'Zamil Rahman',
-    role: 'Player',
-    roleTone: 'green',
-    area: 'Uttara',
-    referral: 'Direct Invite',
-    joined: '1 hour ago',
-  },
-  {
-    id: 'U-88894',
-    name: 'Tamim Anwar',
-    role: 'Player',
-    roleTone: 'green',
-    area: 'Khilgaon',
-    referral: 'TikTok Campaign',
-    joined: '2 hours ago',
-  },
-];
-
-const BARE_TABLE_WRAP = {
-  padding: 0,
-  borderRadius: 12,
-  background: 'transparent',
-  border: 0,
-  boxShadow: 'none',
-};
+/**
+ * Formats a large number for KPI cards (e.g. 41270 → "41,270").
+ */
+function fmt(n) {
+  return Number(n).toLocaleString('en-IN');
+}
 
 export default function UserGrowthPage() {
+  const [kpis, setKpis] = useState(FALLBACK_KPIS);
+  const [signupData, setSignupData] = useState(FALLBACK_SIGNUP_DATA);
+  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchGrowth() {
+      try {
+        const json = await apiGet('/api/v1/admin/analytics/growth');
+        if (!json.success || !json.data) return;
+
+        if (cancelled) return;
+
+        const d = json.data;
+
+        setKpis([
+          {
+            id: 'total',
+            label: 'TOTAL REGISTERED',
+            value: fmt(d.totalUsers),
+            valueColor: undefined,
+            note: 'Cumulative users',
+          },
+          {
+            id: 'new',
+            label: 'NEW REGISTRATIONS',
+            value: `+${fmt(d.newUsersToday)} Today`,
+            valueColor: 'var(--brand-600)',
+            note: 'Daily growth velocity',
+          },
+          {
+            id: 'active',
+            label: 'ACTIVE RATIO',
+            value: `${d.activeRatio.toFixed(1)}%`,
+            valueColor: 'var(--mint)',
+            note: `${fmt(Math.round(d.totalUsers * d.activeRatio / 100))} active MAU`,
+          },
+          {
+            id: 'retention',
+            label: 'RETENTION RATE',
+            value: `${d.retentionRate.toFixed(1)}%`,
+            valueColor: 'var(--info)',
+            note: '30-day user return',
+          },
+        ]);
+
+        setSignupData({
+          labels: d.signupLabels,
+          datasets: [
+            {
+              data: d.signupCounts,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59,130,246,0.35)',
+              borderWidth: 3.5,
+              tension: 0.4,
+              fill: true,
+              pointRadius: 4.5,
+              pointBackgroundColor: '#ffffff',
+              pointBorderColor: '#3b82f6',
+              pointBorderWidth: 2.5,
+            },
+          ],
+        });
+
+        setIsLive(true);
+      } catch {
+        // Network error — fallback data remains in place
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchGrowth();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <>
       <PageTitle title="User Growth & Acquisition" />
@@ -140,9 +158,7 @@ export default function UserGrowthPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              User Growth &amp; Acquisition
-            </h1>
+            <h1>User Growth &amp; Acquisition</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Detailed metrics for signup growth and acquisition channels
@@ -152,7 +168,7 @@ export default function UserGrowthPage() {
 
       {/* KPI Grid */}
       <div className="kpi-grid">
-        {KPIS.map((kpi) => (
+        {kpis.map((kpi) => (
           <div className="stat-card-simple" key={kpi.id}>
             <span
               className="subtle tiny"
@@ -170,7 +186,7 @@ export default function UserGrowthPage() {
                 color: kpi.valueColor,
               }}
             >
-              {kpi.value}
+              {loading ? '—' : kpi.value}
             </b>
             <span className="tiny subtle" style={{ color: 'var(--text-3)' }}>
               {kpi.note}
@@ -180,6 +196,7 @@ export default function UserGrowthPage() {
       </div>
 
       <div
+        className="admin-stack-mobile"
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
@@ -187,7 +204,7 @@ export default function UserGrowthPage() {
           marginBottom: 28,
         }}
       >
-        {/* Visual Acquisition Chart Card */}
+        {/* Signup Growth Chart */}
         <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
           <div className="between" style={{ marginBottom: 16 }}>
             <div>
@@ -196,11 +213,13 @@ export default function UserGrowthPage() {
                 Daily registration registrations over past week
               </span>
             </div>
-            <span className="badge blue nodot">Live Analytics</span>
+            <span className={`badge nodot ${isLive ? 'blue' : 'yellow'}`}>
+              {isLive ? 'Live Analytics' : 'Demo Data'}
+            </span>
           </div>
           <ChartCanvas
             type="line"
-            data={SIGNUP_DATA}
+            data={signupData}
             options={SIGNUP_OPTIONS}
             height={230}
             label="Daily signup growth over the past week"
@@ -225,9 +244,7 @@ export default function UserGrowthPage() {
               <tbody>
                 {CHANNELS.map((row) => (
                   <tr key={row.id}>
-                    <td>
-                      <b>{row.channel}</b>
-                    </td>
+                    <td><b>{row.channel}</b></td>
                     <td className="num font-semibold">{row.users}</td>
                     <td className="num font-semibold">{row.conversion}</td>
                     <td className="num font-semibold">{row.cac}</td>
@@ -239,7 +256,7 @@ export default function UserGrowthPage() {
         </div>
       </div>
 
-      {/* Recent User Signups Log */}
+      {/* Real-Time Registration Stream */}
       <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800 }}>
           Real-Time Registration Stream
@@ -259,18 +276,14 @@ export default function UserGrowthPage() {
             <tbody>
               {SIGNUP_STREAM.map((row) => (
                 <tr key={row.id}>
-                  <td className="num">
-                    <b>{row.id}</b>
-                  </td>
+                  <td className="num"><b>{row.id}</b></td>
                   <td>{row.name}</td>
                   <td>
                     <span className={`badge ${row.roleTone} nodot`}>{row.role}</span>
                   </td>
                   <td>{row.area}</td>
                   <td>{row.referral}</td>
-                  <td style={{ textAlign: 'right' }} className="num">
-                    {row.joined}
-                  </td>
+                  <td style={{ textAlign: 'right' }} className="num">{row.joined}</td>
                 </tr>
               ))}
             </tbody>

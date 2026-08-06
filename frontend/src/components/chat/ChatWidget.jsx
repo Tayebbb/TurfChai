@@ -1,0 +1,312 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { forgetSession, getSessionId, resetSession, sendMessage } from '@/api/assistant';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { RichText } from './RichText';
+import './ChatWidget.css';
+
+const GREETING = {
+  id: 'greeting',
+  role: 'assistant',
+  text: 'Salam! I’m **TurfBondhu**, your TurfChai assistant.\nAsk me to find a turf, check prices, or explain a booking policy.',
+};
+
+const SUGGESTIONS = [
+  'Find a 7-a-side turf in Dhanmondi',
+  'What’s the cheapest slot tonight?',
+  'What’s the cancellation policy?',
+];
+
+/** Distinguishes "not configured" from "rate limited" from "offline". */
+function errorMessage(error) {
+  const status = error?.status;
+  if (status === 429) return 'You’re sending messages a bit fast — give it a moment.';
+  if (status === 503) {
+    return 'The assistant isn’t available right now. If you’re running this locally, check that OPENROUTER_API_KEY or HF_API_KEY is set in your .env file.';
+  }
+  if (status >= 400 && status < 500 && error?.message) return error.message;
+  if (status >= 500) return 'The assistant hit an error handling that. Try rephrasing your question.';
+  return 'Couldn’t reach the assistant — check your connection and that the backend is running.';
+}
+
+const FootballIcon = () => (
+  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+    <circle cx="12" cy="12" r="9.4" fill="currentColor" />
+    <g fill="none" stroke="#0b3b26" strokeWidth="1.35" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M12 8.9l2.95 2.14-1.13 3.47h-3.64L9.05 11.04 12 8.9z" fill="#0b3b26" />
+      <path d="M12 8.9V2.6M14.95 11.04l5.99-1.94M13.82 14.51l3.71 5.09M10.18 14.51L6.47 19.6M9.05 11.04L3.06 9.1" />
+    </g>
+  </svg>
+);
+
+const MicIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="2" width="6" height="11" rx="3" />
+    <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8" />
+  </svg>
+);
+
+export function ChatWidget() {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([GREETING]);
+  const [draft, setDraft] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState(null);
+
+  const panelRef = useRef(null);
+  const listRef = useRef(null);
+  const inputRef = useRef(null);
+  const launcherRef = useRef(null);
+  // text typed before dictation started, so interim results replace only the spoken part
+  const dictationBaseRef = useRef('');
+
+  const onTranscript = useCallback((transcript, isFinal) => {
+    const base = dictationBaseRef.current;
+    const next = base ? `${base} ${transcript}` : transcript;
+    setDraft(next.slice(0, 2000));
+    if (isFinal) {
+      dictationBaseRef.current = next;
+      inputRef.current?.focus();
+    }
+  }, []);
+
+  const speech = useSpeechRecognition({ onResult: onTranscript });
+
+  const toggleDictation = () => {
+    if (speech.listening) {
+      speech.stop();
+      return;
+    }
+    dictationBaseRef.current = draft.trim();
+    speech.start();
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+    else launcherRef.current?.focus({ preventScroll: true });
+  }, [open]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [messages, pending]);
+
+  const ask = useCallback(
+    async (text) => {
+      const question = text.trim();
+      if (!question || pending) return;
+
+      setError(null);
+      setDraft('');
+      setMessages((current) => [
+        ...current,
+        { id: `u-${Date.now()}`, role: 'user', text: question },
+      ]);
+      setPending(true);
+
+      try {
+        const response = await sendMessage(question, getSessionId());
+        setMessages((current) => [
+          ...current,
+          {
+            id: `a-${Date.now()}`,
+            role: 'assistant',
+            text: response.reply,
+            tools: response.toolsUsed ?? [],
+          },
+        ]);
+      } catch (caught) {
+        setError(errorMessage(caught));
+      } finally {
+        setPending(false);
+      }
+    },
+    [pending],
+  );
+
+  const startOver = async () => {
+    const sessionId = getSessionId();
+    setMessages([GREETING]);
+    setError(null);
+    try {
+      await resetSession(sessionId);
+    } catch {
+      /* clearing locally is enough for the user */
+    }
+    forgetSession();
+  };
+
+  return (
+    <>
+      <button
+        ref={launcherRef}
+        type="button"
+        className={`chat-launcher${open ? ' is-open' : ''}`}
+        aria-expanded={open}
+        aria-controls="chat-panel"
+        aria-label={open ? 'Close the TurfBondhu assistant' : 'Open the TurfBondhu assistant'}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="chat-launcher-glow" aria-hidden="true" />
+        {open ? (
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path
+              d="M6 6l12 12M18 6L6 18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          </svg>
+        ) : (
+          <FootballIcon />
+        )}
+      </button>
+
+      {open ? (
+        <div
+          id="chat-panel"
+          className="chat-panel"
+          role="dialog"
+          aria-modal="false"
+          aria-label="TurfBondhu assistant"
+          ref={panelRef}
+        >
+          <header className="chat-head">
+            <span className="chat-avatar" aria-hidden="true">
+              <FootballIcon />
+            </span>
+            <div className="chat-head-text">
+              <b>TurfBondhu</b>
+              <span>Booking assistant</span>
+            </div>
+            <button type="button" className="chat-ghost" onClick={startOver}>
+              New chat
+            </button>
+            <button
+              type="button"
+              className="chat-icon-btn"
+              aria-label="Close assistant"
+              onClick={() => setOpen(false)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path
+                  d="M6 6l12 12M18 6L6 18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </header>
+
+          <div className="chat-log" ref={listRef} role="log" aria-live="polite" aria-atomic="false">
+            {messages.map((message) => (
+              <div key={message.id} className={`chat-row ${message.role}`}>
+                <div className="chat-bubble">
+                  <RichText text={message.text} />
+                  {message.tools?.length ? (
+                    <div className="chat-tools">
+                      {message.tools.map((tool) => (
+                        <span key={tool} className="chat-tool">
+                          {tool.replaceAll('_', ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+
+            {pending ? (
+              <div className="chat-row assistant">
+                <div className="chat-bubble chat-typing" aria-label="Assistant is typing">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="chat-error" role="alert">
+                {error}
+              </div>
+            ) : null}
+          </div>
+
+          {messages.length === 1 && !pending ? (
+            <div className="chat-suggestions">
+              {SUGGESTIONS.map((suggestion) => (
+                <button key={suggestion} type="button" onClick={() => ask(suggestion)}>
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {speech.listening || speech.error ? (
+            <p className={`chat-mic-status${speech.error ? ' is-error' : ''}`} role="status">
+              {speech.listening ? 'Listening… speak now' : speech.error}
+            </p>
+          ) : null}
+
+          <form
+            className="chat-composer"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (speech.listening) speech.stop();
+              ask(draft);
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={draft}
+              maxLength={2000}
+              placeholder={speech.listening ? 'Listening… speak now' : 'Ask about turfs, prices, bookings…'}
+              aria-label="Message the assistant"
+              onChange={(event) => {
+                dictationBaseRef.current = event.target.value.trim();
+                setDraft(event.target.value);
+              }}
+            />
+            {speech.supported ? (
+              <button
+                type="button"
+                className={`chat-mic${speech.listening ? ' is-listening' : ''}`}
+                aria-pressed={speech.listening}
+                aria-label={speech.listening ? 'Stop dictation' : 'Dictate your message'}
+                title={speech.listening ? 'Stop dictation' : 'Dictate your message'}
+                disabled={pending}
+                onClick={toggleDictation}
+              >
+                <MicIcon />
+              </button>
+            ) : null}
+            <button type="submit" aria-label="Send message" disabled={pending || !draft.trim()}>
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  d="M4 12l16-8-6 8 6 8-16-8z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </form>
+        </div>
+      ) : null}
+    </>
+  );
+}

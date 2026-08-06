@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
+import { QrCode } from "@/components/common/QrCode";
 import { Button } from "@/components/buttons/Button";
+import { apiSend } from "@/api/client";
 import { fridayBooking } from "@/data/bookings";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
@@ -16,6 +19,20 @@ const TEAM_AVATARS = [
 
 export default function MatchdayPage() {
   const { showToast } = useToast();
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+
+  // Scanning the ticket opens this booking, so any phone camera is a valid reader.
+  const ticketUrl = `${window.location.origin}${paths.player.bookingDetail(fridayBooking.ref)}`;
+
+  const handleCheckIn = async () => {
+    try {
+      await apiSend('POST', '/api/v1/matchday/checkin?bookingId=1');
+      setIsCheckedIn(true);
+      showToast("Checked in successfully! 🏅");
+    } catch {
+      showToast("Check-in failed. Please try again.");
+    }
+  };
 
   return (
     <>
@@ -50,10 +67,9 @@ export default function MatchdayPage() {
           </div>
 
           <div className="center" style={{ padding: 20 }}>
-            <div
-              className="qr"
-              role="img"
-              aria-label="Check-in QR code for booking TC-48291"
+            <QrCode
+              value={ticketUrl}
+              label={`Check-in QR code for booking ${fridayBooking.ref}`}
             />
             <b
               className="num"
@@ -86,7 +102,11 @@ export default function MatchdayPage() {
               <div>
                 <span className="tiny subtle">CHECK-IN</span>
                 <br />
-                <span className="badge amber">Not yet</span>
+                {isCheckedIn ? (
+                  <span className="badge green">Checked in</span>
+                ) : (
+                  <span className="badge amber">Not yet</span>
+                )}
               </div>
             </div>
           </div>
@@ -110,6 +130,14 @@ export default function MatchdayPage() {
             📞 Contact venue
           </Button>
         </div>
+
+        {!isCheckedIn && (
+          <div style={{ marginTop: 14 }}>
+            <Button variant="primary" block size="lg" onClick={handleCheckIn}>
+              Simulate Check-In (Test API)
+            </Button>
+          </div>
+        )}
 
         <div className="card" style={{ marginTop: 14 }}>
           <h4>Handover instructions</h4>

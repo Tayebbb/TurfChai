@@ -1,0 +1,53 @@
+/* ---------- Landing page hero (theme-aware) ---------- */
+
+.hero {
+  position: relative;
+  padding: 72px 0 48px;
+  background:
+    radial-gradient(circle at 15% -10%, rgba(53, 197, 127, 0.16), transparent 55%),
+    radial-gradient(circle at 90% 15%, rgba(38, 96, 216, 0.1), transparent 55%),
+    linear-gradient(180deg, var(--brand-soft), var(--bg));
+}
+
+[data-theme="dark"] .hero {
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.16), transparent 30%),
+    linear-gradient(180deg, rgba(10, 16, 24, 0.95), rgba(10, 16, 24, 0.7));
+}
+
+.hero .wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.hero .lede {
+  margin-top: 16px;
+  font-size: 1.05rem;
+  color: var(--text-2);
+  line-height: 1.7;
+}
+
+.hero-links a {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ---------- Venue cards / CTA (theme-aware) ---------- */
+
+.venue-card .price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.cta-band {
+  padding: 36px 24px;
+  text-align: center;
+  background: linear-gradient(135deg, var(--brand-soft), var(--surface));
+}
+
+[data-theme="dark"] .cta-band {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(59, 130, 246, 0.1));
+}
