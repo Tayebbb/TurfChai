@@ -1,5 +1,8 @@
 import { Button } from '@/components/buttons/Button';
+import { Panel } from '@/components/ui/Panel';
 import { paths } from '@/routes/paths';
+import { getNotifications, markAllRead } from '@/api/notifications';
+import { useApi } from '@/hooks/useApi';
 import { DashHeader, ServicePending } from './DashboardKit';
 
 /**
@@ -99,15 +102,53 @@ export function WalletSection() {
 }
 
 export function NotificationsSection() {
+  const { data: notifData, loading, error, reload } = useApi(getNotifications, []);
+  const notificationsList = notifData || [];
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead();
+      reload();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <>
-      <DashHeader title="Notifications" subtitle="Reminders, invitations and announcements." />
-      <ServicePending
-        icon="🔔"
-        title="Notifications aren’t connected yet"
-        description="These are generated from real events — booking confirmations, tournament updates, payment receipts — so nothing is shown until the notification service publishes them."
-        endpoints={['GET /api/v1/notifications', 'POST /api/v1/notifications/read']}
+      <DashHeader 
+        title="Notifications" 
+        subtitle="Reminders, invitations and announcements." 
+        action={notificationsList.some(n => !n.isRead) ? (
+          <button type="button" className="btn btn-tertiary btn-sm" onClick={handleMarkAllRead}>
+            Mark all read
+          </button>
+        ) : null}
       />
+      {loading && <div style={{padding:40}} className="center">Loading notifications...</div>}
+      {error && <div style={{padding:40, color:'var(--danger)'}} className="center">Failed to load notifications</div>}
+      
+      {!loading && !error && notificationsList.length === 0 ? (
+        <ServicePending
+          icon="🔔"
+          title="All caught up!"
+          description="You don't have any notifications right now."
+        />
+      ) : (
+        <div className="stack-sm">
+          {notificationsList.map((item) => (
+            <Panel key={item.id} style={{ opacity: item.isRead ? 0.6 : 1 }}>
+              <b>{item.title}</b>
+              <p className="small muted" style={{ margin: '2px 0 0' }}>
+                {item.body}
+              </p>
+              <span className="tiny subtle">
+                {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+              </span>
+            </Panel>
+          ))}
+        </div>
+      )}
     </>
   );
 }
