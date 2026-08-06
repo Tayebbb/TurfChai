@@ -48,21 +48,21 @@ class AdminAnalyticsServiceTest {
     // ── Growth tests ───────────────────────────────────────────────────────
 
     @Test
-    void getGrowth_returnsSeedData_whenDatabaseIsEmpty() {
+    void getGrowth_returnsZeroData_whenDatabaseIsEmpty() {
         when(analyticsRepository.countTotalUsers()).thenReturn(0L);
 
         GrowthDto dto = analyticsService.getGrowth();
 
         assertNotNull(dto);
-        assertEquals(41_270L, dto.getTotalUsers(),
-                "Seed total should be 41,270");
+        assertEquals(0L, dto.getTotalUsers(),
+                "Seed total should be 0");
         assertEquals(7, dto.getSignupLabels().size(),
                 "Should return 7-day signup series");
         assertEquals(7, dto.getSignupCounts().size());
-        assertTrue(dto.getActiveRatio() > 0, "Seed active ratio should be > 0");
+        assertEquals(0.0, dto.getActiveRatio(), "Seed active ratio should be 0.0");
 
-        // Repository growth queries should NOT be called when below threshold
-        verify(analyticsRepository, never()).countNewUsersInPeriod(any(), any());
+        // Repository growth queries WILL be called now when below threshold
+        verify(analyticsRepository, atLeastOnce()).countNewUsersInPeriod(any(), any());
     }
 
     @Test
@@ -123,15 +123,15 @@ class AdminAnalyticsServiceTest {
     // ── Segments tests ─────────────────────────────────────────────────────
 
     @Test
-    void getSegments_returnsSeedData_whenDatabaseIsEmpty() {
+    void getSegments_returnsZeroData_whenDatabaseIsEmpty() {
         when(analyticsRepository.countTotalUsers()).thenReturn(0L);
 
         SegmentsDto dto = analyticsService.getSegments();
 
         assertNotNull(dto);
-        assertEquals(34_200L, dto.getPlayerCount());
-        assertEquals(4_850L, dto.getHostCount());
-        assertTrue(dto.getAvgLifetimeValueBdt() > 0);
+        assertEquals(0L, dto.getPlayerCount());
+        assertEquals(0L, dto.getHostCount());
+        assertEquals(0L, dto.getAvgLifetimeValueBdt());
     }
 
     @Test
