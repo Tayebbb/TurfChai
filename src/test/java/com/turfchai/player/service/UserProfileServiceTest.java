@@ -85,7 +85,7 @@ class UserProfileServiceTest {
 
         assertThat(service.toggleSavedVenue(DEMO, venue.getSlug())).isTrue();
         List<VenueSummaryDto> saved = service.listSavedVenues(DEMO);
-        assertThat(saved).extracting(VenueSummaryDto::slug).containsExactly("toggle-arena");
+        assertThat(saved).extracting(v -> v.slug()).containsExactly("toggle-arena");
         assertThat(service.isSaved(DEMO, venue.getSlug())).isTrue();
 
         assertThat(service.toggleSavedVenue(DEMO, venue.getSlug())).isFalse();

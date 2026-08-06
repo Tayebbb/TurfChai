@@ -23,7 +23,7 @@ public class WebCorsConfig implements WebMvcConfigurer {
         String[] allowedOrigins = new String[0];
         if (frontendUrl != null && !frontendUrl.isBlank()) {
             allowedOrigins = Arrays.stream(frontendUrl.split(","))
-                    .map(String::trim)
+                    .map(s -> s.trim())
                     .filter(s -> !s.isEmpty())
                     .toArray(String[]::new);
         }
@@ -48,7 +48,7 @@ public class WebCorsConfig implements WebMvcConfigurer {
         String[] configured = new String[0];
         if (frontendUrl != null && !frontendUrl.isBlank()) {
             configured = Arrays.stream(frontendUrl.split(","))
-                    .map(String::trim)
+                    .map(s -> s.trim())
                     .filter(s -> !s.isEmpty())
                     .toArray(String[]::new);
         }
