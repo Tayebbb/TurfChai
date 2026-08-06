@@ -7,7 +7,11 @@ import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.exception.SlotUnavailableException;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
+import com.turfchai.model.User;
+import com.turfchai.model.enums.RoleType;
+import com.turfchai.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +27,7 @@ public class BookingService {
 
     private final SlotRepository slotRepository;
     private final BookingRepository bookingRepository;
+    private final UserRepository userRepository;
 
     /**
      * Acquires a 5-minute hold on a slot. The row is locked with
@@ -83,6 +88,38 @@ public class BookingService {
                 && userId.equals(slot.getHeldByUserId())
                 && slot.getHoldExpiresAt() != null
                 && slot.getHoldExpiresAt().isAfter(OffsetDateTime.now());
+    }
+
+    /**
+     * Cancels a booking and releases its slot back to AVAILABLE. The caller
+     * must be the booking owner or an admin/owner role.
+     */
+    @Transactional
+    public void cancelBooking(Long userId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new SlotUnavailableException("Booking not found with id: " + bookingId));
+
+        boolean isOwner = userId != null && userId.equals(booking.getUserId());
+        if (!isOwner) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new AccessDeniedException("You do not have permission to cancel this booking"));
+            if (!isAdminOrOwner(user.getRole())) {
+                throw new AccessDeniedException("You do not have permission to cancel this booking");
+            }
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Slot slot = booking.getSlot();
+        slot.setStatus(SlotStatus.AVAILABLE);
+        slot.setHeldByUserId(null);
+        slot.setHoldExpiresAt(null);
+
+        bookingRepository.save(booking);
+        slotRepository.save(slot);
+    }
+
+    private boolean isAdminOrOwner(RoleType role) {
+        return role == RoleType.ADMIN || role == RoleType.SUPER_ADMIN || role == RoleType.OWNER;
     }
 
     private String generateBookingCode() {
