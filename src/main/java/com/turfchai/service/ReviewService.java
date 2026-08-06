@@ -1,15 +1,15 @@
 package com.turfchai.service;
 
-import com.turfchai.domain.Booking;
+import com.turfchai.booking.entity.Booking;
+import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.domain.Review;
 import com.turfchai.domain.ReviewStatus;
-import com.turfchai.domain.User;
-import com.turfchai.domain.Venue;
 import com.turfchai.dto.ReviewDto;
-import com.turfchai.repository.BookingRepository;
+import com.turfchai.model.User;
 import com.turfchai.repository.ReviewRepository;
 import com.turfchai.repository.UserRepository;
-import com.turfchai.repository.VenueRepository;
+import com.turfchai.venue.entity.Venue;
+import com.turfchai.venue.repository.VenueRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -87,7 +87,7 @@ public class ReviewService {
     public void checkIn(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-        booking.setCheckedInAt(ZonedDateTime.now());
+        booking.setCheckedInAt(java.time.OffsetDateTime.now());
         bookingRepository.save(booking);
     }
 }
