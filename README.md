@@ -9,7 +9,13 @@
   <a href="#"><img src="https://img.shields.io/badge/React-19.2.0-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" /></a>
   <a href="#"><img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Render-Deployed-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render" /></a>
+  <a href="https://turf-chai.vercel.app/"><img src="https://img.shields.io/badge/Vercel-Live_Demo-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel Live Demo" /></a>
 </div>
+
+---
+
+> [!WARNING]
+> **Active Development Phase:** This project is currently in the active building and development phase. Features, schemas, and UI components are actively being updated and might change rapidly.
 
 ---
 
