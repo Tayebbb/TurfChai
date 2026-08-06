@@ -328,6 +328,19 @@
   .has-bottomnav .chat-panel { bottom: calc(142px + env(safe-area-inset-bottom)); }
 }
 
+/* Pages with their own bottom action bar (venue booking bar, checkout sticky
+   bar) would otherwise get their primary CTA covered by the launcher. */
+@media (max-width: 1000px) {
+  body:has(.mobilebar) .chat-launcher { bottom: calc(96px + env(safe-area-inset-bottom)); }
+  body:has(.mobilebar) .chat-panel { bottom: calc(164px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 820px) {
+  body.has-bottomnav:has(.mobilebar) .chat-launcher,
+  body.has-bottomnav:has(.stickybar) .chat-launcher { bottom: calc(158px + env(safe-area-inset-bottom)); }
+  body.has-bottomnav:has(.mobilebar) .chat-panel,
+  body.has-bottomnav:has(.stickybar) .chat-panel { bottom: calc(226px + env(safe-area-inset-bottom)); }
+}
+
 @media (max-width: 560px) {
   .chat-launcher { right: 16px; }
   .chat-panel {
