@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
@@ -16,6 +17,23 @@ const TEAM_AVATARS = [
 
 export default function MatchdayPage() {
   const { showToast } = useToast();
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+
+  const handleCheckIn = async () => {
+    try {
+      const response = await fetch("http://localhost:8080/api/v1/matchday/checkin?bookingId=1", {
+        method: "POST"
+      });
+      if (response.ok) {
+        setIsCheckedIn(true);
+        showToast("Checked in successfully! 🏅");
+      } else {
+        showToast("Check-in failed. Please try again.");
+      }
+    } catch (err) {
+      showToast("Network error. Could not check in.");
+    }
+  };
 
   return (
     <>
@@ -86,7 +104,11 @@ export default function MatchdayPage() {
               <div>
                 <span className="tiny subtle">CHECK-IN</span>
                 <br />
-                <span className="badge amber">Not yet</span>
+                {isCheckedIn ? (
+                  <span className="badge green">Checked in</span>
+                ) : (
+                  <span className="badge amber">Not yet</span>
+                )}
               </div>
             </div>
           </div>
@@ -110,6 +132,14 @@ export default function MatchdayPage() {
             📞 Contact venue
           </Button>
         </div>
+
+        {!isCheckedIn && (
+          <div style={{ marginTop: 14 }}>
+            <Button variant="primary" block size="lg" onClick={handleCheckIn}>
+              Simulate Check-In (Test API)
+            </Button>
+          </div>
+        )}
 
         <div className="card" style={{ marginTop: 14 }}>
           <h4>Handover instructions</h4>

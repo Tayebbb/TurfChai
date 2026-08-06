@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { cn } from '@/utils/cn';
 
 /** Shimmering placeholder block. */
@@ -22,3 +23,13 @@ export function SkeletonList({ count = 3, height = 72, gap = 12 }) {
     </div>
   );
 }
+=======
+export function Skeleton({ width, height, className = "" }) {
+  return (
+    <div
+      className={`skeleton ${className}`.trim()}
+      style={{ width: width || "100%", height: height || "20px", background: "rgba(255,255,255,0.08)", borderRadius: 6 }}
+    />
+  );
+}
+>>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)

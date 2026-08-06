@@ -344,6 +344,7 @@ export default function VenuePage() {
   };
 
   const selectedSlot = SLOTS.find((slot) => slot.id === slotId);
+  const checkoutHref = slotId ? `${paths.player.checkout}?slotId=${slotId}` : paths.player.checkout;
 
   if (detail.error && detail.error.status === 404) {
     return (
@@ -622,7 +623,7 @@ export default function VenuePage() {
             <Button
               variant="primary"
               block
-              to={paths.player.checkout}
+              to={checkoutHref}
               style={{ minHeight: 44, fontSize: 14 }}
             >
               Book this slot
@@ -799,7 +800,7 @@ export default function VenuePage() {
               {selectedDateLabel} · <span>{selectedSlot ? selectedSlot.time : 'select a slot'}</span>
             </div>
           </div>
-          <Button variant="primary" to={paths.player.checkout}>
+          <Button variant="primary" to={checkoutHref}>
             Book slot
           </Button>
         </div>

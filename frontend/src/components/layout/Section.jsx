@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 
@@ -28,6 +29,22 @@ export function SectionHead({ title, subtitle, className }) {
     <div className={cn('section-head', className)}>
       <h2>{title}</h2>
       {subtitle ? <p className="sub">{subtitle}</p> : null}
+=======
+export function Section({ children, title, subtitle, className = "", ...props }) {
+  return (
+    <section className={`section ${className}`.trim()} style={{ margin: "24px 0" }} {...props}>
+      {title && <SectionHead title={title} subtitle={subtitle} />}
+      {children}
+    </section>
+  );
+}
+
+export function SectionHead({ title, subtitle, className = "" }) {
+  return (
+    <div className={`section-head ${className}`.trim()} style={{ marginBottom: 12 }}>
+      {title && <h2 style={{ fontSize: "1.25rem" }}>{title}</h2>}
+      {subtitle && <p className="small muted">{subtitle}</p>}
+>>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
     </div>
   );
 }

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
@@ -267,5 +268,16 @@ export default function RequestReviewPage() {
         </div>
       </Overlay>
     </>
+=======
+import { PageTitle } from "@/components/common/PageTitle";
+
+export default function RequestReviewPage() {
+  return (
+    <div style={{ padding: 20 }}>
+      <PageTitle title="Turf Request Review" />
+      <h2>Review Turf Request</h2>
+      <p className="muted">Pending review items.</p>
+    </div>
+>>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
   );
 }

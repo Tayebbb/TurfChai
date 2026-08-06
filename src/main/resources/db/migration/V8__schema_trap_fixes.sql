@@ -1,5 +1,5 @@
 -- ============================================================================
--- V7: Fix schema traps that only surface on PostgreSQL
+-- V8: Fix schema traps that only surface on PostgreSQL
 --
 -- The dev profile runs H2 with ddl-auto=update and Flyway disabled, so these
 -- mismatches between the JPA entities and the V1 baseline passed every local

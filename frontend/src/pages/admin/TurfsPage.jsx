@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
@@ -139,5 +140,16 @@ export default function TurfsPage() {
         </table>
       </div>
     </>
+=======
+import { PageTitle } from "@/components/common/PageTitle";
+
+export default function TurfsPage() {
+  return (
+    <div style={{ padding: 20 }}>
+      <PageTitle title="Turf Management" />
+      <h2>All Venues & Turfs</h2>
+      <p className="muted">Manage all registered sports venues.</p>
+    </div>
+>>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
   );
 }
