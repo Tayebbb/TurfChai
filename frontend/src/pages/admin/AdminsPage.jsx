@@ -69,7 +69,20 @@ export default function AdminsPage() {
   };
 
   useEffect(() => {
-    loadAdmins();
+    let cancelled = false;
+    listAdmins()
+      .then((rows) => {
+        if (!cancelled) setAdmins(rows);
+      })
+      .catch((error) => {
+        if (!cancelled) showToast(error?.message || 'Failed to load admins', { duration: 5000 });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
