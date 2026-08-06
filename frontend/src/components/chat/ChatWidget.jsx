@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { forgetSession, getSessionId, resetSession, sendMessage } from '@/api/assistant';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { RichText } from './RichText';
 import './ChatWidget.css';
 
@@ -37,6 +38,13 @@ const FootballIcon = () => (
   </svg>
 );
 
+const MicIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="2" width="6" height="11" rx="3" />
+    <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8" />
+  </svg>
+);
+
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([GREETING]);
@@ -48,6 +56,29 @@ export function ChatWidget() {
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const launcherRef = useRef(null);
+  // text typed before dictation started, so interim results replace only the spoken part
+  const dictationBaseRef = useRef('');
+
+  const onTranscript = useCallback((transcript, isFinal) => {
+    const base = dictationBaseRef.current;
+    const next = base ? `${base} ${transcript}` : transcript;
+    setDraft(next.slice(0, 2000));
+    if (isFinal) {
+      dictationBaseRef.current = next;
+      inputRef.current?.focus();
+    }
+  }, []);
+
+  const speech = useSpeechRecognition({ onResult: onTranscript });
+
+  const toggleDictation = () => {
+    if (speech.listening) {
+      speech.stop();
+      return;
+    }
+    dictationBaseRef.current = draft.trim();
+    speech.start();
+  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -223,10 +254,17 @@ export function ChatWidget() {
             </div>
           ) : null}
 
+          {speech.listening || speech.error ? (
+            <p className={`chat-mic-status${speech.error ? ' is-error' : ''}`} role="status">
+              {speech.listening ? 'Listening… speak now' : speech.error}
+            </p>
+          ) : null}
+
           <form
             className="chat-composer"
             onSubmit={(event) => {
               event.preventDefault();
+              if (speech.listening) speech.stop();
               ask(draft);
             }}
           >
@@ -235,10 +273,26 @@ export function ChatWidget() {
               type="text"
               value={draft}
               maxLength={2000}
-              placeholder="Ask about turfs, prices, bookings…"
+              placeholder={speech.listening ? 'Listening… speak now' : 'Ask about turfs, prices, bookings…'}
               aria-label="Message the assistant"
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                dictationBaseRef.current = event.target.value.trim();
+                setDraft(event.target.value);
+              }}
             />
+            {speech.supported ? (
+              <button
+                type="button"
+                className={`chat-mic${speech.listening ? ' is-listening' : ''}`}
+                aria-pressed={speech.listening}
+                aria-label={speech.listening ? 'Stop dictation' : 'Dictate your message'}
+                title={speech.listening ? 'Stop dictation' : 'Dictate your message'}
+                disabled={pending}
+                onClick={toggleDictation}
+              >
+                <MicIcon />
+              </button>
+            ) : null}
             <button type="submit" aria-label="Send message" disabled={pending || !draft.trim()}>
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                 <path
