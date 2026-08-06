@@ -4,7 +4,6 @@ import com.turfchai.dto.analytics.GrowthDto;
 import com.turfchai.dto.analytics.RevenueDto;
 import com.turfchai.dto.analytics.SegmentsDto;
 import com.turfchai.repository.AnalyticsRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -12,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -107,7 +107,9 @@ class AdminAnalyticsServiceTest {
     void getRevenue_totalGmv_matchesSumOfSeries() {
         RevenueDto dto = analyticsService.getRevenue();
 
-        long expectedSum = dto.getGmv().stream().mapToLong(Long::longValue).sum();
+        long expectedSum = dto.getGmv().stream()
+                .mapToLong(value -> Objects.requireNonNull(value).longValue())
+                .sum();
         assertEquals(expectedSum, dto.getTotalGmv());
     }
 

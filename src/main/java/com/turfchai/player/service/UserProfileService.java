@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 
 /** Player profile management and saved-venue bookmarks. */
@@ -138,12 +139,13 @@ public class UserProfileService {
 
     private VenueSummaryDto toVenueSummary(Venue venue) {
         SportPricingRule cheapest = venue.getPricingRules().stream()
-                .filter(SportPricingRule::isActive)
-                .min(Comparator.comparing(SportPricingRule::getRate))
+                .filter(rule -> rule != null && rule.isActive())
+                .min(Comparator.comparing((SportPricingRule rule) -> rule.getRate()))
                 .orElse(null);
         List<String> sports = venue.getPitches().stream()
                 .flatMap(pitch -> pitch.getSports().stream())
-                .map(Sport::getSlug)
+                .filter(Objects::nonNull)
+                .map(sport -> sport.getSlug())
                 .distinct()
                 .toList();
         return new VenueSummaryDto(
@@ -178,7 +180,11 @@ public class UserProfileService {
         if (csv == null || csv.isBlank()) {
             return List.of();
         }
-        return Arrays.stream(csv.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        return Arrays.stream(csv.split(","))
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     public static class UserNotFoundException extends RuntimeException {

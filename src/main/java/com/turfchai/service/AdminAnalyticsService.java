@@ -7,7 +7,6 @@ import com.turfchai.repository.AnalyticsRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.OffsetDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;

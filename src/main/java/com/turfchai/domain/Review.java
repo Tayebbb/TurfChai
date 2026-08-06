@@ -14,6 +14,7 @@ import java.util.Map;
 
 @Entity
 @Table(name = "reviews")
+@Check(constraints = "overall_rating BETWEEN 1 AND 5")
 public class Review {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,7 +33,6 @@ public class Review {
     private Venue venue;
 
     @Column(name = "overall_rating", nullable = false)
-    @Check(constraints = "overall_rating BETWEEN 1 AND 5")
     private Integer overallRating;
 
     @JdbcTypeCode(SqlTypes.JSON)
