@@ -6,22 +6,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configures the Cloudinary SDK bean using the CLOUDINARY_URL environment variable.
+ * Configures the Cloudinary SDK bean from the CLOUDINARY_URL environment variable
+ * (format {@code cloudinary://API_KEY:API_SECRET@CLOUD_NAME}).
  *
- * <p>Expected format:
- * {@code cloudinary://API_KEY:API_SECRET@CLOUD_NAME}
- *
- * <p>Set in environment:
- * {@code CLOUDINARY_URL=cloudinary://311877841418845:vz_QB0gHkX9_RVXgC0CnmeFZdMk@dait0sacc}
+ * <p>The variable is optional so the app still boots without it; an unconfigured
+ * client simply fails when an upload is attempted.
  */
 @Configuration
 public class CloudinaryConfig {
 
-    @Value("${cloudinary.url}")
+    @Value("${cloudinary.url:}")
     private String cloudinaryUrl;
 
     @Bean
     public Cloudinary cloudinary() {
-        return new Cloudinary(cloudinaryUrl);
+        return cloudinaryUrl == null || cloudinaryUrl.isBlank()
+                ? new Cloudinary()
+                : new Cloudinary(cloudinaryUrl);
     }
 }
