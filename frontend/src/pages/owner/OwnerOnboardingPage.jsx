@@ -20,6 +20,14 @@ import {
 } from '@/components/common/PageTitle';
 
 import {
+  LocationPicker,
+} from '@/components/common/LocationPicker';
+
+import {
+  createVenue,
+} from '@/api/ownerVenues';
+
+import {
   Field,
   Input,
 } from '@/components/forms/Field';
@@ -112,28 +120,8 @@ const VENUE_PHOTOS = [
   },
 ];
 
-const VENUE_SUMMARY = [
-  {
-    id: 'name',
-    label: 'Venue name',
-    value: 'Kick Off Arena',
-  },
-  {
-    id: 'address',
-    label: 'Address',
-    value: 'House 12, Road 27, Dhanmondi',
-  },
-  {
-    id: 'sports',
-    label: 'Sports',
-    value: 'Football · Cricket · Futsal · Badminton',
-  },
-  {
-    id: 'pitches',
-    label: 'Pitches & Slots',
-    value: '3 pitches (custom slot times per sport)',
-  },
-];
+const VENUE_SPORTS = 'Football · Cricket · Futsal · Badminton';
+const VENUE_PITCHES = '3 pitches (custom slot times per sport)';
 
 export default function OwnerOnboardingPage() {
   const {
@@ -149,6 +137,54 @@ export default function OwnerOnboardingPage() {
   const [ownerPhone, setOwnerPhone] = useState('+880 1811 223 344');
   const [nid, setNid] = useState('1994 2233 4455 667');
   const [confirmed, setConfirmed] = useState(true);
+
+  const [venueName, setVenueName] = useState('Kick Off Arena');
+  const [location, setLocation] = useState({ address: '', area: '', lat: null, lng: null });
+  const [saving, setSaving] = useState(false);
+
+  const located = Number.isFinite(location.lat) && Number.isFinite(location.lng);
+
+  const venueSummary = [
+    { id: 'name', label: 'Venue name', value: venueName || '—' },
+    { id: 'address', label: 'Address', value: location.address || 'Not set yet' },
+    {
+      id: 'coords',
+      label: 'Coordinates',
+      value: located ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'Not set yet',
+    },
+    { id: 'sports', label: 'Sports', value: VENUE_SPORTS },
+    { id: 'pitches', label: 'Pitches & Slots', value: VENUE_PITCHES },
+  ];
+
+  const submit = async () => {
+    if (!located) {
+      showToast('Pin your turf on the map first — we need its coordinates');
+      return;
+    }
+    setSaving(true);
+    try {
+      await createVenue({
+        name: venueName.trim(),
+        address: location.address.slice(0, 255),
+        // the backend caps area at 100 chars and rejects a blank one
+        area: (location.area || location.address.split(',')[0] || 'Dhaka').slice(0, 100),
+        lat: location.lat,
+        lng: location.lng,
+        openTime: '06:00',
+        closeTime: '23:00',
+        contactPhone: ownerPhone,
+      });
+      submitted.open();
+    } catch (error) {
+      showToast(
+        error.status === 401 || error.status === 403
+          ? 'Sign in with your owner account to submit this listing'
+          : error.message || 'Could not submit the listing — try again',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -203,6 +239,37 @@ export default function OwnerOnboardingPage() {
           }}
         >
           {/* Request form (step 3) */}
+          <Card>
+            <h3>Step 2 · Turf location</h3>
+
+            <p
+              className="subtle small"
+              style={{
+                marginBottom: 12,
+              }}
+            >
+              Players navigate to this point, and it is what we use to pull match-day weather for your
+              slots.
+            </p>
+
+            <Field
+              label="Venue name"
+              htmlFor="on0"
+            >
+              <Input
+                id="on0"
+                value={venueName}
+                onChange={(event) => setVenueName(event.target.value)}
+              />
+            </Field>
+
+            <LocationPicker
+              value={location}
+              onChange={setLocation}
+              label="Exact turf location"
+            />
+          </Card>
+
           <Card>
             <h3>Step 3 · Verification documents</h3>
 
@@ -330,9 +397,10 @@ export default function OwnerOnboardingPage() {
               variant="primary"
               size="lg"
               block
-              onClick={submitted.open}
+              disabled={!confirmed || !located || saving}
+              onClick={submit}
             >
-              Submit request for review
+              {saving ? 'Submitting…' : 'Submit request for review'}
             </Button>
           </Card>
 
@@ -347,7 +415,7 @@ export default function OwnerOnboardingPage() {
                   marginTop: 8,
                 }}
               >
-                {VENUE_SUMMARY.map((entry) => (
+                {venueSummary.map((entry) => (
                   <div
                     className="between small"
                     key={entry.id}
