@@ -46,6 +46,21 @@ export function clearSession() {
   notifySessionChange();
 }
 
+/**
+ * A 401 on a request that carried a token means the session died server-side
+ * (expired, or — as happens a lot in local dev — the backend restarted and
+ * wiped the in-memory DB the token's user id pointed at). Without this, a
+ * dead token just sits in localStorage and every subsequent call fails the
+ * same way. Clears the session and sends the user to login instead.
+ */
+function handleUnauthorized() {
+  const onAdminRoute = window.location.pathname.startsWith('/admin');
+  const loginPath = onAdminRoute ? '/admin/login' : '/auth';
+  if (window.location.pathname === loginPath) return; // avoid redirect loop
+  clearSession();
+  window.location.assign(loginPath);
+}
+
 function resolveUrl(path) {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   if (BACKEND_ORIGIN) {
@@ -85,6 +100,8 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && token) handleUnauthorized();
+
     let message = `Request failed with status ${response.status}`;
     try {
       const errorBody = await response.json();
@@ -118,6 +135,8 @@ function authHeaders(extra = {}) {
 }
 
 async function throwApiError(response) {
+  if (response.status === 401 && getToken()) handleUnauthorized();
+
   let message = `Request failed (${response.status})`;
   try {
     const body = await response.json();
