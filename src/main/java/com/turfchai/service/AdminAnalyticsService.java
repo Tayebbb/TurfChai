@@ -26,8 +26,6 @@ import java.util.Locale;
 @Transactional(readOnly = true)
 public class AdminAnalyticsService {
 
-    private static final long SEED_THRESHOLD = 10;
-
     private final AnalyticsRepository analyticsRepository;
     private final TurfRequestRepository turfRequestRepository;
     private final VenueRepository venueRepository;
@@ -49,9 +47,6 @@ public class AdminAnalyticsService {
 
     public DashboardStatsDto getDashboardStats() {
         long totalUsers = analyticsRepository.countTotalUsers();
-        if (totalUsers < SEED_THRESHOLD) {
-            return new DashboardStatsDto(4, 128, 41270, 5);
-        }
         long pendingRequests = turfRequestRepository.findByStatusOrderByCreatedAtAsc("PENDING").size();
         long activeTurfs = venueRepository.count();
         long adminAccounts = analyticsRepository.countAdminUsers();
@@ -65,10 +60,6 @@ public class AdminAnalyticsService {
      */
     public GrowthDto getGrowth() {
         long totalUsers = analyticsRepository.countTotalUsers();
-
-        if (totalUsers < SEED_THRESHOLD) {
-            return buildSeedGrowthDto();
-        }
 
         long activeUsers = analyticsRepository.countActiveUsers();
         double activeRatio = totalUsers == 0 ? 0.0
@@ -202,30 +193,17 @@ public class AdminAnalyticsService {
     public SegmentsDto getSegments() {
         long totalUsers = analyticsRepository.countTotalUsers();
 
-        if (totalUsers < SEED_THRESHOLD) {
-            return buildSeedSegmentsDto();
-        }
-
         long players = analyticsRepository.countActivePlayers();
         long hosts = analyticsRepository.countActiveHosts();
         long inactive = analyticsRepository.countInactiveUsers();
 
-        // avg LTV: simplified as (total bookings revenue / total users)
-        // Using a placeholder since Booking entity is minimal in current sprint
-        long avgLtv = totalUsers == 0 ? 0 : 4250L;
+        long totalRevenue = bookingRepository.findAll().stream()
+                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
+                .mapToLong(b -> b.getNetAmount().longValue())
+                .sum();
+        long avgLtv = totalUsers == 0 ? 0 : totalRevenue / totalUsers;
 
         return new SegmentsDto(players, hosts, inactive, totalUsers, avgLtv);
     }
 
-    // ── Seed / fallback builders ────────────────────────────────────────────
-
-    private GrowthDto buildSeedGrowthDto() {
-        List<String> labels = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
-        List<Long> counts = List.of(142L, 178L, 165L, 192L, 214L, 258L, 248L);
-        return new GrowthDto(41270L, 248L, 89.4, 84.2, labels, counts);
-    }
-
-    private SegmentsDto buildSeedSegmentsDto() {
-        return new SegmentsDto(34200L, 4850L, 5790L, 41270L, 4250L);
-    }
 }
