@@ -72,8 +72,13 @@ public class SecurityConfig {
                                 "/api/v1/venues/**",
                                 "/api/v1/players/**",
                                 "/api/v1/tournaments/**",
-                                "/api/v1/host/tournaments/**"
+                                "/api/v1/host/tournaments/**",
+                                // Public promo code validation (used by checkout UI)
+                                "/api/v1/promotions/validate-code"
                         ).permitAll()
+                        // Media upload & owner management require authentication
+                        .requestMatchers("/api/v1/media/**").authenticated()
+                        .requestMatchers("/api/v1/owner/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
