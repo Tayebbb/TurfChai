@@ -13,45 +13,33 @@ ALTER TABLE venues ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(20);
 ALTER TABLE venues ADD COLUMN IF NOT EXISTS contact_email VARCHAR(150);
 
 -- 2. promotions table
-CREATE TABLE IF NOT EXISTS promotions (
-    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    venue_id        BIGINT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
-    code            VARCHAR(30) NOT NULL,
-    label           VARCHAR(120) NOT NULL,
+-- V1 baseline already created `promotions` (title/kind/value/...), so reconcile
+-- that table with the entity/V10 shape (code/label/discount_type/...) instead of
+-- CREATE TABLE IF NOT EXISTS (which is a no-op and would leave legacy columns).
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS code VARCHAR(30) NOT NULL DEFAULT '';
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS label VARCHAR(120) NOT NULL DEFAULT '';
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS discount_type VARCHAR(10) NOT NULL DEFAULT 'PERCENT';
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS discount_value NUMERIC(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS min_order_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00;
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS max_discount_amount NUMERIC(12,2);
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS valid_from TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS valid_until TIMESTAMPTZ;
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS usage_limit INTEGER;
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS usage_count INTEGER NOT NULL DEFAULT 0;
 
-    -- Discount type: 'PERCENT' or 'FLAT'
-    discount_type   VARCHAR(10) NOT NULL DEFAULT 'PERCENT'
-                    CHECK (discount_type IN ('PERCENT', 'FLAT')),
+ALTER TABLE promotions DROP CONSTRAINT IF EXISTS ck_promotions_window;
+ALTER TABLE promotions DROP CONSTRAINT IF EXISTS ck_promotions_value;
+ALTER TABLE promotions DROP COLUMN IF EXISTS title;
+ALTER TABLE promotions DROP COLUMN IF EXISTS kind;
+ALTER TABLE promotions DROP COLUMN IF EXISTS value;
+ALTER TABLE promotions DROP COLUMN IF EXISTS auto_apply_at_checkout;
+ALTER TABLE promotions DROP COLUMN IF EXISTS starts_at;
+ALTER TABLE promotions DROP COLUMN IF EXISTS ends_at;
 
-    -- Percent off (0-100) when discount_type='PERCENT'; amount off when 'FLAT'
-    discount_value  NUMERIC(10,2) NOT NULL CHECK (discount_value >= 0),
-
-    -- Optional minimum booking amount in BDT before promo applies
-    min_order_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
-
-    -- Optional maximum discount cap in BDT (null = no cap)
-    max_discount_amount NUMERIC(12,2),
-
-    -- JSONB conditions e.g. {"sports":["football"],"days_of_week":[6,7]}
-    conditions      JSONB NOT NULL DEFAULT '{}',
-
-    -- Validity window
-    valid_from      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    valid_until     TIMESTAMPTZ,
-
-    -- Usage limits
-    usage_limit     INTEGER,
-    usage_count     INTEGER NOT NULL DEFAULT 0,
-
-    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
-
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-    CONSTRAINT uq_promotions_venue_code UNIQUE (venue_id, code),
-    CONSTRAINT ck_promotions_percent_range CHECK (
-        discount_type <> 'PERCENT' OR discount_value BETWEEN 0 AND 100
-    )
+ALTER TABLE promotions ADD CONSTRAINT uq_promotions_venue_code UNIQUE (venue_id, code);
+ALTER TABLE promotions ADD CONSTRAINT ck_promotions_discount_type CHECK (discount_type IN ('PERCENT', 'FLAT'));
+ALTER TABLE promotions ADD CONSTRAINT ck_promotions_percent_range CHECK (
+    discount_type <> 'PERCENT' OR discount_value BETWEEN 0 AND 100
 );
 
 CREATE INDEX IF NOT EXISTS idx_promotions_venue ON promotions (venue_id) WHERE is_active = TRUE;
