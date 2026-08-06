@@ -40,7 +40,7 @@ export default function GameDetailPage() {
   const { label: lockLabel } = useCountdown(LOCK_SECONDS);
   const [method, setMethod] = useState('bKash');
   const [gameDetail, setGameDetail] = useState(null);
-  const [members, setMembers] = useState([]);
+  const [_members, setMembers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {

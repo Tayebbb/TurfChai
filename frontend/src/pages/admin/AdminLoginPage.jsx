@@ -161,67 +161,7 @@ export default function AdminLoginPage() {
             maxWidth: 480,
           }}
         >
-          {/* Demo Admin Banner & 1-Tap Login Button */}
-          <div
-            style={{
-              marginBottom: 18,
-              padding: 14,
-              borderRadius: 14,
-              background: 'rgba(59, 130, 246, 0.12)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div>
-                <b style={{ fontSize: 14, display: 'block', color: 'var(--text)' }}>
-                  🛡️ Demo Admin Access
-                </b>
-                <span className="tiny subtle">
-                  No DB check required — Instant dashboard access
-                </span>
-              </div>
-              <span className="badge blue">DEMO MODE</span>
-            </div>
-            <Button
-              variant="secondary"
-              block
-              type="button"
-              style={{
-                fontWeight: 700,
-                background: 'var(--brand)',
-                color: '#fff',
-                borderColor: 'var(--brand)',
-              }}
-              onClick={() => {
-                localStorage.setItem('turfchai_token', 'demo-admin-token-12345');
-                localStorage.setItem(
-                  'turfchai_user',
-                  JSON.stringify({ id: 1, name: 'Demo Admin', email: 'admin@turfchai.com', role: 'ADMIN' })
-                );
-                showToast('Signed in as Demo Admin ✓');
-                navigate(paths.admin.dashboard);
-              }}
-            >
-              ⚡ Demo Admin 1-Tap Login →
-            </Button>
-          </div>
 
-          {/* Standard Form */}
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              localStorage.setItem('turfchai_token', 'demo-admin-token-12345');
-              localStorage.setItem(
-                'turfchai_user',
-                JSON.stringify({ id: 1, name: 'Demo Admin', email: email || 'admin@turfchai.com', role: 'ADMIN' })
-              );
-              showToast('Signed in to Admin Console ✓');
-              navigate(paths.admin.dashboard);
-            }}
-          >
-            <Field
-              label="Work Email"
-              htmlFor="em"
           {/* Brand + heading (mirrors the shared auth page) */}
           <div className="center" style={{ marginBottom: 26, textAlign: 'center' }}>
             <Link

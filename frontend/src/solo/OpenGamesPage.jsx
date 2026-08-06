@@ -7,7 +7,6 @@ import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
 import { Overlay } from '@/components/modals/Overlay';
 import { Chip } from '@/components/ui/Chip';
-import { fullGame, openGames } from '@/data/games';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -247,7 +246,7 @@ export default function OpenGamesPage() {
   const [filters, setFilters] = useState({});
   const [filled, setFilled] = useState(false);
   const [games, setGames] = useState(mockOpenGames);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
