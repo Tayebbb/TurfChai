@@ -58,7 +58,9 @@ export default function TurfRequestsPage() {
           </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <span className="badge amber">4 Pending Approval</span>
+          <span className="badge amber">
+            {Array.isArray(requestData) ? requestData.filter(r => r.status === 'PENDING' || !r.status).length : 0} Pending Approval
+          </span>
         </div>
       </div>
 
