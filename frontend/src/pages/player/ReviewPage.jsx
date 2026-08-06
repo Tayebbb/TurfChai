@@ -5,6 +5,7 @@ import { Overlay } from "@/components/modals/Overlay";
 import { useDisclosure } from "@/hooks/useDisclosure";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
+import { submitReview } from "@/api/reviews";
 import "./ReviewPage.css";
 
 const RATING_ROWS = [
@@ -60,13 +61,9 @@ export default function ReviewPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:8080/api/v1/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      const response = await submitReview(payload);
       
-      if (response.ok) {
+      if (response.success) {
         published.open();
       } else {
         showToast("Failed to submit review.");

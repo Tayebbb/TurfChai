@@ -5,6 +5,7 @@ import { Button } from "@/components/buttons/Button";
 import { fridayBooking } from "@/data/bookings";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
+import { checkIn } from "@/api/reviews";
 
 const TEAM_AVATARS = [
   { id: "rk", initials: "RK" },
@@ -21,10 +22,8 @@ export default function MatchdayPage() {
 
   const handleCheckIn = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/v1/matchday/checkin?bookingId=1", {
-        method: "POST"
-      });
-      if (response.ok) {
+      const response = await checkIn(1);
+      if (response.success) {
         setIsCheckedIn(true);
         showToast("Checked in successfully! 🏅");
       } else {

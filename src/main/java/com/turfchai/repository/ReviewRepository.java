@@ -10,9 +10,9 @@ import java.math.BigDecimal;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     boolean existsByBookingIdAndUserId(Long bookingId, Long userId);
 
-    @Query("SELECT AVG(r.overallRating) FROM Review r WHERE r.venue.id = :venueId AND r.status = 'published'")
+    @Query("SELECT AVG(r.overallRating) FROM Review r WHERE r.venue.id = :venueId AND r.status = com.turfchai.domain.ReviewStatus.PUBLISHED")
     BigDecimal getAverageRatingForVenue(@Param("venueId") Long venueId);
 
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.venue.id = :venueId AND r.status = 'published'")
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.venue.id = :venueId AND r.status = com.turfchai.domain.ReviewStatus.PUBLISHED")
     Integer getReviewCountForVenue(@Param("venueId") Long venueId);
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
@@ -6,6 +6,7 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { getAnalyticsGrowth, getAnalyticsRevenue, getAnalyticsSegments } from '@/api/admin';
 import './DashboardPage.css';
 
 const GRID_COLOR = 'rgba(255,255,255,0.06)';
@@ -177,8 +178,26 @@ export default function DashboardPage() {
   const [timeframe, setTimeframe] = useState('monthly');
   const [year, setYear] = useState('2026');
   const [userSegment, setUserSegment] = useState('all');
+  const [analytics, setAnalytics] = useState({ growth: null, revenue: null, segments: null });
 
-  const series = EARNINGS_DATA[timeframe][year];
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getAnalyticsGrowth(), getAnalyticsRevenue(), getAnalyticsSegments()])
+      .then(([growth, revenue, segments]) => {
+        if (!cancelled) setAnalytics({
+          growth: growth?.success ? growth.data : null,
+          revenue: revenue?.success ? revenue.data : null,
+          segments: segments?.success ? segments.data : null,
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const series = analytics.revenue && timeframe === 'monthly'
+    ? { labels: analytics.revenue.labels, gmv: analytics.revenue.gmv,
+      bookings: analytics.revenue.bookings, growth: analytics.revenue.growthPercent }
+    : EARNINGS_DATA[timeframe][year];
 
   const earningsData = useMemo(
     () => ({
@@ -215,6 +234,18 @@ export default function DashboardPage() {
   }, [series]);
 
   const userGrowthData = useMemo(() => {
+    if (analytics.growth) {
+      return {
+        labels: analytics.growth.signupLabels,
+        datasets: [{
+          label: 'New registrations',
+          data: analytics.growth.signupCounts,
+          backgroundColor: '#22c55e',
+          barThickness: 14,
+          borderRadius: { topLeft: 4, topRight: 4 },
+        }],
+      };
+    }
     const datasets = [];
     if (userSegment !== 'hosts') {
       datasets.push({
@@ -235,7 +266,30 @@ export default function DashboardPage() {
       });
     }
     return { labels: GROWTH_MONTHS, datasets };
-  }, [userSegment]);
+  }, [analytics.growth, userSegment]);
+
+  const breakdownData = useMemo(() => {
+    if (!analytics.segments) return BREAKDOWN_DATA;
+    return {
+      ...BREAKDOWN_DATA,
+      datasets: [{ ...BREAKDOWN_DATA.datasets[0], data: [
+        analytics.segments.playerCount,
+        analytics.segments.hostCount,
+        analytics.segments.inactiveCount,
+      ] }],
+    };
+  }, [analytics.segments]);
+
+  const breakdownLegend = useMemo(() => {
+    if (!analytics.segments || !analytics.segments.totalUsers) return BREAKDOWN_LEGEND;
+    const total = analytics.segments.totalUsers;
+    const share = (value) => `${(value * 100 / total).toFixed(1)}%`;
+    return [
+      { ...BREAKDOWN_LEGEND[0], count: analytics.segments.playerCount.toLocaleString(), share: share(analytics.segments.playerCount) },
+      { ...BREAKDOWN_LEGEND[1], count: analytics.segments.hostCount.toLocaleString(), share: share(analytics.segments.hostCount) },
+      { ...BREAKDOWN_LEGEND[2], name: 'Inactive users', description: 'No recent activity', count: analytics.segments.inactiveCount.toLocaleString(), share: share(analytics.segments.inactiveCount) },
+    ];
+  }, [analytics.segments]);
 
   return (
     <>
@@ -660,7 +714,7 @@ export default function DashboardPage() {
             <div style={{ position: 'relative', width: 170, height: 170, margin: '0 auto' }}>
               <ChartCanvas
                 type="doughnut"
-                data={BREAKDOWN_DATA}
+                data={breakdownData}
                 options={BREAKDOWN_OPTIONS}
                 height={170}
                 label="User distribution across players, hosts and solo players"
@@ -675,14 +729,14 @@ export default function DashboardPage() {
                 }}
               >
                 <span style={{ fontSize: 20, fontWeight: 800, display: 'block', lineHeight: 1 }}>
-                  41.2K
+                  {analytics.segments ? analytics.segments.totalUsers.toLocaleString() : '41.2K'}
                 </span>
                 <span style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700 }}>USERS</span>
               </div>
             </div>
 
             <div className="user-breakdown-legend">
-              {BREAKDOWN_LEGEND.map((item) => (
+              {breakdownLegend.map((item) => (
                 <div className="legend-item" key={item.id}>
                   <div>
                     <span className="legend-dot" style={{ background: item.color }} />

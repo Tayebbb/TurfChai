@@ -3,6 +3,7 @@ package com.turfchai.dto;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.Valid;
 
 import java.util.Map;
 
@@ -32,7 +33,8 @@ public class ReviewDto {
      * Optional sub-category ratings. Each value must be 1–5.
      * Keys: surface, lighting, cleanliness, amenities, safety, youth
      */
-    private Map<String, Integer> subRatings;
+    private Map<String, @Valid @Min(value = 1, message = "subRatings values must be at least 1")
+            @Max(value = 5, message = "subRatings values must be at most 5") Integer> subRatings;
 
     private String comment;
 

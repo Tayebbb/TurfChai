@@ -1,11 +1,13 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
 import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
+import { getAnalyticsSegments } from '@/api/admin';
 
-const KPIS = [
+const FALLBACK_KPIS = [
   {
     id: 'players',
     label: 'Active Players',
@@ -220,6 +222,43 @@ const BARE_TABLE_WRAP = {
 };
 
 export default function UserSegmentsPage() {
+  const [segments, setSegments] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAnalyticsSegments()
+      .then((response) => {
+        if (!cancelled && response?.success) setSegments(response.data);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const kpis = useMemo(() => {
+    if (!segments) return FALLBACK_KPIS;
+    return [
+      { ...FALLBACK_KPIS[0], value: String(segments.playerCount) },
+      { ...FALLBACK_KPIS[1], value: String(segments.hostCount) },
+      { ...FALLBACK_KPIS[2], value: String(segments.inactiveCount) },
+      { ...FALLBACK_KPIS[3], value: String(segments.avgLifetimeValueBdt) },
+    ];
+  }, [segments]);
+
+  const shareLegend = useMemo(() => {
+    if (!segments || !segments.totalUsers) return SHARE_LEGEND;
+    const percent = (count) => `${((count * 100) / segments.totalUsers).toFixed(1)}%`;
+    return [
+      { ...SHARE_LEGEND[0], count: segments.playerCount.toLocaleString(), share: percent(segments.playerCount) },
+      { ...SHARE_LEGEND[1], count: segments.hostCount.toLocaleString(), share: percent(segments.hostCount) },
+      { ...SHARE_LEGEND[2], count: segments.inactiveCount.toLocaleString(), share: percent(segments.inactiveCount) },
+    ];
+  }, [segments]);
+
+  const donutData = useMemo(() => ({
+    ...DONUT_DATA,
+    datasets: [{ ...DONUT_DATA.datasets[0], data: shareLegend.map((item) => Number(item.share.replace('%', ''))) }],
+  }), [shareLegend]);
+
   return (
     <>
       <PageTitle title="User Segment Breakdown" />
@@ -243,7 +282,7 @@ export default function UserSegmentsPage() {
       </div>
 
       <div className="grid4" style={{ gap: 20, marginBottom: 28 }}>
-          {KPIS.map((kpi, index) => (
+          {kpis.map((kpi, index) => (
           <div className="liquid-glass kpi-card" key={kpi.id}>
             <div>
               <div className="between">
@@ -256,7 +295,7 @@ export default function UserSegmentsPage() {
                 className="value num"
                 style={{ color: kpi.color, fontSize: 36, display: 'block', margin: '6px 0 2px' }}
               >
-                <CountUp to={Number(kpi.value.replace(/,/g, ''))} delay={index * 120} />
+                <CountUp to={Number(kpi.value.replace(/[^0-9.-]/g, ''))} delay={index * 120} />
               </b>
               <span className={kpi.deltaClass} style={kpi.deltaStyle}>
                 {kpi.deltaText}
@@ -291,7 +330,7 @@ export default function UserSegmentsPage() {
             <div style={{ position: 'relative', width: 170, height: 170, margin: '0 auto' }}>
               <ChartCanvas
                 type="doughnut"
-                data={DONUT_DATA}
+                data={donutData}
                 options={DONUT_OPTIONS}
                 height={170}
                 label="User distribution: 83% Players, 3% Hosts, 14% Inactive"
@@ -315,7 +354,7 @@ export default function UserSegmentsPage() {
                     fontFamily: 'var(--font-display)',
                   }}
                 >
-                  41.2K
+                  {segments ? segments.totalUsers.toLocaleString() : '41.2K'}
                 </span>
                 <span
                   style={{
@@ -331,7 +370,7 @@ export default function UserSegmentsPage() {
             </div>
 
             <div className="user-breakdown-legend">
-              {SHARE_LEGEND.map((item) => (
+              {shareLegend.map((item) => (
                 <div className="legend-item" key={item.id}>
                   <div>
                     <span className="legend-dot" style={{ background: item.dot }}></span>

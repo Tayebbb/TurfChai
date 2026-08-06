@@ -7,31 +7,22 @@ import com.turfchai.repository.AnalyticsRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-/**
- * Computes admin analytics KPIs and time-series data for the Admin Dashboard,
- * User Growth, and User Segments pages.
- *
- * <h3>Fallback / seed behaviour</h3>
- * When the H2 in-memory database is empty (total users = 0 or very low) the
- * service enriches the response with realistic static values, mirroring the
- * demo data already shown in the frontend prototype. This keeps the charts
- * meaningful during local development without needing a populated database.
- */
+/** Computes live, database-backed analytics for the admin console. */
 @Service
 @Transactional(readOnly = true)
 public class AdminAnalyticsService {
-
-    /**
-     * Threshold below which seed data is blended into the response.
-     * A real deployment will always exceed this.
-     */
-    private static final long SEED_THRESHOLD = 10;
 
     private final AnalyticsRepository analyticsRepository;
 
@@ -39,96 +30,79 @@ public class AdminAnalyticsService {
         this.analyticsRepository = analyticsRepository;
     }
 
-    // ── Public API ─────────────────────────────────────────────────────────
-
-    /**
-     * Returns user growth KPIs plus a 7-day daily signup chart series.
-     */
     public GrowthDto getGrowth() {
         long totalUsers = analyticsRepository.countTotalUsers();
-
-        if (totalUsers < SEED_THRESHOLD) {
-            return buildSeedGrowthDto();
-        }
-
         long activeUsers = analyticsRepository.countActiveUsers();
-        double activeRatio = totalUsers == 0 ? 0.0
-                : Math.round((activeUsers * 1000.0 / totalUsers)) / 10.0;
+        double activeRatio = totalUsers == 0 ? 0.0 : roundOneDecimal(activeUsers * 100.0 / totalUsers);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
-        // Last 24 h new signups
-        OffsetDateTime now = OffsetDateTime.now();
-        long newUsersToday = analyticsRepository.countNewUsersInPeriod(
-                now.minusDays(1), now);
-
-        // 7-day daily signup counts (Mon → Sun or current-7-days)
         List<String> labels = new ArrayList<>();
         List<Long> counts = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
-            OffsetDateTime dayStart = now.minusDays(i).toLocalDate().atStartOfDay().atOffset(now.getOffset());
-            OffsetDateTime dayEnd = dayStart.plusDays(1);
-            labels.add(dayStart.getDayOfWeek()
-                    .getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
-            counts.add(analyticsRepository.countNewUsersInPeriod(dayStart, dayEnd));
+            OffsetDateTime start = now.minusDays(i).toLocalDate().atStartOfDay().atOffset(ZoneOffset.UTC);
+            labels.add(start.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+            counts.add(analyticsRepository.countNewUsersInPeriod(start, start.plusDays(1)));
         }
-
-        return new GrowthDto(totalUsers, newUsersToday, activeRatio,
-                84.2, // retentionRate — requires cohort analysis beyond simple counts
-                labels, counts);
+        long newUsersToday = analyticsRepository.countNewUsersInPeriod(now.minusDays(1), now);
+        return new GrowthDto(totalUsers, newUsersToday, activeRatio, 0.0, labels, counts);
     }
 
-    /**
-     * Returns monthly GMV + booking-count time-series for the earnings chart.
-     * <p>
-     * For dev/demo purposes the revenue data is always demo data because
-     * booking net_amount is not yet aggregated via JPQL in this version
-     * (the bookings table lacks a full revenue model in the minimal entity).
-     * The endpoint is wired and ready for a live query replacement.
-     * </p>
-     */
     public RevenueDto getRevenue() {
-        // Realistic monthly demo data (matches the frontend prototype)
-        List<String> labels = List.of("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug");
-        List<Long> gmv = List.of(3820000L, 4150000L, 4400000L, 4780000L,
-                5100000L, 5350000L, 5600000L, 5920000L);
-        List<Long> bookings = List.of(14200L, 15400L, 16100L, 17500L,
-                18900L, 19800L, 20700L, 21900L);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        YearMonth currentMonth = YearMonth.from(now);
+        YearMonth firstMonth = currentMonth.minusMonths(7);
+        OffsetDateTime from = firstMonth.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+
+        Map<YearMonth, Object[]> rowsByMonth = new HashMap<>();
+        for (Object[] row : analyticsRepository.findMonthlyRevenue(from)) {
+            rowsByMonth.put(toYearMonth(row[0]), row);
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<Long> gmv = new ArrayList<>();
+        List<Long> bookings = new ArrayList<>();
+        for (int offset = 0; offset < 8; offset++) {
+            YearMonth month = firstMonth.plusMonths(offset);
+            Object[] row = rowsByMonth.get(month);
+            labels.add(month.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+            gmv.add(row == null ? 0L : ((Number) row[1]).longValue());
+            bookings.add(row == null ? 0L : ((Number) row[2]).longValue());
+        }
 
         long totalGmv = gmv.stream().mapToLong(Long::longValue).sum();
         long totalBookings = bookings.stream().mapToLong(Long::longValue).sum();
-
-        return new RevenueDto(labels, gmv, bookings, "+24.6%", totalGmv, totalBookings);
+        double utilization = number(analyticsRepository.calculateTurfUtilization(from, now));
+        return new RevenueDto(labels, gmv, bookings, percentageChange(gmv), totalGmv, totalBookings,
+                roundOneDecimal(utilization));
     }
 
-    /**
-     * Returns user-segment KPIs (player count, host count, inactive count, LTV).
-     */
     public SegmentsDto getSegments() {
         long totalUsers = analyticsRepository.countTotalUsers();
-
-        if (totalUsers < SEED_THRESHOLD) {
-            return buildSeedSegmentsDto();
-        }
-
         long players = analyticsRepository.countActivePlayers();
         long hosts = analyticsRepository.countActiveHosts();
         long inactive = analyticsRepository.countInactiveUsers();
-
-        // avg LTV: simplified as (total bookings revenue / total users)
-        // Using a placeholder since Booking entity is minimal in current sprint
-        long avgLtv = totalUsers == 0 ? 0 : 4250L;
-
-        return new SegmentsDto(players, hosts, inactive, totalUsers, avgLtv);
+        BigDecimal revenue = analyticsRepository.sumBookingRevenue();
+        long averageLtv = totalUsers == 0 || revenue == null ? 0L
+                : revenue.divide(BigDecimal.valueOf(totalUsers), 0, java.math.RoundingMode.HALF_UP).longValue();
+        return new SegmentsDto(players, hosts, inactive, totalUsers, averageLtv);
     }
 
-    // ── Seed / fallback builders ────────────────────────────────────────────
-
-    private GrowthDto buildSeedGrowthDto() {
-        List<String> labels = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
-        List<Long> counts = List.of(142L, 178L, 165L, 192L, 214L, 258L, 248L);
-        return new GrowthDto(41270L, 248L, 89.4, 84.2, labels, counts);
+    private static YearMonth toYearMonth(Object value) {
+        if (value instanceof Timestamp timestamp) return YearMonth.from(timestamp.toLocalDateTime());
+        if (value instanceof OffsetDateTime dateTime) return YearMonth.from(dateTime);
+        if (value instanceof java.time.LocalDateTime dateTime) return YearMonth.from(dateTime);
+        if (value instanceof java.time.LocalDate date) return YearMonth.from(date);
+        throw new IllegalArgumentException("Unsupported analytics period type: " + value);
     }
 
-    private SegmentsDto buildSeedSegmentsDto() {
-        return new SegmentsDto(34200L, 4850L, 5790L, 41270L, 4250L);
+    private static double number(Number value) { return value == null ? 0.0 : value.doubleValue(); }
+    private static double roundOneDecimal(double value) { return Math.round(value * 10.0) / 10.0; }
+
+    private static String percentageChange(List<Long> values) {
+        if (values.size() < 2) return "0.0%";
+        long previous = values.get(values.size() - 2);
+        long latest = values.get(values.size() - 1);
+        if (previous == 0) return latest == 0 ? "0.0%" : "+100.0%";
+        return String.format(Locale.ROOT, "%+.1f%%", (latest - previous) * 100.0 / previous);
     }
 }

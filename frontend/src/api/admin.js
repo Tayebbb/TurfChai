@@ -35,3 +35,15 @@ export function updateAdminPermissions(adminId, permissions) {
 export function deactivateAdmin(adminId) {
   return api(`/admin/admins/${adminId}/deactivate`, { method: 'POST' });
 }
+
+export function getAnalyticsGrowth() {
+  return api('/admin/analytics/growth');
+}
+
+export function getAnalyticsRevenue() {
+  return api('/admin/analytics/revenue');
+}
+
+export function getAnalyticsSegments() {
+  return api('/admin/analytics/segments');
+}

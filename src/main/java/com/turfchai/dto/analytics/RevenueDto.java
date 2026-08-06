@@ -36,18 +36,28 @@ public class RevenueDto {
     /** Cumulative bookings across all periods. */
     private long totalBookings;
 
+    /** Share of sellable slots that were booked in the reporting window. */
+    private double turfUtilizationPercent;
+
     // ── Constructors ──────────────────────────────────────────────────────
 
     public RevenueDto() {}
 
     public RevenueDto(List<String> labels, List<Long> gmv, List<Long> bookings,
                       String growthPercent, long totalGmv, long totalBookings) {
+        this(labels, gmv, bookings, growthPercent, totalGmv, totalBookings, 0.0);
+    }
+
+    public RevenueDto(List<String> labels, List<Long> gmv, List<Long> bookings,
+                      String growthPercent, long totalGmv, long totalBookings,
+                      double turfUtilizationPercent) {
         this.labels = labels;
         this.gmv = gmv;
         this.bookings = bookings;
         this.growthPercent = growthPercent;
         this.totalGmv = totalGmv;
         this.totalBookings = totalBookings;
+        this.turfUtilizationPercent = turfUtilizationPercent;
     }
 
     // ── Getters & setters ─────────────────────────────────────────────────
@@ -69,4 +79,7 @@ public class RevenueDto {
 
     public long getTotalBookings() { return totalBookings; }
     public void setTotalBookings(long totalBookings) { this.totalBookings = totalBookings; }
+
+    public double getTurfUtilizationPercent() { return turfUtilizationPercent; }
+    public void setTurfUtilizationPercent(double turfUtilizationPercent) { this.turfUtilizationPercent = turfUtilizationPercent; }
 }

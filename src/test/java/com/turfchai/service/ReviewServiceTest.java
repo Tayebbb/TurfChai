@@ -4,6 +4,7 @@ import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.domain.Review;
 import com.turfchai.dto.ReviewDto;
+import com.turfchai.exception.ReviewAlreadyExistsException;
 import com.turfchai.model.User;
 import com.turfchai.repository.ReviewRepository;
 import com.turfchai.repository.UserRepository;
@@ -17,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -56,6 +58,8 @@ public class ReviewServiceTest {
         booking = new Booking();
         booking.setId(1L);
         booking.setUserId(1L);
+        booking.setVenueId(1L);
+        booking.setCheckedInAt(OffsetDateTime.now());
 
         dto = new ReviewDto();
         dto.setBookingId(1L);
@@ -89,10 +93,10 @@ public class ReviewServiceTest {
     void submitReview_throwsExceptionIfDuplicate() {
         when(reviewRepository.existsByBookingIdAndUserId(1L, 1L)).thenReturn(true);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+        ReviewAlreadyExistsException ex = assertThrows(ReviewAlreadyExistsException.class, () -> {
             reviewService.submitReview(dto);
         });
-        assertEquals("Review already exists for this booking and user.", ex.getMessage());
+        assertEquals("A review has already been submitted for this booking.", ex.getMessage());
 
         verify(reviewRepository, never()).save(any());
         verify(venueRepository, never()).save(any());

@@ -5,6 +5,8 @@ import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.domain.Review;
 import com.turfchai.domain.ReviewStatus;
 import com.turfchai.dto.ReviewDto;
+import com.turfchai.exception.ReviewAlreadyExistsException;
+import com.turfchai.exception.ReviewEligibilityException;
 import com.turfchai.model.User;
 import com.turfchai.repository.ReviewRepository;
 import com.turfchai.repository.UserRepository;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -39,11 +42,20 @@ public class ReviewService {
     @Transactional
     public Review submitReview(ReviewDto dto) {
         if (reviewRepository.existsByBookingIdAndUserId(dto.getBookingId(), dto.getUserId())) {
-            throw new IllegalArgumentException("Review already exists for this booking and user.");
+            throw new ReviewAlreadyExistsException();
         }
 
         Booking booking = bookingRepository.findById(dto.getBookingId())
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        if (!dto.getUserId().equals(booking.getUserId())) {
+            throw new ReviewEligibilityException("The booking does not belong to this user.");
+        }
+        if (!dto.getVenueId().equals(booking.getVenueId())) {
+            throw new ReviewEligibilityException("The booking does not belong to this venue.");
+        }
+        if (booking.getCheckedInAt() == null) {
+            throw new ReviewEligibilityException("A review can only be submitted after matchday check-in.");
+        }
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Venue venue = venueRepository.findById(dto.getVenueId())
@@ -54,9 +66,9 @@ public class ReviewService {
         review.setUser(user);
         review.setVenue(venue);
         review.setOverallRating(dto.getOverallRating());
-        review.setSubRatings(dto.getSubRatings());
+        review.setSubRatings(dto.getSubRatings() == null ? Collections.emptyMap() : dto.getSubRatings());
         review.setComment(dto.getComment());
-        review.setStatus(ReviewStatus.published); // assuming auto-publish for now
+        review.setStatus(ReviewStatus.PUBLISHED);
 
         List<String> tags = new ArrayList<>();
         tags.add("verified_booking");
@@ -87,7 +99,9 @@ public class ReviewService {
     public void checkIn(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-        booking.setCheckedInAt(OffsetDateTime.now());
-        bookingRepository.save(booking);
+        if (booking.getCheckedInAt() == null) {
+            booking.setCheckedInAt(OffsetDateTime.now());
+            bookingRepository.save(booking);
+        }
     }
 }
