@@ -217,7 +217,7 @@ public class RewardService {
     /** Active reward catalog, annotated with whether the caller can currently afford each one. */
     @Transactional(readOnly = true)
     public List<RewardProductResponse> listRewardProducts(Long userId) {
-        int balance = currentBalance(userId);
+        int balance = userId != null ? currentBalance(userId) : 0; // visitors browse the catalog with no balance
         return rewardProductRepository.findByIsActiveTrueOrderByCostPointsAsc().stream()
                 .map(product -> RewardProductResponse.builder()
                         .id(product.getId())

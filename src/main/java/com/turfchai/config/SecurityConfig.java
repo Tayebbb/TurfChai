@@ -66,6 +66,9 @@ public class SecurityConfig {
                                 "/api/v1/solo/open-games",
                                 "/api/v1/solo/open-games/*",
                                 "/api/v1/solo/open-games/*/members",
+                                // Catalog only — balances, redemption and the
+                                // points ledger stay behind authentication:
+                                "/api/v1/rewards/products",
                                 "/api/ai/**",
                                 "/error",
                                 "/actuator/health",
