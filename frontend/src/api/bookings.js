@@ -5,6 +5,15 @@ import { api } from './client';
  * require a bearer token, which the shared client attaches automatically.
  */
 
+/**
+ * GET /api/v1/venues/{venueId}/slots?date=YYYY-MM-DD — a venue's bookable
+ * slots for one day. Public (no auth) — same as venue browsing — so a
+ * player can see availability before logging in.
+ */
+export function getVenueSlots(venueId, date) {
+  return api(`/venues/${encodeURIComponent(venueId)}/slots?date=${encodeURIComponent(date)}`, { token: false });
+}
+
 /** POST /api/v1/bookings/hold-slot — acquires a 5-minute hold. */
 export function holdSlot(slotId) {
   return api('/bookings/hold-slot', { method: 'POST', body: { slotId } });
