@@ -1,5 +1,5 @@
 -- ============================================================================
--- V4: Widen users.reliability_score to INTEGER
+-- V5: Widen users.reliability_score to INTEGER
 --   The User entity maps reliabilityScore as Integer, but V1 defined the column
 --   as SMALLINT, which fails Hibernate's ddl-auto=validate on startup.
 --   SMALLINT was the original schema intent, but the Java model owns the type;
