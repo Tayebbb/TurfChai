@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface WeatherForecastGridRepository extends JpaRepository<WeatherForecastGrid, WeatherForecastGridId> {
+    void deleteByForecastDatetimeBefore(java.time.OffsetDateTime dateTime);
 }
