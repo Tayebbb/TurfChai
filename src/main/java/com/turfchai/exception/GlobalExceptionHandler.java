@@ -103,6 +103,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
+    @ExceptionHandler(com.turfchai.booking.exception.SlotUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleSlotUnavailable(com.turfchai.booking.exception.SlotUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
