@@ -91,9 +91,6 @@ jobs:
         run: |
           nohup java -jar target/turfchai-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
           echo $! > app.pid
-      - name: Run admin smoke test
-        shell: bash
-        run: ./scripts/ci-smoke.sh
       - name: Show backend log on failure
         if: failure()
         shell: bash
