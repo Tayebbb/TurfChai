@@ -37,14 +37,18 @@ public interface AnalyticsRepository extends JpaRepository<User, Long> {
     // ── User segments ──────────────────────────────────────────────────────
 
     /** Players with status = 'ACTIVE' (or 'active'). */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.role = com.turfchai.model.enums.RoleType.PLAYER AND UPPER(u.status) = 'ACTIVE'")
+    @Query("SELECT COUNT(u) FROM User u WHERE (u.role = 'PLAYER' OR u.role = 'SOLO_PLAYER') AND UPPER(u.status) = 'ACTIVE'")
     long countActivePlayers();
 
     /** Hosts / owners with status = 'ACTIVE' (or 'active'). */
-    @Query("SELECT COUNT(u) FROM User u WHERE (u.role = com.turfchai.model.enums.RoleType.HOST OR u.role = com.turfchai.model.enums.RoleType.OWNER) AND UPPER(u.status) = 'ACTIVE'")
+    @Query("SELECT COUNT(u) FROM User u WHERE (u.role = 'HOST' OR u.role = 'OWNER') AND UPPER(u.status) = 'ACTIVE'")
     long countActiveHosts();
 
     /** Users with status NOT 'ACTIVE' or suspended. */
     @Query("SELECT COUNT(u) FROM User u WHERE UPPER(u.status) <> 'ACTIVE' OR u.isSuspended = true")
     long countInactiveUsers();
+
+    /** Admin users: role = 'ADMIN' or 'SUPER_ADMIN'. */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role = 'ADMIN' OR u.role = 'SUPER_ADMIN'")
+    long countAdminUsers();
 }

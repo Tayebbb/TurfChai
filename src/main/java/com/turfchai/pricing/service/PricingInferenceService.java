@@ -8,7 +8,9 @@ import com.turfchai.pricing.dto.PricingQuoteResponse;
 import com.turfchai.pricing.entity.WeatherForecastGridId;
 import com.turfchai.pricing.repository.HolidayRepository;
 import com.turfchai.pricing.repository.WeatherForecastGridRepository;
+import com.turfchai.venue.entity.SportPricingRule;
 import com.turfchai.venue.entity.Venue;
+import com.turfchai.venue.repository.SportPricingRuleRepository;
 import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,22 +28,29 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PricingInferenceService {
 
+    /** Used only when an owner has not set a base price yet. */
+    private static final float FALLBACK_BASE_RATE = 1000.0f;
+
     private final VenueRepository venueRepository;
     private final HolidayRepository holidayRepository;
     private final WeatherForecastGridRepository weatherForecastGridRepository;
+    private final SportPricingRuleRepository pricingRuleRepository;
 
     private volatile OrtEnvironment env;
     private volatile OrtSession session;
 
     /**
      * Lazily loads the ONNX pricing model via file stream or direct file path.
-     * Prevents loading the model into JVM heap byte arrays, avoiding OutOfMemoryError
+     * Prevents loading the model into JVM heap byte arrays, avoiding
+     * OutOfMemoryError
      * on memory-constrained deployments (such as Render free/starter tiers).
      */
     private synchronized void ensureModelLoaded() throws Exception {
@@ -94,7 +103,8 @@ public class PricingInferenceService {
         if (venue.getLat() != null && venue.getLng() != null) {
             BigDecimal gridLat = venue.getLat().setScale(2, RoundingMode.HALF_UP);
             BigDecimal gridLon = venue.getLng().setScale(2, RoundingMode.HALF_UP);
-            WeatherForecastGridId gridId = new WeatherForecastGridId(gridLat, gridLon, dt.truncatedTo(ChronoUnit.HOURS).atOffset(ZoneOffset.UTC));
+            WeatherForecastGridId gridId = new WeatherForecastGridId(gridLat, gridLon,
+                    dt.truncatedTo(ChronoUnit.HOURS).atOffset(ZoneOffset.UTC));
             weatherCondition = weatherForecastGridRepository.findById(gridId)
                     .map(grid -> (float) grid.getWeatherCondition())
                     .orElse(0.0f);
@@ -104,8 +114,9 @@ public class PricingInferenceService {
         // 9. timeSlot
         float timeSlot = (hour <= 15) ? 0.0f : 1.0f;
 
-        float[][] features = new float[][]{
-                {day, month, hour, weekend, publicHoliday, daysBeforeBooking, weatherCondition, occupancyRate, timeSlot}
+        float[][] features = new float[][] {
+                { day, month, hour, weekend, publicHoliday, daysBeforeBooking, weatherCondition, occupancyRate,
+                        timeSlot }
         };
 
         try (OnnxTensor tensor = OnnxTensor.createTensor(env, features)) {
@@ -113,7 +124,7 @@ public class PricingInferenceService {
             float[][] output = (float[][]) result.get(0).getValue();
             float multiplier = output[0][0];
 
-            float baseRate = 1000.0f; // default base rate
+            float baseRate = resolveBaseRate(request.getVenueId(), request.getSportSlug());
             float suggestedPrice = baseRate * multiplier;
 
             PricingQuoteResponse.FeatureBreakdown breakdown = PricingQuoteResponse.FeatureBreakdown.builder()
@@ -135,5 +146,30 @@ public class PricingInferenceService {
                     .featureBreakdown(breakdown)
                     .build();
         }
+    }
+
+    /**
+     * The owner sets one base price per sport; peak and off-peak are this model's
+     * job.
+     * A FULL_DAY rule is that base price — anything else is a legacy window, so the
+     * cheapest of those stands in for it.
+     */
+    private float resolveBaseRate(Long venueId, String sportSlug) {
+        List<SportPricingRule> rules = pricingRuleRepository.findActiveByVenueId(venueId);
+        if (sportSlug != null && !sportSlug.isBlank()) {
+            List<SportPricingRule> forSport = rules.stream()
+                    .filter(rule -> rule.getSport().getSlug().equalsIgnoreCase(sportSlug))
+                    .toList();
+            if (!forSport.isEmpty()) {
+                rules = forSport;
+            }
+        }
+        return rules.stream()
+                .min(Comparator
+                        .comparingInt(
+                                (SportPricingRule rule) -> "FULL_DAY".equalsIgnoreCase(rule.getWindowType()) ? 0 : 1)
+                        .thenComparing(SportPricingRule::getRate))
+                .map(rule -> rule.getRate().floatValue())
+                .orElse(FALLBACK_BASE_RATE);
     }
 }

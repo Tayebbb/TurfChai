@@ -22,18 +22,19 @@
 [data-theme='dark'] .ps-hero-banner { opacity: 0.55; }
 
 .ps-hero-body {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
   gap: 16px;
   padding: 0 22px 20px;
-  margin-top: -34px;
-  flex-wrap: wrap;
 }
 
 /* Avatar sits in a conic completion ring */
 .ps-ring {
   --pct: 0;
   flex: none;
+  /* only the ring laps onto the banner — the name below it must stay on the card */
+  margin-top: -42px;
   width: 84px;
   height: 84px;
   border-radius: 50%;
@@ -58,7 +59,7 @@
 }
 [data-theme='dark'] .ps-avatar { color: var(--brand); }
 
-.ps-hero-text { min-width: 0; flex: 1; padding-bottom: 4px; }
+.ps-hero-text { min-width: 0; flex: 1; padding-top: 8px; }
 .ps-hero-text h1 {
   margin: 0;
   font-size: 21px;
@@ -125,11 +126,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Sticky save bar ── */
+/* ── Save bar ── */
 .ps-savebar {
-  position: sticky;
-  bottom: 12px;
-  z-index: 5;
   display: flex;
   align-items: center;
   gap: 12px;

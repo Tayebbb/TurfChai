@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
+import { QrCode } from "@/components/common/QrCode";
 import { Button } from "@/components/buttons/Button";
 import { getBooking } from "@/api/bookings";
 import { useApi } from "@/hooks/useApi";
@@ -70,6 +71,7 @@ export default function BookingSuccessPage() {
 
   const status = booking?.status === "CANCELLED" ? "Cancelled" : "Confirmed";
   const code = booking?.bookingCode || "—";
+  const ticketUrl = `${window.location.origin}${paths.player.bookingDetail(bookingId)}`;
 
   return (
     <>
@@ -144,11 +146,10 @@ export default function BookingSuccessPage() {
                 <span className="badge green">Paid in full</span>
               </div>
             </div>
-            <div
-              className="qr"
+            <QrCode
+              value={ticketUrl}
               style={{ width: 88, height: 88 }}
-              role="img"
-              aria-label="Booking QR code"
+              label={`Booking QR code for ${code}`}
             />
           </div>
         </div>

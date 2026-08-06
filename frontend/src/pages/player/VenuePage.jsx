@@ -339,8 +339,17 @@ export default function VenuePage() {
     }
   };
 
+  const [slotWarn, setSlotWarn] = useState(false);
+
   const selectedSlot = slots.find((slot) => slot.id === slotId);
-  const checkoutHref = selectedSlot ? `${paths.player.checkout}?slotId=${selectedSlot.id}` : paths.player.checkout;
+  const checkoutHref = selectedSlot ? `${paths.player.checkout}?slotId=${selectedSlot.id}` : null;
+
+  const handleBookClick = (e) => {
+    if (!selectedSlot) {
+      e.preventDefault();
+      setSlotWarn(true);
+    }
+  };
 
   if (detail.error && detail.error.status === 404) {
     return (
@@ -481,7 +490,7 @@ export default function VenuePage() {
                 <SlotGrid
                   slots={slots}
                   selectedId={slotId}
-                  onSelect={(slot) => setSlotId(slot.id)}
+                  onSelect={(slot) => { setSlotId(slot.id); setSlotWarn(false); }}
                   label="Available time slots"
                 />
               )}
@@ -635,16 +644,32 @@ export default function VenuePage() {
               variant="primary"
               block
               to={checkoutHref}
+              onClick={handleBookClick}
               style={{ minHeight: 44, fontSize: 14 }}
             >
               Book this slot
             </Button>
+            {slotWarn && (
+              <p
+                role="alert"
+                style={{
+                  fontSize: 12.5,
+                  color: 'var(--danger)',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  marginTop: 8,
+                  lineHeight: 1.5,
+                }}
+              >
+                ⚠️ Please select a time slot before booking.
+              </p>
+            )}
             <p
               style={{
                 fontSize: 11.5,
                 color: 'var(--text-3)',
                 textAlign: 'center',
-                marginTop: 8,
+                marginTop: slotWarn ? 4 : 8,
                 lineHeight: 1.5,
               }}
             >
@@ -811,7 +836,7 @@ export default function VenuePage() {
               {selectedDateLabel} · <span>{selectedSlot ? selectedSlot.time : 'select a slot'}</span>
             </div>
           </div>
-          <Button variant="primary" to={checkoutHref}>
+          <Button variant="primary" to={checkoutHref} onClick={handleBookClick}>
             Book slot
           </Button>
         </div>

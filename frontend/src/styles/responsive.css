@@ -43,3 +43,19 @@
   .datebox{min-width:56px}
 }
 
+/* ---------- Grid helpers must never widen the page ---------- */
+/* Grid/flex items default to min-width:auto, so wide content (charts, tables,
+   nowrap rows) pushes the whole document instead of shrinking. */
+.grid2 > *, .grid3 > *, .grid4 > *, .stack > * { min-width: 0 }
+@media (max-width:900px){
+  .grid4{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:760px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  /* Adjacent inline tags with no whitespace between them form one unbreakable run. */
+  .sport-picker-trigger{display:flex;flex-wrap:wrap;gap:6px}
+}
+@media (max-width:520px){
+  .grid4{grid-template-columns:1fr}
+}
+

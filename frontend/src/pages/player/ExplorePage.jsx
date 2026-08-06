@@ -91,6 +91,13 @@ const CheckIcon = (
   </svg>
 );
 
+const PinIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" strokeWidth="2" {...svgProps}>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
 const LOCATIONS = ['Dhanmondi', 'Mohammadpur', 'Mirpur', 'Uttara', 'Banani / Gulshan'];
 const START_TIMES = ['7:00 PM', 'Any time', 'Morning', 'Evening'];
 const DURATIONS = ['60 min', '90 min', '120 min'];
@@ -110,6 +117,9 @@ const AMENITIES = [
 
 const PAGE_SIZE = 10;
 
+/** How far around the player we look once they share their location. */
+const NEAR_RADIUS_KM = 15;
+
 /** Filter-drawer labels -> backend amenity keys (unmapped labels are UI-only). */
 const AMENITY_KEYS = {
   Floodlights: 'floodlights',
@@ -127,6 +137,8 @@ export default function ExplorePage() {
   const [view, setView] = useState('list');
   const [page, setPage] = useState(0);
   const [filterParams, setFilterParams] = useState({});
+  const [near, setNear] = useState(null);
+  const [locating, setLocating] = useState(false);
 
   // Debounce keystrokes so we don't hit the API on every character.
   useEffect(() => {
@@ -135,9 +147,18 @@ export default function ExplorePage() {
   }, [query]);
 
   // Live search; falls back to the sample list when the API is unreachable.
+  const nearKey = near ? `${near.lat},${near.lng},${near.radiusKm}` : '';
   const search = useApi(
-    () => searchVenues({ q: debouncedQuery, page, size: PAGE_SIZE, sort: 'rating', ...filterParams }),
-    [debouncedQuery, page, JSON.stringify(filterParams)],
+    () =>
+      searchVenues({
+        q: debouncedQuery,
+        page,
+        size: PAGE_SIZE,
+        sort: near ? 'distance' : 'rating',
+        ...(near ? { lat: near.lat, lng: near.lng, radiusKm: near.radiusKm } : {}),
+        ...filterParams,
+      }),
+    [debouncedQuery, page, JSON.stringify(filterParams), nearKey],
   );
   const venues = search.data ? search.data.items.map(toExploreCard) : exploreVenuesFallback;
   const totalPages = search.data?.totalPages ?? 1;
@@ -164,6 +185,41 @@ export default function ExplorePage() {
   const applyFilters = (params) => {
     setFilterParams(params);
     setPage(0);
+  };
+
+  const toggleNearMe = () => {
+    if (near) {
+      setNear(null);
+      setPage(0);
+      showToast('Showing venues from every area again');
+      return;
+    }
+    if (!navigator.geolocation) {
+      showToast('Your browser does not support location sharing');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setLocating(false);
+        setNear({
+          lat: Number(coords.latitude.toFixed(6)),
+          lng: Number(coords.longitude.toFixed(6)),
+          radiusKm: NEAR_RADIUS_KM,
+        });
+        setPage(0);
+        showToast(`📍 Showing venues within ${NEAR_RADIUS_KM} km of you`);
+      },
+      (error) => {
+        setLocating(false);
+        showToast(
+          error.code === error.PERMISSION_DENIED
+            ? 'Location blocked — allow location access to search near you'
+            : 'Could not get your location — try again',
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    );
   };
 
   // Saved-venue bookmarks (heart buttons); non-fatal if the API is down.
@@ -221,6 +277,18 @@ export default function ExplorePage() {
               }}
             />
           </label>
+
+          <button
+            className={`locate-btn${near ? ' is-on' : ''}`}
+            type="button"
+            aria-pressed={Boolean(near)}
+            disabled={locating}
+            title={near ? 'Stop searching near me' : 'Use my current location'}
+            onClick={toggleNearMe}
+          >
+            {PinIcon}
+            {locating ? 'Locating…' : near ? 'Near me' : 'Use my location'}
+          </button>
 
           <button className="filters-btn" type="button" aria-label="Open filters" onClick={filters.open}>
             <svg width="16" height="16" viewBox="0 0 24 24" strokeWidth="2" {...svgProps}>
@@ -288,7 +356,9 @@ export default function ExplorePage() {
         <p className="results-meta" role="status">
           {search.loading
             ? 'Searching venues…'
-            : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by rating`}
+            : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by ${
+                near ? `distance from you (within ${near.radiusKm} km)` : 'rating'
+              }`}
           {search.error ? ' · live results unavailable, showing samples' : ''}
         </p>
 
@@ -299,7 +369,9 @@ export default function ExplorePage() {
             {!search.loading && venues.length === 0 ? (
               <div className="alert-nudge">
                 <p className="small" style={{ margin: 0, color: 'var(--text-2)' }}>
-                  No venues match your search — try a different area or clear filters.
+                  {near
+                    ? `No venues within ${near.radiusKm} km of you — turn off “Near me” to see every area.`
+                    : 'No venues match your search — try a different area or clear filters.'}
                 </p>
               </div>
             ) : null}
@@ -403,11 +475,8 @@ export default function ExplorePage() {
                   key={index}
                   variant={index === page ? undefined : 'tertiary'}
                   size="sm"
-                  style={
-                    index === page
-                      ? { background: 'var(--brand)', color: '#fff', borderColor: 'var(--brand)', width: 36, padding: 0 }
-                      : { width: 36, padding: 0 }
-                  }
+                  className={index === page ? 'pg-current' : undefined}
+                  style={{ width: 36, padding: 0 }}
                   onClick={() => setPage(index)}
                 >
                   {index + 1}

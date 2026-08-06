@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Overlay } from "@/components/modals/Overlay";
+import { apiSend } from "@/api/client";
 import { useDisclosure } from "@/hooks/useDisclosure";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
@@ -60,19 +61,10 @@ export default function ReviewPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:8080/api/v1/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      
-      if (response.ok) {
-        published.open();
-      } else {
-        showToast("Failed to submit review.");
-      }
+      await apiSend("POST", "/api/v1/reviews", payload);
+      published.open();
     } catch {
-      showToast("Network error. Could not submit review.");
+      showToast("Failed to submit review.");
     } finally {
       setIsSubmitting(false);
     }

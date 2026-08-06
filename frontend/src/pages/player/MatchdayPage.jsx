@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
+import { QrCode } from "@/components/common/QrCode";
 import { Button } from "@/components/buttons/Button";
+import { apiSend } from "@/api/client";
 import { fridayBooking } from "@/data/bookings";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
@@ -19,19 +21,16 @@ export default function MatchdayPage() {
   const { showToast } = useToast();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
 
+  // Scanning the ticket opens this booking, so any phone camera is a valid reader.
+  const ticketUrl = `${window.location.origin}${paths.player.bookingDetail(fridayBooking.ref)}`;
+
   const handleCheckIn = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/v1/matchday/checkin?bookingId=1", {
-        method: "POST"
-      });
-      if (response.ok) {
-        setIsCheckedIn(true);
-        showToast("Checked in successfully! 🏅");
-      } else {
-        showToast("Check-in failed. Please try again.");
-      }
+      await apiSend('POST', '/api/v1/matchday/checkin?bookingId=1');
+      setIsCheckedIn(true);
+      showToast("Checked in successfully! 🏅");
     } catch {
-      showToast("Network error. Could not check in.");
+      showToast("Check-in failed. Please try again.");
     }
   };
 
@@ -68,10 +67,9 @@ export default function MatchdayPage() {
           </div>
 
           <div className="center" style={{ padding: 20 }}>
-            <div
-              className="qr"
-              role="img"
-              aria-label="Check-in QR code for booking TC-48291"
+            <QrCode
+              value={ticketUrl}
+              label={`Check-in QR code for booking ${fridayBooking.ref}`}
             />
             <b
               className="num"

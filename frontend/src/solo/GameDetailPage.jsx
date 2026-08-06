@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 import { Overlay } from '@/components/modals/Overlay';
 import { fridayNightRoster } from '@/data/games';
+import { fetchOpenGameById, fetchOpenGameMembers, joinOpenGame } from '@/api/openGames';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -33,10 +34,54 @@ const RULES = [
 ];
 
 export default function GameDetailPage() {
+  const { id } = useParams();
   const { showToast } = useToast();
   const payShare = useDisclosure(false);
   const { label: lockLabel } = useCountdown(LOCK_SECONDS);
   const [method, setMethod] = useState('bKash');
+  const [gameDetail, setGameDetail] = useState(null);
+  const [_members, setMembers] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const gameId = id || 1;
+    async function loadGameDetails() {
+      try {
+        const [data, memberList] = await Promise.all([
+          fetchOpenGameById(gameId),
+          fetchOpenGameMembers(gameId),
+        ]);
+        if (isMounted && data) {
+          setGameDetail(data);
+          if (Array.isArray(memberList)) setMembers(memberList);
+        }
+      } catch (err) {
+        console.warn('Could not load game details from backend API:', err);
+      }
+    }
+    loadGameDetails();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const handleJoinGame = async () => {
+    const gameId = id || gameDetail?.id || 1;
+    setSubmitting(true);
+    try {
+      await joinOpenGame(gameId, {
+        userId: 1,
+        positionNote: 'Midfielder',
+      });
+      showToast('Successfully joined game! 🎉');
+    } catch (err) {
+      console.warn('Failed to join open game via API:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
   return (
     <>
@@ -222,8 +267,8 @@ export default function GameDetailPage() {
             </button>
           ))}
         </div>
-        <Link className="btn btn-primary btn-lg btn-block" to={paths.solo.ticket}>
-          Pay ৳280 with {method}
+        <Link className="btn btn-primary btn-lg btn-block" to={paths.solo.ticket} onClick={handleJoinGame}>
+          {submitting ? 'Processing…' : `Pay ৳280 with ${method}`}
         </Link>
         <p className="tiny subtle center" style={{ marginTop: 8 }}>
           If payment fails, the lock releases and the spot reopens — you&apos;re never charged for a failed attempt.
