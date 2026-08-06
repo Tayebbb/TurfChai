@@ -1,5 +1,6 @@
 package com.turfchai.venue.service;
 
+import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.venue.VenueTestData;
 import com.turfchai.venue.dto.PagedResponse;
 import com.turfchai.venue.dto.VenueDetailDto;
@@ -36,6 +37,8 @@ class VenueSearchServiceTest {
     private SportRepository sports;
     @Autowired
     private com.turfchai.tournament.repository.TournamentRepository tournaments;
+    @Autowired
+    private SlotRepository slots;
 
     private Sport football;
     private Sport badminton;
@@ -45,6 +48,7 @@ class VenueSearchServiceTest {
         // The demo tournament seeder references venue pitches — clear it
         // first so the venue reset below doesn't hit FK constraints.
         tournaments.deleteAll();
+        slots.deleteAll();
         venues.deleteAll();
         football = VenueTestData.sport(sports, "football");
         badminton = VenueTestData.sport(sports, "badminton");

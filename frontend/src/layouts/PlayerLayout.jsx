@@ -14,7 +14,7 @@ import { SiteFooter } from '@/components/layout/SiteFooter';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PLAYER_BOTTOM_NAV, PLAYER_NAV_LINKS } from '@/constants/navigation';
 import { getMyProfile } from '@/api/players';
-import { getNotifications, getUnreadCount, markAllRead, markRead } from '@/api/notifications';
+import { getNotifications, getUnreadCount, markAllRead } from '@/api/notifications';
 import { clearSession } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
 import { useBodyClass } from '@/hooks/useBodyClass';
