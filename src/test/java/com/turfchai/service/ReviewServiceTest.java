@@ -1,14 +1,14 @@
 package com.turfchai.service;
 
-import com.turfchai.domain.Booking;
+import com.turfchai.booking.entity.Booking;
+import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.domain.Review;
-import com.turfchai.domain.User;
-import com.turfchai.domain.Venue;
+import com.turfchai.model.User;
+import com.turfchai.venue.entity.Venue;
 import com.turfchai.dto.ReviewDto;
-import com.turfchai.repository.BookingRepository;
 import com.turfchai.repository.ReviewRepository;
 import com.turfchai.repository.UserRepository;
-import com.turfchai.repository.VenueRepository;
+import com.turfchai.venue.repository.VenueRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,8 +55,7 @@ public class ReviewServiceTest {
 
         booking = new Booking();
         booking.setId(1L);
-        booking.setBooker(user);
-        booking.setVenue(venue);
+        booking.setUserId(user.getId());
 
         dto = new ReviewDto();
         dto.setBookingId(1L);
@@ -80,7 +79,7 @@ public class ReviewServiceTest {
 
         assertNotNull(saved);
         assertEquals(4, saved.getOverallRating());
-        
+
         verify(venueRepository).save(venue);
         assertEquals(new BigDecimal("4.5"), venue.getRatingAvg());
         assertEquals(2, venue.getReviewCount());

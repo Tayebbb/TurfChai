@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 
@@ -25,26 +24,7 @@ export function IconButton({ label, notify = false, className, to, href, childre
 
   return (
     <button className={classes} type="button" {...a11y} {...rest}>
-=======
-export function IconButton({
-  children,
-  label,
-  notify,
-  onClick,
-  className = "",
-  ...props
-}) {
-  return (
-    <button
-      type="button"
-      className={`icon-btn${notify ? ' notify' : ''} ${className}`.trim()}
-      aria-label={label}
-      onClick={onClick}
-      {...props}
-    >
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
       {children}
     </button>
   );
 }
-

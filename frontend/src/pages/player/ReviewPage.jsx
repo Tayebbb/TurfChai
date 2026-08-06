@@ -71,7 +71,7 @@ export default function ReviewPage() {
       } else {
         showToast("Failed to submit review.");
       }
-    } catch (err) {
+    } catch {
       showToast("Network error. Could not submit review.");
     } finally {
       setIsSubmitting(false);

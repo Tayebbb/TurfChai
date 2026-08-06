@@ -11,7 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,7 +62,7 @@ class AdminAnalyticsServiceTest {
     void getGrowth_returnsLiveData_whenDatabaseHasUsers() {
         when(analyticsRepository.countTotalUsers()).thenReturn(200L);
         when(analyticsRepository.countActiveUsers()).thenReturn(180L);
-        when(analyticsRepository.countNewUsersInPeriod(any(ZonedDateTime.class), any(ZonedDateTime.class)))
+        when(analyticsRepository.countNewUsersInPeriod(any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .thenReturn(5L);
 
         GrowthDto dto = analyticsService.getGrowth();

@@ -62,6 +62,9 @@ public class Booking {
     @Builder.Default
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
+    @Column(name = "checked_in_at")
+    private OffsetDateTime checkedInAt;
+
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = OffsetDateTime.now();

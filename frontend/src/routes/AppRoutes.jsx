@@ -19,11 +19,7 @@ import { PublicLayout } from '@/layouts/PublicLayout';
 /* Every page is its own chunk so a first paint only ships one screen. */
 const Landing = lazy(() => import('@/public/LandingPage'));
 const NotFound = lazy(() => import('@/public/NotFoundPage'));
-<<<<<<< HEAD
 const Auth = lazy(() => import('@/auth/AuthPage'));
-=======
-const Auth = lazy(() => import('@/pages/auth/AuthPage'));
->>>>>>> 936546e (Implement matchday reviews, analytics, and schema infrastructure)
 const OwnerOnboarding = lazy(() => import('@/pages/owner/OwnerOnboardingPage'));
 const AdminLogin = lazy(() => import('@/pages/admin/AdminLoginPage'));
 
