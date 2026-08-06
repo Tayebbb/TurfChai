@@ -1,29 +1,14 @@
+import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
-import { fridayBooking } from "@/data/bookings";
+import { getBooking, cancelBooking } from "@/api/bookings";
+import { getUser } from "@/api/client";
+import { useApi } from "@/hooks/useApi";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
 import "./BookingDetailPage.css";
-
-const MATCH_FACTS = [
-  { id: "date", label: "DATE", value: fridayBooking.date },
-  {
-    id: "play",
-    label: "PLAY TIME",
-    value: fridayBooking.playTimeSpaced,
-    num: true,
-  },
-  { id: "handover", label: "HANDOVER", value: "7:20 PM · 10 min" },
-  { id: "pitch", label: "PITCH", value: "Pitch 2 · 7-a-side" },
-  { id: "surface", label: "SURFACE", value: "Artificial grass" },
-  {
-    id: "contact",
-    label: "VENUE CONTACT",
-    value: fridayBooking.phone,
-    num: true,
-  },
-];
 
 const TIMELINE = [
   {
@@ -82,12 +67,90 @@ const PAID_AVATARS = [
   { id: "ar", initials: "AR", tone: "b" },
 ];
 
+const STATUS_BADGE = {
+  CONFIRMED: { label: "Confirmed", className: "badge green" },
+  PENDING: { label: "Pending", className: "badge amber" },
+  CANCELLED: { label: "Cancelled", className: "badge" },
+};
+
 export default function BookingDetailPage() {
+  const { bookingId } = useParams();
   const { showToast } = useToast();
+  const [cancelling, setCancelling] = useState(false);
+
+  const { data: booking, loading, error, reload } = useApi(
+    () => getBooking(bookingId),
+    [bookingId],
+  );
+
+  const currentUser = getUser();
+  const isOwner =
+    booking &&
+    currentUser &&
+    Number(booking.userId) === Number(currentUser.id);
+
+  const badge = STATUS_BADGE[booking?.status] ?? STATUS_BADGE.CONFIRMED;
+
+  const onCancel = async () => {
+    setCancelling(true);
+    try {
+      await cancelBooking(bookingId);
+      showToast("Booking cancelled — your slot has been released");
+      reload();
+    } catch (cancelError) {
+      showToast(cancelError.message || "Could not cancel this booking");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <PageTitle title="Booking" />
+        <main className="wrap" id="main" style={{ paddingTop: 20, maxWidth: 1000 }}>
+          <p className="subtle" role="status">
+            Loading booking…
+          </p>
+        </main>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageTitle title="Booking" />
+        <main className="wrap" id="main" style={{ paddingTop: 20, maxWidth: 1000 }}>
+          <div className="card" style={{ padding: 24 }}>
+            <h1 style={{ fontSize: 20, marginBottom: 6 }}>Could not load this booking</h1>
+            <p className="subtle">{error.message}</p>
+            <div className="row" style={{ marginTop: 12 }}>
+              <Button variant="secondary" to={paths.player.bookings}>
+                My bookings
+              </Button>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  const code = booking?.bookingCode || "—";
+  const createdAt = booking?.createdAt ? new Date(booking.createdAt).toLocaleString() : "";
+
+  const facts = [
+    { id: "date", label: "DATE", value: "Fri 8 Aug" },
+    { id: "play", label: "PLAY TIME", value: "7:30 – 9:00 PM", num: true },
+    { id: "handover", label: "HANDOVER", value: "7:20 PM · 10 min" },
+    { id: "pitch", label: "PITCH", value: "Pitch 2 · 7-a-side" },
+    { id: "surface", label: "SURFACE", value: "Artificial grass" },
+    { id: "contact", label: "VENUE CONTACT", value: "01811 223 344", num: true },
+  ];
 
   return (
     <>
-      <PageTitle title="Booking TC-48291" />
+      <PageTitle title={`Booking ${code}`} />
       <main
         className="wrap"
         id="main"
@@ -96,7 +159,7 @@ export default function BookingDetailPage() {
         <Breadcrumbs
           items={[
             { label: "My bookings", to: paths.player.bookings },
-            { label: fridayBooking.ref },
+            { label: code },
           ]}
         />
 
@@ -109,13 +172,12 @@ export default function BookingDetailPage() {
               Kick Off Arena · Pitch 2
             </h1>
             <span className="subtle">
-              Booking <b className="num">{fridayBooking.ref}</b> · booked Mon 4
-              Aug, 8:14 PM
+              Booking <b className="num">{code}</b>
+              {createdAt ? ` · booked ${createdAt}` : ""}
             </span>
           </div>
           <div className="row-wrap">
-            <span className="badge green">Confirmed</span>
-            <span className="badge amber">Partially paid · 6/10</span>
+            <span className={badge.className}>{badge.label}</span>
           </div>
         </div>
 
@@ -125,7 +187,7 @@ export default function BookingDetailPage() {
             <section className="card">
               <h3>Match details</h3>
               <div className="grid3" style={{ marginTop: 8, gap: 10 }}>
-                {MATCH_FACTS.map((fact) => (
+                {facts.map((fact) => (
                   <div className="panel" key={fact.id}>
                     <span className="tiny subtle">{fact.label}</span>
                     <br />
@@ -251,7 +313,7 @@ export default function BookingDetailPage() {
               </div>
               <div className="pricerow total">
                 <span>Total paid</span>
-                <span className="num">{fridayBooking.total}</span>
+                <span className="num">৳2,550</span>
               </div>
               <Button
                 size="sm"
@@ -270,24 +332,29 @@ export default function BookingDetailPage() {
                 PM · none after.
               </p>
               <div className="stack-sm">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  block
-                  onClick={() =>
-                    showToast("Replacement request posted to Open Games 📣")
-                  }
-                >
-                  Find replacement player
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghostDanger"
-                  block
-                  to={paths.player.cancel}
-                >
-                  Cancel booking
-                </Button>
+                {isOwner && booking?.status === "CONFIRMED" ? (
+                  <Button
+                    size="sm"
+                    variant="ghostDanger"
+                    block
+                    onClick={onCancel}
+                    loading={cancelling}
+                    disabled={cancelling}
+                  >
+                    Cancel booking
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    block
+                    onClick={() =>
+                      showToast("Replacement request posted to Open Games 📣")
+                    }
+                  >
+                    Find replacement player
+                  </Button>
+                )}
               </div>
             </div>
           </aside>
