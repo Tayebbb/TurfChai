@@ -141,8 +141,7 @@ export default function OwnerOnboardingPage() {
   const submitted = useDisclosure();
   const { data: myRequests, refetch: refetchRequests } = useApi(getMyTurfRequests, []);
 
-  // The prototype ships step 3 of the flow; steps 1–2 are already complete.
-  const [step] = useState('documents');
+  const [step, setStep] = useState('business');
 
   const [ownerName, setOwnerName] = useState('Mahmudul Hasan');
   const [ownerPhone, setOwnerPhone] = useState('+880 1811 223 344');
@@ -182,6 +181,18 @@ export default function OwnerOnboardingPage() {
   };
 
   const submit = async () => {
+    if (!ownerName.trim()) {
+      showToast('Owner full name is required');
+      return;
+    }
+    if (!ownerPhone.trim()) {
+      showToast('Owner phone number is required');
+      return;
+    }
+    if (!venueName.trim()) {
+      showToast('Venue name is required');
+      return;
+    }
     if (!located) {
       showToast('Pin your turf on the map first — we need its coordinates');
       return;
@@ -210,6 +221,7 @@ export default function OwnerOnboardingPage() {
         contactPhone: ownerPhone,
       }).catch(() => {});
       submitted.open();
+      setStep('submit');
       showToast('Turf onboarding request submitted to admin ✓');
       refetchRequests();
     } catch (error) {
@@ -489,7 +501,7 @@ export default function OwnerOnboardingPage() {
                 style={{
                   marginTop: 10,
                 }}
-                onClick={() => showToast('Back to step 1')}
+                onClick={() => setStep('business')}
               >
                 Edit
               </Button>
