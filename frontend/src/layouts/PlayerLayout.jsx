@@ -61,14 +61,14 @@ export function PlayerLayout({ withFooter = false }) {
   const fullName = localUser?.fullName || me.data?.fullName || 'Player';
   const player = me.data ? { ...me.data, fullName } : localUser;
   const initials =
-    player?.avatarInitials ||
-    (fullName ?? '')
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('') ||
-    '·';
+    (fullName ?? '').split(/\s+/).filter(Boolean).length === 1
+      ? (fullName ?? '').trim().slice(0, 2).toUpperCase()
+      : (fullName ?? '')
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0]?.toUpperCase())
+          .join('') || '·';
 
   const signOut = () => {
     clearSession();

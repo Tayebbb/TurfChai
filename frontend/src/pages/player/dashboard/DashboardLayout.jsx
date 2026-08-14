@@ -15,13 +15,14 @@ export default function DashboardLayout() {
   const completion = profileCompletion(profile);
 
   const initials =
-    profile?.avatarInitials ||
-    (fullName ?? '')
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('');
+    (fullName ?? '').split(/\s+/).filter(Boolean).length === 1
+      ? (fullName ?? '').trim().slice(0, 2).toUpperCase()
+      : (fullName ?? '')
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0]?.toUpperCase())
+          .join('') || '·';
 
   return (
     <>
