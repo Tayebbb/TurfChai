@@ -359,7 +359,6 @@ function SavedVenuesSection() {
 /* ======== SOLO PLAYER MODE ======== */
 function SoloMode() {
   const me = useApi(() => getMyProfile(), []);
-  const gamesApi = useApi(() => searchOpenGames(), []);
 
   const soloRecord =
     me.data?.reliabilityScore != null
@@ -446,7 +445,6 @@ function LfgAlertsCard() {
 function HostMode() {
   const tournamentApi = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
   const tournament = tournamentApi.data;
-  const browseApi = useApi(() => browseTournaments({ size: 3 }), []);
 
   return (
     <div className="tabpanel on">

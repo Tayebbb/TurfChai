@@ -25,6 +25,12 @@ class TurfApprovalServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private com.turfchai.repository.UserRepository userRepository;
+
+    @Mock
+    private com.turfchai.venue.service.VenueManagementService venueManagementService;
+
     @InjectMocks
     private TurfApprovalService turfApprovalService;
 

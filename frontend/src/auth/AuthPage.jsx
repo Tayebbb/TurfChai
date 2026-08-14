@@ -55,7 +55,7 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-  const [venueName, setVenueName] = useState('');
+
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 

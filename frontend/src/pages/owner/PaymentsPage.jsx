@@ -84,6 +84,17 @@ export default function PaymentsPage() {
     }
   };
 
+  const chartDataApi = apiSummary?.chartData || { labels: [], datasets: {} };
+  const sportReport = apiSummary?.sportReport || [];
+  const methodSplit = apiSummary?.methodSplit || [];
+  const KPIS = [
+    { label: 'Gross today', value: '৳0', delta: '+0%' },
+    { label: 'Platform fees', value: '৳0', delta: '0%' },
+    { label: 'Refunds', value: '৳0', delta: '0' },
+    { label: 'Net to you', value: '৳0', delta: 'N/A' },
+  ];
+  const LEDGER = [];
+  
   const dark = theme === 'dark';
 
   const chartData = useMemo(
@@ -394,7 +405,7 @@ export default function PaymentsPage() {
                 </td>
               </tr>
             ))}
-            {ledgers.length === 0 && (
+            {resolvedLedger.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ textAlign: 'center', padding: '24px 0' }}>
                   No payments found

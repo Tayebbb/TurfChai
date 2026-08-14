@@ -60,9 +60,8 @@ import {
 
 import { paths } from '@/routes/paths';
 
-import { useApi } from '@/hooks/useApi';
-import { getOwnerVenueSetup } from '@/api/ownerVenueSetup';
-import { generateSlots } from '@/api/ownerSlots';
+
+import { generateSlots as apiGenerateSlots } from '@/api/ownerSlots';
 
 function CustomDatePicker({ value, onChange, id }) {
   const [textVal, setTextVal] = useState(() => {
@@ -300,8 +299,6 @@ export default function VenueSetupPage() {
   const [deposit, setDeposit] = useState('30% deposit allowed');
   const [policy, setPolicy] = useState('Free cancel until 24h before · 50% within 24h · no refund within 6h');
   const [allowSplit, setAllowSplit] = useState(true);
-  const [mlPricingEnabled, setMlPricingEnabled] = useState(apiData.mlPricingEnabled ?? true);
-
   const [slotDraft, setSlotDraft] = useState({
     sport: 'football',
     duration: '90',
@@ -312,6 +309,26 @@ export default function VenueSetupPage() {
   const [sportPricing, setSportPricing] = useState(INITIAL_SPORT_PRICING);
 
   const [photos, setPhotos] = useState([]);
+
+  const [generateDraft, setGenerateDraft] = useState({
+    pitchId: '',
+    startDate: '',
+    endDate: '',
+    startTime: '06:00',
+    endTime: '23:00',
+    slotDurationMinutes: 60,
+    basePrice: 2000
+  });
+
+  async function handleGenerateSlots() {
+    try {
+      await apiGenerateSlots(generateDraft);
+      showToast('Slots generated successfully ✓');
+      generateSlotsModal.close();
+    } catch {
+      showToast('Failed to generate slots');
+    }
+  }
 
   function handlePhotoUpload(event) {
     const files = Array.from(event.target.files || []);
@@ -478,7 +495,7 @@ export default function VenueSetupPage() {
     }
 
     if (editingId) {
-      setLocalPitches((current) =>
+      setPitches((current) =>
         current.map((pitch) =>
           pitch.id === editingId ? { ...pitch, name, desc, sports: pitchDraft.sports } : pitch,
         ),
