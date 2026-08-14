@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/buttons/Button';
@@ -280,7 +280,7 @@ export default function PaymentsPage() {
   const { theme } = useTheme();
   const methodChips = useFilterChips(['Today']);
 
-  const { data: apiSummary, loading: apiLoading } = useApi(fetchOwnerPayments, []);
+  const { data: apiSummary } = useApi(fetchOwnerPayments, []);
 
   const [timeframe, setTimeframe] = useState('daily');
   const [selectedSports, setSelectedSports] = useState(() => SPORTS.map((sport) => sport.key));

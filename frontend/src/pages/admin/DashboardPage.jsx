@@ -116,7 +116,10 @@ export default function DashboardPage() {
 
   const { data: revRes } = useApi(() => api(`/admin/analytics/revenue?year=${year}&timeframe=${timeframe}`), [year, timeframe]);
   const revenueDto = revRes?.data || revRes;
-  const series = revenueDto || { labels: [], gmv: [], bookings: [], totalGmv: 0, totalBookings: 0, growthPercent: '0%' };
+  const series = useMemo(
+    () => revenueDto || { labels: [], gmv: [], bookings: [], totalGmv: 0, totalBookings: 0, growthPercent: '0%' },
+    [revenueDto]
+  );
 
   const earningsData = useMemo(
     () => ({
@@ -235,7 +238,10 @@ export default function DashboardPage() {
 
   // Live audit log for Recent Activity card
   const { data: auditRes } = useApi(() => api('/admin/audit-log?page=0&size=5'), []);
-  const rawAuditContent = auditRes?.data?.content || auditRes?.content || [];
+  const rawAuditContent = useMemo(
+    () => auditRes?.data?.content || auditRes?.content || [],
+    [auditRes]
+  );
 
   const auditLog = useMemo(() => rawAuditContent.map((entry) => {
     const when = entry.createdAt

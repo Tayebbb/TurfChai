@@ -368,12 +368,19 @@ export default function OwnerOnboardingPage() {
                     {doc.file}
                   </span>
 
-                  <Badge
-                    tone="green"
-                    dot={false}
-                  >
-                    Uploaded
-                  </Badge>
+                  <label style={{ cursor: 'pointer' }}>
+                    <input
+                      type="file"
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleFileUpload(e, doc.id)}
+                    />
+                    <Badge
+                      tone="green"
+                      dot={false}
+                    >
+                      Re-upload
+                    </Badge>
+                  </label>
                 </Panel>
               </div>
             ))}
@@ -397,17 +404,25 @@ export default function OwnerOnboardingPage() {
                   />
                 ))}
 
-                <IconButton
-                  label="Add photo"
-                  style={{
-                    width: 64,
-                    height: 64,
-                    fontSize: 22,
-                  }}
-                  onClick={() => showToast('Add photo 📷')}
-                >
-                  +
-                </IconButton>
+                <label style={{ cursor: 'pointer' }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleFileUpload(e, 'photo')}
+                  />
+                  <IconButton
+                    label="Add photo"
+                    style={{
+                      width: 64,
+                      height: 64,
+                      fontSize: 22,
+                    }}
+                    onClick={() => {}}
+                  >
+                    +
+                  </IconButton>
+                </label>
               </Row>
             </div>
 
@@ -482,6 +497,23 @@ export default function OwnerOnboardingPage() {
 
             <GlassCard>
               <h4>After you submit — request states</h4>
+
+              {Array.isArray(myRequests) && myRequests.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <b className="tiny subtle">YOUR SUBMITTED REQUESTS ({myRequests.length})</b>
+                  {myRequests.map((req) => (
+                    <Panel key={req.requestCode || req.id} className="between" style={{ marginTop: 6 }}>
+                      <div>
+                        <b>{req.venueName}</b>
+                        <p className="tiny muted" style={{ margin: 0 }}>Code: {req.requestCode}</p>
+                      </div>
+                      <Badge tone={req.status === 'APPROVED' ? 'green' : req.status === 'REJECTED' ? 'red' : 'amber'}>
+                        {req.status}
+                      </Badge>
+                    </Panel>
+                  ))}
+                </div>
+              )}
 
               <Stack
                 gap="sm"
