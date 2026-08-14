@@ -1,4 +1,4 @@
-import { api } from '@/api/client';
+import { api, apiGet, apiSend } from '@/api/client';
 
 export function listTurfRequests(status) {
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
@@ -14,4 +14,16 @@ export function reviewTurfRequest(code, action, note) {
     method: 'POST',
     body: { action, note },
   });
+}
+
+export async function createTurfRequest(payload) {
+  return apiSend('POST', '/api/v1/turf-requests', payload);
+}
+
+export async function getMyTurfRequests() {
+  return apiGet('/api/v1/turf-requests');
+}
+
+export async function uploadTurfDoc(formData) {
+  return apiSend('POST', '/api/v1/turf-requests/upload', formData);
 }
