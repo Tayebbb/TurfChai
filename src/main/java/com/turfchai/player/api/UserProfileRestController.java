@@ -42,14 +42,18 @@ public class UserProfileRestController {
     }
 
     private UUID currentUserId(String header) {
-        if (header == null || header.isBlank()) {
-            return DEMO_USER_ID;
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.turfchai.security.UserPrincipal principal) {
+            return principal.getPublicId();
         }
-        try {
-            return UUID.fromString(header.trim());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("X-User-Id must be a UUID");
+        if (header != null && !header.isBlank()) {
+            try {
+                return UUID.fromString(header.trim());
+            } catch (IllegalArgumentException ignored) {
+            }
         }
+        return DEMO_USER_ID;
     }
 
     @GetMapping("/me")

@@ -88,6 +88,10 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
   if (token) {
     const authToken = getToken();
     if (authToken) headers.Authorization = `Bearer ${authToken}`;
+    const user = getUser();
+    if (user?.publicId || user?.id) {
+      headers['X-User-Id'] = user.publicId || user.id;
+    }
   }
 
   const url = resolveUrl(path);

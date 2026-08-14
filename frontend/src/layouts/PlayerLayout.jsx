@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { Icon } from '@/components/common/Icon';
@@ -16,7 +17,7 @@ import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PLAYER_BOTTOM_NAV, PLAYER_NAV_LINKS } from '@/constants/navigation';
 import { getMyProfile } from '@/api/players';
 import { getNotifications, getUnreadCount, markAllRead } from '@/api/notifications';
-import { clearSession } from '@/api/client';
+import { clearSession, getUser } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
 import { useBodyClass } from '@/hooks/useBodyClass';
 import { useDisclosure } from '@/hooks/useDisclosure';
@@ -49,16 +50,25 @@ export function PlayerLayout({ withFooter = false }) {
   };
 
   const me = useApi(() => getMyProfile(), []);
-  const player = me.data;
+  const localUser = getUser();
+
+  useEffect(() => {
+    const handleSession = () => me.reload();
+    window.addEventListener('turfchai:session-change', handleSession);
+    return () => window.removeEventListener('turfchai:session-change', handleSession);
+  }, [me]);
+
+  const fullName = localUser?.fullName || me.data?.fullName || 'Player';
+  const player = me.data ? { ...me.data, fullName } : localUser;
   const initials =
     player?.avatarInitials ||
-    (player?.fullName ?? '')
+    (fullName ?? '')
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
       .join('') ||
-    '\u00b7';
+    '·';
 
   const signOut = () => {
     clearSession();
