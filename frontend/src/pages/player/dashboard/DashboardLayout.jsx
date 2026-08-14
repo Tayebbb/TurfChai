@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { getMyProfile } from '@/api/players';
+import { getUser } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
 import { paths } from '@/routes/paths';
 import { DASHBOARD_SECTIONS, profileCompletion } from './sections';
@@ -8,12 +9,14 @@ import './DashboardLayout.css';
 
 export default function DashboardLayout() {
   const me = useApi(() => getMyProfile(), []);
-  const profile = me.data;
+  const localUser = getUser();
+  const fullName = localUser?.fullName || me.data?.fullName || 'Player';
+  const profile = me.data ? { ...me.data, fullName } : localUser;
   const completion = profileCompletion(profile);
 
   const initials =
     profile?.avatarInitials ||
-    (profile?.fullName ?? '')
+    (fullName ?? '')
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
