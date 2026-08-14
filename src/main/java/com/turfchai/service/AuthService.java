@@ -17,4 +17,5 @@ public interface AuthService {
     AuthResponse refreshToken(String refreshToken);
     UserResponse getCurrentUser(String publicId);
     UserResponse updateProfile(String publicId, UpdateProfileRequest request);
+    boolean checkEmail(String email);
 }

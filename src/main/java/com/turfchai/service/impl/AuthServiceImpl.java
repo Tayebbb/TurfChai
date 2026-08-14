@@ -147,6 +147,14 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public boolean checkEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        return userRepository.findByEmail(email.trim().toLowerCase()).isPresent();
+    }
+
+    @Override
     @Transactional
     public UserResponse updateProfile(String publicId, UpdateProfileRequest request) {
         User user = userRepository.findByPublicId(publicId)
