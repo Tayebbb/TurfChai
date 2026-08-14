@@ -58,6 +58,9 @@ public class TurfRequest {
     @Builder.Default
     private String docUtilityBill = "PENDING";
 
+    @Column(name = "photos_json", columnDefinition = "TEXT")
+    private String photosJson;
+
     @Column(nullable = false, length = 30)
     @Builder.Default
     private String status = "PENDING";

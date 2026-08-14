@@ -15,6 +15,8 @@ public class TurfApprovalService {
 
     private final TurfRequestRepository turfRequestRepository;
     private final NotificationService notificationService;
+    private final com.turfchai.repository.UserRepository userRepository;
+    private final com.turfchai.venue.service.VenueManagementService venueManagementService;
 
     @Transactional(readOnly = true)
     public List<TurfRequest> listByStatus(String status) {
@@ -42,15 +44,44 @@ public class TurfApprovalService {
                     throw new IllegalStateException("Cannot approve request in status: " + currentStatus);
                 }
                 request.setStatus("APPROVED");
-                // Note: Normally we'd create the Venue record here and set request.venueId.
-                // Assuming venue creation happens independently or in a later step.
+                java.util.List<String> photos = null;
+                if (request.getPhotosJson() != null && !request.getPhotosJson().isBlank() && !request.getPhotosJson().equals("[]")) {
+                    try {
+                        photos = new com.fasterxml.jackson.databind.ObjectMapper().readValue(request.getPhotosJson(), java.util.List.class);
+                    } catch (Exception e) {}
+                }
+
+                com.turfchai.venue.dto.owner.CreateVenueRequest venueReq = new com.turfchai.venue.dto.owner.CreateVenueRequest(
+                    request.getVenueName(), // name
+                    request.getArea(), // address
+                    request.getArea(), // area
+                    new java.math.BigDecimal("23.8103"), // lat
+                    new java.math.BigDecimal("90.4125"), // lng
+                    new java.math.BigDecimal("2000"), // basePrice
+                    "06:00", // openTime
+                    "23:00", // closeTime
+                    "floodlights,parking", // amenities
+                    request.getOwnerPhone(), // contactPhone
+                    request.getOwnerEmail(), // contactEmail
+                    "FULL_ONLY", // depositPolicy
+                    "FREE_24H_50_6H", // cancelPolicy
+                    false, // allowSplitPayment
+                    "Standard rules", // rules
+                    photos, // photos
+                    false // mlPricingEnabled
+                );
+
+                venueManagementService.createVenue(request.getOwnerUserId(), venueReq);
                 break;
             case "REJECT":
                 if (!currentStatus.equals("PENDING") && !currentStatus.equals("CHANGES_REQUESTED")) {
                     throw new IllegalStateException("Cannot reject request in status: " + currentStatus);
                 }
                 request.setStatus("REJECTED");
-                break;
+                Long ownerIdToDelete = request.getOwnerUserId();
+                turfRequestRepository.delete(request);
+                userRepository.deleteById(ownerIdToDelete);
+                return; // End immediately as entities are deleted
             case "REQUEST_CHANGES":
                 if (!currentStatus.equals("PENDING")) {
                     throw new IllegalStateException("Cannot request changes for request in status: " + currentStatus);

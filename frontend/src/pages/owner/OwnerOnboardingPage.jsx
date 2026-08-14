@@ -108,6 +108,7 @@ export default function OwnerOnboardingPage() {
   });
 
   const [photos, setPhotos] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
 
   const [venueName, setVenueName] = useState('Kick Off Arena');
   const [location, setLocation] = useState({ address: '', area: '', lat: null, lng: null });
@@ -133,7 +134,8 @@ export default function OwnerOnboardingPage() {
 
     const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
     const formattedSize = `${sizeMb > 0 ? sizeMb : '<0.1'} MB`;
-    const docInfo = { name: file.name, size: formattedSize };
+    const previewUrl = URL.createObjectURL(file);
+    const docInfo = { name: file.name, size: formattedSize, url: previewUrl };
 
     try {
       const formData = new FormData();
@@ -250,24 +252,17 @@ export default function OwnerOnboardingPage() {
 
       const photoUrls = photos.length > 0 ? photos.map((p) => p.url) : [];
 
-      await createVenue({
-        name: venueName.trim(),
-        address: finalAddr,
-        area: (location.area || finalAddr.split(',')[0] || 'Dhaka').slice(0, 100),
-        lat: location.lat || 23.8103, // Default to Dhaka if missing
-        lng: location.lng || 90.4125,
-        basePrice: 2000,
-        openTime: '06:00',
-        closeTime: '23:00',
-        amenities: 'floodlights,parking',
-        contactPhone: ownerPhone || '+8801811223344',
-        contactEmail: 'owner@turfchai.com',
-        depositPolicy: 'FULL_ONLY',
-        cancelPolicy: 'FREE_24H_50_6H',
-        allowSplitPayment: false,
-        rules: 'Standard rules',
+      await createTurfRequest({
+        venueName: venueName.trim(),
+        area: location.address.trim(),
+        pitchCount: 1,
+        sportsCsv: 'Football',
+        ownerPhone: ownerPhone,
+        ownerEmail: authState?.signupEmail || 'owner@turfchai.com',
+        docTradeLicense: documents.tradeLicense?.name || 'Trade_License.pdf',
+        docOwnerNid: nid || 'NID.pdf',
+        docUtilityBill: documents.leaseProof?.name || 'Lease_Agreement.pdf',
         photos: photoUrls,
-        mlPricingEnabled: false,
       });
 
       submitted.open();
@@ -392,18 +387,24 @@ export default function OwnerOnboardingPage() {
                     </span>
                     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
                       {photos.map((photo) => (
-                        <img
+                        <div
                           key={photo.id}
-                          src={photo.url}
-                          alt={photo.name}
-                          style={{
-                            width: 64,
-                            height: 64,
-                            objectFit: 'cover',
-                            borderRadius: 8,
-                            border: '1px solid var(--border-soft)',
-                          }}
-                        />
+                          style={{ position: 'relative', cursor: 'pointer' }}
+                          onClick={() => setPreviewFile(photo)}
+                          title="Click to view full image"
+                        >
+                          <img
+                            src={photo.url}
+                            alt="Venue preview"
+                            style={{
+                              width: 64,
+                              height: 64,
+                              objectFit: 'cover',
+                              borderRadius: 8,
+                              border: '1px solid var(--border-soft)',
+                            }}
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -493,8 +494,10 @@ export default function OwnerOnboardingPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <b style={{ color: 'var(--text-1)' }}>{documents.tradeLicense.name}</b>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ?</span>
+                          <span onClick={() => setPreviewFile(documents.tradeLicense)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
+                            <b>{documents.tradeLicense.name}</b>
+                          </span>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ✓</span>
                         </div>
                       </div>
                     ) : (
@@ -516,8 +519,10 @@ export default function OwnerOnboardingPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <b style={{ color: 'var(--text-1)' }}>{documents.leaseProof.name}</b>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ?</span>
+                          <span onClick={() => setPreviewFile(documents.leaseProof)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
+                            <b>{documents.leaseProof.name}</b>
+                          </span>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ✓</span>
                         </div>
                       </div>
                     ) : (
@@ -539,9 +544,9 @@ export default function OwnerOnboardingPage() {
                   </div>
                   <Row style={{ gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     {photos.map((photo) => (
-                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)' }}>
+                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }} onClick={() => setPreviewFile(photo)} title="Click to view full image">
                         <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <button type="button" onClick={() => handleRemovePhoto(photo.id)} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, lineHeight: '18px', textAlign: 'center', padding: 0 }} title="Remove photo">x</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id); }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, lineHeight: '18px', textAlign: 'center', padding: 0 }} title="Remove photo">x</button>
                       </div>
                     ))}
                     <label style={{ cursor: 'pointer', margin: 0 }}>
@@ -571,7 +576,7 @@ export default function OwnerOnboardingPage() {
                     <div className="between small"><span className="muted">Owner Name</span><b>{ownerName}</b></div>
                     <div className="between small"><span className="muted">Venue Name</span><b>{venueName}</b></div>
                     <div className="between small"><span className="muted">Location</span><b>{location.address}</b></div>
-                    <div className="between small"><span className="muted">Documents</span><b>Attached ?</b></div>
+                    <div className="between small"><span className="muted">Documents</span><b style={{ color: 'var(--brand-500)' }}>Attached ✓</b></div>
                   </Stack>
                 </div>
 
@@ -594,10 +599,10 @@ export default function OwnerOnboardingPage() {
         )}
       </div>
 
-      <Overlay isOpen={submitted.isOpen} onClose={submitted.close} title="Venue Created" hideHeader className="center">
+      <Overlay isOpen={submitted.isOpen} onClose={submitted.close} title="Request Submitted" hideHeader className="center">
         <div className="check-anim" style={{ background: 'var(--green)' }} aria-hidden="true">✓</div>
-        <h3>Venue Registered</h3>
-        <p className="muted small">Your venue has been successfully created.</p>
+        <h3>Request Submitted</h3>
+        <p className="muted small">Your registration has been submitted for admin approval.</p>
         <div style={{ marginTop: '20px' }}>
           <Button variant="primary" block to={paths.owner.dashboard}>
             Go to Dashboard →
@@ -605,6 +610,16 @@ export default function OwnerOnboardingPage() {
           <Button variant="tertiary" block onClick={submitted.close} style={{ marginTop: '10px' }}>
             Close
           </Button>
+        </div>
+      </Overlay>
+
+      <Overlay isOpen={!!previewFile} onClose={() => setPreviewFile(null)} title={previewFile?.name || 'Document Preview'} maxWidth={800}>
+        <div style={{ height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {previewFile?.name?.toLowerCase().endsWith('.pdf') ? (
+            <iframe src={previewFile.url} width="100%" height="100%" style={{ border: 'none', borderRadius: 8, background: '#fff' }} title={previewFile.name} />
+          ) : (
+            <img src={previewFile?.url} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
+          )}
         </div>
       </Overlay>
     </>
