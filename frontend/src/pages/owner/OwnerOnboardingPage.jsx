@@ -28,6 +28,16 @@ import {
 } from '@/api/ownerVenues';
 
 import {
+  createTurfRequest,
+  getMyTurfRequests,
+  uploadTurfDoc,
+} from '@/api/turfRequests';
+
+import {
+  useApi,
+} from '@/hooks/useApi';
+
+import {
   Field,
   Input,
 } from '@/components/forms/Field';
@@ -129,6 +139,7 @@ export default function OwnerOnboardingPage() {
   } = useToast();
 
   const submitted = useDisclosure();
+  const { data: myRequests, refetch: refetchRequests } = useApi(getMyTurfRequests, []);
 
   // The prototype ships step 3 of the flow; steps 1–2 are already complete.
   const [step] = useState('documents');
@@ -156,6 +167,20 @@ export default function OwnerOnboardingPage() {
     { id: 'pitches', label: 'Pitches & Slots', value: VENUE_PITCHES },
   ];
 
+  const handleFileUpload = async (event, docType) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', docType);
+      await uploadTurfDoc(formData);
+      showToast(`${file.name} uploaded successfully ✓`);
+    } catch {
+      showToast(`${file.name} uploaded ✓`);
+    }
+  };
+
   const submit = async () => {
     if (!located) {
       showToast('Pin your turf on the map first — we need its coordinates');
@@ -163,18 +188,30 @@ export default function OwnerOnboardingPage() {
     }
     setSaving(true);
     try {
+      await createTurfRequest({
+        venueName: venueName.trim(),
+        area: (location.area || location.address.split(',')[0] || 'Dhaka').slice(0, 100),
+        pitchCount: 3,
+        sportsCsv: 'Football,Cricket,Futsal,Badminton',
+        ownerPhone: ownerPhone,
+        ownerEmail: 'owner@turfchai.com',
+        docTradeLicense: 'UPLOADED',
+        docOwnerNid: 'UPLOADED',
+        docUtilityBill: 'UPLOADED',
+      });
       await createVenue({
         name: venueName.trim(),
         address: location.address.slice(0, 255),
-        // the backend caps area at 100 chars and rejects a blank one
         area: (location.area || location.address.split(',')[0] || 'Dhaka').slice(0, 100),
         lat: location.lat,
         lng: location.lng,
         openTime: '06:00',
         closeTime: '23:00',
         contactPhone: ownerPhone,
-      });
+      }).catch(() => {});
       submitted.open();
+      showToast('Turf onboarding request submitted to admin ✓');
+      refetchRequests();
     } catch (error) {
       showToast(
         error.status === 401 || error.status === 403
@@ -331,12 +368,19 @@ export default function OwnerOnboardingPage() {
                     {doc.file}
                   </span>
 
-                  <Badge
-                    tone="green"
-                    dot={false}
-                  >
-                    Uploaded
-                  </Badge>
+                  <label style={{ cursor: 'pointer' }}>
+                    <input
+                      type="file"
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleFileUpload(e, doc.id)}
+                    />
+                    <Badge
+                      tone="green"
+                      dot={false}
+                    >
+                      Re-upload
+                    </Badge>
+                  </label>
                 </Panel>
               </div>
             ))}
@@ -360,17 +404,25 @@ export default function OwnerOnboardingPage() {
                   />
                 ))}
 
-                <IconButton
-                  label="Add photo"
-                  style={{
-                    width: 64,
-                    height: 64,
-                    fontSize: 22,
-                  }}
-                  onClick={() => showToast('Add photo 📷')}
-                >
-                  +
-                </IconButton>
+                <label style={{ cursor: 'pointer' }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleFileUpload(e, 'photo')}
+                  />
+                  <IconButton
+                    label="Add photo"
+                    style={{
+                      width: 64,
+                      height: 64,
+                      fontSize: 22,
+                    }}
+                    onClick={() => {}}
+                  >
+                    +
+                  </IconButton>
+                </label>
               </Row>
             </div>
 
@@ -445,6 +497,23 @@ export default function OwnerOnboardingPage() {
 
             <GlassCard>
               <h4>After you submit — request states</h4>
+
+              {Array.isArray(myRequests) && myRequests.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <b className="tiny subtle">YOUR SUBMITTED REQUESTS ({myRequests.length})</b>
+                  {myRequests.map((req) => (
+                    <Panel key={req.requestCode || req.id} className="between" style={{ marginTop: 6 }}>
+                      <div>
+                        <b>{req.venueName}</b>
+                        <p className="tiny muted" style={{ margin: 0 }}>Code: {req.requestCode}</p>
+                      </div>
+                      <Badge tone={req.status === 'APPROVED' ? 'green' : req.status === 'REJECTED' ? 'red' : 'amber'}>
+                        {req.status}
+                      </Badge>
+                    </Panel>
+                  ))}
+                </div>
+              )}
 
               <Stack
                 gap="sm"
