@@ -7,10 +7,6 @@ import {
 } from '@/components/buttons/Button';
 
 import {
-  IconButton,
-} from '@/components/buttons/IconButton';
-
-import {
   Card,
   GlassCard,
 } from '@/components/cards/Card';
@@ -65,10 +61,6 @@ import {
 } from '@/components/ui/Panel';
 
 import {
-  Photo,
-} from '@/components/ui/Photo';
-
-import {
   useDisclosure,
 } from '@/hooks/useDisclosure';
 
@@ -99,37 +91,6 @@ const STEPS = [
   },
 ];
 
-const UPLOADED_DOCS = [
-  {
-    id: 'trade-license',
-    label: 'Trade license',
-    file: '📄 trade-license-2026.pdf · 1.2 MB',
-  },
-  {
-    id: 'lease',
-    label: 'Ownership / lease proof',
-    file: '📄 lease-agreement.pdf · 2.8 MB',
-  },
-];
-
-const VENUE_PHOTOS = [
-  {
-    id: 'pitch',
-    variant: undefined,
-    glyph: '🏟️',
-  },
-  {
-    id: 'night',
-    variant: 'alt1',
-    glyph: '🌙',
-  },
-  {
-    id: 'goal',
-    variant: 'alt2',
-    glyph: '🥅',
-  },
-];
-
 const VENUE_SPORTS = 'Football · Cricket · Futsal · Badminton';
 const VENUE_PITCHES = '3 pitches (custom slot times per sport)';
 
@@ -147,6 +108,13 @@ export default function OwnerOnboardingPage() {
   const [ownerPhone, setOwnerPhone] = useState('+880 1811 223 344');
   const [nid, setNid] = useState('1994 2233 4455 667');
   const [confirmed, setConfirmed] = useState(true);
+
+  const [documents, setDocuments] = useState({
+    tradeLicense: null,
+    leaseProof: null,
+  });
+
+  const [photos, setPhotos] = useState([]);
 
   const [venueName, setVenueName] = useState('Kick Off Arena');
   const [location, setLocation] = useState({ address: '', area: '', lat: null, lng: null });
@@ -169,15 +137,57 @@ export default function OwnerOnboardingPage() {
   const handleFileUpload = async (event, docType) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    const formattedSize = `${sizeMb > 0 ? sizeMb : '<0.1'} MB`;
+    const docInfo = { name: file.name, size: formattedSize };
+
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', docType);
       await uploadTurfDoc(formData);
-      showToast(`${file.name} uploaded successfully ✓`);
     } catch {
-      showToast(`${file.name} uploaded ✓`);
+      /* fallback to local attachment state */
     }
+
+    if (docType === 'tradeLicense') {
+      setDocuments((prev) => ({ ...prev, tradeLicense: docInfo }));
+    } else if (docType === 'leaseProof') {
+      setDocuments((prev) => ({ ...prev, leaseProof: docInfo }));
+    }
+    showToast(`${file.name} uploaded successfully ✓`);
+  };
+
+  const handlePhotoUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      const previewUrl = URL.createObjectURL(file);
+      const newPhoto = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: file.name,
+        url: previewUrl,
+      };
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'photo');
+        await uploadTurfDoc(formData);
+      } catch {
+        /* local preview fallback */
+      }
+
+      setPhotos((prev) => [...prev, newPhoto]);
+    }
+    showToast(`${files.length} venue photo(s) added ✓`);
+  };
+
+  const handleRemovePhoto = (id) => {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+    showToast('Photo removed');
   };
 
   const submit = async () => {
@@ -206,9 +216,9 @@ export default function OwnerOnboardingPage() {
         sportsCsv: 'Football,Cricket,Futsal,Badminton',
         ownerPhone: ownerPhone,
         ownerEmail: 'owner@turfchai.com',
-        docTradeLicense: 'UPLOADED',
-        docOwnerNid: 'UPLOADED',
-        docUtilityBill: 'UPLOADED',
+        docTradeLicense: documents.tradeLicense?.name || 'trade-license.pdf',
+        docOwnerNid: nid || '1994 2233 4455 667',
+        docUtilityBill: documents.leaseProof?.name || 'lease-agreement.pdf',
       });
       await createVenue({
         name: venueName.trim(),
@@ -366,74 +376,143 @@ export default function OwnerOnboardingPage() {
               />
             </Field>
 
-            {UPLOADED_DOCS.map((doc) => (
-              <div
-                className="field"
-                key={doc.id}
-              >
-                <label>{doc.label}</label>
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>Trade License</label>
+              <Panel className="between" style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
+                {documents.tradeLicense ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>📄</span>
+                    <div>
+                      <b style={{ color: 'var(--text-1)' }}>{documents.tradeLicense.name}</b>
+                      <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} · Uploaded ✓</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="small muted">No trade license document attached yet</span>
+                )}
 
-                <Panel className="between">
-                  <span
-                    className="small"
-                  >
-                    {doc.file}
-                  </span>
-
-                  <label style={{ cursor: 'pointer' }}>
-                    <input
-                      type="file"
-                      style={{ display: 'none' }}
-                      onChange={(e) => handleFileUpload(e, doc.id)}
-                    />
-                    <Badge
-                      tone="green"
-                      dot={false}
-                    >
-                      Re-upload
-                    </Badge>
-                  </label>
-                </Panel>
-              </div>
-            ))}
-
-            <div
-              className="field"
-            >
-              <label>Venue photos (min 3)</label>
-
-              <Row>
-                {VENUE_PHOTOS.map((photo) => (
-                  <Photo
-                    key={photo.id}
-                    variant={photo.variant}
-                    glyph={photo.glyph}
-                    style={{
-                      width: 64,
-                      height: 64,
-                      fontSize: 18,
-                    }}
+                <label style={{ cursor: 'pointer', margin: 0 }}>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleFileUpload(e, 'tradeLicense')}
                   />
+                  <Badge tone={documents.tradeLicense ? 'green' : 'blue'} dot={false}>
+                    {documents.tradeLicense ? 'Change File' : 'Upload Document'}
+                  </Badge>
+                </label>
+              </Panel>
+            </div>
+
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>Ownership / Lease Proof</label>
+              <Panel className="between" style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
+                {documents.leaseProof ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>📄</span>
+                    <div>
+                      <b style={{ color: 'var(--text-1)' }}>{documents.leaseProof.name}</b>
+                      <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} · Uploaded ✓</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="small muted">No ownership or lease agreement attached yet</span>
+                )}
+
+                <label style={{ cursor: 'pointer', margin: 0 }}>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleFileUpload(e, 'leaseProof')}
+                  />
+                  <Badge tone={documents.leaseProof ? 'green' : 'blue'} dot={false}>
+                    {documents.leaseProof ? 'Change File' : 'Upload Document'}
+                  </Badge>
+                </label>
+              </Panel>
+            </div>
+
+            <div className="field" style={{ marginTop: 14 }}>
+              <div className="between" style={{ marginBottom: 6 }}>
+                <label style={{ margin: 0 }}>Venue Photos ({photos.length} uploaded)</label>
+                <span className="tiny muted">Min 3 photos required</span>
+              </div>
+
+              <Row style={{ gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                {photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    style={{
+                      position: 'relative',
+                      width: 72,
+                      height: 72,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      border: '1px solid var(--border-soft)',
+                      background: 'rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(photo.id)}
+                      style={{
+                        position: 'absolute',
+                        top: 2,
+                        right: 2,
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.7)',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 10,
+                        lineHeight: '18px',
+                        textAlign: 'center',
+                        padding: 0,
+                      }}
+                      title="Remove photo"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 ))}
 
-                <label style={{ cursor: 'pointer' }}>
+                <label style={{ cursor: 'pointer', margin: 0 }}>
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => handleFileUpload(e, 'photo')}
+                    onChange={handlePhotoUpload}
                   />
-                  <IconButton
-                    label="Add photo"
+                  <div
                     style={{
-                      width: 64,
-                      height: 64,
-                      fontSize: 22,
+                      width: 72,
+                      height: 72,
+                      borderRadius: 12,
+                      border: '2px dashed var(--brand-600)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(34, 197, 94, 0.06)',
+                      color: 'var(--brand-600)',
+                      fontWeight: 700,
+                      fontSize: 11,
+                      gap: 2,
                     }}
-                    onClick={() => {}}
                   >
-                    +
-                  </IconButton>
+                    <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>
+                    Upload
+                  </div>
                 </label>
               </Row>
             </div>
