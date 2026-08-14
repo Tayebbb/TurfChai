@@ -108,6 +108,7 @@ export default function OwnerOnboardingPage() {
   });
 
   const [photos, setPhotos] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
 
   const [venueName, setVenueName] = useState('Kick Off Arena');
   const [location, setLocation] = useState({ address: '', area: '', lat: null, lng: null });
@@ -396,7 +397,7 @@ export default function OwnerOnboardingPage() {
                         <div
                           key={photo.id}
                           style={{ position: 'relative', cursor: 'pointer' }}
-                          onClick={() => window.open(photo.url, '_blank')}
+                          onClick={() => setPreviewFile(photo)}
                           title="Click to view full image"
                         >
                           <img
@@ -500,9 +501,9 @@ export default function OwnerOnboardingPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <a href={documents.tradeLicense.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', cursor: 'pointer' }} title="Click to view document">
-                            <b style={{ color: 'var(--brand-500)', textDecoration: 'underline' }}>{documents.tradeLicense.name}</b>
-                          </a>
+                          <span onClick={() => setPreviewFile(documents.tradeLicense)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
+                            <b>{documents.tradeLicense.name}</b>
+                          </span>
                           <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ✓</span>
                         </div>
                       </div>
@@ -525,9 +526,9 @@ export default function OwnerOnboardingPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <a href={documents.leaseProof.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', cursor: 'pointer' }} title="Click to view document">
-                            <b style={{ color: 'var(--brand-500)', textDecoration: 'underline' }}>{documents.leaseProof.name}</b>
-                          </a>
+                          <span onClick={() => setPreviewFile(documents.leaseProof)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
+                            <b>{documents.leaseProof.name}</b>
+                          </span>
                           <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ✓</span>
                         </div>
                       </div>
@@ -550,7 +551,7 @@ export default function OwnerOnboardingPage() {
                   </div>
                   <Row style={{ gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     {photos.map((photo) => (
-                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }} onClick={() => window.open(photo.url, '_blank')} title="Click to view full image">
+                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }} onClick={() => setPreviewFile(photo)} title="Click to view full image">
                         <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <button type="button" onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id); }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, lineHeight: '18px', textAlign: 'center', padding: 0 }} title="Remove photo">x</button>
                       </div>
@@ -616,6 +617,16 @@ export default function OwnerOnboardingPage() {
           <Button variant="tertiary" block onClick={submitted.close} style={{ marginTop: '10px' }}>
             Close
           </Button>
+        </div>
+      </Overlay>
+
+      <Overlay isOpen={!!previewFile} onClose={() => setPreviewFile(null)} title={previewFile?.name || 'Document Preview'} maxWidth={800}>
+        <div style={{ height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {previewFile?.name?.toLowerCase().endsWith('.pdf') ? (
+            <iframe src={previewFile.url} width="100%" height="100%" style={{ border: 'none', borderRadius: 8, background: '#fff' }} title={previewFile.name} />
+          ) : (
+            <img src={previewFile?.url} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
+          )}
         </div>
       </Overlay>
     </>
