@@ -71,7 +71,7 @@ export default function PromotionsPage() {
       
       refetch();
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to create promotion';
+      const msg = err.message || 'Failed to create promotion';
       showToast(`Error: ${msg}`);
     } finally {
       setIsSubmitting(false);
@@ -85,7 +85,7 @@ export default function PromotionsPage() {
       showToast(!currentActive ? 'Promotion activated ✓' : 'Promotion paused ✓');
       refetch();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update promotion status';
+      const msg = err.message || 'Failed to update promotion status';
       showToast(`Error: ${msg}`);
     }
   };
@@ -99,7 +99,7 @@ export default function PromotionsPage() {
       showToast('Promotion deleted ✓');
       refetch();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to delete promotion';
+      const msg = err.message || 'Failed to delete promotion';
       showToast(`Error: ${msg}`);
     }
   };
