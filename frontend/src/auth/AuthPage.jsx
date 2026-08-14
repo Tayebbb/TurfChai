@@ -240,20 +240,9 @@ export default function AuthPage() {
                 />
               </Field>
 
-              {role === 'owner' && (
-                <Field label="Venue Name" htmlFor="vnm">
-                  <Input
-                    id="vnm"
-                    placeholder="e.g. Dream Arena Turf"
-                    value={venueName}
-                    onChange={(e) => setVenueName(e.target.value)}
-                  />
-                </Field>
-              )}
-
-              <Field label="Email Address" htmlFor="em2">
+              <Field label="Email Address" htmlFor="su-em">
                 <Input
-                  id="em2"
+                  id="su-em"
                   type="email"
                   placeholder="user@example.com"
                   value={signupEmail}

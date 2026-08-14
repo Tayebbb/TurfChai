@@ -97,7 +97,7 @@ export default function OwnerOnboardingPage() {
   const [contactPhone, setContactPhone] = useState('+8801700000000');
   const [contactEmail, setContactEmail] = useState('owner@example.com');
 
-  const [ownerName, setOwnerName] = useState('');
+  const [ownerName, setOwnerName] = useState(authState?.fullName || '');
   const [ownerPhone, setOwnerPhone] = useState('');
   const [nid, setNid] = useState('');
   const [confirmed, setConfirmed] = useState(false);
