@@ -7,6 +7,8 @@ import { useApi } from '@/hooks/useApi';
 import {
   DEMO_TOURNAMENT_CODE,
   getTournament,
+  payDeposit,
+  quoteReservation,
   bdt,
   formatTime,
   formatDate,
@@ -19,6 +21,14 @@ import { paths } from '@/routes/paths';
 const FORMATS = ['Knockout · 16 teams', 'Group + knockout', 'League'];
 const TEAM_COUNTS = ['8', '16', '24'];
 const PAYMENT_METHODS = ['bKash', 'Nagad', 'Card', 'Bank transfer'];
+
+/** Methods that settle against the payer's own mobile-wallet number. */
+const WALLET_METHODS = new Set(['bKash', 'Nagad']);
+
+const REPEAT_OPTIONS = [1, 2, 4, 6, 8, 12];
+
+const repeatLabel = (weeks) =>
+  weeks === 1 ? 'One-off · single day' : `Weekly · ${weeks} weeks`;
 
 const POLICY_POINTS = (summary) => [
   <>
@@ -42,17 +52,36 @@ export default function ReservePage() {
   const tournament = useApi(() => getTournament(code), [code]);
   const live = tournament.data;
 
+  // Recurrence drives the price, so the quote is re-fetched on every change.
+  // It writes nothing server-side.
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
+  const [syncedCode, setSyncedCode] = useState(null);
+  if (live && syncedCode !== live.code) {
+    // Adopt the recurrence already booked, so a reloaded page does not quote a
+    // single week against a reservation that spans several.
+    setSyncedCode(live.code);
+    setRepeatWeeks(live.repeatWeeks ?? 1);
+  }
+
+  const quote = useApi(() => quoteReservation(code, repeatWeeks), [code, repeatWeeks]);
+  const depositPaid = live?.deposit?.status === 'PAID';
+  // Once settled the booking is fact, not a quote.
+  const costs = (depositPaid ? live?.costs : quote.data?.costs) ?? live?.costs ?? null;
+  const weekOptions = REPEAT_OPTIONS.includes(repeatWeeks)
+    ? REPEAT_OPTIONS
+    : [...REPEAT_OPTIONS, repeatWeeks].sort((a, b) => a - b);
+
   const summary = live
     ? {
         venue: live.venueName,
         when: `${formatDate(live.date)} · ${formatTime(live.windowStart)} – ${formatTime(live.windowEnd)}`,
-        slots: `${live.costs.slotCount} slots · ${new Set(live.reservations.map((r) => r.pitchName)).size} pitches`,
-        slotCount: live.costs.slotCount,
-        slotTotal: bdt(live.costs.slotTotal),
-        discount: Number(live.costs.discount) > 0 ? `−${bdt(live.costs.discount)}` : '৳0',
-        total: bdt(live.costs.total),
-        deposit: bdt(live.costs.deposit),
-        balance: bdt(live.costs.balance),
+        slots: `${costs?.slotCount ?? 0} slots · ${new Set(live.reservations.map((r) => r.pitchName)).size} pitches`,
+        slotCount: costs?.slotCount ?? 0,
+        slotTotal: bdt(costs?.slotTotal ?? 0),
+        discount: Number(costs?.discount) > 0 ? `−${bdt(costs.discount)}` : '৳0',
+        total: bdt(costs?.total ?? 0),
+        deposit: bdt(costs?.deposit ?? 0),
+        balance: bdt(costs?.balance ?? 0),
         balanceDue: formatDate(live.balanceDueDate),
       }
     : {
@@ -96,6 +125,38 @@ export default function ReservePage() {
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [method, setMethod] = useState('bKash');
   const [bkashNumber, setBkashNumber] = useState('');
+  const [paying, setPaying] = useState(false);
+  const [receipt, setReceipt] = useState(null);
+
+  const walletMethod = WALLET_METHODS.has(method);
+  const hasSlots = summary.slotCount > 0;
+
+  const onPayDeposit = async () => {
+    if (!agreedToTerms) {
+      showToast('Please accept the reservation terms first');
+      return;
+    }
+    setPaying(true);
+    try {
+      const updated = await payDeposit(code, {
+        repeatWeeks,
+        method,
+        payerReference: walletMethod ? bkashNumber.trim() || undefined : undefined,
+      });
+      setReceipt(updated.deposit ?? null);
+      tournament.reload();
+      quote.reload();
+      reserved.open();
+    } catch (error) {
+      showToast(
+        error.status === 409
+          ? `⚠️ ${error.message}`
+          : error.message || 'Could not take the deposit — please try again',
+      );
+    } finally {
+      setPaying(false);
+    }
+  };
 
   return (
     <>
@@ -155,6 +216,33 @@ export default function ReservePage() {
                   onChange={(event) => setOrganizer(event.target.value)}
                 />
               </div>
+              <div className="field">
+                <label htmlFor="tRepeat">Recurring weekly booking</label>
+                <select
+                  className="select"
+                  id="tRepeat"
+                  value={repeatWeeks}
+                  disabled={depositPaid}
+                  onChange={(event) => setRepeatWeeks(Number(event.target.value))}
+                >
+                  {weekOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {repeatLabel(option)}
+                    </option>
+                  ))}
+                </select>
+                <span className="tiny subtle">
+                  {depositPaid
+                    ? `Booked · ${repeatLabel(repeatWeeks).toLowerCase()}.`
+                    : quote.loading
+                      ? 'Pricing…'
+                      : quote.error
+                        ? 'Live price unavailable — showing the single-day total.'
+                        : repeatWeeks === 1
+                          ? 'The same pitches and times can repeat every week.'
+                          : `Repeats the same pitches and times through ${formatDate(quote.data?.lastDate)}.`}
+                </span>
+              </div>
               <label className="checkline">
                 <input
                   type="checkbox"
@@ -197,20 +285,46 @@ export default function ReservePage() {
                   </button>
                 ))}
               </div>
-              <div className="field" style={{ marginTop: 10 }}>
-                <label htmlFor="bkNum">bKash number</label>
-                <input
-                  className="input num"
-                  id="bkNum"
-                  value={bkashNumber}
-                  onChange={(event) => setBkashNumber(event.target.value)}
-                />
-              </div>
-              <button className="btn btn-primary btn-lg btn-block" type="button" onClick={reserved.open}>
-                Pay {summary.deposit} deposit &amp; reserve
+              {walletMethod ? (
+                <div className="field" style={{ marginTop: 10 }}>
+                  <label htmlFor="bkNum">{method} number</label>
+                  <input
+                    className="input num"
+                    id="bkNum"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    value={bkashNumber}
+                    onChange={(event) => setBkashNumber(event.target.value)}
+                  />
+                </div>
+              ) : null}
+              <button
+                className="btn btn-primary btn-lg btn-block"
+                type="button"
+                disabled={paying || depositPaid || !agreedToTerms || !hasSlots}
+                onClick={onPayDeposit}
+              >
+                {depositPaid
+                  ? 'Deposit paid ✓'
+                  : paying
+                    ? 'Taking payment…'
+                    : `Pay ${summary.deposit} deposit & reserve`}
               </button>
               <p className="tiny subtle center" style={{ marginTop: 8 }}>
-                🔒 Held for you while you pay · balance {summary.balance} due {summary.balanceDue}
+                {!hasSlots ? (
+                  <>
+                    Add pitch slots on the timeline before paying —{' '}
+                    <Link to={paths.host.multiPitch}>pick your slots</Link>
+                  </>
+                ) : depositPaid ? (
+                  <>
+                    ✓ Deposit settled · balance {summary.balance} due {summary.balanceDue}
+                  </>
+                ) : (
+                  <>
+                    🔒 Held for you while you pay · balance {summary.balance} due {summary.balanceDue}
+                  </>
+                )}
               </p>
             </section>
           </div>
@@ -230,6 +344,14 @@ export default function ReservePage() {
               <span>{summary.slotCount} pitch-slots</span>
               <span className="num">{summary.slotTotal}</span>
             </div>
+            {repeatWeeks > 1 ? (
+              <div className="pricerow">
+                <span>Weekly repeat</span>
+                <span className="num">
+                  {quote.data ? `${quote.data.slotsPerWeek} slots × ${repeatWeeks} weeks` : `${repeatWeeks} weeks`}
+                </span>
+              </div>
+            ) : null}
             <div className="pricerow neg">
               <span>Multi-pitch discount</span>
               <span className="num">{summary.discount}</span>
@@ -271,10 +393,17 @@ export default function ReservePage() {
         </div>
         <h3>{name} is booked!</h3>
         <p className="muted small">
-          Deposit {summary.deposit} due via {method}. Reservation{' '}
+          Deposit {receipt ? bdt(receipt.amount) : summary.deposit} received via{' '}
+          {receipt?.method ?? method}. Reservation{' '}
           <b className="num">{live?.code ?? code}</b> holds {summary.slotCount} slots at{' '}
-          {summary.venue} — payment capture arrives with the payments service.
+          {summary.venue}
+          {repeatWeeks > 1 ? ` across ${repeatWeeks} weeks` : ''}.
         </p>
+        {receipt?.reference ? (
+          <p className="tiny subtle">
+            Payment reference <b className="num">{receipt.reference}</b>
+          </p>
+        ) : null}
         <div className="stack-sm" style={{ marginTop: 12 }}>
           <Link
             className="btn btn-primary btn-block"

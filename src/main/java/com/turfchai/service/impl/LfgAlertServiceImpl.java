@@ -3,6 +3,7 @@ package com.turfchai.service.impl;
 import com.turfchai.dto.request.CreateLfgAlertRequest;
 import com.turfchai.dto.response.LfgAlertResponse;
 import com.turfchai.dto.response.OpenGameResponse;
+import com.turfchai.exception.LfgAlertNotFoundException;
 import com.turfchai.exception.UserNotFoundException;
 import com.turfchai.model.LfgAlert;
 import com.turfchai.model.OpenGame;
@@ -35,9 +36,9 @@ public class LfgAlertServiceImpl implements LfgAlertService {
 
     @Override
     @Transactional
-    public LfgAlertResponse createAlert(CreateLfgAlertRequest request) {
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + request.getUserId()));
+    public LfgAlertResponse createAlert(Long ownerId, CreateLfgAlertRequest request) {
+        User user = userRepository.findById(ownerId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + ownerId));
 
         Sport sport = null;
         if (request.getSportId() != null) {
@@ -63,21 +64,15 @@ public class LfgAlertServiceImpl implements LfgAlertService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LfgAlertResponse> getUserAlerts(Long userId) {
-        List<LfgAlert> alerts = alertRepository.findByUserId(userId);
+    public List<LfgAlertResponse> getUserAlerts(Long ownerId) {
+        List<LfgAlert> alerts = alertRepository.findByUserId(ownerId);
         return alerts.stream().map(this::mapToLfgAlertResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public LfgAlertResponse updateAlertStatus(Long alertId, Long userId, LfgStatus status) {
-        LfgAlert alert = alertRepository.findById(alertId)
-                .orElseThrow(() -> new RuntimeException("LFG alert not found with id: " + alertId));
-
-        if (!alert.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized to modify this alert");
-        }
-
+    public LfgAlertResponse updateAlertStatus(Long alertId, Long callerId, LfgStatus status) {
+        LfgAlert alert = requireOwned(alertId, callerId);
         alert.setStatus(status);
         LfgAlert updated = alertRepository.save(alert);
         return mapToLfgAlertResponse(updated);
@@ -85,28 +80,34 @@ public class LfgAlertServiceImpl implements LfgAlertService {
 
     @Override
     @Transactional
-    public void deleteAlert(Long alertId, Long userId) {
+    public void deleteAlert(Long alertId, Long callerId) {
+        alertRepository.delete(requireOwned(alertId, callerId));
+    }
+
+    /**
+     * Loads an alert the caller owns.
+     *
+     * <p>Someone else's alert reports as missing rather than forbidden: a 403
+     * would confirm that the id exists, which is exactly what an id-guessing
+     * probe is looking for.
+     */
+    private LfgAlert requireOwned(Long alertId, Long callerId) {
         LfgAlert alert = alertRepository.findById(alertId)
-                .orElseThrow(() -> new RuntimeException("LFG alert not found with id: " + alertId));
-
-        if (!alert.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized to delete this alert");
-        }
-
-        alertRepository.delete(alert);
+                .filter(a -> a.getUser().getId().equals(callerId))
+                .orElseThrow(() -> new LfgAlertNotFoundException("LFG alert not found with id: " + alertId));
+        return alert;
     }
 
     @Override
     @Transactional
-    public List<OpenGameResponse> findMatchesForAlert(Long alertId) {
-        LfgAlert alert = alertRepository.findById(alertId)
-                .orElseThrow(() -> new RuntimeException("LFG alert not found with id: " + alertId));
+    public List<OpenGameResponse> findMatchesForAlert(Long alertId, Long callerId) {
+        LfgAlert alert = requireOwned(alertId, callerId);
 
         List<OpenGame> openGames = openGameRepository.findByStatusIn(List.of(OpenGameStatus.OPEN, OpenGameStatus.ALMOST_FULL));
 
         List<OpenGame> matchedGames = openGames.stream().filter(game -> {
-            if (game.getVenue() != null && !game.getVenue().getArea().toLowerCase().contains(alert.getArea().toLowerCase())
-                    && !alert.getArea().toLowerCase().contains(game.getVenue().getArea().toLowerCase())) {
+            String gameArea = game.getVenue() == null ? null : game.getVenue().getArea();
+            if (gameArea != null && !areasOverlap(gameArea, alert.getArea())) {
                 return false;
             }
             if (alert.getSkillLevel() != null && alert.getSkillLevel() != SkillLevel.ALL_LEVELS
@@ -144,6 +145,16 @@ public class LfgAlertServiceImpl implements LfgAlertService {
                 .pricePerPlayer(game.getPricePerPlayer())
                 .status(game.getStatus().name())
                 .build()).collect(Collectors.toList());
+    }
+
+    /** Areas match when either name contains the other, e.g. "Mirpur" vs "Mirpur DOHS". */
+    private static boolean areasOverlap(String gameArea, String alertArea) {
+        if (alertArea == null || alertArea.isBlank()) {
+            return true;
+        }
+        String a = gameArea.toLowerCase();
+        String b = alertArea.toLowerCase();
+        return a.contains(b) || b.contains(a);
     }
 
     private LfgAlertResponse mapToLfgAlertResponse(LfgAlert alert) {

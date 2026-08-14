@@ -47,7 +47,36 @@ public final class TournamentRequests {
             @NotNull LocalTime endTime) {
     }
 
-    public record ReserveSlotsRequest(@NotEmpty List<@Valid SlotRequest> slots) {
+    /**
+     * @param repeatWeeks how many consecutive weeks the slot pattern repeats,
+     *                    counting the tournament date itself. Null means one.
+     */
+    public record ReserveSlotsRequest(@NotEmpty List<@Valid SlotRequest> slots,
+                                      @Min(1) @Max(26) Integer repeatWeeks) {
+
+        /** Single-week reservation — the default before a recurrence is chosen. */
+        public ReserveSlotsRequest(List<SlotRequest> slots) {
+            this(slots, null);
+        }
+
+        public int weeks() {
+            return repeatWeeks == null ? 1 : repeatWeeks;
+        }
+    }
+
+    /**
+     * Confirms the bulk reservation and records the deposit. The amount is
+     * always computed server-side, so the client cannot name its own price.
+     */
+    public record PayDepositRequest(
+            @Min(1) @Max(26) Integer repeatWeeks,
+            @NotBlank @Pattern(regexp = "bKash|Nagad|Card|Bank transfer",
+                    message = "must be one of bKash, Nagad, Card, Bank transfer") String method,
+            @Size(max = 60) String payerReference) {
+
+        public int weeks() {
+            return repeatWeeks == null ? 1 : repeatWeeks;
+        }
     }
 
     /** Player-facing registration for a tournament. */

@@ -85,7 +85,7 @@ function formatStamp(value) {
 }
 
 /** One saved alert: pause/resume switch, delete, and the games it matches now. */
-function AlertRow({ alert, userId, onChanged }) {
+function AlertRow({ alert, onChanged }) {
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
   const matches = useApi(() => getLfgAlertMatches(alert.id), [alert.id]);
@@ -99,7 +99,7 @@ function AlertRow({ alert, userId, onChanged }) {
   const setEnabled = async (enabled) => {
     setBusy(true);
     try {
-      await updateLfgAlertStatus(alert.id, userId, enabled ? 'ACTIVE' : 'PAUSED');
+      await updateLfgAlertStatus(alert.id, enabled ? 'ACTIVE' : 'PAUSED');
       showToast(enabled ? 'Alert resumed — watching again' : 'Alert paused');
       onChanged();
     } catch (error) {
@@ -112,7 +112,7 @@ function AlertRow({ alert, userId, onChanged }) {
   const onDelete = async () => {
     setBusy(true);
     try {
-      await deleteLfgAlert(alert.id, userId);
+      await deleteLfgAlert(alert.id);
       showToast('Alert deleted');
       onChanged();
     } catch (error) {
@@ -198,7 +198,7 @@ export default function LfgAlertPage() {
   const [lastCreated, setLastCreated] = useState(null);
 
   const { data, loading, error, reload } = useApi(
-    () => (userId ? listLfgAlerts(userId) : Promise.resolve([])),
+    () => (userId ? listLfgAlerts() : Promise.resolve([])),
     [userId],
   );
   const alerts = Array.isArray(data) ? data : [];
@@ -210,7 +210,6 @@ export default function LfgAlertPage() {
     setSaving(true);
     try {
       const created = await createLfgAlert({
-        userId,
         sportName: sport,
         area,
         preferredDays: days,
@@ -366,7 +365,7 @@ export default function LfgAlertPage() {
                   </p>
                 ) : (
                   alerts.map((alert) => (
-                    <AlertRow key={alert.id} alert={alert} userId={userId} onChanged={reload} />
+                    <AlertRow key={alert.id} alert={alert} onChanged={reload} />
                   ))
                 )}
               </div>

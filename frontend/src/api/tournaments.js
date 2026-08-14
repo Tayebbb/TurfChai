@@ -9,9 +9,34 @@ export function getTournament(code = DEMO_TOURNAMENT_CODE) {
 }
 
 /** POST /{code}/multi-pitch-reserve — slots: [{pitchId, startTime, endTime}] (priced server-side) */
-export function reserveSlots(code, slots) {
+export function reserveSlots(code, slots, repeatWeeks) {
   return apiSend('POST', `/api/v1/host/tournaments/${encodeURIComponent(code)}/multi-pitch-reserve`, {
     slots,
+    repeatWeeks,
+  });
+}
+
+/**
+ * GET /{code}/reserve-quote?repeatWeeks= — live price for repeating the
+ * reserved pattern weekly. Writes nothing, so it is safe to call on every
+ * change of the recurrence selector.
+ */
+export function quoteReservation(code, repeatWeeks) {
+  return apiGet(`/api/v1/host/tournaments/${encodeURIComponent(code)}/reserve-quote`, {
+    repeatWeeks,
+  });
+}
+
+/**
+ * POST /{code}/deposit — confirms the bulk reservation and captures the
+ * deposit. The amount is computed server-side; only the method and the
+ * payer's reference travel from the browser.
+ */
+export function payDeposit(code, { repeatWeeks, method, payerReference }) {
+  return apiSend('POST', `/api/v1/host/tournaments/${encodeURIComponent(code)}/deposit`, {
+    repeatWeeks,
+    method,
+    payerReference,
   });
 }
 

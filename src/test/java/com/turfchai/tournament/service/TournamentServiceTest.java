@@ -7,6 +7,7 @@ import com.turfchai.tournament.config.TournamentDataSeeder;
 import com.turfchai.tournament.repository.TournamentRepository;
 import com.turfchai.tournament.repository.TournamentFixtureRepository;
 import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
+import com.turfchai.tournament.service.TournamentRequests.PayDepositRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
 import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
 import com.turfchai.tournament.service.TournamentRequests.SlotRequest;
@@ -14,6 +15,8 @@ import com.turfchai.tournament.service.TournamentService.PitchConflictException;
 import com.turfchai.tournament.service.TournamentService.TournamentConflictException;
 import com.turfchai.tournament.service.TournamentService.TournamentNotFoundException;
 import com.turfchai.tournament.service.TournamentViews.FixtureView;
+import com.turfchai.tournament.service.TournamentViews.ReservationQuote;
+import com.turfchai.tournament.service.TournamentViews.ReservationView;
 import com.turfchai.tournament.service.TournamentViews.TeamView;
 import com.turfchai.tournament.service.TournamentViews.TournamentView;
 import com.turfchai.venue.repository.PitchRepository;
@@ -190,6 +193,107 @@ class TournamentServiceTest {
         service.reserveSlots(a.code(), new ReserveSlotsRequest(List.of(slot)));
         assertThatThrownBy(() -> service.reserveSlots(b.code(), new ReserveSlotsRequest(List.of(slot))))
                 .isInstanceOf(PitchConflictException.class);
+    }
+
+    // ------------------------------------------------------------------
+    // Recurring weekly reservations + deposit
+    // ------------------------------------------------------------------
+
+    @Test
+    void reserveSlotsRepeatsThePatternWeekly() {
+        TournamentView t = createTournament(8);
+        Long pitchId = pitchIdOf("kick-off-arena");
+
+        TournamentView after = service.reserveSlots(t.code(), new ReserveSlotsRequest(
+                List.of(new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0))), 3));
+
+        assertThat(after.reservations()).hasSize(3);
+        assertThat(after.reservations()).extracting(ReservationView::slotDate)
+                .containsExactly(t.date(), t.date().plusWeeks(1), t.date().plusWeeks(2));
+        assertThat(after.repeatWeeks()).isEqualTo(3);
+    }
+
+    @Test
+    void quoteScalesWithTheRecurrenceWithoutWritingAnything() {
+        TournamentView t = createTournament(8);
+        Long pitchId = pitchIdOf("kick-off-arena");
+        service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)))));
+
+        ReservationQuote single = service.quoteRecurring(t.code(), 1);
+        ReservationQuote quadruple = service.quoteRecurring(t.code(), 4);
+
+        assertThat(quadruple.costs().slotCount()).isEqualTo(single.costs().slotCount() * 4);
+        assertThat(quadruple.costs().slotTotal())
+                .isEqualByComparingTo(single.costs().slotTotal().multiply(new BigDecimal("4")));
+        assertThat(quadruple.lastDate()).isEqualTo(t.date().plusWeeks(3));
+        // Quoting must not create anything.
+        assertThat(service.get(t.code()).reservations()).hasSize(1);
+    }
+
+    @Test
+    void quoteRejectsAnAbsurdRecurrence() {
+        TournamentView t = createTournament(8);
+        assertThatThrownBy(() -> service.quoteRecurring(t.code(), 0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.quoteRecurring(t.code(), 999))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void payDepositExtendsTheRecurrenceAndChargesTheServerPrice() {
+        TournamentView t = createTournament(8);
+        Long pitchId = pitchIdOf("kick-off-arena");
+        service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)))));
+
+        TournamentView paid = service.payDeposit(t.code(),
+                new PayDepositRequest(2, "bKash", "01700000000"));
+
+        assertThat(paid.reservations()).hasSize(2);
+        assertThat(paid.deposit().status()).isEqualTo("PAID");
+        assertThat(paid.deposit().method()).isEqualTo("bKash");
+        assertThat(paid.deposit().reference()).isEqualTo("01700000000");
+        assertThat(paid.deposit().paidAt()).isNotNull();
+        // The charged amount is the one the server computed, not one supplied.
+        assertThat(paid.deposit().amount()).isEqualByComparingTo(paid.costs().deposit());
+    }
+
+    @Test
+    void depositCannotBePaidTwice() {
+        TournamentView t = createTournament(8);
+        Long pitchId = pitchIdOf("kick-off-arena");
+        service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)))));
+        service.payDeposit(t.code(), new PayDepositRequest(1, "Card", null));
+
+        assertThatThrownBy(() -> service.payDeposit(t.code(), new PayDepositRequest(1, "Card", null)))
+                .isInstanceOf(TournamentConflictException.class);
+    }
+
+    @Test
+    void depositChargesExactlyWhatWasQuoted() {
+        TournamentView t = createTournament(8);
+        Long pitchId = pitchIdOf("kick-off-arena");
+        service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)),
+                new SlotRequest(pitchId, LocalTime.of(10, 0), LocalTime.of(12, 0)))));
+
+        ReservationQuote quoted = service.quoteRecurring(t.code(), 4);
+        TournamentView paid = service.payDeposit(t.code(), new PayDepositRequest(4, "Card", null));
+
+        assertThat(paid.deposit().amount()).isEqualByComparingTo(quoted.costs().deposit());
+        assertThat(paid.costs().total()).isEqualByComparingTo(quoted.costs().total());
+        assertThat(paid.costs().slotCount()).isEqualTo(quoted.costs().slotCount());
+    }
+
+    @Test
+    void depositIsRefusedWithNothingReserved() {
+        TournamentView t = createTournament(8);
+
+        assertThatThrownBy(() -> service.payDeposit(t.code(), new PayDepositRequest(1, "bKash", null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Reserve at least one pitch slot");
     }
 
     // ------------------------------------------------------------------

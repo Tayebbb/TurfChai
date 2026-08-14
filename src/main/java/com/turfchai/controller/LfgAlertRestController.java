@@ -4,16 +4,25 @@ import com.turfchai.dto.request.CreateLfgAlertRequest;
 import com.turfchai.dto.response.LfgAlertResponse;
 import com.turfchai.dto.response.OpenGameResponse;
 import com.turfchai.model.enums.LfgStatus;
+import com.turfchai.security.UserPrincipal;
 import com.turfchai.service.LfgAlertService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * LFG availability alerts.
+ *
+ * <p>The owner is always the authenticated principal. These routes used to take
+ * the user id from the request, which meant the ownership checks downstream
+ * could be satisfied simply by naming the victim.
+ */
 @RestController
 @RequestMapping("/api/v1/solo/lfg-alerts")
 @RequiredArgsConstructor
@@ -23,39 +32,40 @@ public class LfgAlertRestController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
-    public ResponseEntity<LfgAlertResponse> createAlert(@Valid @RequestBody CreateLfgAlertRequest request) {
-        LfgAlertResponse response = alertService.createAlert(request);
+    public ResponseEntity<LfgAlertResponse> createAlert(@AuthenticationPrincipal UserPrincipal principal,
+                                                        @Valid @RequestBody CreateLfgAlertRequest request) {
+        LfgAlertResponse response = alertService.createAlert(principal.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<LfgAlertResponse>> getUserAlerts(@RequestParam Long userId) {
-        List<LfgAlertResponse> alerts = alertService.getUserAlerts(userId);
-        return ResponseEntity.ok(alerts);
+    @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
+    public ResponseEntity<List<LfgAlertResponse>> getMyAlerts(@AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(alertService.getUserAlerts(principal.getId()));
     }
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
     public ResponseEntity<LfgAlertResponse> updateAlertStatus(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
-            @RequestParam Long userId,
             @RequestParam LfgStatus status) {
-        LfgAlertResponse response = alertService.updateAlertStatus(id, userId, status);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(alertService.updateAlertStatus(id, principal.getId(), status));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
-    public ResponseEntity<Void> deleteAlert(
-            @PathVariable Long id,
-            @RequestParam Long userId) {
-        alertService.deleteAlert(id, userId);
+    public ResponseEntity<Void> deleteAlert(@AuthenticationPrincipal UserPrincipal principal,
+                                            @PathVariable Long id) {
+        alertService.deleteAlert(id, principal.getId());
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/matches")
-    public ResponseEntity<List<OpenGameResponse>> getAlertMatches(@PathVariable Long id) {
-        List<OpenGameResponse> matches = alertService.findMatchesForAlert(id);
-        return ResponseEntity.ok(matches);
+    @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
+    public ResponseEntity<List<OpenGameResponse>> getAlertMatches(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(alertService.findMatchesForAlert(id, principal.getId()));
     }
 }
