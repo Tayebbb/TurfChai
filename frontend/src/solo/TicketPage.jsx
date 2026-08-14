@@ -11,9 +11,24 @@ import {
   getOpenGameMembers,
   skillLabel,
 } from '@/api/openGames';
+import { getTicket } from '@/api/tickets';
 import { useApi } from '@/hooks/useApi';
 import { paths } from '@/routes/paths';
 import { formatBdt } from '@/utils/format';
+
+/** ISO instant -> `"Sat 14 Aug, 5:00 pm"`, or null when absent/unparseable. */
+function formatStamp(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 export default function TicketPage() {
   const [searchParams] = useSearchParams();
@@ -34,6 +49,14 @@ export default function TicketPage() {
     error: membersError,
     reload: reloadMembers,
   } = useApi(() => (gameId ? getOpenGameMembers(gameId) : Promise.resolve([])), [gameId]);
+
+  // The gate pass is minted per player and only for someone on the roster, so
+  // this call is expected to fail for a signed-out or non-member visitor. The
+  // page still renders the match; it just has no QR to show.
+  const { data: ticket, loading: ticketLoading } = useApi(
+    () => (gameId && currentUser ? getTicket(gameId) : Promise.resolve(null)),
+    [gameId, currentUser?.id],
+  );
 
   const members = Array.isArray(memberData) ? memberData : [];
 
@@ -92,13 +115,14 @@ export default function TicketPage() {
   const capacity = Number(game.capacity ?? 0);
   const filledCount = Number(game.filledCount ?? 0);
   const spotsLeft = Math.max(0, Number(game.spotsLeft ?? 0));
-  const ticketCode = game.gameCode ?? `OG-${game.id}`;
+  const ticketCode = ticket?.ticketCode ?? game.gameCode ?? `OG-${game.id}`;
   const timeRange = formatTimeRange(game.startTime, game.endTime);
   const dayLabel = formatGameDay(game.gameDate);
   const venueLine = [game.venueName, game.pitchName, game.area].filter(Boolean).join(' · ');
-  const onRoster = !!currentUser && members.some((m) => Number(m.userId) === Number(currentUser.id));
-
-  const ticketUrl = `${window.location.origin}${paths.solo.ticket}?gameId=${game.id}`;
+  const onRoster =
+    !!ticket || (!!currentUser && members.some((m) => Number(m.userId) === Number(currentUser.id)));
+  const validFrom = formatStamp(ticket?.validFrom);
+  const validUntil = formatStamp(ticket?.validUntil);
 
   const ticketFacts = [
     { id: 'day', label: dayLabel.toUpperCase() || 'KICKOFF', value: <b className="num">{timeRange}</b> },
@@ -141,10 +165,40 @@ export default function TicketPage() {
             <div className="muted small">{venueLine}</div>
           </div>
           <div className="center" style={{ padding: 18 }}>
-            <QrCode value={ticketUrl} label={`Match ticket QR code for ${ticketCode}`} />
+            {ticketLoading ? (
+              <p className="subtle small" role="status" style={{ margin: 0 }}>
+                Preparing your gate pass…
+              </p>
+            ) : ticket?.checkInToken ? (
+              <>
+                <QrCode
+                  value={ticket.checkInToken}
+                  label={`Gate check-in code for ${ticketCode}`}
+                />
+                {ticket.checkedIn ? (
+                  <span className="badge green" style={{ marginTop: 10 }}>
+                    Checked in ✓
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <div className="alert warn" style={{ textAlign: 'left' }}>
+                <span className="ico">🎫</span>
+                <div className="tiny">
+                  {currentUser
+                    ? 'Only players on this roster get a gate pass. Join the match to get yours.'
+                    : 'Sign in with the account you joined on to load your gate pass.'}
+                </div>
+              </div>
+            )}
             <b className="num" style={{ fontSize: 18, letterSpacing: '.08em', display: 'block', marginTop: 10 }}>
               {ticketCode}
             </b>
+            {validFrom && validUntil ? (
+              <span className="tiny subtle">
+                Scannable {validFrom} – {validUntil}
+              </span>
+            ) : null}
           </div>
           <div className="perf" />
           <div style={{ padding: '16px 20px' }}>
