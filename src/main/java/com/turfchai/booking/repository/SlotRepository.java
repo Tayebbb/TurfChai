@@ -20,4 +20,8 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
 
     /** HELD slots whose hold window has passed; candidates for cleanup. */
     List<Slot> findByStatusAndHoldExpiresAtBefore(SlotStatus status, OffsetDateTime before);
+
+    boolean existsByPitchIdAndSlotDateAndStartTime(Long pitchId, java.time.LocalDate slotDate, java.time.LocalTime startTime);
+
+    List<Slot> findByVenueIdAndSlotDateBetweenOrderBySlotDateAscStartTimeAsc(Long venueId, java.time.LocalDate startDate, java.time.LocalDate endDate);
 }

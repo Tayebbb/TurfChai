@@ -6,100 +6,16 @@ import { KpiCard } from '@/components/cards/KpiCard';
 import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Progress } from '@/components/ui/Progress';
-import { currentOwner } from '@/data/users';
+import { getMyProfile } from '@/api/players';
+import { getOwnerAnalytics } from '@/api/ownerAnalytics';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import { useState } from 'react';
 import './DashboardPage.css';
 
-const KPIS = [
-  { label: "Today's revenue", value: '৳18,400', delta: '▲ 12% vs last Fri', trend: 'up' },
-  { label: 'Bookings today', value: '14', delta: '▲ 2 more than avg', trend: 'up' },
-  { label: 'Occupancy', value: '72%', delta: 'Peak 4–11 PM: 94%' },
-  { label: 'Pending payments', value: '৳4,300', delta: '3 bookings awaiting', trend: 'down' },
-];
 
-const NEXT_UP = [
-  {
-    id: 'p2-730',
-    slot: '7:30 PM · Pitch 2',
-    badge: { tone: 'green', text: 'Online · paid' },
-    detail: 'Rafiul Karim · 10 players · TC-48291 · handover 7:20',
-    action: { kind: 'link', to: paths.owner.bookings, label: 'Detail', variant: 'secondary' },
-  },
-  {
-    id: 'p1-730',
-    slot: '7:30 PM · Pitch 1',
-    badge: { tone: 'amber', text: 'Phone · deposit' },
-    detail: 'Karim Traders XI · ৳765 paid · ৳1,785 due',
-    action: { kind: 'toast', toast: 'Marked as arrived ✓', label: 'Arrived', variant: 'secondary' },
-  },
-  {
-    id: 'p2-900',
-    slot: '9:00 PM · Pitch 2',
-    badge: { tone: 'blue', text: 'Open game' },
-    detail: 'Friday Night Football · host Rifat H. · 10/10 paid',
-    action: { kind: 'link', to: paths.owner.bookings, label: 'Detail', variant: 'secondary' },
-  },
-  {
-    id: 'p3-900',
-    slot: '9:00 PM · Pitch 3',
-    badge: { tone: 'gray', text: 'Empty' },
-    detail: 'Futsal court unbooked tonight',
-    action: { kind: 'link', to: paths.owner.promotions, label: 'Promote', variant: 'primary' },
-  },
-];
-
-const ACTIVITY = [
-  {
-    id: 'bkash',
-    title: 'bKash payment reconciled — ৳2,550',
-    detail: 'TC-48291 · Rafiul K. · auto-matched to evening shift · 6:12 PM',
-  },
-  {
-    id: 'open-game',
-    title: 'Open game filled 10/10',
-    detail: 'Friday Night Football · last share ৳280 paid · 5:47 PM',
-  },
-  {
-    id: 'walk-in',
-    title: 'Walk-in cash booking — ৳1,700',
-    detail: 'Pitch 3 · added by staff Sumon · afternoon shift · 3:05 PM',
-  },
-  {
-    id: 'refund',
-    title: 'Refund issued — ৳2,200',
-    detail: 'TC-48102 cancelled 26h ahead · full refund per policy · 11:40 AM',
-  },
-];
-
-const ATTENTION = [
-  {
-    id: 'deposits',
-    tone: 'warn',
-    icon: '💰',
-    title: '3 deposit bookings due tonight',
-    body: '৳4,300 to collect at venue. ',
-    link: { to: paths.owner.bookings, label: 'View list' },
-  },
-  {
-    id: 'reviews',
-    tone: 'info',
-    icon: '⭐',
-    title: '2 new reviews await response',
-    body: 'Replying raises repeat bookings. ',
-    link: { to: paths.owner.reviews, label: 'Respond' },
-  },
-  {
-    id: 'offpeak',
-    tone: 'info',
-    icon: '📉',
-    title: 'Tue–Wed 2–4 PM off-peak low',
-    body: 'Try an off-peak promo. ',
-    link: { to: paths.owner.promotions, label: 'Create' },
-  },
-];
 
 export default function DashboardPage() {
   const { showToast } = useToast();
@@ -114,15 +30,26 @@ export default function DashboardPage() {
     );
   }
 
+  const profileApi = useApi(() => getMyProfile(), []);
+  const owner = profileApi.data;
+
+  const { data: analyticsRes, loading } = useApi(getOwnerAnalytics, []);
+  const analyticsData = analyticsRes?.data || analyticsRes || {};
+
+  const KPIS = analyticsData.kpis || [];
+  const NEXT_UP = analyticsData.nextUp || [];
+  const ACTIVITY = analyticsData.activity || [];
+  const ATTENTION = analyticsData.attention || [];
+
   return (
     <>
       <PageTitle title="Dashboard" />
 
       <div className="main-header">
         <div>
-          <h1>Good evening, {currentOwner?.shortName ?? 'Owner'} 🏟️</h1>
+          <h1>Good evening, {owner?.name ?? 'Owner'} 🏟️</h1>
           <span className="subtle small">
-            {currentOwner?.venue ?? '—'} · {currentOwner?.area ?? '—'} · <Badge tone="green">Live</Badge>
+            Kick Off Arena · Dhanmondi · <Badge tone="green">Live</Badge>
           </span>
         </div>
         <div className="row">
@@ -139,6 +66,7 @@ export default function DashboardPage() {
         {KPIS.map((kpi) => (
           <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} delta={kpi.delta} trend={kpi.trend} />
         ))}
+        {loading && <div className="tiny subtle center">Loading KPIs...</div>}
       </div>
 
       {/* 2-Column Minimal Operational Grid */}
@@ -153,27 +81,28 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="stack-sm">
-              {NEXT_UP.map((row) => (
-                <div className="panel between" key={row.id}>
-                  <div>
-                    <b className="small num">{row.slot}</b>{' '}
-                    <Badge tone={row.badge.tone} dot={false}>
-                      {row.badge.text}
-                    </Badge>
-                    <div className="tiny subtle">{row.detail}</div>
+                {NEXT_UP.map((row) => (
+                  <div className="panel between" key={row.id}>
+                    <div>
+                      <b className="small num">{row.slot}</b>{' '}
+                      <Badge tone={row.badge.tone} dot={false}>
+                        {row.badge.text}
+                      </Badge>
+                      <div className="tiny subtle">{row.detail}</div>
+                    </div>
+                    {row.action.kind === 'link' ? (
+                      <Button size="sm" variant={row.action.variant} to={row.action.to}>
+                        {row.action.label}
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant={row.action.variant} onClick={() => showToast(row.action.toast)}>
+                        {row.action.label}
+                      </Button>
+                    )}
                   </div>
-                  {row.action.kind === 'link' ? (
-                    <Button size="sm" variant={row.action.variant} to={row.action.to}>
-                      {row.action.label}
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant={row.action.variant} onClick={() => showToast(row.action.toast)}>
-                      {row.action.label}
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+                {!loading && NEXT_UP.length === 0 && <div className="tiny subtle center">No upcoming slots</div>}
+              </div>
           </section>
 
           <section className="card">
@@ -192,6 +121,7 @@ export default function DashboardPage() {
                   </p>
                 </li>
               ))}
+              {!loading && ACTIVITY.length === 0 && <li className="tiny subtle center">No recent activity</li>}
             </ul>
           </section>
         </div>
@@ -210,6 +140,7 @@ export default function DashboardPage() {
                   <Link to={item.link.to}>{item.link.label}</Link>
                 </Alert>
               ))}
+              {!loading && ATTENTION.length === 0 && <div className="tiny subtle center">All good!</div>}
             </div>
           </section>
 

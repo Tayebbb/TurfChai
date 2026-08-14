@@ -19,4 +19,13 @@ public class BookingResponse {
     private String status;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    
+    // Enriched fields for frontend BookingsPage
+    private String title;
+    private String venue;
+    private String pitch;
+    private String date;
+    private String time;
+    private String duration;
+    private String share;
 }

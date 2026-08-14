@@ -10,7 +10,6 @@ import { Photo } from '@/components/ui/Photo';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { searchVenues, toExploreCard } from '@/api/venues';
 import { getSavedVenues, toggleSavedVenue } from '@/api/players';
-import { exploreVenues as exploreVenuesFallback } from '@/data/venues';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useFilterChips } from '@/hooks/useFilterChips';
@@ -139,7 +138,7 @@ export default function ExplorePage() {
     () => searchVenues({ q: debouncedQuery, page, size: PAGE_SIZE, sort: 'rating', ...filterParams }),
     [debouncedQuery, page, JSON.stringify(filterParams)],
   );
-  const venues = search.data ? search.data.items.map(toExploreCard) : exploreVenuesFallback;
+  const venues = search.data ? search.data.items.map(toExploreCard) : [];
   const totalPages = search.data?.totalPages ?? 1;
   const totalItems = search.data?.totalItems ?? venues.length;
 

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Alert } from '@/components/ui/Alert';
 import { Switch } from '@/components/forms/Toggles';
-import { fridayNightRoster } from '@/data/games';
+import { searchOpenGames } from '@/api/games';
+import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
 import { currentPlayer } from '@/data/users';
 import { paths } from '@/routes/paths';
@@ -17,6 +18,13 @@ const TICKET_FACTS = [
 export default function TicketPage() {
   const { showToast } = useToast();
   const [reminder, setReminder] = useState(true);
+
+  // Fetching the first open game for demo ticket purposes
+  const gamesApi = useApi(() => searchOpenGames(), []);
+  const game = gamesApi.data?.[0];
+
+  if (gamesApi.loading) return <div className="wrap" style={{ paddingTop: 32 }}>Loading...</div>;
+  if (!game) return <div className="wrap" style={{ paddingTop: 32 }}>Ticket not found</div>;
 
   return (
     <>
@@ -37,12 +45,12 @@ export default function TicketPage() {
         <div className="ticket">
           <div className="head">
             <div className="between">
-              <b style={{ fontFamily: 'var(--font-display)', fontSize: 17 }}>Friday Night Football</b>
+              <b style={{ fontFamily: 'var(--font-display)', fontSize: 17 }}>{game.title}</b>
               <span className="badge nodot" style={{ background: 'rgba(255,255,255,.2)', color: '#fff' }}>
                 Open game
               </span>
             </div>
-            <div className="muted small">Kick Off Arena · Pitch 2 · Dhanmondi 27</div>
+            <div className="muted small">{game.venueName} \u00b7 {game.pitchName} \u00b7 {game.area}</div>
           </div>
           <div className="center" style={{ padding: 18 }}>
             <div className="qr" role="img" aria-label="Match ticket QR code" />
@@ -93,13 +101,13 @@ export default function TicketPage() {
 
         <div className="card" style={{ marginTop: 14 }}>
           <div className="between">
-            <h4 style={{ margin: 0 }}>Roster · 10/10 · Full</h4>
+            <h4 style={{ margin: 0 }}>Roster \u00b7 {game.filledCount + 1}/{game.capacity} \u00b7 Full</h4>
             <span className="badge gray">Closed</span>
           </div>
           <div className="row-wrap" style={{ marginTop: 10 }}>
-            {fridayNightRoster.map((player) => (
-              <span key={player.id} className={player.tone ? `avatar ${player.tone}` : 'avatar'}>
-                {player.initials}
+            {(game.members || []).map((player) => (
+              <span key={player.userId} className="avatar">
+                {player.playerName.substring(0, 2).toUpperCase()}
               </span>
             ))}
             <span className="avatar" style={{ background: 'var(--brand)', color: '#fff' }}>

@@ -5,7 +5,7 @@ import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
 import { Overlay } from '@/components/modals/Overlay';
 import { Chip } from '@/components/ui/Chip';
-import { fullGame, openGames } from '@/data/games';
+import { searchOpenGames, toGameFeedCard } from '@/api/games';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -197,6 +197,11 @@ export default function OpenGamesPage() {
   const [filters, setFilters] = useState({});
   const [filled, setFilled] = useState(false);
 
+  const gamesApi = useApi(() => searchOpenGames(), []);
+  const allGames = useMemo(() => {
+    return gamesApi.data ? gamesApi.data.map(toGameFeedCard) : [];
+  }, [gamesApi.data]);
+
   // Mirrors the prototype's 0% → target fill-bar sweep on first paint.
   useEffect(() => {
     const id = setTimeout(() => setFilled(true), 200);
@@ -206,10 +211,11 @@ export default function OpenGamesPage() {
   const normalisedQuery = query.trim().toLowerCase();
 
   const visibleGames = useMemo(
-    () => openGames.filter((game) => matchesFilters(game, normalisedQuery, filters)),
-    [normalisedQuery, filters],
+    () => allGames.filter((game) => matchesFilters(game, normalisedQuery, filters)),
+    [allGames, normalisedQuery, filters],
   );
-  const fullVisible = matchesFilters(fullGame, normalisedQuery, filters);
+  // Optional: Add a dummy full game if needed, or get it from API
+  const fullVisible = false;
 
   const visibleCount = visibleGames.length + (fullVisible ? 1 : 0);
   const activeFilterCount = Object.keys(filters).length;
@@ -423,9 +429,9 @@ export default function OpenGamesPage() {
           {fullVisible ? (
             <div className="full-card">
               <div className="full-card-info">
-                <h3>{fullGame.name}</h3>
+                <h3>Full Game</h3>
                 <p>
-                  {fullGame.venue} · Tonight 11:00 PM ·{' '}
+                  Venue · Tonight 11:00 PM ·{' '}
                   <span className="badge gray" style={{ display: 'inline-flex' }}>
                     Full · closed
                   </span>

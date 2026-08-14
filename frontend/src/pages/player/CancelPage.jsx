@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Overlay } from "@/components/modals/Overlay";
-import { fridayBooking } from "@/data/bookings";
+import { getBooking } from "@/api/bookings";
+import { useApi } from "@/hooks/useApi";
 import { useDisclosure } from "@/hooks/useDisclosure";
 import { paths } from "@/routes/paths";
 
@@ -18,6 +19,8 @@ const REASONS = [
 export default function CancelPage() {
   const cancelled = useDisclosure(false);
   const [reason, setReason] = useState(REASONS[0]);
+  const bookingApi = useApi(() => getBooking("TC-48291"), []);
+  const booking = bookingApi.data;
 
   return (
     <>
@@ -27,9 +30,9 @@ export default function CancelPage() {
         id="main"
         style={{ paddingTop: 32, paddingBottom: 64 }}
       >
-        <h1 style={{ fontSize: 22 }}>Cancel booking {fridayBooking.ref}?</h1>
+        <h1 style={{ fontSize: 22 }}>Cancel booking {booking?.bookingCode || "TC-48291"}?</h1>
         <p className="subtle" style={{ marginBottom: 16 }}>
-          Kick Off Arena · Fri 8 Aug, 7:30–9:00 PM
+          {booking?.venue || "Venue"} \u00b7 {booking?.date || "Date"}
         </p>
 
         <div className="card">
@@ -99,7 +102,7 @@ export default function CancelPage() {
           <Button
             variant="secondary"
             block
-            to={paths.player.bookingDetail(fridayBooking.ref)}
+            to={paths.player.bookingDetail(booking?.bookingCode || "TC-48291")}
           >
             Keep my booking
           </Button>

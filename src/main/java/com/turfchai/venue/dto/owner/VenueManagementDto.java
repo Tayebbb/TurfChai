@@ -28,6 +28,7 @@ public record VenueManagementDto(
         boolean tournamentReady,
         boolean hasPromotion,
         String promotionLabel,
+        boolean mlPricingEnabled,
         List<String> photos,
         List<PitchDto> pitches,
         List<PricingRuleDto> pricingRules

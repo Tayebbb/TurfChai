@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -10,9 +10,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Photo } from '@/components/ui/Photo';
 import { Stars } from '@/components/ui/Stars';
 import { Verified } from '@/components/ui/Tags';
-import { similarVenues as similarVenuesFallback } from '@/data/venues';
 import { getVenue, searchVenues, toSimilarCard } from '@/api/venues';
 import { getSavedVenues, toggleSavedVenue } from '@/api/players';
+import { getPricingQuote } from '@/api/pricing';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -255,15 +255,84 @@ export default function VenuePage() {
   const [slotId, setSlotId] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
 
+  // ── Dynamic pricing state ─────────────────────────────────────────────────
+  const [dynSlots, setDynSlots] = useState(null);   // null = loading, [] = no ML
+  const [priceLoading, setPriceLoading] = useState(false);
+
+
   // Live venue details by slug; static prototype copy remains as fallback.
   const detail = useApi(() => getVenue(venueId), [venueId]);
   const venue = detail.data;
+
+  // ── Build ML-priced slots when venue id + date change ────────────────────
+  useEffect(() => {
+    if (!venue?.id) return;
+    setPriceLoading(true);
+    setDynSlots(null);
+
+    // Generate hourly slots from open→close for the selected date.
+    const openHour  = venue.openTime  ? parseInt(venue.openTime.split(':')[0],  10) : 6;
+    const closeHour = venue.closeTime ? parseInt(venue.closeTime.split(':')[0], 10) : 23;
+    const slotMins  = 90; // default slot duration
+    const today = new Date();
+    const daysAhead = Math.max(
+      0,
+      Math.round((new Date(dateId) - new Date(today.toISOString().slice(0, 10))) / 86400000),
+    );
+    const occupancy = 0.65; // default occupancy estimate
+
+    const rawSlots = [];
+    for (let h = openHour; h + Math.floor(slotMins / 60) <= closeHour; h++) {
+      rawSlots.push(h);
+    }
+
+    Promise.allSettled(
+      rawSlots.map((h) => {
+        const dt = `${dateId}T${String(h).padStart(2, '0')}:00:00`;
+        return getPricingQuote({
+          venueId: venue.id,
+          bookingDateTime: dt,
+          daysBeforeBooking: daysAhead,
+          occupancyRate: occupancy,
+        }).then((quote) => ({ hour: h, quote }));
+      }),
+    ).then((results) => {
+      const built = results
+        .filter((r) => r.status === 'fulfilled')
+        .map(({ value: { hour, quote } }) => {
+          const startH  = hour;
+          const endH    = hour + Math.floor(slotMins / 60);
+          const startFmt = `${startH > 12 ? startH - 12 : startH}:00 ${startH >= 12 ? 'PM' : 'AM'}`;
+          const endFmt   = `${endH   > 12 ? endH   - 12 : endH  }:00 ${endH   >= 12 ? 'PM' : 'AM'}`;
+          const price    = Math.round(quote.suggestedPrice);
+          const isBooked = false; // real availability from booking engine — treat as available for now
+          return {
+            id: `dyn-slot-${dateId}-${hour}`,
+            time: startFmt,
+            status: isBooked ? 'booked' : 'available',
+            price: isBooked
+              ? <span className="slot-meta">Booked</span>
+              : (
+                <>
+                  <span className="slot-price">৳{price.toLocaleString('en-US')}</span>
+                  <span className="slot-meta" title={`ML: ×${quote.multiplier?.toFixed(2)} | Base: ৳${Math.round(quote.baseRate)}`}>
+                    ends {endFmt} · 🤖
+                  </span>
+                </>
+              ),
+          };
+        });
+      setDynSlots(built);
+      setPriceLoading(false);
+    });
+  }, [venue?.id, dateId]);
+
   const similarApi = useApi(
     () => searchVenues({ size: 4, sort: 'rating' }).then((page) =>
       page.items.filter((item) => item.slug !== venueId).slice(0, 3).map(toSimilarCard)),
     [venueId],
   );
-  const similarVenues = similarApi.data ?? similarVenuesFallback;
+  const similarVenues = similarApi.data ? similarApi.data.items.map(toSimilarCard) : [];
 
   const name = venue?.name ?? 'Kick Off Arena';
   const metaLine = venue ? `${venue.address}` : 'Road 27, Dhanmondi · 1.2 km';
@@ -449,7 +518,10 @@ export default function VenuePage() {
             <section className="vsection" id="slots">
               <div className="between" style={{ marginBottom: 18 }}>
                 <h2 style={{ fontSize: 20, margin: 0 }}>Live availability</h2>
-                <Badge tone="amber" dot={false}>Sample schedule</Badge>
+                {dynSlots !== null
+                  ? <Badge tone="green" dot={false}>🤖 ML Dynamic Pricing</Badge>
+                  : <Badge tone="amber" dot={false}>{priceLoading ? 'Fetching prices…' : 'Sample schedule'}</Badge>
+                }
               </div>
 
               <DateStrip
@@ -469,7 +541,7 @@ export default function VenuePage() {
               </div>
 
               <SlotGrid
-                slots={SLOTS}
+                slots={dynSlots ?? SLOTS}
                 selectedId={slotId}
                 onSelect={(slot) => setSlotId(slot.id)}
                 label="Available time slots"

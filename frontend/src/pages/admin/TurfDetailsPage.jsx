@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Overlay } from '@/components/modals/Overlay';
-import { findVenue } from '@/data/admin';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
@@ -51,7 +50,6 @@ export default function TurfDetailsPage() {
     [turfId],
   );
 
-  const fallback = useMemo(() => findVenue(turfId), [turfId]);
   const apiVenueData = apiVenueRes?.data || apiVenueRes;
 
   const venue = useMemo(() => {
@@ -72,16 +70,31 @@ export default function TurfDetailsPage() {
         status: overrideStatus || apiVenueData.status || 'Live',
         badgeClass: (overrideStatus || apiVenueData.status) === 'LIVE' ? 'green' : (overrideStatus || apiVenueData.status) === 'SUSPENDED' ? 'red' : 'amber',
         dateAdded: apiVenueData.createdAt ? new Date(apiVenueData.createdAt).toLocaleDateString() : 'Mar 12, 2026',
-        documents: fallback.documents,
+        documents: {
+          tradeLicense: 'Pending Verification',
+          ownerNid: 'Pending Verification',
+          utilityBill: 'Pending Verification',
+        },
         pitchesList: apiVenueData.pitches?.length
           ? apiVenueData.pitches.map((p) => ({ name: p.name, rate: `৳${p.hourlyRate}/hr`, type: p.surfaceType || 'Synthetic' }))
-          : fallback.pitchesList,
-        recentBookings: fallback.recentBookings,
-        chartData: fallback.chartData,
+          : [],
+        recentBookings: [],
+        chartData: [0, 0, 0, 0, 0, 0, 0],
       };
     }
-    return { ...fallback, status: overrideStatus || fallback.status };
-  }, [apiVenueData, fallback, overrideStatus]);
+    return { 
+      status: overrideStatus,
+      name: 'Loading...',
+      documents: {
+        tradeLicense: 'Pending',
+        ownerNid: 'Pending',
+        utilityBill: 'Pending',
+      },
+      pitchesList: [],
+      recentBookings: [],
+      chartData: [0, 0, 0, 0, 0, 0, 0]
+    };
+  }, [apiVenueData, overrideStatus]);
 
   const demandData = useMemo(
     () => ({

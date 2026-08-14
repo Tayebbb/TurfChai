@@ -18,7 +18,6 @@ import { Skill } from '@/components/ui/Tags';
 import { searchVenues, toNearbyCard } from '@/api/venues';
 import { getMyProfile } from '@/api/players';
 import { getTournament, DEMO_TOURNAMENT_CODE, formatDate } from '@/api/tournaments';
-import { nearbyVenues as nearbyVenuesFallback } from '@/data/venues';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useQueryParam } from '@/hooks/useQueryParam';
@@ -36,52 +35,7 @@ const MODES = [
 const PLAYER_CHIPS = ['Today', 'Tomorrow', 'Weekend', '⚽ Football', '🏏 Cricket', 'Off-peak deals'];
 const SOLO_CHIPS = ['Tonight', '⚽ Football', '🏏 Cricket', 'Beginner friendly', 'Under ৳300'];
 
-const FEATURED_GAMES = [
-  {
-    id: 'friday-night-football',
-    title: 'Friday Night Football · Kick Off Arena',
-    status: 'Needs 1 · tonight',
-    statusTone: 'red',
-    skill: 'Intermediate',
-    when: '9:00–10:30 PM',
-    distanceKm: 1.2,
-    price: 280,
-  },
-  {
-    id: 'casual-6-a-side',
-    title: 'Casual 6-a-side · GreenTurf',
-    status: '3 spots',
-    statusTone: 'green',
-    skill: 'Beginner',
-    when: 'Tomorrow 7:00 PM',
-    distanceKm: 2.8,
-    price: 200,
-  },
-];
-
-const SOLO_GAMES = [
-  ...FEATURED_GAMES,
-  {
-    id: 'weekend-cricket-net',
-    title: 'Weekend Cricket Net · Mirpur Sports City',
-    status: '2 spots · Sat',
-    statusTone: 'amber',
-    skill: 'Advanced',
-    when: 'Sat 4:00 PM',
-    distanceKm: 5.1,
-    price: 350,
-  },
-  {
-    id: 'badminton-doubles',
-    title: 'Badminton Doubles · ShuttleZone',
-    status: '4 spots',
-    statusTone: 'green',
-    skill: 'All levels',
-    when: 'Sun 10:00 AM',
-    distanceKm: 1.9,
-    price: 150,
-  },
-];
+import { searchOpenGames, toHomeGameCard } from '@/api/games';
 
 const RECENTLY_VIEWED = [
   { id: 'kick-off-arena', name: 'Kick Off Arena' },
@@ -89,42 +43,7 @@ const RECENTLY_VIEWED = [
   { id: 'shuttlezone-lalmatia', name: 'ShuttleZone Lalmatia' },
 ];
 
-const JOINABLE_TOURNAMENTS = [
-  {
-    id: 'dhaka-corporate-league',
-    privacy: '🌐 Open to everyone',
-    privacyTone: 'green',
-    format: '5-a-side',
-    name: 'Dhaka Corporate League',
-    meta: 'Sat 30 Aug · Kick Off Arena · 6/12 teams · free entry',
-    cta: 'Join now',
-    ctaVariant: 'primary',
-    toast: '✅ Join request sent — the host will confirm your team',
-  },
-  {
-    id: 'mirpur-weekend-sevens',
-    privacy: '🌐 Open to everyone',
-    privacyTone: 'green',
-    format: '7-a-side',
-    name: 'Mirpur Weekend Sevens',
-    meta: 'Sun 31 Aug · Mirpur Sports City · 9/16 teams · ৳4,500/team',
-    cta: 'Join · ৳4,500',
-    ctaVariant: 'primary',
-    toast: '✅ Spot held for 30 min — pay the entry fee to confirm',
-  },
-  {
-    id: 'gulshan-premier-cup',
-    privacy: '🔒 Invite only',
-    privacyTone: 'gray',
-    format: '6-a-side',
-    name: 'Gulshan Premier Cup',
-    meta: 'Fri 5 Sep · Baridhara Sports Hub · details visible to invitees',
-    cta: 'Requires invite',
-    ctaVariant: 'secondary',
-    toast: '🔒 This tournament is private — ask the host for an invite link',
-    dimmed: true,
-  },
-];
+import { browseTournaments, toJoinableTournamentCard } from '@/api/tournaments';
 
 const TOURNAMENT_FORMATS = [
   { id: '5', label: '5-a-side' },
@@ -180,7 +99,9 @@ export default function HomePage() {
 function PlayerMode() {
   // Live venue rail; falls back to sample data when the API is unreachable.
   const venuesApi = useApi(() => searchVenues({ size: 6, sort: 'rating' }), []);
-  const nearbyVenues = venuesApi.data ? venuesApi.data.items.map(toNearbyCard) : nearbyVenuesFallback;
+  const nearbyVenues = venuesApi.data ? venuesApi.data.items.map(toNearbyCard) : [];
+
+  const gamesApi = useApi(() => searchOpenGames(), []);
 
   return (
     <div className="tabpanel on">
@@ -265,9 +186,18 @@ function PlayerMode() {
           <Link to={paths.solo.openGames}>Open games →</Link>
         </div>
         <div className="grid2">
-          {FEATURED_GAMES.map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
+          {gamesApi.loading ? (
+            <>
+              <Skeleton height={140} width="100%" radius={12} />
+              <Skeleton height={140} width="100%" radius={12} />
+            </>
+          ) : gamesApi.data ? (
+            gamesApi.data.slice(0, 2).map(toHomeGameCard).map((game) => (
+              <GameCard key={game.id} game={game} />
+            ))
+          ) : (
+            <p className="subtle">No featured games available</p>
+          )}
         </div>
       </section>
 
@@ -303,6 +233,8 @@ function PlayerMode() {
 /* ======== SOLO PLAYER MODE ======== */
 function SoloMode() {
   const me = useApi(() => getMyProfile(), []);
+  const gamesApi = useApi(() => searchOpenGames(), []);
+
   const soloRecord =
     me.data?.reliabilityScore != null
       ? `${me.data.gamesAttended ?? 0} games \u00b7 ${me.data.reliabilityScore}% show-up`
@@ -361,9 +293,20 @@ function SoloMode() {
           <Link to={paths.solo.openGames}>See all 18 →</Link>
         </div>
         <div className="grid2">
-          {SOLO_GAMES.map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
+          {gamesApi.loading ? (
+            <>
+              <Skeleton height={140} width="100%" radius={12} />
+              <Skeleton height={140} width="100%" radius={12} />
+              <Skeleton height={140} width="100%" radius={12} />
+              <Skeleton height={140} width="100%" radius={12} />
+            </>
+          ) : gamesApi.data ? (
+            gamesApi.data.slice(0, 4).map(toHomeGameCard).map((game) => (
+              <GameCard key={game.id} game={game} />
+            ))
+          ) : (
+            <p className="subtle">No games available</p>
+          )}
         </div>
       </section>
 
@@ -408,6 +351,7 @@ function HostMode() {
   const [inviteCode, setInviteCode] = useState('');
   const tournamentApi = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
   const tournament = tournamentApi.data;
+  const browseApi = useApi(() => browseTournaments({ size: 3 }), []);
 
   return (
     <div className="tabpanel on">
@@ -473,28 +417,38 @@ function HostMode() {
           <span className="subtle small">Open ones are one tap · invite-only needs a link</span>
         </div>
         <div className="grid3">
-          {JOINABLE_TOURNAMENTS.map((tournament) => (
-            <div key={tournament.id} className="card" style={tournament.dimmed ? { opacity: 0.92 } : undefined}>
-              <div className="between">
-                <Badge tone={tournament.privacyTone} dot={false}>
-                  {tournament.privacy}
-                </Badge>
-                <Skill>{tournament.format}</Skill>
+          {browseApi.loading ? (
+            <>
+              <Skeleton height={140} width="100%" radius={12} />
+              <Skeleton height={140} width="100%" radius={12} />
+              <Skeleton height={140} width="100%" radius={12} />
+            </>
+          ) : browseApi.data ? (
+            browseApi.data.items.slice(0, 3).map(toJoinableTournamentCard).map((tournament) => (
+              <div key={tournament.id} className="card" style={tournament.dimmed ? { opacity: 0.92 } : undefined}>
+                <div className="between">
+                  <Badge tone={tournament.privacyTone} dot={false}>
+                    {tournament.privacy}
+                  </Badge>
+                  <Skill>{tournament.format}</Skill>
+                </div>
+                <h4 style={{ margin: '8px 0 2px' }}>{tournament.name}</h4>
+                <p className="subtle small" style={{ margin: 0 }}>
+                  {tournament.meta}
+                </p>
+                <Button
+                  size="sm"
+                  variant={tournament.ctaVariant}
+                  style={{ marginTop: 10 }}
+                  onClick={() => showToast(tournament.toast)}
+                >
+                  {tournament.cta}
+                </Button>
               </div>
-              <h4 style={{ margin: '8px 0 2px' }}>{tournament.name}</h4>
-              <p className="subtle small" style={{ margin: 0 }}>
-                {tournament.meta}
-              </p>
-              <Button
-                size="sm"
-                variant={tournament.ctaVariant}
-                style={{ marginTop: 10 }}
-                onClick={() => showToast(tournament.toast)}
-              >
-                {tournament.cta}
-              </Button>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="subtle">No joinable tournaments at the moment</p>
+          )}
         </div>
         <div className="panel" style={{ marginTop: 12 }}>
           <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>

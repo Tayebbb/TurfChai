@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
-import { fridayBooking } from "@/data/bookings";
+import { getBooking } from "@/api/bookings";
+import { useApi } from "@/hooks/useApi";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
 
@@ -18,6 +19,8 @@ const TEAM_AVATARS = [
 export default function MatchdayPage() {
   const { showToast } = useToast();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const bookingApi = useApi(() => getBooking("TC-48291"), []);
+  const booking = bookingApi.data;
 
   const handleCheckIn = async () => {
     try {
@@ -53,7 +56,7 @@ export default function MatchdayPage() {
           <div className="head">
             <div className="between">
               <b style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>
-                {fridayBooking.venue}
+                {booking?.venue || "Venue"}
               </b>
               <span
                 className="badge nodot"
@@ -63,7 +66,7 @@ export default function MatchdayPage() {
               </span>
             </div>
             <div className="muted small" style={{ marginTop: 2 }}>
-              House 12, Road 27, Dhanmondi · Fri 8 Aug 2026
+              {booking?.pitch || "Pitch"} \u00b7 {booking?.date || "Date"}
             </div>
           </div>
 
@@ -82,7 +85,7 @@ export default function MatchdayPage() {
                 marginTop: 12,
               }}
             >
-              {fridayBooking.ref}
+              {booking?.bookingCode || "TC-48291"}
             </b>
             <span className="subtle small">Show at the gate to check in</span>
           </div>
@@ -94,12 +97,12 @@ export default function MatchdayPage() {
               <div>
                 <span className="tiny subtle">PLAY TIME</span>
                 <br />
-                <b className="num">{fridayBooking.playTime}</b>
+                <b className="num">{booking?.time || "Time"}</b>
               </div>
               <div>
                 <span className="tiny subtle">ARRIVE BY</span>
                 <br />
-                <b className="num">{fridayBooking.arriveBy}</b>
+                <b className="num">10 min before</b>
               </div>
               <div>
                 <span className="tiny subtle">CHECK-IN</span>

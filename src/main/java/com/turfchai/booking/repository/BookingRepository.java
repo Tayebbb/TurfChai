@@ -11,4 +11,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Optional<Booking> findByBookingCode(String bookingCode);
 
     List<Booking> findByUserId(Long userId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b JOIN Venue v ON b.venueId = v.id WHERE v.owner.id = :ownerId")
+    List<Booking> findBookingsByOwnerId(@org.springframework.data.repository.query.Param("ownerId") Long ownerId);
 }

@@ -1,6 +1,7 @@
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
-import { splitRoster } from "@/data/bookings";
+import { getBooking } from "@/api/bookings";
+import { useApi } from "@/hooks/useApi";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
 import "./SplitPaymentPage.css";
@@ -9,6 +10,9 @@ const STEPPER_BTN = { width: 30, height: 30 };
 
 export default function SplitPaymentPage() {
   const { showToast } = useToast();
+  const bookingApi = useApi(() => getBooking('TC-48291'), []);
+  const booking = bookingApi.data;
+  const splitRoster = booking?.members || [];
 
   return (
     <>

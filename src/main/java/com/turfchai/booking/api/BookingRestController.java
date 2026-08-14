@@ -21,6 +21,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.transaction.annotation.Transactional;
+
 /**
  * Booking engine REST API. Every endpoint resolves the caller from the JWT
  * security principal, so the routes live under {@code /api/v1/bookings/**},
@@ -30,6 +32,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/bookings")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
+@Transactional
 public class BookingRestController {
 
     private final BookingService bookingService;
@@ -87,6 +90,13 @@ public class BookingRestController {
                 .status(booking.getStatus() != null ? booking.getStatus().name() : null)
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())
+                .title("Booking " + booking.getBookingCode())
+                .venue(booking.getSlot() != null ? booking.getSlot().getPitch().getVenue().getName() : "Venue")
+                .pitch(booking.getSlot() != null ? booking.getSlot().getPitch().getName() : "Pitch")
+                .date(booking.getBookingDate() != null ? booking.getBookingDate().toString() : "Date")
+                .time(booking.getStartTime() != null ? booking.getStartTime().toString() : "Time")
+                .duration("60 min")
+                .share("\u09F3" + booking.getGrossAmount() + " paid")
                 .build();
     }
 }

@@ -10,11 +10,8 @@ import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 
-const OFFPEAK_STATS = [
-  { id: 'bookings', value: '42', label: 'bookings' },
-  { id: 'revenue', value: '৳64,700', label: 'revenue' },
-  { id: 'lift', value: '+31%', label: 'occupancy lift' },
-];
+import { useApi } from '@/hooks/useApi';
+import { getOwnerPromotions } from '@/api/ownerPromotions';
 
 const TYPE_CHIPS = ['Off-peak discount', 'Repeat-customer reward', 'Limited-time deal', 'Venue loyalty'];
 const DAY_CHIPS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -35,6 +32,9 @@ export default function PromotionsPage() {
   const [fromTime, setFromTime] = useState('12:00 PM');
   const [toTime, setToTime] = useState('5:00 PM');
 
+  const { data: res, loading } = useApi(getOwnerPromotions, []);
+  const promotions = res?.data || res || [];
+
   return (
     <>
       <PageTitle title="Promotions" />
@@ -51,92 +51,58 @@ export default function PromotionsPage() {
 
       <div className="grid2" style={{ alignItems: 'start' }}>
         <div className="stack">
-          <div className="card" style={{ borderLeft: '3px solid var(--brand)' }}>
-            <div className="between">
-              <h3 style={{ margin: 0 }}>Weekday Off-Peak −30%</h3>
-              <Badge tone="green">Active</Badge>
-            </div>
-            <p className="subtle small" style={{ margin: '4px 0 10px' }}>
-              Mon–Thu · 12:00–5:00 PM · all pitches · ৳2,200 → <b className="num">৳1,540</b>
-            </p>
-            <div className="grid3" style={{ gap: 8 }}>
-              {OFFPEAK_STATS.map((stat) => (
-                <div className="panel center" key={stat.id}>
-                  <b className="num">{stat.value}</b>
-                  <div className="tiny subtle">{stat.label}</div>
+          {promotions.map((promo) => (
+            <div className="card" key={promo.id} style={{ borderLeft: `3px solid ${promo.tone || 'var(--brand)'}` }}>
+              <div className="between">
+                <h3 style={{ margin: 0 }}>{promo.title}</h3>
+                <Badge tone={promo.badgeTone}>{promo.badgeText}</Badge>
+              </div>
+              <p className="subtle small" style={{ margin: '4px 0 10px' }}>
+                {promo.description}
+              </p>
+              {promo.stats && (
+                <div className="grid3" style={{ gap: 8 }}>
+                  {promo.stats.map((stat) => (
+                    <div className="panel center" key={stat.id}>
+                      <b className="num">{stat.value}</b>
+                      <div className="tiny subtle">{stat.label}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              {promo.tags && (
+                <div className="row-wrap">
+                  {promo.tags.map((tag) => (
+                    <Badge key={tag.text} tone={tag.tone} dot={false}>
+                      {tag.text}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="row" style={{ marginTop: 10 }}>
+                {promo.actions.map((action) => (
+                  <Button
+                    key={action.label}
+                    size="sm"
+                    variant={action.variant}
+                    onClick={action.openDrawer ? drawer.open : () => showToast(action.toast)}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <div className="row" style={{ marginTop: 10 }}>
-              <Button size="sm" onClick={drawer.open}>
-                Edit
-              </Button>
-              <Button size="sm" variant="tertiary" onClick={() => showToast('Promotion paused ⏸️')}>
-                Pause
-              </Button>
+          ))}
+          {!loading && promotions.length === 0 && (
+            <div className="card center subtle" style={{ padding: '48px 24px' }}>
+              No promotions active yet. Create one to fill empty slots!
             </div>
-          </div>
-
-          <div className="card" style={{ borderLeft: '3px solid var(--brand)' }}>
-            <div className="between">
-              <h3 style={{ margin: 0 }}>Every 10th booking −20%</h3>
-              <Badge tone="green">Active · venue loyalty</Badge>
+          )}
+          {loading && (
+            <div className="card center subtle" style={{ padding: '48px 24px' }}>
+              Loading promotions...
             </div>
-            <p className="subtle small" style={{ margin: '4px 0 10px' }}>
-              Automatic repeat-customer reward · applies at checkout for enrolled regulars
-            </p>
-            <div className="row-wrap">
-              <Badge tone="blue" dot={false}>
-                23 members enrolled
-              </Badge>
-              <Badge tone="green" dot={false}>
-                7 rewards redeemed
-              </Badge>
-            </div>
-            <div className="row" style={{ marginTop: 10 }}>
-              <Button size="sm" onClick={drawer.open}>
-                Edit
-              </Button>
-              <Button size="sm" variant="tertiary" to={paths.owner.customers}>
-                View members
-              </Button>
-            </div>
-          </div>
-
-          <div className="card" style={{ borderLeft: '3px solid var(--warn)' }}>
-            <div className="between">
-              <h3 style={{ margin: 0 }}>Eid Week Special −৳500</h3>
-              <Badge tone="amber">Scheduled</Badge>
-            </div>
-            <p className="subtle small" style={{ margin: '4px 0 10px' }}>
-              Fixed ৳500 off evening slots · 15–22 Aug · limited to first 40 bookings
-            </p>
-            <div className="row">
-              <Button size="sm" onClick={drawer.open}>
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="ghostDanger"
-                onClick={() => showToast('Campaign deleted — undo? (30s)')}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-
-          <div className="card" style={{ opacity: 0.7 }}>
-            <div className="between">
-              <h3 style={{ margin: 0 }}>Ramadan Midnight −25%</h3>
-              <Badge tone="gray">Ended 30 Apr</Badge>
-            </div>
-            <p className="subtle small" style={{ margin: '4px 0 0' }}>
-              96 bookings · ৳1,58,300 revenue ·{' '}
-              <Button size="sm" variant="tertiary" onClick={() => showToast('Duplicated as a new draft ✓')}>
-                Duplicate
-              </Button>
-            </p>
-          </div>
+          )}
         </div>
 
         <div className="glass glass-card">

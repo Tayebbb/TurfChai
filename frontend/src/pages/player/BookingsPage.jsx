@@ -1,11 +1,14 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Overlay } from "@/components/modals/Overlay";
 import { DateStrip, SlotGrid } from "@/components/booking/SlotGrid";
 import { TabPanel, Tabs } from "@/components/navigation/Tabs";
 import { Photo } from "@/components/ui/Photo";
-import { fridayBooking } from "@/data/bookings";
+import { Badge } from "@/components/ui/Badge";
+import { getMyBookings, toBookingCard } from '@/api/bookings';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from "@/hooks/useDisclosure";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
@@ -33,7 +36,10 @@ const RESCHEDULE_SLOTS = [
 const THUMB_STYLE = { width: 56, height: 56, fontSize: 22, flex: "none" };
 
 export default function BookingsPage() {
+  const navigate = useNavigate();
   const { showToast } = useToast();
+  const bookingsApi = useApi(() => getMyBookings(), []);
+  const bookings = bookingsApi.data ? bookingsApi.data.map(toBookingCard) : [];
   const [tab, setTab] = useState("up");
   const [rescheduleDate, setRescheduleDate] = useState("sun-10");
   const [rescheduleSlot, setRescheduleSlot] = useState(null);
@@ -58,88 +64,43 @@ export default function BookingsPage() {
 
         {/* UPCOMING */}
         <TabPanel id="up" value={tab}>
-          <div className="stack">
+          {bookingsApi.loading ? (
+            <p>Loading bookings...</p>
+          ) : bookings.length === 0 ? (
             <div className="card">
-              <div className="between" style={{ flexWrap: "wrap", gap: 10 }}>
-                <div className="row">
-                  <Photo style={THUMB_STYLE} glyph="⚽" />
-                  <div>
-                    <b>Kick Off Arena · Pitch 2</b>
-                    <div className="subtle small">
-                      Fri 8 Aug · 7:30–9:00 PM · Ref TC-48291
+              <p className="subtle small">No bookings found. <Link to={paths.player.explore}>Explore venues</Link></p>
+            </div>
+          ) : (
+            <div className="stack">
+              {bookings.map((b) => (
+                <div key={b.id} className="card">
+                  <div className="between" style={{ flexWrap: "wrap", gap: 10 }}>
+                    <div className="row">
+                      <Photo style={THUMB_STYLE} glyph="⚽" />
+                      <div>
+                        <b>{b.title}</b>
+                        <div className="subtle small">
+                          {b.date} · {b.time} · Ref {b.id}
+                        </div>
+                        <div className="row-wrap" style={{ marginTop: 4 }}>
+                          <Badge tone={b.statusTone}>{b.status}</Badge>
+                        </div>
+                      </div>
                     </div>
-                    <div className="row-wrap" style={{ marginTop: 4 }}>
-                      <span className="badge green">Confirmed</span>
-                      <span className="badge amber">6/10 paid</span>
+                    <div className="row-wrap">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        to={paths.player.bookingDetail(b.id)}
+                      >
+                        Details
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <div className="row-wrap">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    to={paths.player.splitPayment}
-                  >
-                    Invite players
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => showToast("Directions opened 🗺️")}
-                  >
-                    Directions
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    to={paths.player.bookingDetail(fridayBooking.ref)}
-                  >
-                    Details
-                  </Button>
-                </div>
-              </div>
+              ))}
             </div>
-            <div className="card">
-              <div className="between" style={{ flexWrap: "wrap", gap: 10 }}>
-                <div className="row">
-                  <Photo variant="alt2" style={THUMB_STYLE} glyph="🏸" />
-                  <div>
-                    <b>ShuttleZone Lalmatia · Court 1</b>
-                    <div className="subtle small">
-                      Sun 10 Aug · 9:00–10:00 PM · Ref TC-48307
-                    </div>
-                    <div className="row-wrap" style={{ marginTop: 4 }}>
-                      <span className="badge green">Confirmed</span>
-                      <span className="badge green">Paid</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="row-wrap">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={reschedule.open}
-                  >
-                    Reschedule
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghostDanger"
-                    to={paths.player.cancel}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    to={paths.player.bookingDetail("TC-48307")}
-                  >
-                    Details
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </TabPanel>
 
         {/* PENDING */}
