@@ -45,7 +45,10 @@ public class UserProfileRestController {
         org.springframework.security.core.Authentication auth =
                 org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof com.turfchai.security.UserPrincipal principal) {
-            return principal.getPublicId();
+            try {
+                return UUID.fromString(principal.getPublicId());
+            } catch (IllegalArgumentException ignored) {
+            }
         }
         if (header != null && !header.isBlank()) {
             try {
