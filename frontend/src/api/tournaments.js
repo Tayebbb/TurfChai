@@ -1,30 +1,7 @@
-import { apiGet } from './client';
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080';
+import { apiGet, apiSend } from './client';
 
 /** Code of the demo tournament seeded by the backend. */
 export const DEMO_TOURNAMENT_CODE = 'TR-CUP-0091';
-
-async function apiSend(method, path, body) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    let message = `Request failed (${response.status})`;
-    try {
-      const data = await response.json();
-      if (data?.error) message = data.error;
-    } catch {
-      /* non-JSON body */
-    }
-    const error = new Error(message);
-    error.status = response.status;
-    throw error;
-  }
-  return response.status === 204 ? null : response.json();
-}
 
 /** GET /api/v1/host/tournaments/{code} */
 export function getTournament(code = DEMO_TOURNAMENT_CODE) {
@@ -55,9 +32,34 @@ export function toJoinableTournamentCard(t) {
 }
 
 /** POST /{code}/multi-pitch-reserve — slots: [{pitchId, startTime, endTime}] (priced server-side) */
-export function reserveSlots(code, slots) {
+export function reserveSlots(code, slots, repeatWeeks) {
   return apiSend('POST', `/api/v1/host/tournaments/${encodeURIComponent(code)}/multi-pitch-reserve`, {
     slots,
+    repeatWeeks,
+  });
+}
+
+/**
+ * GET /{code}/reserve-quote?repeatWeeks= — live price for repeating the
+ * reserved pattern weekly. Writes nothing, so it is safe to call on every
+ * change of the recurrence selector.
+ */
+export function quoteReservation(code, repeatWeeks) {
+  return apiGet(`/api/v1/host/tournaments/${encodeURIComponent(code)}/reserve-quote`, {
+    repeatWeeks,
+  });
+}
+
+/**
+ * POST /{code}/deposit — confirms the bulk reservation and captures the
+ * deposit. The amount is computed server-side; only the method and the
+ * payer's reference travel from the browser.
+ */
+export function payDeposit(code, { repeatWeeks, method, payerReference }) {
+  return apiSend('POST', `/api/v1/host/tournaments/${encodeURIComponent(code)}/deposit`, {
+    repeatWeeks,
+    method,
+    payerReference,
   });
 }
 

@@ -91,6 +91,24 @@ public class Tournament {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal depositAmount = BigDecimal.ZERO;
 
+    /** 'UNPAID' | 'PAID'. */
+    @Column(name = "deposit_status", nullable = false, length = 15)
+    private String depositStatus = "UNPAID";
+
+    @Column(name = "deposit_paid_at")
+    private Instant depositPaidAt;
+
+    @Column(name = "deposit_method", length = 30)
+    private String depositMethod;
+
+    /** Payment-gateway reference; the balance receipt is reconciled against it. */
+    @Column(name = "deposit_reference", length = 60)
+    private String depositReference;
+
+    /** Weeks the reserved slot pattern repeats, counting the tournament date itself. */
+    @Column(name = "repeat_weeks", nullable = false)
+    private int repeatWeeks = 1;
+
     private LocalDate balanceDueDate;
 
     @Column(nullable = false)

@@ -1,5 +1,7 @@
 package com.turfchai.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,6 +15,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private Map<String, Object> buildErrorResponse(HttpStatus status, String message) {
         Map<String, Object> response = new HashMap<>();
@@ -69,6 +73,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleLowReliability(LowReliabilityScoreException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTicketException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidTicket(InvalidTicketException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(LfgAlertNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleLfgAlertNotFound(LfgAlertNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
@@ -149,9 +165,68 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
 
+    /**
+     * Omitting a required query param, header, path variable or cookie is the
+     * caller's mistake. Without this the catch-all below turns it into a 500,
+     * which tells the client to retry something that can never succeed.
+     */
+    @ExceptionHandler(org.springframework.web.bind.ServletRequestBindingException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingRequestValue(
+            org.springframework.web.bind.ServletRequestBindingException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    /**
+     * An unrouted path. Without this the catch-all reports a 500 and echoes
+     * Spring's internal "No static resource ..." text, which both misleads the
+     * caller and describes how the application resolves requests.
+     */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResource(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(buildErrorResponse(HttpStatus.NOT_FOUND, "No endpoint matches this request"));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotSupported(
+            org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMediaTypeNotSupported(
+            org.springframework.web.HttpMediaTypeNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(buildErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ex.getMessage()));
+    }
+
+    /**
+     * The client went away mid-response — almost always a browser closing an
+     * SSE stream. Nothing can be written to a response that no longer has a
+     * peer, and letting this reach the catch-all below makes it try to render
+     * JSON into a {@code text/event-stream} response, logging a
+     * {@code HttpMessageNotWritableException} stack trace for every closed tab.
+     * An empty body and no content type is the whole correct response here.
+     */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(
+            org.springframework.web.context.request.async.AsyncRequestNotUsableException ex) {
+        // Intentionally empty: void signals "handled, write nothing".
+    }
+
+    /**
+     * Anything unmapped is a bug, so the detail goes to the log where it is
+     * useful and not to the caller, who would otherwise be told things like
+     * which resolver failed or what a constraint is named.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
+        log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage()));
+                .body(buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Something went wrong on our side. Please try again."));
     }
 }

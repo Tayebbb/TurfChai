@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -11,10 +11,12 @@ import { Photo } from '@/components/ui/Photo';
 import { Stars } from '@/components/ui/Stars';
 import { Verified } from '@/components/ui/Tags';
 import { getVenue, searchVenues, toSimilarCard } from '@/api/venues';
+import { getVenueSlots } from '@/api/bookings';
 import { getSavedVenues, toggleSavedVenue } from '@/api/players';
 import { getPricingQuote } from '@/api/pricing';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSlotStream } from '@/hooks/useSlotStream';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './VenuePage.css';
@@ -45,40 +47,19 @@ function nextSevenDays(from) {
     const date = new Date(from);
     date.setDate(date.getDate() + offset);
     return {
-      id: date.toISOString().slice(0, 10),
+      // Local parts, not toISOString(): east of UTC the ISO date rolls back a
+      // day before dawn, so in Dhaka a 1am visitor saw "Fri 15" but queried
+      // the 14th. Matches `isoDay` in api/openGames.js.
+      id: [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+      ].join('-'),
       weekday: date.toLocaleDateString('en-GB', { weekday: 'short' }),
       day: String(date.getDate()),
     };
   });
 }
-
-const SLOTS = [
-  { id: 'slot-1600', time: '4:00 PM', price: <span className="slot-meta">Booked</span>, status: 'booked' },
-  { id: 'slot-1740', time: '5:40 PM', price: <span className="slot-meta">Booked</span>, status: 'booked' },
-  {
-    id: 'slot-1930',
-    time: '7:30 PM',
-    price: (
-      <>
-        <span className="slot-price">৳2,500</span>
-        <span className="slot-meta">ends 9:00</span>
-      </>
-    ),
-    status: 'available',
-  },
-  { id: 'slot-2110', time: '9:10 PM', price: <span className="slot-meta">Held</span>, status: 'held' },
-  {
-    id: 'slot-2250',
-    time: '10:50 PM',
-    price: (
-      <>
-        <span className="slot-price">৳2,000</span>
-        <span className="slot-meta">ends 12:20</span>
-      </>
-    ),
-    status: 'available',
-  },
-];
 
 const GALLERY = [
   { id: 'hero', variant: undefined },
@@ -139,6 +120,24 @@ function formatTime(time) {
 
 const bdt = (value) =>
   value == null ? null : `৳${Math.round(Number(value)).toLocaleString('en-IN')}`;
+
+/** Backend SlotResponse -> the { id, time, price, status } shape SlotGrid renders. */
+function toGridSlot(slot) {
+  // Defensive: the live stream overlays this field, so never assume it is set.
+  const status = String(slot.status ?? 'available').toLowerCase();
+  const unavailableLabel =
+    status === 'held' ? 'Held' : status === 'blocked' ? 'Unavailable' : 'Booked';
+  const price =
+    status === 'available' ? (
+      <>
+        <span className="slot-price">{bdt(slot.price)}</span>
+        <span className="slot-meta">ends {formatTime(slot.endTime)}</span>
+      </>
+    ) : (
+      <span className="slot-meta">{unavailableLabel}</span>
+    );
+  return { id: slot.id, time: formatTime(slot.startTime), price, status };
+}
 
 /** Backend amenity keys -> the labels rendered in the amenity grid. */
 const AMENITY_LABELS = {
@@ -254,6 +253,12 @@ export default function VenuePage() {
   const [dateId, setDateId] = useState(() => dates[0].id);
   const [slotId, setSlotId] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
+  // Mirrors `slotId` for the stream callback, which must not depend on it —
+  // re-subscribing on every selection would tear down the connection.
+  const selectedSlotIdRef = useRef(slotId);
+  useEffect(() => {
+    selectedSlotIdRef.current = slotId;
+  });
 
   // ── Dynamic pricing state ─────────────────────────────────────────────────
   const [dynSlots, setDynSlots] = useState(null);   // null = loading, [] = no ML
@@ -334,6 +339,64 @@ export default function VenuePage() {
   );
   const similarVenues = similarApi.data ? similarApi.data.items.map(toSimilarCard) : [];
 
+  // Live slot availability for the selected day; refetches when the venue
+  // resolves (numeric id, not the slug in the URL) or the date changes.
+  const slotsApi = useApi(
+    () => (venue?.id ? getVenueSlots(venue.id, dateId) : Promise.resolve([])),
+    [venue?.id, dateId],
+  );
+
+  // Statuses pushed by the SSE stream since the last snapshot, keyed by slot
+  // id. Kept as an overlay rather than mutating `slotsApi.data` so a refetch
+  // always wins and the two sources can never drift apart permanently.
+  const [liveStatus, setLiveStatus] = useState({});
+  const streamKey = `${venue?.id ?? ''}@${dateId}`;
+  const [lastStreamKey, setLastStreamKey] = useState(streamKey);
+  if (lastStreamKey !== streamKey) {
+    // Adjust-state-during-render: a stale overlay must never survive a switch
+    // to another venue or day.
+    setLastStreamKey(streamKey);
+    setLiveStatus({});
+  }
+
+  const applyLiveChange = useCallback(
+    ({ slotId: changedId, status }) => {
+      setLiveStatus((current) =>
+        current[changedId] === status ? current : { ...current, [changedId]: status },
+      );
+      // Losing the slot you were about to book is the one case worth
+      // interrupting for — otherwise checkout would 409 on the hold. Read the
+      // selection from a ref: doing this inside a setState updater would fire
+      // the toast twice under StrictMode's double invocation.
+      if (status !== 'AVAILABLE' && selectedSlotIdRef.current === changedId) {
+        setSlotId(null);
+        showToast('That slot was just taken — pick another time');
+      }
+    },
+    [showToast],
+  );
+
+  const resyncSlots = useCallback(() => {
+    setLiveStatus({});
+    slotsApi.reload();
+  }, [slotsApi]);
+
+  useSlotStream({
+    venueId: venue?.id,
+    date: dateId,
+    enabled: Boolean(venue?.id),
+    onSlotChange: applyLiveChange,
+    onResync: resyncSlots,
+  });
+
+  const slots = useMemo(
+    () =>
+      (slotsApi.data ?? []).map((slot) =>
+        toGridSlot(liveStatus[slot.id] ? { ...slot, status: liveStatus[slot.id] } : slot),
+      ),
+    [slotsApi.data, liveStatus],
+  );
+
   const name = venue?.name ?? 'Kick Off Arena';
   const metaLine = venue ? `${venue.address}` : 'Road 27, Dhanmondi · 1.2 km';
   const rating = venue ? String(venue.rating) : '4.8';
@@ -412,8 +475,21 @@ export default function VenuePage() {
     }
   };
 
-  const selectedSlot = SLOTS.find((slot) => slot.id === slotId);
-  const checkoutHref = slotId ? `${paths.player.checkout}?slotId=${slotId}` : paths.player.checkout;
+  const [slotWarn, setSlotWarn] = useState(false);
+
+  const selectedSlot = slots.find((slot) => slot.id === slotId);
+  // Checkout has no slot-by-id endpoint, so it re-reads the slot from this
+  // venue's day list — hence the venue slug and date travel with the slotId.
+  const checkoutHref = selectedSlot
+    ? `${paths.player.checkout}?slotId=${selectedSlot.id}&venue=${encodeURIComponent(venueId)}&date=${encodeURIComponent(dateId)}`
+    : null;
+
+  const handleBookClick = (e) => {
+    if (!selectedSlot) {
+      e.preventDefault();
+      setSlotWarn(true);
+    }
+  };
 
   if (detail.error && detail.error.status === 404) {
     return (
@@ -518,16 +594,16 @@ export default function VenuePage() {
             <section className="vsection" id="slots">
               <div className="between" style={{ marginBottom: 18 }}>
                 <h2 style={{ fontSize: 20, margin: 0 }}>Live availability</h2>
-                {dynSlots !== null
-                  ? <Badge tone="green" dot={false}>🤖 ML Dynamic Pricing</Badge>
-                  : <Badge tone="amber" dot={false}>{priceLoading ? 'Fetching prices…' : 'Sample schedule'}</Badge>
-                }
+                {slotsApi.error ? <Badge tone="amber" dot={false}>Unavailable</Badge> : null}
               </div>
 
               <DateStrip
                 dates={dates}
                 selectedId={dateId}
-                onSelect={(date) => setDateId(date.id)}
+                onSelect={(date) => {
+                  setDateId(date.id);
+                  setSlotId(null);
+                }}
                 label="Pick a date"
               />
 
@@ -540,12 +616,24 @@ export default function VenuePage() {
                 </span>
               </div>
 
-              <SlotGrid
-                slots={dynSlots ?? SLOTS}
-                selectedId={slotId}
-                onSelect={(slot) => setSlotId(slot.id)}
-                label="Available time slots"
-              />
+              {slotsApi.loading ? (
+                <p className="subtle" role="status" style={{ margin: '8px 0' }}>
+                  Loading available slots…
+                </p>
+              ) : slots.length === 0 ? (
+                <p className="subtle" role="status" style={{ margin: '8px 0' }}>
+                  {slotsApi.error
+                    ? 'Could not load slots for this date — try another day.'
+                    : 'No slots scheduled for this date yet — try another day.'}
+                </p>
+              ) : (
+                <SlotGrid
+                  slots={slots}
+                  selectedId={slotId}
+                  onSelect={(slot) => { setSlotId(slot.id); setSlotWarn(false); }}
+                  label="Available time slots"
+                />
+              )}
 
               <p style={{ margin: '16px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
                 {offPeakRule
@@ -696,16 +784,32 @@ export default function VenuePage() {
               variant="primary"
               block
               to={checkoutHref}
+              onClick={handleBookClick}
               style={{ minHeight: 44, fontSize: 14 }}
             >
               Book this slot
             </Button>
+            {slotWarn && (
+              <p
+                role="alert"
+                style={{
+                  fontSize: 12.5,
+                  color: 'var(--danger)',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  marginTop: 8,
+                  lineHeight: 1.5,
+                }}
+              >
+                ⚠️ Please select a time slot before booking.
+              </p>
+            )}
             <p
               style={{
                 fontSize: 11.5,
                 color: 'var(--text-3)',
                 textAlign: 'center',
-                marginTop: 8,
+                marginTop: slotWarn ? 4 : 8,
                 lineHeight: 1.5,
               }}
             >
@@ -872,7 +976,7 @@ export default function VenuePage() {
               {selectedDateLabel} · <span>{selectedSlot ? selectedSlot.time : 'select a slot'}</span>
             </div>
           </div>
-          <Button variant="primary" to={checkoutHref}>
+          <Button variant="primary" to={checkoutHref} onClick={handleBookClick}>
             Book slot
           </Button>
         </div>

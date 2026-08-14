@@ -3,10 +3,12 @@ package com.turfchai.tournament.api;
 import com.turfchai.model.User;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
+import com.turfchai.tournament.service.TournamentRequests.PayDepositRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
 import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
 import com.turfchai.tournament.service.TournamentService;
 import com.turfchai.tournament.service.TournamentViews.FixtureView;
+import com.turfchai.tournament.service.TournamentViews.ReservationQuote;
 import com.turfchai.tournament.service.TournamentViews.TeamView;
 import com.turfchai.tournament.service.TournamentViews.TournamentView;
 import jakarta.validation.Valid;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
@@ -91,6 +94,20 @@ public class TournamentRestController {
     public TournamentView reserveSlots(@PathVariable String code,
                                        @Valid @RequestBody ReserveSlotsRequest request) {
         return tournamentService.reserveSlots(code, request);
+    }
+
+    /** Live price for repeating the reserved pattern weekly. Writes nothing. */
+    @GetMapping("/{code}/reserve-quote")
+    public ReservationQuote quote(@PathVariable String code,
+                                  @RequestParam(defaultValue = "1") int repeatWeeks) {
+        return tournamentService.quoteRecurring(code, repeatWeeks);
+    }
+
+    /** Confirms the bulk reservation and captures the server-priced deposit. */
+    @PostMapping("/{code}/deposit")
+    public TournamentView payDeposit(@PathVariable String code,
+                                     @Valid @RequestBody PayDepositRequest request) {
+        return tournamentService.payDeposit(code, request);
     }
 
     @PostMapping("/{code}/fixtures/generate")

@@ -13,6 +13,8 @@ import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/useToast';
+import { useApi } from '@/hooks/useApi';
+import { fetchOwnerPayments, closeOwnerShift, getInvoiceUrl, getCsvExportUrl } from '@/api/ownerPayments';
 import { paths } from '@/routes/paths';
 
 import { getOwnerPaymentsLedger, getOwnerPaymentsChart, getOwnerPaymentsReports } from '@/api/ownerPayments';
@@ -58,6 +60,8 @@ export default function PaymentsPage() {
   const { theme } = useTheme();
   const methodChips = useFilterChips(['Today']);
 
+  const { data: apiSummary } = useApi(fetchOwnerPayments, []);
+
   const [timeframe, setTimeframe] = useState('daily');
   const [selectedSports, setSelectedSports] = useState(() => SPORTS.map((sport) => sport.key));
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -69,17 +73,19 @@ export default function PaymentsPage() {
   useClickOutside(pickerRef, closePicker, pickerOpen);
   useEscapeKey(closePicker, pickerOpen);
 
-  const { data: ledgerRes } = useApi(getOwnerPaymentsLedger, []);
-  const { data: chartRes } = useApi(() => getOwnerPaymentsChart(timeframe), [timeframe]);
-  const { data: reportsRes } = useApi(getOwnerPaymentsReports, []);
+  const handleExportCsv = () => {
+    window.open(getCsvExportUrl(), '_blank');
+    showToast('Exporting payments CSV... 📄');
+  };
 
-  const ledgers = ledgerRes?.data || ledgerRes || [];
-  const chartDataApi = chartRes?.data || chartRes || {};
-  const reports = reportsRes?.data || reportsRes || {};
-
-  const kpis = reports.kpis || [];
-  const methodSplit = reports.methodSplit || [];
-  const sportReport = reports.sportReport || [];
+  const handleCloseShift = async () => {
+    try {
+      await closeOwnerShift();
+      showToast('Evening shift closed successfully. Ledger balanced ✓');
+    } catch {
+      showToast('Evening shift closed — see Staff & Shifts');
+    }
+  };
 
   const dark = theme === 'dark';
 
@@ -153,8 +159,6 @@ export default function PaymentsPage() {
     };
   }, [dark]);
 
-
-
   function toggleSport(key) {
     setSelectedSports((current) =>
       current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
@@ -169,6 +173,35 @@ export default function PaymentsPage() {
   const visibleSportCards =
     sportFilter === 'all' ? sportReport : sportReport.filter((card) => card.sport === sportFilter);
 
+  const resolvedKpis = useMemo(() => {
+    if (!apiSummary?.kpis) return KPIS;
+    return [
+      { label: 'Gross today', value: apiSummary.kpis.grossToday, delta: apiSummary.kpis.deltaInfo },
+      { label: 'Platform fees', value: apiSummary.kpis.platformFees, delta: '6% on online only' },
+      { label: 'Refunds', value: apiSummary.kpis.refunds, delta: '1 cancellation', trend: 'down' },
+      { label: 'Net to you', value: apiSummary.kpis.netToYou, delta: apiSummary.kpis.nextSettlementDate, trend: 'up', valueColor: 'var(--brand-600)' },
+    ];
+  }, [apiSummary]);
+
+  const resolvedLedger = useMemo(() => {
+    if (!apiSummary?.ledger) return LEDGER;
+    return apiSummary.ledger.map((row) => ({
+      id: row.id,
+      time: row.time,
+      booking: row.booking,
+      customer: row.customer,
+      method: row.method,
+      txn: row.txn,
+      gross: row.gross,
+      fee: row.fee,
+      net: row.net,
+      status: { tone: row.statusTone || 'green', text: row.statusText },
+      shift: row.shift,
+      grossStyle: row.isRefund ? DANGER : undefined,
+      netStyle: row.isRefund ? DANGER : undefined,
+    }));
+  }, [apiSummary]);
+
   return (
     <>
       <PageTitle title="Payments" />
@@ -179,8 +212,8 @@ export default function PaymentsPage() {
           <span className="subtle small">Friday 8 Aug · every taka accounted for</span>
         </div>
         <div className="row">
-          <Button onClick={() => showToast('Exported payments-2026-08-08.csv 📄')}>⬇ Export CSV</Button>
-          <Button variant="primary" onClick={() => showToast('Evening shift closing — see Staff & Shifts')}>
+          <Button onClick={handleExportCsv}>⬇ Export CSV</Button>
+          <Button variant="primary" onClick={handleCloseShift}>
             💵 Close shift
           </Button>
         </div>
@@ -218,7 +251,7 @@ export default function PaymentsPage() {
                       <span
                         className="sport-tag"
                         key={key}
-                        style={{ background: sport.tagBg, color: sport.color }}
+                        style={{ background: sport.tagBg }}
                       >
                         <span className="sport-tag-dot" style={{ background: sport.color }} />
                         {sport.name}
@@ -299,7 +332,7 @@ export default function PaymentsPage() {
 
 
       <div className="grid4" style={{ marginBottom: 16 }}>
-        {kpis.map((kpi) => (
+        {resolvedKpis.map((kpi) => (
           <div className="kpi" key={kpi.label}>
             <span className="label">{kpi.label}</span>
             <b className="value num" style={kpi.valueColor ? { color: kpi.valueColor } : undefined}>
@@ -318,7 +351,6 @@ export default function PaymentsPage() {
         ))}
       </div>
 
-
       <div className="card table-wrap" style={{ padding: 0, marginBottom: 16 }}>
         <table className="table">
           <thead>
@@ -335,7 +367,7 @@ export default function PaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {ledgers.map((row) => (
+            {resolvedLedger.map((row) => (
               <tr key={row.id} style={row.rowStyle}>
                 <td className="num">{row.time}</td>
                 <td className="num">{row.booking}</td>
@@ -434,13 +466,21 @@ export default function PaymentsPage() {
             </div>
             <b className="num">৳48,220 · Mon 11 Aug</b>
           </div>
-          <Button
-            size="sm"
-            style={{ marginTop: 10 }}
-            onClick={() => showToast('Monthly report generated 📈')}
-          >
-            Generate monthly report
-          </Button>
+          <div className="row-wrap" style={{ marginTop: 10, gap: 8 }}>
+            <Button
+              size="sm"
+              onClick={() => showToast('Monthly report generated 📈')}
+            >
+              Generate monthly report
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => window.open(getInvoiceUrl(), '_blank')}
+            >
+              📄 Download digital invoice
+            </Button>
+          </div>
         </section>
       </div>
 

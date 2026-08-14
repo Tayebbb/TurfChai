@@ -2,9 +2,11 @@ package com.turfchai.booking.service;
 
 import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
+import com.turfchai.booking.event.SlotStatusChangedEvent;
 import com.turfchai.booking.repository.SlotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ import java.util.List;
 public class SlotHoldCleanupJob {
 
     private final SlotRepository slotRepository;
+    private final ApplicationEventPublisher events;
 
     @Scheduled(fixedRate = 30000)
     @Transactional
@@ -47,6 +50,8 @@ public class SlotHoldCleanupJob {
             locked.setHeldByUserId(null);
             locked.setHoldExpiresAt(null);
             slotRepository.save(locked);
+            events.publishEvent(SlotStatusChangedEvent.of(
+                    locked.getId(), locked.getVenueId(), locked.getSlotDate(), SlotStatus.AVAILABLE));
         }
     }
 }

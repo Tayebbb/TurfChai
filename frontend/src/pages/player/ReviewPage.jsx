@@ -1,82 +1,242 @@
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Overlay } from "@/components/modals/Overlay";
+import { apiSend, getUser } from "@/api/client";
+import {
+  formatBookingDate,
+  formatTimeRange,
+  getBooking,
+  groupBookings,
+  listBookings,
+} from "@/api/bookings";
+import { useApi } from "@/hooks/useApi";
 import { useDisclosure } from "@/hooks/useDisclosure";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
 import "./ReviewPage.css";
 
 const RATING_ROWS = [
-  { id: "overall", label: "Overall", primary: true, initial: 5 },
-  { id: "surface", label: "Surface", initial: 5 },
-  { id: "lighting", label: "Lighting", initial: 4 },
-  { id: "cleanliness", label: "Cleanliness", initial: 4 },
-  { id: "amenities", label: "Amenities", initial: 3 },
-  { id: "safety", label: "Safety", initial: 5 },
-  { id: "youth", label: "Youth-friendliness", initial: 4 },
+  { id: "overall", label: "Overall", primary: true },
+  { id: "surface", label: "Surface" },
+  { id: "lighting", label: "Lighting" },
+  { id: "cleanliness", label: "Cleanliness" },
+  { id: "amenities", label: "Amenities" },
+  { id: "safety", label: "Safety" },
+  { id: "youth", label: "Youth-friendliness" },
 ];
 
-const INITIAL_RATINGS = Object.fromEntries(
-  RATING_ROWS.map((row) => [row.id, row.initial]),
-);
+/** Nothing is pre-rated — a 0 renders every star "off" and is never sent. */
+const INITIAL_RATINGS = Object.fromEntries(RATING_ROWS.map((row) => [row.id, 0]));
+
+const SUB_RATING_IDS = RATING_ROWS.filter((row) => !row.primary).map((row) => row.id);
 
 const STARS = [1, 2, 3, 4, 5];
 
-const DEFAULT_REVIEW =
-  "Grass is fresh and fast, floodlights excellent. Handover was exactly on time. Changing room a bit small for 10 people.";
+/** Describes the match a review belongs to, from the booking itself. */
+function matchLine(booking) {
+  return [
+    formatBookingDate(booking),
+    formatTimeRange(booking?.startTime, booking?.endTime),
+    booking?.pitchName,
+  ]
+    .filter((part) => part && part !== "\u2014")
+    .join(" \u00b7 ");
+}
+
+/** Empty/loading/error/sign-in shells all share this frame. */
+function ReviewShell({ children }) {
+  return (
+    <>
+      <PageTitle title="Leave a review" />
+      <main className="wrap-form" id="main" style={{ paddingTop: 32, paddingBottom: 64 }}>
+        {children}
+      </main>
+    </>
+  );
+}
+
+/** Lets the player pick which finished match they are reviewing. */
+function PickBooking() {
+  const { data, loading, error, reload } = useApi(() => listBookings(), []);
+
+  if (loading) {
+    return (
+      <ReviewShell>
+        <p className="subtle" role="status">
+          Loading your matches…
+        </p>
+      </ReviewShell>
+    );
+  }
+
+  if (error) {
+    const unauthorized = error.status === 401;
+    return (
+      <ReviewShell>
+        <div className="card" style={{ padding: 24 }}>
+          <h1 style={{ fontSize: 20, marginBottom: 6 }}>
+            {unauthorized ? "Sign in to review a match" : "Could not load your matches"}
+          </h1>
+          <p className="subtle">{error.message}</p>
+          <div className="row" style={{ marginTop: 12 }}>
+            {unauthorized ? (
+              <Button variant="primary" to={paths.auth}>
+                Sign in
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={reload}>
+                Try again
+              </Button>
+            )}
+          </div>
+        </div>
+      </ReviewShell>
+    );
+  }
+
+  const completed = groupBookings(data).completed;
+
+  return (
+    <ReviewShell>
+      <div className="card">
+        <h1 style={{ fontSize: 21, marginBottom: 4 }}>Which match are you reviewing?</h1>
+        {completed.length === 0 ? (
+          <>
+            <p className="subtle small">
+              You have no finished matches yet. Reviews unlock once you have played.
+            </p>
+            <Button variant="primary" to={paths.player.bookings} style={{ marginTop: 10 }}>
+              My bookings
+            </Button>
+          </>
+        ) : (
+          <div style={{ marginTop: 10 }}>
+            {completed.map((booking) => (
+              <Link
+                key={booking.id}
+                className="member"
+                to={`${paths.player.review}?bookingId=${booking.id}`}
+                style={{ textDecoration: "none", color: "var(--text)" }}
+              >
+                <div style={{ flex: 1 }}>
+                  <b className="small">{booking.venueName ?? "Venue"}</b>
+                  <div className="tiny subtle">{matchLine(booking)}</div>
+                </div>
+                <span className="btn btn-sm btn-secondary">Review</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </ReviewShell>
+  );
+}
 
 export default function ReviewPage() {
+  const [searchParams] = useSearchParams();
+  const bookingId = searchParams.get("bookingId");
+
+  if (!bookingId) return <PickBooking />;
+  return <ReviewForm bookingId={bookingId} />;
+}
+
+function ReviewForm({ bookingId }) {
   const { showToast } = useToast();
   const published = useDisclosure(false);
   const [ratings, setRatings] = useState(INITIAL_RATINGS);
-  const [body, setBody] = useState(DEFAULT_REVIEW);
+  const [body, setBody] = useState("");
   const [parentReview, setParentReview] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentUser = getUser();
+  const { data: booking, loading, error, reload } = useApi(
+    () => getBooking(bookingId),
+    [bookingId],
+  );
 
   /** Sets one category to the clicked star value. */
   const rate = (id, value) => setRatings((prev) => ({ ...prev, [id]: value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!booking || !currentUser?.id || ratings.overall === 0) return;
     setIsSubmitting(true);
-    
-    const payload = {
-      bookingId: 1, // Mocked booking ID
-      userId: 1,    // Mocked user ID
-      venueId: 1,   // Mocked venue ID
-      overallRating: ratings.overall,
-      subRatings: {
-        surface: ratings.surface,
-        lighting: ratings.lighting,
-        cleanliness: ratings.cleanliness,
-        amenities: ratings.amenities,
-        safety: ratings.safety,
-        youth: ratings.youth
-      },
-      comment: body,
-      parentReview: parentReview
-    };
+
+    const subRatings = Object.fromEntries(
+      SUB_RATING_IDS.filter((id) => ratings[id] > 0).map((id) => [id, ratings[id]]),
+    );
 
     try {
-      const response = await fetch("http://localhost:8080/api/v1/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+      await apiSend("POST", "/api/v1/reviews", {
+        bookingId: booking.id,
+        userId: currentUser.id,
+        venueId: booking.venueId,
+        overallRating: ratings.overall,
+        subRatings,
+        comment: body,
+        parentReview,
       });
-      
-      if (response.ok) {
-        published.open();
-      } else {
-        showToast("Failed to submit review.");
-      }
-    } catch {
-      showToast("Network error. Could not submit review.");
+      published.open();
+    } catch (submitError) {
+      showToast(submitError.message || "Failed to submit review.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <ReviewShell>
+        <p className="subtle" role="status">
+          Loading the match…
+        </p>
+      </ReviewShell>
+    );
+  }
+
+  if (error) {
+    const unauthorized = error.status === 401;
+    return (
+      <ReviewShell>
+        <div className="card" style={{ padding: 24 }}>
+          <h1 style={{ fontSize: 20, marginBottom: 6 }}>
+            {unauthorized ? "Sign in to review this match" : "Could not load this match"}
+          </h1>
+          <p className="subtle">{error.message}</p>
+          <div className="row" style={{ marginTop: 12 }}>
+            {unauthorized ? (
+              <Button variant="primary" to={paths.auth}>
+                Sign in
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={reload}>
+                Try again
+              </Button>
+            )}
+            <Button variant="tertiary" to={paths.player.bookings}>
+              My bookings
+            </Button>
+          </div>
+        </div>
+      </ReviewShell>
+    );
+  }
+
+  if (!currentUser?.id) {
+    return (
+      <ReviewShell>
+        <div className="card" style={{ padding: 24 }}>
+          <h1 style={{ fontSize: 20, marginBottom: 6 }}>Sign in to leave a review</h1>
+          <p className="subtle">Reviews are tied to the account that made the booking.</p>
+          <Button variant="primary" to={paths.auth} style={{ marginTop: 12 }}>
+            Sign in
+          </Button>
+        </div>
+      </ReviewShell>
+    );
+  }
 
   return (
     <>
@@ -89,32 +249,21 @@ export default function ReviewPage() {
         <div className="glass glass-card center" style={{ marginBottom: 16 }}>
           <span style={{ fontSize: 30 }}>⚽</span>
           <h1 style={{ fontSize: 21, marginTop: 6 }}>
-            Great game at Kick Off Arena?
+            How was {booking.venueName ?? "your match"}?
           </h1>
           <p className="subtle small">
-            Fri 8 Aug · 7:30–9:00 PM · your review is labelled{" "}
-            <b>Verified booking</b>
+            {matchLine(booking)} · your review is labelled <b>Verified booking</b>
           </p>
           <div
             className="row"
             style={{ justifyContent: "center", marginTop: 8 }}
           >
-            <Button variant="tertiary" to={paths.player.home}>
+            <Button variant="tertiary" to={paths.player.bookings}>
               Not now
             </Button>
             <a className="btn btn-primary" href="#form">
               Leave a review
             </a>
-          </div>
-          <div
-            className="alert ok"
-            style={{ marginTop: 14, textAlign: "left" }}
-          >
-            <span className="ico">🏅</span>
-            <div>
-              <b>+250 points already credited</b> for completing this match —
-              Silver → 1,490 pts. Reviews earn +25 more.
-            </div>
           </div>
         </div>
 
@@ -162,27 +311,6 @@ export default function ReviewPage() {
             />
           </div>
 
-          <div className="field">
-            <label>Photos (optional)</label>
-            <div className="row">
-              <button
-                type="button"
-                className="icon-btn"
-                style={{ width: 64, height: 64, fontSize: 22 }}
-                aria-label="Add a photo"
-                onClick={() => showToast("Camera opened 📷")}
-              >
-                +
-              </button>
-              <div
-                className="photo"
-                style={{ width: 64, height: 64, fontSize: 20 }}
-              >
-                ⚽
-              </div>
-            </div>
-          </div>
-
           <label className="checkline" style={{ marginBottom: 16 }}>
             <input
               type="checkbox"
@@ -195,15 +323,20 @@ export default function ReviewPage() {
             </span>
           </label>
 
-          <Button 
-            variant="primary" 
-            size="lg" 
-            block 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
+          <Button
+            variant="primary"
+            size="lg"
+            block
+            onClick={handleSubmit}
+            disabled={isSubmitting || ratings.overall === 0}
           >
-            {isSubmitting ? "Submitting..." : "Submit review"}
+            {isSubmitting ? "Submitting…" : "Submit review"}
           </Button>
+          {ratings.overall === 0 ? (
+            <p className="tiny subtle" style={{ margin: "8px 0 0" }}>
+              Give an overall rating to submit.
+            </p>
+          ) : null}
         </div>
       </main>
 
@@ -217,27 +350,21 @@ export default function ReviewPage() {
           <div className="check-anim" aria-hidden="true">
             🏅
           </div>
-          <h3>Review published — +25 points</h3>
+          <h3>Review published</h3>
           <p className="muted small">
-            Thanks Rafi! Your verified review helps the next team book with
-            confidence.
+            Thanks — your verified review of {booking.venueName ?? "this venue"} helps the next team
+            book with confidence.
           </p>
-          <div className="panel between" style={{ margin: "12px 0" }}>
-            <span className="small muted">Rewards balance</span>
-            <b className="num">1,515 pts · Silver</b>
+          <div className="stack-sm" style={{ marginTop: 12 }}>
+            {booking.venueSlug ? (
+              <Button variant="primary" block to={paths.player.venue(booking.venueSlug)}>
+                See the venue page
+              </Button>
+            ) : null}
+            <Button variant="secondary" block to={paths.player.bookings}>
+              My bookings
+            </Button>
           </div>
-          <div className="progress" style={{ marginBottom: 6 }}>
-            <i style={{ width: "76%" }} />
-          </div>
-          <p className="subtle tiny">485 points to Gold</p>
-          <Button
-            variant="primary"
-            block
-            to={paths.player.home}
-            style={{ marginTop: 8 }}
-          >
-            Done
-          </Button>
         </div>
       </Overlay>
     </>

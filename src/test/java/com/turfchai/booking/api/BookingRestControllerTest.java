@@ -93,8 +93,14 @@ class BookingRestControllerTest {
                 .andExpect(jsonPath("$.heldUntil").exists());
     }
 
+    /**
+     * A second hold-slot call from the *same* user (e.g. a duplicate request
+     * from React StrictMode's double-invoked mount effect, or a retry) must
+     * refresh the hold rather than 409 — otherwise checkout fails
+     * deterministically every time. See BookingService#holdSlot.
+     */
     @Test
-    void holdSlot_conflictsOnActiveHold() throws Exception {
+    void holdSlot_refreshesOwnActiveHold() throws Exception {
         Slot slot = freshSlot();
         String request = "{\"slotId\":" + slot.getId() + "}";
 
@@ -106,6 +112,32 @@ class BookingRestControllerTest {
 
         mockMvc.perform(post("/api/v1/bookings/hold-slot")
                         .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void holdSlot_conflictsWhenAnotherUserHoldsIt() throws Exception {
+        Slot slot = freshSlot();
+        String request = "{\"slotId\":" + slot.getId() + "}";
+
+        User otherUser = userRepository.save(User.builder()
+                .fullName("Other Booking Tester")
+                .email("booking-other-" + System.nanoTime() + "@turfchai.test")
+                .phone("+88017" + ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999))
+                .passwordHash("x")
+                .build());
+        String otherToken = jwtService.generateToken(otherUser);
+
+        mockMvc.perform(post("/api/v1/bookings/hold-slot")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/bookings/hold-slot")
+                        .header("Authorization", "Bearer " + otherToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict());

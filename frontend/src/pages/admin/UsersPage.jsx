@@ -78,15 +78,12 @@ function initialsOf(name) {
 export default function UsersPage() {
   const { showToast } = useToast();
   const editUser = useDisclosure(false);
-  const delUser = useDisclosure(false);
   const [filter, setFilter] = useState('All Accounts');
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editStanding, setEditStanding] = useState('Active');
-  const [editRoles, setEditRoles] = useState(['Player']);
-  const [editNote, setEditNote] = useState('');
 
   const roleParam = filter === 'Players' ? 'PLAYER' : filter === 'Turf Owners' ? 'HOST' : filter === 'Game Hosts' ? 'HOST' : null;
   const statusParam = filter === 'Suspended' ? 'suspended' : null;
@@ -123,10 +120,7 @@ export default function UsersPage() {
     return STATIC_USERS;
   }, [apiUsersData]);
 
-  const toggleRole = (role) =>
-    setEditRoles((current) =>
-      current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
-    );
+  
 
   const handleOpenEdit = (user) => {
     setSelectedUser(user);
@@ -146,7 +140,7 @@ export default function UsersPage() {
           isSuspended: isSusp,
         });
         reload();
-      } catch (err) {
+      } catch {
         // ignore
       }
     }
@@ -158,7 +152,7 @@ export default function UsersPage() {
       try {
         await reinstateUser(user.dbId);
         reload();
-      } catch (err) {
+      } catch {
         // ignore
       }
     }
@@ -170,7 +164,7 @@ export default function UsersPage() {
       try {
         await updateUserStatus(user.dbId, { status: 'SUSPENDED', isSuspended: true });
         reload();
-      } catch (err) {
+      } catch {
         // ignore
       }
     }

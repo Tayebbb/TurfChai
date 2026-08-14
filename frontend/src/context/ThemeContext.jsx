@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { THEME_STORAGE_KEY } from '@/constants/app';
 

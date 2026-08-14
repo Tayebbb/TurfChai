@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
-import { Input, Select } from '@/components/forms/Field';
+import { Select } from '@/components/forms/Field';
 import { Overlay } from '@/components/modals/Overlay';
 import { Chip } from '@/components/ui/Chip';
 import { Photo } from '@/components/ui/Photo';
@@ -90,42 +90,88 @@ const CheckIcon = (
   </svg>
 );
 
-const LOCATIONS = ['Dhanmondi', 'Mohammadpur', 'Mirpur', 'Uttara', 'Banani / Gulshan'];
-const START_TIMES = ['7:00 PM', 'Any time', 'Morning', 'Evening'];
-const DURATIONS = ['60 min', '90 min', '120 min'];
-const SPORTS = ['Football', 'Cricket', 'Badminton', 'Basketball'];
-const AMENITIES = [
-  'Within 3 km',
-  '4.5+ rating',
-  'Artificial grass',
-  'Natural grass',
-  'Floodlights',
-  'Parking',
-  'Changing room',
-  'Parent-friendly',
-  'Instant booking',
-  'Has promotion',
+const PinIcon = (
+  <svg width="15" height="15" viewBox="0 0 24 24" strokeWidth="2" {...svgProps}>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const LOCATIONS = [
+  { label: 'Any area', value: '' },
+  { label: 'Dhanmondi', value: 'Dhanmondi' },
+  { label: 'Mohammadpur', value: 'Mohammadpur' },
+  { label: 'Mirpur', value: 'Mirpur' },
+  { label: 'Uttara', value: 'Uttara' },
+  { label: 'Banani', value: 'Banani' },
+  { label: 'Gulshan', value: 'Gulshan' },
 ];
+
+/** Maps to the venue API's `openAt` (HH:mm) — venues open across that time. */
+const START_TIMES = [
+  { label: 'Any time', value: '' },
+  { label: 'Morning · 8:00 AM', value: '08:00' },
+  { label: 'Afternoon · 2:00 PM', value: '14:00' },
+  { label: 'Evening · 7:00 PM', value: '19:00' },
+  { label: 'Night · 9:00 PM', value: '21:00' },
+];
+
+const SPORTS = ['Football', 'Cricket', 'Badminton', 'Basketball'];
 
 const PAGE_SIZE = 10;
 
-/** Filter-drawer labels -> backend amenity keys (unmapped labels are UI-only). */
+/** Slider ceiling; at the top notch we send no `maxPrice` at all. */
+const PRICE_CEILING = 5000;
+
+/** How far around the player we look once they share their location. */
+const NEAR_RADIUS_KM = 15;
+
+/** Filter-drawer labels -> backend amenity keys. Every chip maps to a real key. */
 const AMENITY_KEYS = {
   Floodlights: 'floodlights',
   Parking: 'parking',
   'Changing room': 'changing_room',
-  'Parent-friendly': 'youth_friendly',
+  Indoor: 'indoor',
+  Cafeteria: 'cafeteria',
+  'Youth-friendly': 'youth_friendly',
 };
+
+const AMENITIES = Object.keys(AMENITY_KEYS);
+
+const AMENITY_LABELS_BY_KEY = Object.fromEntries(
+  Object.entries(AMENITY_KEYS).map(([label, key]) => [key, label]),
+);
+
+/** URL query -> the exact argument object `searchVenues` accepts. */
+function readFilterParams(searchParams) {
+  const params = {};
+  const area = searchParams.get('area');
+  const sport = searchParams.get('sport');
+  const openAt = searchParams.get('openAt');
+  const maxPrice = Number(searchParams.get('maxPrice'));
+  const amenity = searchParams.getAll('amenity').filter((key) => key in AMENITY_LABELS_BY_KEY);
+  if (area) params.area = area;
+  if (sport) params.sport = sport.toLowerCase();
+  if (openAt) params.openAt = openAt;
+  if (Number.isFinite(maxPrice) && maxPrice > 0) params.maxPrice = maxPrice;
+  if (amenity.length) params.amenity = amenity;
+  if (searchParams.get('verified') === 'true') params.verified = true;
+  return params;
+}
 
 export default function ExplorePage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const filters = useDisclosure(false);
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [view, setView] = useState('list');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
+  const [debouncedQuery, setDebouncedQuery] = useState(() => searchParams.get('q') ?? '');
   const [page, setPage] = useState(0);
-  const [filterParams, setFilterParams] = useState({});
+  const [near, setNear] = useState(null);
+  const [locating, setLocating] = useState(false);
+
+  // Filters live in the URL so the home-page chips can deep-link straight into them.
+  const filterParams = useMemo(() => readFilterParams(searchParams), [searchParams]);
 
   // Debounce keystrokes so we don't hit the API on every character.
   useEffect(() => {
@@ -134,9 +180,18 @@ export default function ExplorePage() {
   }, [query]);
 
   // Live search; falls back to the sample list when the API is unreachable.
+  const nearKey = near ? `${near.lat},${near.lng},${near.radiusKm}` : '';
   const search = useApi(
-    () => searchVenues({ q: debouncedQuery, page, size: PAGE_SIZE, sort: 'rating', ...filterParams }),
-    [debouncedQuery, page, JSON.stringify(filterParams)],
+    () =>
+      searchVenues({
+        q: debouncedQuery,
+        page,
+        size: PAGE_SIZE,
+        sort: near ? 'distance' : 'rating',
+        ...(near ? { lat: near.lat, lng: near.lng, radiusKm: near.radiusKm } : {}),
+        ...filterParams,
+      }),
+    [debouncedQuery, page, JSON.stringify(filterParams), nearKey],
   );
   const venues = search.data ? search.data.items.map(toExploreCard) : [];
   const totalPages = search.data?.totalPages ?? 1;
@@ -161,8 +216,51 @@ export default function ExplorePage() {
   );
 
   const applyFilters = (params) => {
-    setFilterParams(params);
+    const next = new URLSearchParams();
+    if (query) next.set('q', query);
+    if (params.area) next.set('area', params.area);
+    if (params.sport) next.set('sport', params.sport);
+    if (params.openAt) next.set('openAt', params.openAt);
+    if (params.maxPrice != null) next.set('maxPrice', String(params.maxPrice));
+    (params.amenity ?? []).forEach((key) => next.append('amenity', key));
+    if (params.verified) next.set('verified', 'true');
+    setSearchParams(next, { replace: true });
     setPage(0);
+  };
+
+  const toggleNearMe = () => {
+    if (near) {
+      setNear(null);
+      setPage(0);
+      showToast('Showing venues from every area again');
+      return;
+    }
+    if (!navigator.geolocation) {
+      showToast('Your browser does not support location sharing');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setLocating(false);
+        setNear({
+          lat: Number(coords.latitude.toFixed(6)),
+          lng: Number(coords.longitude.toFixed(6)),
+          radiusKm: NEAR_RADIUS_KM,
+        });
+        setPage(0);
+        showToast(`📍 Showing venues within ${NEAR_RADIUS_KM} km of you`);
+      },
+      (error) => {
+        setLocating(false);
+        showToast(
+          error.code === error.PERMISSION_DENIED
+            ? 'Location blocked — allow location access to search near you'
+            : 'Could not get your location — try again',
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    );
   };
 
   // Saved-venue bookmarks (heart buttons); non-fatal if the API is down.
@@ -221,6 +319,18 @@ export default function ExplorePage() {
             />
           </label>
 
+          <button
+            className={`locate-btn${near ? ' is-on' : ''}`}
+            type="button"
+            aria-pressed={Boolean(near)}
+            disabled={locating}
+            title={near ? 'Stop searching near me' : 'Use my current location'}
+            onClick={toggleNearMe}
+          >
+            {PinIcon}
+            {locating ? 'Locating…' : near ? 'Near me' : 'Use my location'}
+          </button>
+
           <button className="filters-btn" type="button" aria-label="Open filters" onClick={filters.open}>
             <svg width="16" height="16" viewBox="0 0 24 24" strokeWidth="2" {...svgProps}>
               <line x1="4" y1="21" x2="4" y2="14" />
@@ -235,59 +345,14 @@ export default function ExplorePage() {
             </svg>
             Filters
           </button>
-
-          <div className="view-seg" role="group" aria-label="View mode">
-            <button
-              className={view === 'list' ? 'on' : undefined}
-              type="button"
-              onClick={() => setView('list')}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                strokeWidth="2.5"
-                style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}
-                {...svgProps}
-              >
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-              List
-            </button>
-            <button
-              className={view === 'map' ? 'on' : undefined}
-              type="button"
-              onClick={() => {
-                setView('map');
-                showToast('Full-screen map view (split view on desktop)');
-              }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                strokeWidth="2.5"
-                style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}
-                {...svgProps}
-              >
-                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-                <line x1="8" y1="2" x2="8" y2="18" />
-                <line x1="16" y1="6" x2="16" y2="22" />
-              </svg>
-              Map
-            </button>
-          </div>
         </div>
 
         <p className="results-meta" role="status">
           {search.loading
             ? 'Searching venues…'
-            : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by rating`}
+            : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by ${
+                near ? `distance from you (within ${near.radiusKm} km)` : 'rating'
+              }`}
           {search.error ? ' · live results unavailable, showing samples' : ''}
         </p>
 
@@ -298,7 +363,9 @@ export default function ExplorePage() {
             {!search.loading && venues.length === 0 ? (
               <div className="alert-nudge">
                 <p className="small" style={{ margin: 0, color: 'var(--text-2)' }}>
-                  No venues match your search — try a different area or clear filters.
+                  {near
+                    ? `No venues within ${near.radiusKm} km of you — turn off “Near me” to see every area.`
+                    : 'No venues match your search — try a different area or clear filters.'}
                 </p>
               </div>
             ) : null}
@@ -402,11 +469,8 @@ export default function ExplorePage() {
                   key={index}
                   variant={index === page ? undefined : 'tertiary'}
                   size="sm"
-                  style={
-                    index === page
-                      ? { background: 'var(--brand)', color: '#fff', borderColor: 'var(--brand)', width: 36, padding: 0 }
-                      : { width: 36, padding: 0 }
-                  }
+                  className={index === page ? 'pg-current' : undefined}
+                  style={{ width: 36, padding: 0 }}
                   onClick={() => setPage(index)}
                 >
                   {index + 1}
@@ -450,19 +514,28 @@ export default function ExplorePage() {
         </div>
       </main>
 
-      <FilterDrawer isOpen={filters.isOpen} onClose={filters.close} onApply={applyFilters} />
+      <FilterDrawer
+        key={JSON.stringify(filterParams)}
+        isOpen={filters.isOpen}
+        onClose={filters.close}
+        onApply={applyFilters}
+        initial={filterParams}
+      />
     </>
   );
 }
 
-function FilterDrawer({ isOpen, onClose, onApply }) {
-  const [location, setLocation] = useState('Dhanmondi');
-  const [date, setDate] = useState('Today, 4 Aug');
-  const [startTime, setStartTime] = useState('7:00 PM');
-  const [maxPrice, setMaxPrice] = useState(3000);
-  const duration = useFilterChips(['90 min']);
-  const sports = useFilterChips(['Football']);
-  const amenities = useFilterChips();
+function FilterDrawer({ isOpen, onClose, onApply, initial }) {
+  const [area, setArea] = useState(initial.area ?? '');
+  const [startTime, setStartTime] = useState(initial.openAt ?? '');
+  const [maxPrice, setMaxPrice] = useState(initial.maxPrice ?? PRICE_CEILING);
+  const [verified, setVerified] = useState(Boolean(initial.verified));
+  const sports = useFilterChips(
+    SPORTS.filter((option) => option.toLowerCase() === initial.sport),
+  );
+  const amenities = useFilterChips(
+    (initial.amenity ?? []).map((key) => AMENITY_LABELS_BY_KEY[key]).filter(Boolean),
+  );
 
   return (
     <Overlay isOpen={isOpen} onClose={onClose} title="Filters" mode="drawer" hideHeader>
@@ -476,40 +549,31 @@ function FilterDrawer({ isOpen, onClose, onApply }) {
         </IconButton>
       </div>
 
-      <div className="field" style={{ marginTop: 12 }}>
-        <label>Location</label>
-        <Select value={location} onChange={(event) => setLocation(event.target.value)}>
-          {LOCATIONS.map((option) => (
-            <option key={option}>{option}</option>
-          ))}
-        </Select>
-      </div>
-      <div className="grid2">
+      <div className="grid2" style={{ marginTop: 12 }}>
         <div className="field">
-          <label>Date</label>
-          <Input value={date} onChange={(event) => setDate(event.target.value)} />
-        </div>
-        <div className="field">
-          <label>Start time</label>
-          <Select value={startTime} onChange={(event) => setStartTime(event.target.value)}>
-            {START_TIMES.map((option) => (
-              <option key={option}>{option}</option>
+          <label htmlFor="filter-area">Location</label>
+          <Select id="filter-area" value={area} onChange={(event) => setArea(event.target.value)}>
+            {LOCATIONS.map((option) => (
+              <option key={option.label} value={option.value}>
+                {option.label}
+              </option>
             ))}
           </Select>
         </div>
-      </div>
-      <div className="field">
-        <label>Duration</label>
-        <div className="row-wrap">
-          {DURATIONS.map((option) => (
-            <Chip
-              key={option}
-              active={duration.isActive(option)}
-              onToggle={() => duration.toggle(option)}
-            >
-              {option}
-            </Chip>
-          ))}
+        <div className="field">
+          <label htmlFor="filter-open-at">Open at</label>
+          <Select
+            id="filter-open-at"
+            value={startTime}
+            onChange={(event) => setStartTime(event.target.value)}
+          >
+            {START_TIMES.map((option) => (
+              <option key={option.label} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+          <span className="hint">Shows venues whose opening hours cover that time.</span>
         </div>
       </div>
       <div className="field">
@@ -523,11 +587,13 @@ function FilterDrawer({ isOpen, onClose, onApply }) {
         </div>
       </div>
       <div className="field">
-        <label>Max price (per booking)</label>
+        <label htmlFor="filter-max-price">Max price (per booking)</label>
         <input
+          id="filter-max-price"
           type="range"
           min="500"
-          max="5000"
+          max={PRICE_CEILING}
+          step="100"
           value={maxPrice}
           onChange={(event) => setMaxPrice(Number(event.target.value))}
           style={{ width: '100%', accentColor: 'var(--brand)' }}
@@ -535,8 +601,10 @@ function FilterDrawer({ isOpen, onClose, onApply }) {
         />
         <div className="between subtle">
           <span>৳500</span>
-          <b>৳{maxPrice.toLocaleString('en-BD')}</b>
-          <span>৳5,000+</span>
+          <b>
+            {maxPrice >= PRICE_CEILING ? 'Any price' : `৳${maxPrice.toLocaleString('en-BD')}`}
+          </b>
+          <span>৳{PRICE_CEILING.toLocaleString('en-BD')}+</span>
         </div>
       </div>
       <div className="field">
@@ -553,13 +621,18 @@ function FilterDrawer({ isOpen, onClose, onApply }) {
           ))}
         </div>
       </div>
+      <div className="field">
+        <label>Trust</label>
+        <div className="row-wrap">
+          <Chip active={verified} onToggle={() => setVerified((current) => !current)}>
+            Verified venues only
+          </Chip>
+        </div>
+      </div>
       <div className="row" style={{ marginTop: 16 }}>
         <Button
           variant="tertiary"
           onClick={() => {
-            duration.clear();
-            sports.clear();
-            amenities.clear();
             onApply({});
             onClose();
           }}
@@ -574,10 +647,12 @@ function FilterDrawer({ isOpen, onClose, onApply }) {
             const amenityKeys = [...amenities.active].map((label) => AMENITY_KEYS[label]).filter(Boolean);
             const sport = [...sports.active][0];
             onApply({
-              area: location.split(' /')[0],
-              sport: sport?.toLowerCase(),
-              maxPrice,
+              ...(area ? { area } : {}),
+              ...(sport ? { sport: sport.toLowerCase() } : {}),
+              ...(startTime ? { openAt: startTime } : {}),
+              ...(maxPrice < PRICE_CEILING ? { maxPrice } : {}),
               ...(amenityKeys.length ? { amenity: amenityKeys } : {}),
+              ...(verified ? { verified: true } : {}),
             });
             onClose();
           }}

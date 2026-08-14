@@ -40,13 +40,27 @@ public final class TournamentViews {
                               BigDecimal total, BigDecimal deposit, BigDecimal balance) {
     }
 
+    /**
+     * Live price for a recurring weekly booking. {@code costs} is what the host
+     * would owe in total; {@code weeklyTotal} is one week of it.
+     */
+    public record ReservationQuote(int repeatWeeks, int slotsPerWeek, BigDecimal weeklyTotal,
+                                   LocalDate firstDate, LocalDate lastDate, CostSummary costs) {
+    }
+
+    /** Deposit state for the reserve checkout. */
+    public record DepositView(String status, BigDecimal amount, String method,
+                              String reference, java.time.Instant paidAt) {
+    }
+
     public record TournamentView(Long id, String code, String name,
                                  String venueSlug, String venueName,
                                  LocalDate date, LocalTime windowStart, LocalTime windowEnd,
                                  String format, int teamCapacity, BigDecimal entryFeePerTeam,
                                  BigDecimal prizePool, String privacy, String inviteCode,
-                                 String status, LocalDate balanceDueDate,
+                                 String status, LocalDate balanceDueDate, int repeatWeeks,
                                  List<TeamView> teams, List<FixtureView> fixtures,
-                                 List<ReservationView> reservations, CostSummary costs) {
+                                 List<ReservationView> reservations, CostSummary costs,
+                                 DepositView deposit) {
     }
 }

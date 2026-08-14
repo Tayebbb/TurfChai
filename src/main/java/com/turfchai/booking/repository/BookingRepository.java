@@ -1,6 +1,7 @@
 package com.turfchai.booking.repository;
 
 import com.turfchai.booking.entity.Booking;
+import com.turfchai.booking.entity.BookingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,6 +13,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByUserId(Long userId);
 
-    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b JOIN Venue v ON b.venueId = v.id WHERE v.owner.id = :ownerId")
-    List<Booking> findBookingsByOwnerId(@org.springframework.data.repository.query.Param("ownerId") Long ownerId);
+    /** An existing pending attempt for this user+slot — payment retries reuse it instead of duplicating. */
+    Optional<Booking> findBySlotIdAndUserIdAndStatus(Long slotId, Long userId, BookingStatus status);
 }

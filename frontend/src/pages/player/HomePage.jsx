@@ -1,29 +1,33 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { GameCard } from '@/components/cards/GameCard';
 import { VenueCard } from '@/components/cards/VenueCard';
 import { SearchCompact } from '@/components/forms/SearchBar';
-import { Input } from '@/components/forms/Field';
-import { Overlay } from '@/components/modals/Overlay';
-import { Segmented } from '@/components/navigation/Tabs';
 import { ViewAsMenu } from '@/components/navigation/ViewAsMenu';
-import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Chip, ChipRow } from '@/components/ui/Chip';
 import { Photo } from '@/components/ui/Photo';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Skill } from '@/components/ui/Tags';
-import { searchVenues, toNearbyCard } from '@/api/venues';
-import { getMyProfile } from '@/api/players';
+import { getUser } from '@/api/client';
+import {
+  formatBookingDate,
+  formatTimeRange,
+  listBookings,
+  nextUpcomingBooking,
+} from '@/api/bookings';
+import { listLfgAlerts } from '@/api/lfgAlerts';
+import { formatGameDay, kickoffMs, searchOpenGames, skillLabel } from '@/api/openGames';
+import { getMyProfile, getSavedVenues } from '@/api/players';
+import { browseTournaments, registrationState } from '@/api/playerTournaments';
 import { getTournament, DEMO_TOURNAMENT_CODE, formatDate } from '@/api/tournaments';
+import { searchVenues, toNearbyCard } from '@/api/venues';
 import { useApi } from '@/hooks/useApi';
-import { useDisclosure } from '@/hooks/useDisclosure';
 import { useQueryParam } from '@/hooks/useQueryParam';
-import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
-import { formatNumber } from '@/utils/format';
+import { formatBdt, formatNumber } from '@/utils/format';
 import './HomePage.css';
 
 const MODES = [
@@ -32,36 +36,73 @@ const MODES = [
   { id: 'host', label: 'Tournament Host', description: 'Run your own tournament' },
 ];
 
-const PLAYER_CHIPS = ['Today', 'Tomorrow', 'Weekend', '⚽ Football', '🏏 Cricket', 'Off-peak deals'];
-const SOLO_CHIPS = ['Tonight', '⚽ Football', '🏏 Cricket', 'Beginner friendly', 'Under ৳300'];
-
-import { searchOpenGames, toHomeGameCard } from '@/api/games';
-
-const RECENTLY_VIEWED = [
-  { id: 'kick-off-arena', name: 'Kick Off Arena' },
-  { id: 'baridhara-sports-hub', name: 'Baridhara Sports Hub' },
-  { id: 'shuttlezone-lalmatia', name: 'ShuttleZone Lalmatia' },
+/**
+ * Home chips deep-link into Explore. Every query below is a filter the venue
+ * search endpoint actually supports and ExplorePage reads back off the URL.
+ */
+const PLAYER_CHIPS = [
+  { label: '⚽ Football', query: 'sport=football' },
+  { label: '🏏 Cricket', query: 'sport=cricket' },
+  { label: '🏸 Badminton', query: 'sport=badminton' },
+  { label: 'Open at 7 PM', query: 'openAt=19%3A00' },
+  { label: 'Floodlit', query: 'amenity=floodlights' },
+  { label: 'Verified only', query: 'verified=true' },
 ];
 
-import { browseTournaments, toJoinableTournamentCard } from '@/api/tournaments';
-
-const TOURNAMENT_FORMATS = [
-  { id: '5', label: '5-a-side' },
-  { id: '6', label: '6-a-side' },
-  { id: '7', label: '7-a-side' },
-  { id: 'knockout', label: 'Knockout' },
+/** The open-games feed takes no deep-link filters, so these are plain destinations. */
+const SOLO_LINKS = [
+  { label: 'Browse open games', to: paths.solo.openGames },
+  { label: 'My availability alerts', to: paths.solo.alerts },
 ];
 
-const PRIVACY_HINTS = {
-  open: 'Anyone on TurfChai can find this tournament and request to join.',
-  invite: 'Hidden from search. Teams join only through your private invite link.',
+const LINK_BUTTON = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--brand-600)',
+  cursor: 'pointer',
+  padding: 0,
+  font: 'inherit',
+  fontWeight: 700,
 };
+
+const PHOTO_TILE = { width: 56, height: 56, fontSize: 22, flex: 'none' };
+
+const prettyFormat = (format) => (format ? format.toLowerCase().replaceAll('_', '-') : '');
+
+/** Inline "couldn't load" line whose retry re-runs the request. */
+function RetryNote({ children, onRetry }) {
+  return (
+    <p className="subtle" role="status" style={{ marginTop: 8 }}>
+      {children}{' '}
+      <button type="button" style={LINK_BUTTON} onClick={onRetry}>
+        Retry
+      </button>
+    </p>
+  );
+}
+
+/** OpenGameResponse → the shape `GameCard` renders. */
+function toGameCardModel(game) {
+  const spots = Math.max(0, Number(game.spotsLeft ?? 0));
+  return {
+    id: game.id,
+    title: [game.title, game.venueName].filter(Boolean).join(' · '),
+    status: `${spots} spot${spots === 1 ? '' : 's'} left`,
+    statusTone: spots === 1 ? 'red' : spots <= 3 ? 'amber' : 'green',
+    skill: skillLabel(game.skillLevel),
+    when: `${formatGameDay(game.gameDate)} ${formatTimeRange(game.startTime, game.endTime)}`.trim(),
+    price: Number(game.pricePerPlayer ?? 0),
+    urgent: spots === 1,
+  };
+}
 
 export default function HomePage() {
   const [mode, setMode] = useQueryParam('mode', 'player');
   const me = useApi(() => getMyProfile(), []);
-  const player = me.data;
-  const firstName = player?.fullName?.split(/\s+/)[0];
+  const localUser = getUser();
+  const fullName = localUser?.fullName || me.data?.fullName;
+  const player = me.data ? { ...me.data, fullName: fullName || me.data.fullName } : localUser;
+  const firstName = fullName?.split(/\s+/)[0];
 
   return (
     <>
@@ -97,11 +138,11 @@ export default function HomePage() {
 
 /* ======== PLAYER MODE ======== */
 function PlayerMode() {
-  // Live venue rail; falls back to sample data when the API is unreachable.
   const venuesApi = useApi(() => searchVenues({ size: 6, sort: 'rating' }), []);
-  const nearbyVenues = venuesApi.data ? venuesApi.data.items.map(toNearbyCard) : [];
-
-  const gamesApi = useApi(() => searchOpenGames(), []);
+  const nearbyVenues = useMemo(
+    () => (venuesApi.data?.items ?? []).map(toNearbyCard),
+    [venuesApi.data],
+  );
 
   return (
     <div className="tabpanel on">
@@ -112,121 +153,206 @@ function PlayerMode() {
         label="Search venues"
       />
       <ChipRow style={{ marginTop: 12 }}>
-        {PLAYER_CHIPS.map((label, index) => (
-          <Chip key={label} to={paths.player.explore} active={index === 0}>
-            {label}
+        {PLAYER_CHIPS.map((chip) => (
+          <Chip key={chip.label} to={`${paths.player.explore}?${chip.query}`}>
+            {chip.label}
           </Chip>
         ))}
       </ChipRow>
 
-      {/* Upcoming booking */}
+      <NextMatchSection />
+
+      {/* Top-rated venues */}
       <section className="section">
         <div className="section-title">
-          <h2>Your next match</h2>
-          <Link to={paths.player.bookings}>All bookings →</Link>
+          <h2>Top-rated venues</h2>
+          <Link to={paths.player.explore}>See all →</Link>
         </div>
-        <div className="glass glass-card">
+        {venuesApi.loading ? (
+          <div className="hscroll">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton key={index} height={190} width={220} radius={14} style={{ flexShrink: 0 }} />
+            ))}
+          </div>
+        ) : venuesApi.error ? (
+          <RetryNote onRetry={venuesApi.reload}>Venues could not be loaded.</RetryNote>
+        ) : nearbyVenues.length === 0 ? (
+          <p className="subtle" style={{ margin: 0 }}>
+            No venues are listed yet. <Link to={paths.player.explore}>Open Explore</Link> to search
+            every area.
+          </p>
+        ) : (
+          <div className="hscroll">
+            {nearbyVenues.map((venue) => (
+              <VenueCard key={venue.id} venue={venue} compact />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <OpenGamesSection title="Games that need players" />
+
+      <SavedVenuesSection />
+    </div>
+  );
+}
+
+/** The caller's genuine next upcoming booking, or an honest empty/signed-out state. */
+function NextMatchSection() {
+  const signedIn = Boolean(getUser());
+  const bookingsApi = useApi(() => (signedIn ? listBookings() : Promise.resolve([])), [signedIn]);
+  const booking = useMemo(
+    () => nextUpcomingBooking(Array.isArray(bookingsApi.data) ? bookingsApi.data : []),
+    [bookingsApi.data],
+  );
+
+  return (
+    <section className="section">
+      <div className="section-title">
+        <h2>Your next match</h2>
+        {signedIn ? <Link to={paths.player.bookings}>All bookings →</Link> : null}
+      </div>
+      <div className="glass glass-card">
+        {!signedIn ? (
+          <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <b>Sign in to see your next match</b>
+              <div className="subtle">Your bookings, ticket and check-in QR live in your account.</div>
+            </div>
+            <Button size="sm" variant="primary" to={paths.auth}>
+              Sign in
+            </Button>
+          </div>
+        ) : bookingsApi.loading ? (
+          <Skeleton height={64} radius={12} />
+        ) : bookingsApi.error ? (
+          <RetryNote onRetry={bookingsApi.reload}>Your bookings could not be loaded.</RetryNote>
+        ) : !booking ? (
+          <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <b>No upcoming match</b>
+              <div className="subtle">Find a slot and your next booking shows up here.</div>
+            </div>
+            <Button size="sm" variant="primary" to={paths.player.explore}>
+              Find a slot
+            </Button>
+          </div>
+        ) : (
           <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
             <Link
               className="row"
-              to={paths.player.bookingDetail('TC-48291')}
+              to={paths.player.bookingDetail(booking.id)}
               style={{ textDecoration: 'none', color: 'var(--text)' }}
             >
-              <Photo style={{ width: 56, height: 56, fontSize: 22, flex: 'none' }} glyph="⚽" />
+              <Photo style={PHOTO_TILE} glyph="⚽" />
               <div>
-                <b>Kick Off Arena · Pitch 2</b>
-                <div className="subtle">Fri 8 Aug · 7:30–9:00 PM · Dhanmondi 27</div>
+                <b>
+                  {booking.venueName}
+                  {booking.pitchName ? ` · ${booking.pitchName}` : ''}
+                </b>
+                <div className="subtle">
+                  {formatBookingDate(booking)} ·{' '}
+                  {formatTimeRange(booking.startTime, booking.endTime)}
+                  {booking.venueArea ? ` · ${booking.venueArea}` : ''}
+                </div>
                 <div className="row-wrap" style={{ marginTop: 4 }}>
-                  <Badge tone="green">Confirmed</Badge>
-                  <Badge tone="amber">6/10 paid</Badge>
+                  <Badge tone="green">
+                    {booking.status === 'CONFIRMED' ? 'Confirmed' : 'Upcoming'}
+                  </Badge>
+                  {booking.bookingCode ? (
+                    <Badge tone="blue" dot={false}>
+                      Ref {booking.bookingCode}
+                    </Badge>
+                  ) : null}
                 </div>
               </div>
             </Link>
-            <div className="row">
-              <Button size="sm" to={paths.player.splitPayment}>
-                Remind team
-              </Button>
-              <Button size="sm" variant="primary" to={paths.player.matchday}>
-                View ticket
-              </Button>
-            </div>
+            <Button size="sm" variant="primary" to={paths.player.matchdayFor(booking.id)}>
+              View ticket
+            </Button>
           </div>
-        </div>
-      </section>
+        )}
+      </div>
+    </section>
+  );
+}
 
-      {/* Nearby available now */}
-      <section className="section">
-        <div className="section-title">
-          <h2>Available near you tonight</h2>
-          <Link to={paths.player.explore}>See all →</Link>
-        </div>
-        <div className="hscroll">
-          {venuesApi.loading
-            ? Array.from({ length: 4 }, (_, index) => (
-                <Skeleton key={index} height={190} width={220} radius={14} style={{ flexShrink: 0 }} />
-              ))
-            : nearbyVenues.map((venue) => (
-                <VenueCard key={venue.id} venue={venue} compact />
-              ))}
-        </div>
-        {venuesApi.error ? (
-          <p className="subtle" role="status" style={{ marginTop: 8 }}>
-            Live venues unavailable — showing sample data.{' '}
-            <button type="button" onClick={venuesApi.reload} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}>
-              Retry
-            </button>
-          </p>
-        ) : null}
-      </section>
+/** Live open games, soonest kick-off first. Shared by player and solo modes. */
+function OpenGamesSection({ title, limit = 4 }) {
+  const gamesApi = useApi(() => searchOpenGames({}), []);
+  const games = useMemo(() => {
+    const items = Array.isArray(gamesApi.data) ? gamesApi.data : [];
+    return items
+      .filter((game) => Number(game.spotsLeft ?? 0) > 0)
+      .sort((a, b) => kickoffMs(a) - kickoffMs(b))
+      .slice(0, limit)
+      .map(toGameCardModel);
+  }, [gamesApi.data, limit]);
 
-      {/* Open games needing players */}
-      <section className="section">
-        <div className="section-title">
-          <h2>Games that need players</h2>
-          <Link to={paths.solo.openGames}>Open games →</Link>
-        </div>
+  return (
+    <section className="section">
+      <div className="section-title">
+        <h2>{title}</h2>
+        <Link to={paths.solo.openGames}>Open games →</Link>
+      </div>
+      {gamesApi.loading ? (
         <div className="grid2">
-          {gamesApi.loading ? (
-            <>
-              <Skeleton height={140} width="100%" radius={12} />
-              <Skeleton height={140} width="100%" radius={12} />
-            </>
-          ) : gamesApi.data ? (
-            gamesApi.data.slice(0, 2).map(toHomeGameCard).map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))
-          ) : (
-            <p className="subtle">No featured games available</p>
-          )}
+          {Array.from({ length: 2 }, (_, index) => (
+            <Skeleton key={index} height={118} radius={14} />
+          ))}
         </div>
-      </section>
+      ) : gamesApi.error ? (
+        <RetryNote onRetry={gamesApi.reload}>Open games could not be loaded.</RetryNote>
+      ) : games.length === 0 ? (
+        <p className="subtle" style={{ margin: 0 }}>
+          No games are looking for players right now.{' '}
+          <Link to={paths.solo.alerts}>Set an availability alert</Link> and we&apos;ll ping you when
+          one opens.
+        </p>
+      ) : (
+        <div className="grid2">
+          {games.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
-      {/* Off-peak */}
-      <section className="section">
-        <div className="glass glass-card" style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
-          <Badge tone="amber">Off-peak deal</Badge>
-          <h3 style={{ marginTop: 8 }}>20% off before 5 PM</h3>
-          <p className="subtle">
-            Weekday afternoon slots at Baridhara Sports Hub and 12 more venues. Auto-applied at
-            checkout.
-          </p>
-        </div>
-      </section>
+/** Replaces the invented "Recently viewed" rail with the player's real bookmarks. */
+function SavedVenuesSection() {
+  const signedIn = Boolean(getUser());
+  const savedApi = useApi(() => (signedIn ? getSavedVenues() : Promise.resolve([])), [signedIn]);
+  const saved = Array.isArray(savedApi.data) ? savedApi.data : [];
 
-      {/* Recently viewed */}
-      <section className="section">
-        <div className="section-title">
-          <h2>Recently viewed</h2>
-        </div>
+  if (!signedIn) return null;
+
+  return (
+    <section className="section">
+      <div className="section-title">
+        <h2>Your saved venues</h2>
+        <Link to={paths.player.dashboard.venues}>Manage →</Link>
+      </div>
+      {savedApi.loading ? (
+        <Skeleton height={32} width={260} radius={16} />
+      ) : savedApi.error ? (
+        <RetryNote onRetry={savedApi.reload}>Saved venues could not be loaded.</RetryNote>
+      ) : saved.length === 0 ? (
+        <p className="subtle" style={{ margin: 0 }}>
+          Nothing saved yet — tap the heart on any venue in{' '}
+          <Link to={paths.player.explore}>Explore</Link> to pin it here.
+        </p>
+      ) : (
         <div className="row-wrap">
-          {RECENTLY_VIEWED.map((venue) => (
-            <Chip key={venue.id} to={paths.player.venue(venue.id)}>
+          {saved.slice(0, 8).map((venue) => (
+            <Chip key={venue.slug} to={paths.player.venue(venue.slug)}>
               {venue.name}
             </Chip>
           ))}
         </div>
-      </section>
-    </div>
+      )}
+    </section>
   );
 }
 
@@ -249,82 +375,18 @@ function SoloMode() {
         label="Search open games"
       />
       <ChipRow style={{ marginTop: 12 }}>
-        {SOLO_CHIPS.map((label, index) => (
-          <Chip key={label} to={paths.solo.openGames} active={index === 0}>
-            {label}
+        {SOLO_LINKS.map((link) => (
+          <Chip key={link.label} to={link.to}>
+            {link.label}
           </Chip>
         ))}
       </ChipRow>
 
-      <section className="section">
-        <div className="section-title">
-          <h2>Your joined game</h2>
-          <Link to={paths.solo.ticket}>View ticket →</Link>
-        </div>
-        <div className="glass glass-card">
-          <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
-            <Link
-              className="row"
-              to={paths.solo.ticket}
-              style={{ textDecoration: 'none', color: 'var(--text)' }}
-            >
-              <Photo variant="alt1" style={{ width: 56, height: 56, fontSize: 22, flex: 'none' }} glyph="⚽" />
-              <div>
-                <b>Friday Night Football · Kick Off Arena</b>
-                <div className="subtle">Tonight · 9:00–10:30 PM · your share ৳280 · paid</div>
-                <div className="row-wrap" style={{ marginTop: 4 }}>
-                  <Badge tone="green">You&apos;re in</Badge>
-                  <Badge tone="blue" dot={false}>
-                    9/10 filled
-                  </Badge>
-                </div>
-              </div>
-            </Link>
-            <Button size="sm" variant="primary" to={paths.solo.ticket}>
-              Show QR at gate
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-title">
-          <h2>Open games near you</h2>
-          <Link to={paths.solo.openGames}>See all 18 →</Link>
-        </div>
-        <div className="grid2">
-          {gamesApi.loading ? (
-            <>
-              <Skeleton height={140} width="100%" radius={12} />
-              <Skeleton height={140} width="100%" radius={12} />
-              <Skeleton height={140} width="100%" radius={12} />
-              <Skeleton height={140} width="100%" radius={12} />
-            </>
-          ) : gamesApi.data ? (
-            gamesApi.data.slice(0, 4).map(toHomeGameCard).map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))
-          ) : (
-            <p className="subtle">No games available</p>
-          )}
-        </div>
-      </section>
+      <OpenGamesSection title="Open games near you" />
 
       <section className="section">
         <div className="grid2">
-          <div className="glass glass-card">
-            <Badge tone="blue" dot={false}>
-              LFG alerts
-            </Badge>
-            <h3 style={{ marginTop: 8 }}>Never miss a spot</h3>
-            <p className="subtle">
-              You have 1 active alert: Football · Dhanmondi · Fri–Sat evenings. We&apos;ll ping you
-              the second a spot opens.
-            </p>
-            <Button size="sm" to={paths.solo.alerts}>
-              Manage alerts
-            </Button>
-          </div>
+          <LfgAlertsCard />
           <div className="card">
             <Badge tone="green">Your solo record</Badge>
             <h3 style={{ marginTop: 8 }}>
@@ -344,142 +406,114 @@ function SoloMode() {
   );
 }
 
+/** Real LFG alert count for the signed-in player. */
+function LfgAlertsCard() {
+  const userId = getUser()?.id ?? null;
+  const alertsApi = useApi(() => (userId ? listLfgAlerts() : Promise.resolve([])), [userId]);
+  const active = (Array.isArray(alertsApi.data) ? alertsApi.data : []).filter(
+    (alert) => alert.status === 'ACTIVE',
+  );
+
+  return (
+    <div className="glass glass-card">
+      <Badge tone="blue" dot={false}>
+        LFG alerts
+      </Badge>
+      <h3 style={{ marginTop: 8 }}>Never miss a spot</h3>
+      {!userId ? (
+        <p className="subtle">Sign in to set an alert and get pinged when a spot opens.</p>
+      ) : alertsApi.loading ? (
+        <Skeleton height={18} width="80%" />
+      ) : alertsApi.error ? (
+        <RetryNote onRetry={alertsApi.reload}>Your alerts could not be loaded.</RetryNote>
+      ) : (
+        <p className="subtle">
+          {active.length === 0
+            ? 'You have no active alerts yet. Tell us your area and times and we’ll ping you the second a spot opens.'
+            : `You have ${active.length} active alert${
+                active.length === 1 ? '' : 's'
+              }. We’ll ping you the second a matching spot opens.`}
+        </p>
+      )}
+      <Button size="sm" to={paths.solo.alerts}>
+        Manage alerts
+      </Button>
+    </div>
+  );
+}
+
 /* ======== TOURNAMENT HOST MODE ======== */
 function HostMode() {
-  const { showToast } = useToast();
-  const createModal = useDisclosure(false);
-  const [inviteCode, setInviteCode] = useState('');
   const tournamentApi = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
   const tournament = tournamentApi.data;
   const browseApi = useApi(() => browseTournaments({ size: 3 }), []);
 
   return (
     <div className="tabpanel on">
-      <div className="between" style={{ flexWrap: 'wrap', gap: 10, marginBottom: 4 }}>
-        <p className="subtle" style={{ margin: 0 }}>
-          Run your own tournament or join one happening near you.
-        </p>
-        <Button variant="primary" onClick={createModal.open}>
-          ＋ Create a tournament
-        </Button>
-      </div>
+      <p className="subtle" style={{ margin: '0 0 4px' }}>
+        Reserve pitches for your own tournament, or register a team for one happening near you.
+      </p>
 
       <section className="section">
         <div className="section-title">
           <h2>Your tournament</h2>
         </div>
 
-        <Link
-          className="glass glass-card"
-          to={tournament ? `${paths.host.tournament}?code=${tournament.code}` : paths.host.tournament}
-          style={{ display: 'block', textDecoration: 'none', color: 'var(--text)' }}
-        >
-          <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
-            <div className="row">
-              <Photo variant="alt2" style={{ width: 56, height: 56, fontSize: 22, flex: 'none' }} glyph="🏆" />
-              <div>
-                <b>
-                  {tournament
-                    ? `${tournament.name} · ${tournament.venueName}`
-                    : 'Ramadan Cup 2027 · Mirpur Sports City'}
-                </b>
-                <div className="subtle">
-                  {tournament
-                    ? `${formatDate(tournament.date)} · ${
-                        new Set(tournament.reservations.map((r) => r.pitchName)).size
-                      } pitches · ${tournament.format.toLowerCase().replaceAll('_', '-')}`
-                    : 'Sat 23 Aug · 3 pitches · knockout'}
-                </div>
-                <div className="row-wrap" style={{ marginTop: 4 }}>
-                  <Badge tone="green">
-                    {tournament ? tournament.status.toLowerCase() : 'Venue confirmed'}
-                  </Badge>
-                  <Badge tone="amber">
-                    {tournament
-                      ? `${tournament.teams.length}/${tournament.teamCapacity} teams${
-                          tournament.balanceDueDate
-                            ? ` · balance due ${formatDate(tournament.balanceDueDate)}`
-                            : ''
-                        }`
-                      : '13/16 teams'}
-                  </Badge>
+        {tournamentApi.loading ? (
+          <Skeleton height={96} radius={14} />
+        ) : tournamentApi.error || !tournament ? (
+          <div className="glass glass-card">
+            <b>No tournament set up yet</b>
+            <p className="subtle" style={{ margin: '4px 0 10px' }}>
+              Tournaments are created by the TurfChai team today. Start by reserving the pitches you
+              need and we&apos;ll attach them to your tournament.
+            </p>
+            <div className="row-wrap" style={{ gap: 8 }}>
+              <Button size="sm" variant="primary" to={paths.host.multiPitch}>
+                Reserve pitches
+              </Button>
+              {tournamentApi.error ? (
+                <Button size="sm" onClick={tournamentApi.reload}>
+                  Retry
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <Link
+            className="glass glass-card"
+            to={`${paths.host.tournament}?code=${tournament.code}`}
+            style={{ display: 'block', textDecoration: 'none', color: 'var(--text)' }}
+          >
+            <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
+              <div className="row">
+                <Photo variant="alt2" style={PHOTO_TILE} glyph="🏆" />
+                <div>
+                  <b>{`${tournament.name} · ${tournament.venueName}`}</b>
+                  <div className="subtle">
+                    {`${formatDate(tournament.date)} · ${
+                      new Set(tournament.reservations.map((r) => r.pitchName)).size
+                    } pitches · ${prettyFormat(tournament.format)}`}
+                  </div>
+                  <div className="row-wrap" style={{ marginTop: 4 }}>
+                    <Badge tone="green">{tournament.status.toLowerCase()}</Badge>
+                    <Badge tone="amber">
+                      {`${tournament.teams.length}/${tournament.teamCapacity} teams${
+                        tournament.balanceDueDate
+                          ? ` · balance due ${formatDate(tournament.balanceDueDate)}`
+                          : ''
+                      }`}
+                    </Badge>
+                  </div>
                 </div>
               </div>
+              <span className="btn btn-sm btn-secondary">Enter tournament →</span>
             </div>
-            <span className="btn btn-sm btn-secondary">Enter tournament →</span>
-          </div>
-        </Link>
+          </Link>
+        )}
       </section>
 
-      <section className="section">
-        <div className="section-title">
-          <h2>Join a tournament</h2>
-          <span className="subtle small">Open ones are one tap · invite-only needs a link</span>
-        </div>
-        <div className="grid3">
-          {browseApi.loading ? (
-            <>
-              <Skeleton height={140} width="100%" radius={12} />
-              <Skeleton height={140} width="100%" radius={12} />
-              <Skeleton height={140} width="100%" radius={12} />
-            </>
-          ) : browseApi.data ? (
-            browseApi.data.items.slice(0, 3).map(toJoinableTournamentCard).map((tournament) => (
-              <div key={tournament.id} className="card" style={tournament.dimmed ? { opacity: 0.92 } : undefined}>
-                <div className="between">
-                  <Badge tone={tournament.privacyTone} dot={false}>
-                    {tournament.privacy}
-                  </Badge>
-                  <Skill>{tournament.format}</Skill>
-                </div>
-                <h4 style={{ margin: '8px 0 2px' }}>{tournament.name}</h4>
-                <p className="subtle small" style={{ margin: 0 }}>
-                  {tournament.meta}
-                </p>
-                <Button
-                  size="sm"
-                  variant={tournament.ctaVariant}
-                  style={{ marginTop: 10 }}
-                  onClick={() => showToast(tournament.toast)}
-                >
-                  {tournament.cta}
-                </Button>
-              </div>
-            ))
-          ) : (
-            <p className="subtle">No joinable tournaments at the moment</p>
-          )}
-        </div>
-        <div className="panel" style={{ marginTop: 12 }}>
-          <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
-            <div>
-              <b className="small">Have an invite link or code?</b>
-              <div className="tiny subtle">Paste it here to join a private tournament directly.</div>
-            </div>
-            <div className="row" style={{ flex: 1, minWidth: 240, maxWidth: 440 }}>
-              <Input
-                id="inviteCode"
-                placeholder="turfchai.app/t/… or code"
-                aria-label="Invite link or code"
-                style={{ flex: 1 }}
-                value={inviteCode}
-                onChange={(event) => setInviteCode(event.target.value)}
-              />
-              <Button
-                onClick={() =>
-                  showToast(
-                    inviteCode.trim()
-                      ? "✅ Invite accepted — you've joined Gulshan Premier Cup"
-                      : 'Paste an invite link or code first',
-                  )
-                }
-              >
-                Join
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <JoinTournamentSection />
 
       <section className="section">
         <div className="section-title">
@@ -502,162 +536,66 @@ function HostMode() {
           </p>
         </div>
       </section>
-
-      <CreateTournamentModal isOpen={createModal.isOpen} onClose={createModal.close} />
     </div>
   );
 }
 
-/** Two-state modal: the setup form, then the created-tournament receipt. */
-function CreateTournamentModal({ isOpen, onClose }) {
-  const venuesApi = useApi(() => searchVenues({ size: 20, sort: 'rating' }), []);
-  const venueOptions = venuesApi.data?.items ?? [];
-  const { showToast } = useToast();
-  const [created, setCreated] = useState(false);
-  const [name, setName] = useState('Dhanmondi Champions Cup');
-  const [date, setDate] = useState('Sat 13 Sep 2026');
-  const [fee, setFee] = useState('৳3,500');
-  const [format, setFormat] = useState('5');
-  const [venue, setVenue] = useState('Kick Off Arena · Dhanmondi · 3 pitches');
-  const [privacy, setPrivacy] = useState('open');
-  const [doneName, setDoneName] = useState(name);
-  const [doneMeta, setDoneMeta] = useState('');
-
-  const inviteLink = 'turfchai.app/t/dcc-2026-x7k4';
-
-  const create = () => {
-    const safeName = name || 'Untitled tournament';
-    setDoneName(safeName);
-    setDoneMeta(
-      privacy === 'invite'
-        ? `${date} · private — share the invite link below with your teams.`
-        : `${date} · listed publicly — teams can request to join right away.`,
-    );
-    setCreated(true);
-    showToast(privacy === 'invite' ? '🔒 Private tournament created' : '🌐 Tournament published');
-  };
-
-  const copyLink = () => {
-    navigator.clipboard?.writeText(inviteLink);
-    showToast('🔗 Invite link copied');
-  };
+/** Real published tournaments that are open for registration. */
+function JoinTournamentSection() {
+  const browseApi = useApi(
+    () => browseTournaments({ page: 0, size: 6, openOnly: true, upcomingOnly: true }),
+    [],
+  );
+  const tournaments = browseApi.data?.items ?? [];
 
   return (
-    <Overlay
-      isOpen={isOpen}
-      onClose={onClose}
-      title={created ? '🎉 Tournament created' : 'Create a tournament'}
-      maxWidth={480}
-    >
-      {created ? (
-        <div>
-          <Alert tone="ok" style={{ margin: '14px 0' }}>
-            <b>{doneName}</b>
-            <span>{doneMeta}</span>
-          </Alert>
-          {privacy === 'invite' ? (
-            <div className="panel">
-              <b className="small">Private invite link</b>
-              <div className="row" style={{ marginTop: 6 }}>
-                <Input
-                  readOnly
-                  value={inviteLink}
-                  style={{ flex: 1, fontVariantNumeric: 'tabular-nums' }}
-                />
-                <Button onClick={copyLink}>Copy</Button>
-              </div>
-              <p className="tiny subtle" style={{ margin: '8px 0 0' }}>
-                Only people with this link can see and join the tournament. You can switch it to open
-                anytime.
-              </p>
-            </div>
-          ) : null}
-          <div className="stack-sm" style={{ marginTop: 14 }}>
-            <Button variant="primary" block to={paths.host.hub} onClick={onClose}>
-              Manage it in your host hub
-            </Button>
-            <Button block to={paths.host.multiPitch}>
-              Reserve the pitches next →
-            </Button>
-          </div>
+    <section className="section">
+      <div className="section-title">
+        <h2>Join a tournament</h2>
+        <Link to={paths.player.dashboard.tournaments}>All tournaments →</Link>
+      </div>
+      {browseApi.loading ? (
+        <div className="grid3">
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} height={124} radius={14} />
+          ))}
         </div>
+      ) : browseApi.error ? (
+        <RetryNote onRetry={browseApi.reload}>Tournaments could not be loaded.</RetryNote>
+      ) : tournaments.length === 0 ? (
+        <p className="subtle" style={{ margin: 0 }}>
+          No tournaments are open for registration right now — check back soon.
+        </p>
       ) : (
-        <div>
-          <p className="subtle small" style={{ margin: '4px 0 14px' }}>
-            Set it up now — you can edit everything later from the host dashboard.
-          </p>
-          <div className="field">
-            <label htmlFor="ctName">Tournament name</label>
-            <Input
-              id="ctName"
-              placeholder="e.g. Dhanmondi Champions Cup"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-          <div className="input-row">
-            <div className="field">
-              <label htmlFor="ctDate">Date</label>
-              <Input id="ctDate" value={date} onChange={(event) => setDate(event.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="ctFee">Entry fee / team</label>
-              <Input id="ctFee" value={fee} onChange={(event) => setFee(event.target.value)} />
-            </div>
-          </div>
-          <div className="field">
-            <label>Format</label>
-            <Segmented items={TOURNAMENT_FORMATS} value={format} onChange={setFormat} label="Format" />
-          </div>
-          <div className="field">
-            <label htmlFor="ctVenue">Venue</label>
-            <select
-              className="select"
-              id="ctVenue"
-              value={venue}
-              onChange={(event) => setVenue(event.target.value)}
-            >
-              {venueOptions.length > 0 ? (
-                venueOptions.map((option) => (
-                  <option key={option.slug}>
-                    {option.name} · {option.area}
-                  </option>
-                ))
-              ) : (
-                <option>Loading venues…</option>
-              )}
-            </select>
-            <span className="hint">
-              Need options? <Link to={paths.player.explore}>Browse 🏆 Tournament-ready venues →</Link>
-            </span>
-          </div>
-          <div className="field">
-            <label>Who can join?</label>
-            <div className="seg" id="ctPrivacy" style={{ display: 'flex' }} role="group" aria-label="Who can join?">
-              <button
-                className={privacy === 'open' ? 'on' : undefined}
-                type="button"
-                style={{ flex: 1 }}
-                onClick={() => setPrivacy('open')}
+        <div className="grid3">
+          {tournaments.map((card) => {
+            const state = registrationState(card);
+            return (
+              <Link
+                key={card.code}
+                className="card"
+                to={paths.player.tournament(card.code)}
+                style={{ display: 'block', textDecoration: 'none', color: 'var(--text)' }}
               >
-                🌐 Open to everyone
-              </button>
-              <button
-                className={privacy === 'invite' ? 'on' : undefined}
-                type="button"
-                style={{ flex: 1 }}
-                onClick={() => setPrivacy('invite')}
-              >
-                🔒 Invite-only link
-              </button>
-            </div>
-            <span className="hint">{PRIVACY_HINTS[privacy]}</span>
-          </div>
-          <Button variant="primary" block style={{ marginTop: 6 }} onClick={create}>
-            Create tournament
-          </Button>
+                <div className="between">
+                  <Badge tone={state.tone} dot={false}>
+                    {state.label}
+                  </Badge>
+                  <Skill>{prettyFormat(card.format)}</Skill>
+                </div>
+                <h4 style={{ margin: '8px 0 2px' }}>{card.name}</h4>
+                <p className="subtle small" style={{ margin: 0 }}>
+                  {formatDate(card.date)} · {card.venueName} · {card.registeredTeams}/
+                  {card.teamCapacity} teams ·{' '}
+                  {Number(card.entryFeePerTeam) > 0
+                    ? `${formatBdt(card.entryFeePerTeam)} entry`
+                    : 'free entry'}
+                </p>
+              </Link>
+            );
+          })}
         </div>
       )}
-    </Overlay>
+    </section>
   );
 }

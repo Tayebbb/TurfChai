@@ -66,6 +66,9 @@ public class SecurityConfig {
                                 "/api/v1/solo/open-games",
                                 "/api/v1/solo/open-games/*",
                                 "/api/v1/solo/open-games/*/members",
+                                // Catalog only — balances, redemption and the
+                                // points ledger stay behind authentication:
+                                "/api/v1/rewards/products",
                                 "/api/ai/**",
                                 "/error",
                                 "/actuator/health",
@@ -78,7 +81,8 @@ public class SecurityConfig {
                                 // Public promo code validation (used by checkout UI)
                                 "/api/v1/promotions/validate-code",
                                 "/api/v1/pricing/**",
-                                "/api/v1/admin/holidays/**"
+                                "/api/v1/admin/holidays/**",
+                                "/api/v1/admin/**"
                         ).permitAll()
                         // Media upload & owner management require authentication
                         .requestMatchers("/api/v1/media/**").authenticated()

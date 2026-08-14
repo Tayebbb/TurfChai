@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { Icon } from '@/components/common/Icon';
 
 /** Mobile tab bar; visible under 820px on `.has-bottomnav` layouts. */
 export function BottomNav({ links, trailing }) {
@@ -13,7 +14,7 @@ export function BottomNav({ links, trailing }) {
             className={({ isActive }) => (isActive ? 'active' : undefined)}
           >
             <span className="ico" aria-hidden="true">
-              {link.icon}
+              <Icon name={link.icon} />
             </span>
             {link.label}
           </NavLink>

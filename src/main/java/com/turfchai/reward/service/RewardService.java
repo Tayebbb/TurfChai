@@ -217,7 +217,7 @@ public class RewardService {
     /** Active reward catalog, annotated with whether the caller can currently afford each one. */
     @Transactional(readOnly = true)
     public List<RewardProductResponse> listRewardProducts(Long userId) {
-        int balance = currentBalance(userId);
+        int balance = userId != null ? currentBalance(userId) : 0; // visitors browse the catalog with no balance
         return rewardProductRepository.findByIsActiveTrueOrderByCostPointsAsc().stream()
                 .map(product -> RewardProductResponse.builder()
                         .id(product.getId())
@@ -304,6 +304,38 @@ public class RewardService {
                 .walletCreditAmount(walletCreditAmount)
                 .newWalletBalance(newWalletBalance)
                 .build();
+    }
+
+    /** The caller's current wallet balance — the running sum of {@code wallet_transactions}. */
+    @Transactional(readOnly = true)
+    public BigDecimal getWalletBalance(Long userId) {
+        return walletTransactionRepository.sumDeltaByUserId(userId);
+    }
+
+    /**
+     * Applies (spends) wallet balance toward a booking's payment at
+     * checkout. The payment/checkout module is the only caller of this —
+     * see {@link com.turfchai.reward.entity.WalletTransaction}'s Javadoc,
+     * which reserves {@link WalletReason#CHECKOUT_APPLY} for exactly this.
+     */
+    @Transactional
+    public BigDecimal applyWalletAtCheckout(Long userId, BigDecimal amount, Long bookingId) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Wallet amount to apply must be positive");
+        }
+        BigDecimal balance = getWalletBalance(userId);
+        if (amount.compareTo(balance) > 0) {
+            throw new IllegalStateException("Insufficient wallet balance");
+        }
+        BigDecimal newBalance = balance.subtract(amount);
+        walletTransactionRepository.save(WalletTransaction.builder()
+                .userId(userId)
+                .delta(amount.negate())
+                .reason(WalletReason.CHECKOUT_APPLY)
+                .bookingId(bookingId)
+                .balanceAfter(newBalance)
+                .build());
+        return newBalance;
     }
 
     private BigDecimal creditWallet(Long userId, BigDecimal amount, Long redemptionId) {

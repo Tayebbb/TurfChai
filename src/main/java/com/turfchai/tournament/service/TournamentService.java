@@ -10,12 +10,15 @@ import com.turfchai.tournament.repository.TournamentPitchReservationRepository;
 import com.turfchai.tournament.repository.TournamentRepository;
 import com.turfchai.tournament.repository.TournamentTeamRepository;
 import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
+import com.turfchai.tournament.service.TournamentRequests.PayDepositRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterPlayerRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
 import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
 import com.turfchai.tournament.service.TournamentRequests.SlotRequest;
 import com.turfchai.tournament.service.TournamentViews.CostSummary;
+import com.turfchai.tournament.service.TournamentViews.DepositView;
 import com.turfchai.tournament.service.TournamentViews.FixtureView;
+import com.turfchai.tournament.service.TournamentViews.ReservationQuote;
 import com.turfchai.tournament.service.TournamentViews.ReservationView;
 import com.turfchai.tournament.service.TournamentViews.TeamView;
 import com.turfchai.tournament.service.TournamentViews.TournamentCard;
@@ -34,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +55,9 @@ public class TournamentService {
     static final int BUNDLE_DISCOUNT_MIN_SLOTS = 12;
     static final BigDecimal BUNDLE_DISCOUNT_RATE = new BigDecimal("0.04");
     static final BigDecimal DEPOSIT_RATE = new BigDecimal("0.40");
+
+    /** Upper bound on weekly recurrence — matches the request-level @Max. */
+    public static final int MAX_REPEAT_WEEKS = 26;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -292,31 +299,9 @@ public class TournamentService {
             }
         }
 
-        for (SlotRequest slot : slots) {
-            // Pessimistic lock: serializes concurrent reservations per pitch.
-            Pitch pitch = pitches.findByIdForUpdate(slot.pitchId())
-                    .orElseThrow(() -> new IllegalArgumentException("Unknown pitch: " + slot.pitchId()));
-            if (!pitch.getVenue().getId().equals(t.getVenue().getId())) {
-                throw new IllegalArgumentException(
-                        "Pitch " + slot.pitchId() + " does not belong to venue " + t.getVenue().getSlug());
-            }
-            List<TournamentPitchReservation> clashes = reservations.findOverlapping(
-                    pitch.getId(), t.getTournamentDate(), slot.startTime(), slot.endTime());
-            if (!clashes.isEmpty()) {
-                TournamentPitchReservation clash = clashes.get(0);
-                throw new PitchConflictException(
-                        "Pitch '" + pitch.getName() + "' is already reserved "
-                                + clash.getStartTime() + "-" + clash.getEndTime()
-                                + " on " + t.getTournamentDate());
-            }
-            TournamentPitchReservation r = new TournamentPitchReservation();
-            r.setTournament(t);
-            r.setPitch(pitch);
-            r.setSlotDate(t.getTournamentDate());
-            r.setStartTime(slot.startTime());
-            r.setEndTime(slot.endTime());
-            r.setPrice(slotPrice(t, pitch, slot.startTime(), slot.endTime()));
-            reservations.save(r);
+        int weeks = request.weeks();
+        for (int week = 0; week < weeks; week++) {
+            reserveWeek(t, slots, t.getTournamentDate().plusWeeks(week));
         }
         try {
             reservations.flush();
@@ -325,8 +310,138 @@ public class TournamentService {
             throw new PitchConflictException("One of the requested slots was just taken");
         }
         t.setStatus("CONFIRMED");
+        t.setRepeatWeeks(Math.max(t.getRepeatWeeks(), weeks));
         t.setDepositAmount(costSummary(t).deposit());
         return toView(t);
+    }
+
+    /** Persists one week's copy of the slot pattern. Any clash rejects the batch. */
+    private void reserveWeek(Tournament t, List<SlotRequest> slots, LocalDate date) {
+        for (SlotRequest slot : slots) {
+            Pitch pitch = lockPitch(t, slot.pitchId());
+            rejectIfClashing(pitch, date, slot.startTime(), slot.endTime());
+            save(t, pitch, date, slot.startTime(), slot.endTime(),
+                    slotPrice(t, pitch, slot.startTime(), slot.endTime()));
+        }
+    }
+
+    /**
+     * Repeats an existing week, carrying its prices across rather than
+     * re-deriving them. The quote the host accepted is built from these same
+     * stored prices, so copying them is what keeps the amount charged equal to
+     * the amount shown.
+     */
+    private void cloneWeek(Tournament t, List<TournamentPitchReservation> pattern, LocalDate date) {
+        for (TournamentPitchReservation source : pattern) {
+            Pitch pitch = lockPitch(t, source.getPitch().getId());
+            rejectIfClashing(pitch, date, source.getStartTime(), source.getEndTime());
+            save(t, pitch, date, source.getStartTime(), source.getEndTime(), source.getPrice());
+        }
+    }
+
+    /** Pessimistic lock: serializes concurrent reservations per pitch. */
+    private Pitch lockPitch(Tournament t, Long pitchId) {
+        Pitch pitch = pitches.findByIdForUpdate(pitchId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown pitch: " + pitchId));
+        if (!pitch.getVenue().getId().equals(t.getVenue().getId())) {
+            throw new IllegalArgumentException(
+                    "Pitch " + pitchId + " does not belong to venue " + t.getVenue().getSlug());
+        }
+        return pitch;
+    }
+
+    private void rejectIfClashing(Pitch pitch, LocalDate date,
+                                  java.time.LocalTime start, java.time.LocalTime end) {
+        List<TournamentPitchReservation> clashes = reservations.findOverlapping(
+                pitch.getId(), date, start, end);
+        if (!clashes.isEmpty()) {
+            TournamentPitchReservation clash = clashes.get(0);
+            throw new PitchConflictException(
+                    "Pitch '" + pitch.getName() + "' is already reserved "
+                            + clash.getStartTime() + "-" + clash.getEndTime()
+                            + " on " + date);
+        }
+    }
+
+    private void save(Tournament t, Pitch pitch, LocalDate date,
+                      java.time.LocalTime start, java.time.LocalTime end, BigDecimal price) {
+        TournamentPitchReservation r = new TournamentPitchReservation();
+        r.setTournament(t);
+        r.setPitch(pitch);
+        r.setSlotDate(date);
+        r.setStartTime(start);
+        r.setEndTime(end);
+        r.setPrice(price);
+        reservations.save(r);
+    }
+
+    /**
+     * Prices the tournament's slot pattern repeated over {@code repeatWeeks}
+     * without writing anything, so the reserve screen can show a live total as
+     * the host changes the recurrence.
+     */
+    @Transactional(readOnly = true)
+    public ReservationQuote quoteRecurring(String code, int repeatWeeks) {
+        if (repeatWeeks < 1 || repeatWeeks > MAX_REPEAT_WEEKS) {
+            throw new IllegalArgumentException("repeatWeeks must be between 1 and " + MAX_REPEAT_WEEKS);
+        }
+        Tournament t = require(code);
+        List<TournamentPitchReservation> first = weekOneReservations(t);
+        BigDecimal weekly = first.stream().map(TournamentPitchReservation::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        LocalDate last = t.getTournamentDate().plusWeeks(repeatWeeks - 1L);
+        return new ReservationQuote(repeatWeeks, first.size(), weekly,
+                t.getTournamentDate(), last,
+                summarize(first.size() * repeatWeeks, weekly.multiply(BigDecimal.valueOf(repeatWeeks))));
+    }
+
+    /**
+     * Confirms the bulk reservation and records the deposit. Extending the
+     * recurrence and taking payment happen in one transaction: a clash on a
+     * later week must not leave the host charged for slots they do not hold.
+     *
+     * <p>The charged amount is recomputed here rather than taken from the
+     * request, so the client cannot name its own price.
+     */
+    @Transactional
+    public TournamentView payDeposit(String code, PayDepositRequest request) {
+        Tournament t = require(code);
+        if ("PAID".equals(t.getDepositStatus())) {
+            throw new TournamentConflictException("Deposit for " + code + " has already been paid");
+        }
+        List<TournamentPitchReservation> first = weekOneReservations(t);
+        if (first.isEmpty()) {
+            throw new IllegalArgumentException("Reserve at least one pitch slot before paying the deposit");
+        }
+
+        int weeks = request.weeks();
+        for (int week = t.getRepeatWeeks(); week < weeks; week++) {
+            cloneWeek(t, first, t.getTournamentDate().plusWeeks(week));
+        }
+        try {
+            reservations.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new PitchConflictException("One of the recurring slots was just taken");
+        }
+
+        CostSummary costs = costSummary(t);
+        t.setRepeatWeeks(Math.max(t.getRepeatWeeks(), weeks));
+        t.setDepositAmount(costs.deposit());
+        t.setDepositStatus("PAID");
+        t.setDepositMethod(request.method());
+        t.setDepositReference(request.payerReference() == null || request.payerReference().isBlank()
+                ? "DEP-" + t.getCode() + "-" + randomDigits(6)
+                : request.payerReference().trim());
+        t.setDepositPaidAt(Instant.now());
+        t.setStatus("CONFIRMED");
+        return toView(t);
+    }
+
+    /** The slots on the tournament date itself — the pattern later weeks repeat. */
+    private List<TournamentPitchReservation> weekOneReservations(Tournament t) {
+        return reservations.findByTournamentIdOrderBySlotDateAscStartTimeAsc(t.getId()).stream()
+                .filter(r -> t.getTournamentDate().equals(r.getSlotDate()))
+                .toList();
     }
 
     /**
@@ -489,12 +604,20 @@ public class TournamentService {
                 .findByTournamentIdOrderBySlotDateAscStartTimeAsc(t.getId());
         BigDecimal slotTotal = rs.stream().map(TournamentPitchReservation::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal discount = rs.size() >= BUNDLE_DISCOUNT_MIN_SLOTS
+        return summarize(rs.size(), slotTotal);
+    }
+
+    /**
+     * The single place the bundle discount, deposit and balance are derived,
+     * so a quote and the amount actually charged can never drift apart.
+     */
+    static CostSummary summarize(int slotCount, BigDecimal slotTotal) {
+        BigDecimal discount = slotCount >= BUNDLE_DISCOUNT_MIN_SLOTS
                 ? slotTotal.multiply(BUNDLE_DISCOUNT_RATE).setScale(0, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         BigDecimal total = slotTotal.subtract(discount);
         BigDecimal deposit = total.multiply(DEPOSIT_RATE).setScale(0, RoundingMode.HALF_UP);
-        return new CostSummary(rs.size(), slotTotal, discount, total, deposit, total.subtract(deposit));
+        return new CostSummary(slotCount, slotTotal, discount, total, deposit, total.subtract(deposit));
     }
 
     private TournamentView toView(Tournament t) {
@@ -514,8 +637,10 @@ public class TournamentService {
                 t.getTournamentDate(), t.getWindowStart(), t.getWindowEnd(),
                 t.getFormat(), t.getTeamCapacity(), t.getEntryFeePerTeam(),
                 t.getPrizePool(), t.getPrivacy(), t.getInviteCode(),
-                t.getStatus(), t.getBalanceDueDate(),
-                teamViews, fixtureViews, reservationViews, costSummary(t));
+                t.getStatus(), t.getBalanceDueDate(), t.getRepeatWeeks(),
+                teamViews, fixtureViews, reservationViews, costSummary(t),
+                new DepositView(t.getDepositStatus(), t.getDepositAmount(),
+                        t.getDepositMethod(), t.getDepositReference(), t.getDepositPaidAt()));
     }
 
     private TeamView toView(TournamentTeam x) {

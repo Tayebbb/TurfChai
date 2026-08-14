@@ -16,6 +16,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
   },
   server: {
+    // bind every interface so phones on the same Wi-Fi can open the dev server
+    host: true,
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8080',

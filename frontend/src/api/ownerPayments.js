@@ -1,13 +1,17 @@
-import { apiGet } from './client';
+import { apiGet, apiSend } from './client';
 
-export function getOwnerPaymentsLedger() {
-  return apiGet('/api/v1/owner/payments/ledger');
+export async function fetchOwnerPayments() {
+  return apiGet('/api/v1/owner/payments');
 }
 
-export function getOwnerPaymentsChart(timeframe) {
-  return apiGet(`/api/v1/owner/payments/chart?timeframe=${timeframe}`);
+export async function closeOwnerShift() {
+  return apiSend('POST', '/api/v1/owner/payments/close-shift');
 }
 
-export function getOwnerPaymentsReports() {
-  return apiGet('/api/v1/owner/payments/reports');
+export function getInvoiceUrl(payoutCode = 'SETTLE-2026-08') {
+  return `/api/v1/owner/payments/invoices/${payoutCode}`;
+}
+
+export function getCsvExportUrl() {
+  return `/api/v1/owner/payments/export`;
 }

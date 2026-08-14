@@ -18,31 +18,48 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Map;
 
-/** Seeds the demo super admin (dev/test profiles only). */
+/** Seeds the demo super admin (dev/test/ci profiles only — never prod).
+ *  If a SUPER_ADMIN already exists (from V4 migration), updates it to the
+ *  desired credentials rather than failing the unique index constraint. */
 @Configuration
-@Profile({"dev", "test"})
+@Profile({"dev", "test", "ci"})
 public class AdminDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDataSeeder.class);
 
-    public static final String SUPER_ADMIN_EMAIL = "fazle.rabbi.mugdho@gmail.com";
+    public static final String SUPER_ADMIN_EMAIL = "shahadat.cse.20230104008@aust.edu";
+    public static final String SUPER_ADMIN_NAME = "Fazle Rabbi Mugdho";
+    public static final String SUPER_ADMIN_PHONE = "+8801700000001";
+    public static final String SUPER_ADMIN_PASSWORD = "TurfChai@123";
 
     @Bean
     @Order(0)   // before demo player/venue/tournament seeders
     CommandLineRunner seedSuperAdmin(UserRepository users, AdminRepository admins, PasswordEncoder passwordEncoder) {
         return args -> {
-            User user = users.findByEmail(SUPER_ADMIN_EMAIL).orElseGet(() -> {
-                User created = User.builder()
-                        .fullName("Fazle Rabbi Mugdho")
+            User user = users.findAll().stream()
+                    .filter(u -> u.getRole() == RoleType.SUPER_ADMIN)
+                    .findFirst().orElse(null);
+
+            if (user == null) {
+                user = users.save(User.builder()
+                        .fullName(SUPER_ADMIN_NAME)
                         .email(SUPER_ADMIN_EMAIL)
-                        .phone("+8801700000001")
-                        .passwordHash(passwordEncoder.encode("TurfChai@123"))
+                        .phone(SUPER_ADMIN_PHONE)
+                        .passwordHash(passwordEncoder.encode(SUPER_ADMIN_PASSWORD))
                         .role(RoleType.SUPER_ADMIN)
                         .status("ACTIVE")
                         .avatarInitials("FR")
-                        .build();
-                return users.save(created);
-            });
+                        .build());
+                log.info("Created super admin {}", SUPER_ADMIN_EMAIL);
+            } else {
+                user.setEmail(SUPER_ADMIN_EMAIL);
+                user.setFullName(SUPER_ADMIN_NAME);
+                user.setPhone(SUPER_ADMIN_PHONE);
+                user.setPasswordHash(passwordEncoder.encode(SUPER_ADMIN_PASSWORD));
+                user.setAvatarInitials("FR");
+                users.save(user);
+                log.info("Updated existing super admin to {}", SUPER_ADMIN_EMAIL);
+            }
 
             if (admins.findByUser_Id(user.getId()).isEmpty()) {
                 admins.save(Admin.builder()
@@ -51,7 +68,7 @@ public class AdminDataSeeder {
                         .permissions(Map.of("all", true))
                         .status(AdminStatus.ACTIVE)
                         .build());
-                log.info("Seeded super admin {}", SUPER_ADMIN_EMAIL);
+                log.info("Seeded admin record for super admin");
             }
         };
     }

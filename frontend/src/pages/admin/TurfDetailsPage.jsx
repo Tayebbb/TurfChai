@@ -45,7 +45,7 @@ export default function TurfDetailsPage() {
   const [overrideStatus, setOverrideStatus] = useState(null);
 
   const isNumericId = /^\d+$/.test(turfId);
-  const { data: apiVenueRes, loading } = useApi(
+  const { data: apiVenueRes } = useApi(
     () => (isNumericId ? getAdminVenue(turfId) : Promise.resolve(null)),
     [turfId],
   );
@@ -125,7 +125,7 @@ export default function TurfDetailsPage() {
     if (venue.dbId) {
       try {
         await updateVenueStatus(venue.dbId, 'ARCHIVED');
-      } catch (err) {
+      } catch {
         // ignore fallback
       }
     }
@@ -138,7 +138,7 @@ export default function TurfDetailsPage() {
     if (venue.dbId) {
       try {
         await updateVenueStatus(venue.dbId, 'SUSPENDED');
-      } catch (err) {
+      } catch {
         // ignore
       }
     }
@@ -151,7 +151,7 @@ export default function TurfDetailsPage() {
     if (venue.dbId) {
       try {
         await updateVenueStatus(venue.dbId, 'LIVE');
-      } catch (err) {
+      } catch {
         // ignore
       }
     }

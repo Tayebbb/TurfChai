@@ -10,6 +10,8 @@ public interface TurfRequestRepository extends JpaRepository<TurfRequest, Long> 
 
     List<TurfRequest> findByStatusOrderByCreatedAtAsc(String status);
 
+    List<TurfRequest> findByOwnerUserIdOrderByCreatedAtDesc(Long ownerUserId);
+
     Optional<TurfRequest> findByRequestCode(String requestCode);
 
     List<TurfRequest> findAllByOrderByCreatedAtDesc();

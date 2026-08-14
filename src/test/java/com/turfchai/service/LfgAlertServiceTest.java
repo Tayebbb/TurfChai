@@ -3,6 +3,7 @@ package com.turfchai.service;
 import com.turfchai.dto.request.CreateLfgAlertRequest;
 import com.turfchai.dto.response.LfgAlertResponse;
 import com.turfchai.dto.response.OpenGameResponse;
+import com.turfchai.exception.LfgAlertNotFoundException;
 import com.turfchai.model.LfgAlert;
 import com.turfchai.model.OpenGame;
 import com.turfchai.model.User;
@@ -115,7 +116,6 @@ class LfgAlertServiceTest {
     @DisplayName("Should create LFG alert successfully")
     void testCreateAlert_Success() {
         CreateLfgAlertRequest request = CreateLfgAlertRequest.builder()
-                .userId(1L)
                 .area("Dhanmondi")
                 .preferredFrom(LocalTime.of(19, 0))
                 .preferredTo(LocalTime.of(22, 0))
@@ -129,7 +129,7 @@ class LfgAlertServiceTest {
             return a;
         });
 
-        LfgAlertResponse response = alertService.createAlert(request);
+        LfgAlertResponse response = alertService.createAlert(1L, request);
 
         assertNotNull(response);
         assertEquals("Dhanmondi", response.getArea());
@@ -153,7 +153,7 @@ class LfgAlertServiceTest {
         when(alertRepository.findById(300L)).thenReturn(Optional.of(alert));
         when(openGameRepository.findByStatusIn(anyList())).thenReturn(List.of(matchingGame, nonMatchingGame));
 
-        List<OpenGameResponse> matches = alertService.findMatchesForAlert(300L);
+        List<OpenGameResponse> matches = alertService.findMatchesForAlert(300L, 1L);
 
         assertEquals(1, matches.size());
         assertEquals("Evening 7-a-side", matches.get(0).getTitle());
@@ -176,5 +176,28 @@ class LfgAlertServiceTest {
         LfgAlertResponse response = alertService.updateAlertStatus(300L, 1L, LfgStatus.PAUSED);
 
         assertEquals("PAUSED", response.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should not expose another user's alert, even by exact id")
+    void testAlertOfAnotherUser_isNotReachable() {
+        LfgAlert someoneElses = LfgAlert.builder()
+                .id(300L)
+                .user(user)
+                .area("Dhanmondi")
+                .status(LfgStatus.ACTIVE)
+                .build();
+
+        when(alertRepository.findById(300L)).thenReturn(Optional.of(someoneElses));
+
+        long attacker = 99L;
+        assertThrows(LfgAlertNotFoundException.class,
+                () -> alertService.updateAlertStatus(300L, attacker, LfgStatus.PAUSED));
+        assertThrows(LfgAlertNotFoundException.class,
+                () -> alertService.deleteAlert(300L, attacker));
+        assertThrows(LfgAlertNotFoundException.class,
+                () -> alertService.findMatchesForAlert(300L, attacker));
+
+        verify(alertRepository, never()).delete(any(LfgAlert.class));
     }
 }

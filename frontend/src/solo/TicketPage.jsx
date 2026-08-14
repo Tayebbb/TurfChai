@@ -1,23 +1,138 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
+import { QrCode } from '@/components/common/QrCode';
 import { Alert } from '@/components/ui/Alert';
-import { Switch } from '@/components/forms/Toggles';
-import { searchOpenGames } from '@/api/games';
+import { Button } from '@/components/buttons/Button';
+import { getUser } from '@/api/client';
+import {
+  formatGameDay,
+  formatTimeRange,
+  getOpenGame,
+  getOpenGameMembers,
+  skillLabel,
+} from '@/api/openGames';
+import { getTicket } from '@/api/tickets';
 import { useApi } from '@/hooks/useApi';
-import { useToast } from '@/hooks/useToast';
-import { currentPlayer } from '@/data/users';
 import { paths } from '@/routes/paths';
+import { formatBdt } from '@/utils/format';
 
-const TICKET_FACTS = [
-  { id: 'tonight', label: 'TONIGHT', value: <b className="num">9:00–10:30 PM</b> },
-  { id: 'arrive', label: 'ARRIVE BY', value: <b className="num">8:50 PM</b> },
-  { id: 'share', label: 'SHARE', value: <span className="badge green">Paid ৳280</span> },
-];
+/** ISO instant -> `"Sat 14 Aug, 5:00 pm"`, or null when absent/unparseable. */
+function formatStamp(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 export default function TicketPage() {
-  const { showToast } = useToast();
-  const [reminder, setReminder] = useState(true);
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const currentUser = getUser();
+
+  // The join flow passes the id in router state; the query param keeps the
+  // ticket linkable (and is what the QR code encodes).
+  const gameId = location.state?.gameId ?? searchParams.get('gameId');
+
+  const { data: game, loading, error, reload } = useApi(
+    () => (gameId ? getOpenGame(gameId) : Promise.resolve(null)),
+    [gameId],
+  );
+  const {
+    data: memberData,
+    loading: membersLoading,
+    error: membersError,
+    reload: reloadMembers,
+  } = useApi(() => (gameId ? getOpenGameMembers(gameId) : Promise.resolve([])), [gameId]);
+
+  // The gate pass is minted per player and only for someone on the roster, so
+  // this call is expected to fail for a signed-out or non-member visitor. The
+  // page still renders the match; it just has no QR to show.
+  const { data: ticket, loading: ticketLoading } = useApi(
+    () => (gameId && currentUser ? getTicket(gameId) : Promise.resolve(null)),
+    [gameId, currentUser?.id],
+  );
+
+  const members = Array.isArray(memberData) ? memberData : [];
+
+  if (!gameId) {
+    return (
+      <>
+        <PageTitle title="Match ticket" />
+        <main className="wrap-form" id="main" style={{ paddingTop: 32, paddingBottom: 80 }}>
+          <div className="card center" style={{ padding: 24 }}>
+            <h1 style={{ fontSize: 20, marginBottom: 6 }}>No ticket selected</h1>
+            <p className="subtle small">Open a game you have joined to see its ticket.</p>
+            <Button variant="primary" to={paths.solo.openGames} className="btn-block">
+              Browse open games
+            </Button>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (loading) {
+    return (
+      <>
+        <PageTitle title="Match ticket" />
+        <main className="wrap-form" id="main" style={{ paddingTop: 32, paddingBottom: 80 }}>
+          <p className="subtle" role="status">
+            Loading your ticket…
+          </p>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !game) {
+    return (
+      <>
+        <PageTitle title="Match ticket" />
+        <main className="wrap-form" id="main" style={{ paddingTop: 32, paddingBottom: 80 }}>
+          <div className="card" style={{ padding: 24 }}>
+            <h1 style={{ fontSize: 20, marginBottom: 6 }}>Could not load this ticket</h1>
+            <p className="subtle">{error?.message ?? 'This open game is no longer available.'}</p>
+            <div className="row" style={{ marginTop: 12 }}>
+              <Button variant="secondary" to={paths.solo.openGames}>
+                Open games
+              </Button>
+              <Button variant="primary" onClick={reload}>
+                Try again
+              </Button>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  const capacity = Number(game.capacity ?? 0);
+  const filledCount = Number(game.filledCount ?? 0);
+  const spotsLeft = Math.max(0, Number(game.spotsLeft ?? 0));
+  const ticketCode = ticket?.ticketCode ?? game.gameCode ?? `OG-${game.id}`;
+  const timeRange = formatTimeRange(game.startTime, game.endTime);
+  const dayLabel = formatGameDay(game.gameDate);
+  const venueLine = [game.venueName, game.pitchName, game.area].filter(Boolean).join(' · ');
+  const onRoster =
+    !!ticket || (!!currentUser && members.some((m) => Number(m.userId) === Number(currentUser.id)));
+  const validFrom = formatStamp(ticket?.validFrom);
+  const validUntil = formatStamp(ticket?.validUntil);
+
+  const ticketFacts = [
+    { id: 'day', label: dayLabel.toUpperCase() || 'KICKOFF', value: <b className="num">{timeRange}</b> },
+    { id: 'skill', label: 'SKILL', value: <b>{skillLabel(game.skillLevel)}</b> },
+    {
+      id: 'share',
+      label: 'SHARE',
+      value: <span className="badge green">{formatBdt(game.pricePerPlayer)}</span>,
+    },
+  ];
 
   // Fetching the first open game for demo ticket purposes
   const gamesApi = useApi(() => searchOpenGames(), []);
@@ -28,17 +143,21 @@ export default function TicketPage() {
 
   return (
     <>
-      <PageTitle title="Match ticket" />
+      <PageTitle title={`Ticket · ${game.title ?? 'Match'}`} />
 
       <main className="wrap-form" id="main" style={{ paddingTop: 32, paddingBottom: 80 }}>
         <div className="center" style={{ marginBottom: 18 }}>
           <div className="check-anim" aria-hidden="true">
             ✓
           </div>
-          <span className="badge green">You&apos;re in! Payment reconciled · host alerted</span>
-          <h1 style={{ fontSize: 22, marginTop: 10 }}>Match ticket sent 🎟️</h1>
+          {onRoster ? (
+            <span className="badge green">You&apos;re in! Your spot is on the roster</span>
+          ) : (
+            <span className="badge amber">Match ticket · you are not on this roster yet</span>
+          )}
+          <h1 style={{ fontSize: 22, marginTop: 10 }}>Match ticket 🎟️</h1>
           <p className="subtle small">
-            ৳280 paid via bKash · TXN 9K3L27 · recorded in the venue&apos;s shift ledger automatically
+            {formatBdt(game.pricePerPlayer)} per player · show this code at the gate
           </p>
         </div>
 
@@ -50,18 +169,48 @@ export default function TicketPage() {
                 Open game
               </span>
             </div>
-            <div className="muted small">{game.venueName} \u00b7 {game.pitchName} \u00b7 {game.area}</div>
+            <div className="muted small">{venueLine}</div>
           </div>
           <div className="center" style={{ padding: 18 }}>
-            <div className="qr" role="img" aria-label="Match ticket QR code" />
+            {ticketLoading ? (
+              <p className="subtle small" role="status" style={{ margin: 0 }}>
+                Preparing your gate pass…
+              </p>
+            ) : ticket?.checkInToken ? (
+              <>
+                <QrCode
+                  value={ticket.checkInToken}
+                  label={`Gate check-in code for ${ticketCode}`}
+                />
+                {ticket.checkedIn ? (
+                  <span className="badge green" style={{ marginTop: 10 }}>
+                    Checked in ✓
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <div className="alert warn" style={{ textAlign: 'left' }}>
+                <span className="ico">🎫</span>
+                <div className="tiny">
+                  {currentUser
+                    ? 'Only players on this roster get a gate pass. Join the match to get yours.'
+                    : 'Sign in with the account you joined on to load your gate pass.'}
+                </div>
+              </div>
+            )}
             <b className="num" style={{ fontSize: 18, letterSpacing: '.08em', display: 'block', marginTop: 10 }}>
-              OG-7734-RK
+              {ticketCode}
             </b>
+            {validFrom && validUntil ? (
+              <span className="tiny subtle">
+                Scannable {validFrom} – {validUntil}
+              </span>
+            ) : null}
           </div>
           <div className="perf" />
           <div style={{ padding: '16px 20px' }}>
             <div className="grid3" style={{ gap: 10 }}>
-              {TICKET_FACTS.map((fact) => (
+              {ticketFacts.map((fact) => (
                 <div key={fact.id}>
                   <span className="tiny subtle">{fact.label}</span>
                   <br />
@@ -73,49 +222,61 @@ export default function TicketPage() {
         </div>
 
         <div className="grid2" style={{ marginTop: 14, gap: 10 }}>
-          <button className="btn btn-primary" type="button" onClick={() => showToast('Opening directions 🗺️')}>
-            🗺️ Directions
-          </button>
-          <button
-            className="btn btn-secondary"
-            type="button"
-            onClick={() => showToast('Chat with Rifat opened 💬')}
-          >
-            💬 Contact host
-          </button>
+          <Link className="btn btn-primary" to={paths.solo.game(game.id)}>
+            Match details
+          </Link>
+          <Link className="btn btn-secondary" to={paths.solo.openGames}>
+            More open games
+          </Link>
         </div>
 
         <div className="card" style={{ marginTop: 14 }}>
           <div className="between">
-            <h4 style={{ margin: 0 }}>Reminder</h4>
-            <Switch
-              label="Match reminder"
-              checked={reminder}
-              onChange={(event) => setReminder(event.target.checked)}
-            />
-          </div>
-          <p className="small muted" style={{ margin: '6px 0 0' }}>
-            We&apos;ll remind you at <b>7:30 PM</b> (90 min before kickoff) with directions and the roster.
-          </p>
-        </div>
-
-        <div className="card" style={{ marginTop: 14 }}>
-          <div className="between">
-            <h4 style={{ margin: 0 }}>Roster \u00b7 {game.filledCount + 1}/{game.capacity} \u00b7 Full</h4>
-            <span className="badge gray">Closed</span>
-          </div>
-          <div className="row-wrap" style={{ marginTop: 10 }}>
-            {(game.members || []).map((player) => (
-              <span key={player.userId} className="avatar">
-                {player.playerName.substring(0, 2).toUpperCase()}
-              </span>
-            ))}
-            <span className="avatar" style={{ background: 'var(--brand)', color: '#fff' }}>
-              {currentPlayer?.initials ?? '??'}
+            <h4 style={{ margin: 0 }}>
+              Roster · {filledCount}/{capacity}
+              {spotsLeft === 0 ? ' · Full' : ''}
+            </h4>
+            <span className={spotsLeft === 0 ? 'badge gray' : 'badge green'}>
+              {spotsLeft === 0 ? 'Closed' : `${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left`}
             </span>
           </div>
+          {membersLoading ? (
+            <p className="subtle small" role="status" style={{ margin: '10px 0 0' }}>
+              Loading roster…
+            </p>
+          ) : membersError ? (
+            <div style={{ marginTop: 10 }}>
+              <p className="subtle small" style={{ margin: '0 0 8px' }}>
+                {membersError.message}
+              </p>
+              <Button variant="secondary" size="sm" onClick={reloadMembers}>
+                Retry
+              </Button>
+            </div>
+          ) : members.length === 0 ? (
+            <p className="subtle small" style={{ margin: '10px 0 0' }}>
+              Nobody has joined yet.
+            </p>
+          ) : (
+            <div className="row-wrap" style={{ marginTop: 10 }}>
+              {members.map((member) => (
+                <span
+                  key={member.id ?? member.userId}
+                  className={
+                    currentUser && Number(member.userId) === Number(currentUser.id)
+                      ? 'avatar brand'
+                      : 'avatar'
+                  }
+                  title={member.name}
+                >
+                  {member.initials ?? '??'}
+                </span>
+              ))}
+            </div>
+          )}
           <p className="subtle tiny" style={{ margin: '8px 0 0' }}>
-            Host Rifat manages teams on the night. Turf owner handles pitch entry &amp; handover.
+            {game.organizerName ? `${game.organizerName} hosts this game. ` : ''}
+            The turf owner handles pitch entry &amp; handover.
           </p>
         </div>
 

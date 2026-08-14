@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/buttons/Button';
 import { Card } from '@/components/cards/Card';
 import { PageTitle } from '@/components/common/PageTitle';
@@ -41,6 +41,9 @@ const AUTH_TABS = [
 export default function AuthPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // set when a signed-out visitor hits an action that needs an identity
+  const nextPath = searchParams.get('next');
 
   const [role, setRole] = useState('player');
   const [tab, setTab] = useState('signin');
@@ -60,6 +63,7 @@ export default function AuthPage() {
 
   /** Map the DB role (returned by the login API) to a redirect destination */
   const getDestinationByRole = (apiRole) => {
+    if (nextPath && nextPath.startsWith('/')) return nextPath;
     if (apiRole === 'ADMIN') return paths.admin.dashboard;
     if (apiRole === 'OWNER') return paths.owner.dashboard;
     return paths.player.home;
@@ -100,7 +104,8 @@ export default function AuthPage() {
       });
       setSession(response);
       showToast(`Account created! Welcome to TurfChai ✓`);
-      if (role === 'admin') navigate(paths.admin.dashboard);
+      if (nextPath && nextPath.startsWith('/')) navigate(nextPath);
+      else if (role === 'admin') navigate(paths.admin.dashboard);
       else if (role === 'owner') navigate(paths.owner.onboarding);
       else navigate(paths.player.onboarding);
     } catch (error) {
@@ -112,7 +117,7 @@ export default function AuthPage() {
     <>
       <PageTitle title="Authentication — TurfChai" />
 
-      <div className="wrap-form" style={{ paddingTop: 36, paddingBottom: 64, maxWidth: 480, margin: '0 auto' }}>
+      <div className="wrap-form" style={{ paddingTop: 36, paddingBottom: 64 }}>
         {/* Main Card Container */}
         <Card style={{ padding: 24, borderRadius: 20 }}>
           {/* Sign In vs Create Account Tabs */}
