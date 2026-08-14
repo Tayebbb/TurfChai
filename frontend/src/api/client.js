@@ -81,6 +81,16 @@ function resolveUrl(path) {
 }
 
 /**
+ * Same base-URL resolution the fetch helpers use, for callers that need the
+ * URL rather than a request — `EventSource`, for one. Kept exported so no
+ * caller re-derives the origin by hand; that duplication has broken LAN and
+ * deployed builds before.
+ */
+export function apiUrl(path) {
+  return resolveUrl(path);
+}
+
+/**
  * Fetch wrapper for API calls.
  */
 export async function api(path, { method = 'GET', body, token = true } = {}) {
