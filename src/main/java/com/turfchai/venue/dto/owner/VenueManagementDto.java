@@ -23,6 +23,7 @@ public record VenueManagementDto(
         String contactEmail,
         String depositPolicy,
         String cancelPolicy,
+        BigDecimal basePrice,
         boolean allowSplitPayment,
         boolean verified,
         boolean tournamentReady,

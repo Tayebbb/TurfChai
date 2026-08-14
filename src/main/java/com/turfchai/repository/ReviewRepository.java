@@ -15,4 +15,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT COUNT(r) FROM Review r WHERE r.venue.id = :venueId AND r.status = 'published'")
     Integer getReviewCountForVenue(@Param("venueId") Long venueId);
+
+    java.util.List<Review> findByVenueIdInOrderByCreatedAtDesc(java.util.List<Long> venueIds);
 }

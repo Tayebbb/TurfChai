@@ -136,6 +136,7 @@ public class VenueManagementService {
         if (req.promotionLabel() != null) venue.setPromotionLabel(req.promotionLabel());
         if (req.photos() != null) venue.setPhotos(String.join(",", req.photos()));
         if (req.mlPricingEnabled() != null) venue.setMlPricingEnabled(req.mlPricingEnabled());
+        if (req.basePrice() != null) venue.setBasePrice(req.basePrice());
 
         return toDto(venueRepository.save(venue));
     }
@@ -311,7 +312,7 @@ public class VenueManagementService {
                 v.getOpenTime(), v.getCloseTime(),
                 v.getAmenities(), v.getRules(),
                 v.getContactPhone(), v.getContactEmail(),
-                v.getDepositPolicy(), v.getCancelPolicy(), v.isAllowSplitPayment(),
+                v.getDepositPolicy(), v.getCancelPolicy(), v.getBasePrice(), v.isAllowSplitPayment(),
                 v.isVerified(), v.isTournamentReady(), v.isHasPromotion(), v.getPromotionLabel(),
                 v.isMlPricingEnabled(), photos, pitches, rules
         );

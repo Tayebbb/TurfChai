@@ -8,6 +8,7 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { Progress } from '@/components/ui/Progress';
 import { getMyProfile } from '@/api/players';
 import { getOwnerAnalytics } from '@/api/ownerAnalytics';
+import { listMyVenues } from '@/api/ownerVenues';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -33,6 +34,10 @@ export default function DashboardPage() {
   const profileApi = useApi(() => getMyProfile(), []);
   const owner = profileApi.data;
 
+  const { data: venuesRes } = useApi(listMyVenues, []);
+  const venues = venuesRes?.data || venuesRes || [];
+  const activeVenue = venues[0];
+
   const { data: analyticsRes, loading } = useApi(getOwnerAnalytics, []);
   const analyticsData = analyticsRes?.data || analyticsRes || {};
 
@@ -49,7 +54,8 @@ export default function DashboardPage() {
         <div>
           <h1>Good evening, {owner?.name ?? 'Owner'} 🏟️</h1>
           <span className="subtle small">
-            Kick Off Arena · Dhanmondi · <Badge tone="green">Live</Badge>
+            {activeVenue ? `${activeVenue.name} · ${activeVenue.area} · ` : 'Loading... '}
+            <Badge tone="green">Live</Badge>
           </span>
         </div>
         <div className="row">
