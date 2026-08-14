@@ -66,7 +66,7 @@ class VenueSearchServiceTest {
     void filtersByArea() {
         PagedResponse<VenueSummaryDto> result = service.search(
                 criteria("Dhanmondi", null, null, null, null, null), 0, 10, "rating");
-        assertThat(result.items()).extracting(VenueSummaryDto::slug)
+        assertThat(result.items()).extracting(v -> v.slug())
                 .containsExactlyInAnyOrder("alpha-arena", "gamma-court");
     }
 
@@ -74,7 +74,7 @@ class VenueSearchServiceTest {
     void filtersBySport() {
         PagedResponse<VenueSummaryDto> result = service.search(
                 criteria(null, "badminton", null, null, null, null), 0, 10, "rating");
-        assertThat(result.items()).extracting(VenueSummaryDto::slug).containsExactly("gamma-court");
+        assertThat(result.items()).extracting(v -> v.slug()).containsExactly("gamma-court");
     }
 
     @Test
@@ -82,14 +82,14 @@ class VenueSearchServiceTest {
         PagedResponse<VenueSummaryDto> result = service.search(
                 criteria(null, null, BigDecimal.valueOf(1000), BigDecimal.valueOf(2000), null, null),
                 0, 10, "rating");
-        assertThat(result.items()).extracting(VenueSummaryDto::slug).containsExactly("beta-turf");
+        assertThat(result.items()).extracting(v -> v.slug()).containsExactly("beta-turf");
     }
 
     @Test
     void filtersByAmenitiesAndVerified() {
         PagedResponse<VenueSummaryDto> result = service.search(
                 criteria(null, null, null, null, List.of("floodlights"), true), 0, 10, "rating");
-        assertThat(result.items()).extracting(VenueSummaryDto::slug).containsExactly("alpha-arena");
+        assertThat(result.items()).extracting(v -> v.slug()).containsExactly("alpha-arena");
     }
 
     @Test
@@ -97,7 +97,7 @@ class VenueSearchServiceTest {
         VenueSearchCriteria byName = new VenueSearchCriteria(
                 "gamma", null, null, null, null, null, null, null, null, null, null);
         assertThat(service.search(byName, 0, 10, "rating").items())
-                .extracting(VenueSummaryDto::slug).containsExactly("gamma-court");
+                .extracting(v -> v.slug()).containsExactly("gamma-court");
     }
 
     @Test

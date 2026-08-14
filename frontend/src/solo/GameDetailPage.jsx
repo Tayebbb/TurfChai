@@ -1,9 +1,6 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { PageTitle } from '@/components/common/PageTitle';
-import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
-import { Overlay } from '@/components/modals/Overlay';
-import { fridayNightRoster } from '@/data/games';
+import { useParams } from 'react-router-dom';
+import { getOpenGame } from '@/api/games';
+import { useApi } from '@/hooks/useApi';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -33,14 +30,21 @@ const RULES = [
 ];
 
 export default function GameDetailPage() {
+  const { gameId } = useParams();
+  const gameApi = useApi(() => getOpenGame(gameId), [gameId]);
+  const game = gameApi.data;
+
   const { showToast } = useToast();
   const payShare = useDisclosure(false);
   const { label: lockLabel } = useCountdown(LOCK_SECONDS);
   const [method, setMethod] = useState('bKash');
 
+  if (gameApi.loading) return <div className="wrap" style={{ paddingTop: 20 }}>Loading...</div>;
+  if (!game) return <div className="wrap" style={{ paddingTop: 20 }}>Game not found.</div>;
+
   return (
     <>
-      <PageTitle title="Friday Night Football" />
+      <PageTitle title={game.title} />
 
       <main className="wrap" id="main" style={{ paddingTop: 20, maxWidth: 1000 }}>
         <Breadcrumbs
@@ -53,15 +57,19 @@ export default function GameDetailPage() {
         <div className="between" style={{ flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
           <div>
             <div className="row-wrap" style={{ marginBottom: 6 }}>
-              <span className="badge red">Needs 1 player · urgent</span>
+              {game.spotsLeft <= 2 ? (
+                <span className="badge red">Needs {game.spotsLeft} player \u00b7 urgent</span>
+              ) : (
+                <span className="badge green">{game.spotsLeft} spots left</span>
+              )}
               <span className="badge green nodot">Instant join</span>
-              <span className="skill">Intermediate</span>
+              <span className="skill">{game.skillLevel || 'Intermediate'}</span>
             </div>
-            <h1 style={{ fontSize: 24, marginBottom: 2 }}>Friday Night Football</h1>
+            <h1 style={{ fontSize: 24, marginBottom: 2 }}>{game.title}</h1>
             <span className="subtle">
-              Kick Off Arena · Pitch 2 · Dhanmondi 27 ·{' '}
+              {game.venueName} \u00b7 {game.pitchName} \u00b7 {game.area} \u00b7{' '}
               <b className="num" style={{ color: 'var(--text)' }}>
-                Tonight 9:00–10:30 PM
+                {game.gameDate} {game.startTime}\u2013{game.endTime}
               </b>
             </span>
           </div>
@@ -98,9 +106,9 @@ export default function GameDetailPage() {
                 </button>
               </div>
               <div className="row" style={{ marginTop: 10 }}>
-                <span className="avatar lg c">RH</span>
+                <span className="avatar lg c">{game.organizerName?.substring(0, 2).toUpperCase()}</span>
                 <div>
-                  <b>Rifat Hossain</b>
+                  <b>{game.organizerName}</b>
                   <div className="subtle small">Hosting since 2024 · 68 games hosted</div>
                   <div className="row-wrap" style={{ marginTop: 4 }}>
                     <span className="rating">4.9</span>
@@ -111,19 +119,22 @@ export default function GameDetailPage() {
             </section>
 
             <section className="card">
-              <h3>Roster · 9 of 10</h3>
+              <h3>Roster \u00b7 {game.filledCount} of {game.capacity}</h3>
               <div className="row-wrap" style={{ marginTop: 10 }}>
-                {fridayNightRoster.map((player) => (
-                  <span key={player.id} className={player.tone ? `avatar ${player.tone}` : 'avatar'}>
-                    {player.initials}
+                {(game.members || []).map((player) => (
+                  <span key={player.userId} className="avatar">
+                    {player.playerName.substring(0, 2).toUpperCase()}
                   </span>
                 ))}
-                <span
-                  className="avatar"
-                  style={{ background: 'var(--warn-soft)', color: 'var(--warn)', borderStyle: 'dashed' }}
-                >
-                  ?
-                </span>
+                {Array.from({ length: game.spotsLeft }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="avatar"
+                    style={{ background: 'var(--warn-soft)', color: 'var(--warn)', borderStyle: 'dashed' }}
+                  >
+                    ?
+                  </span>
+                ))}
               </div>
               <p className="subtle small" style={{ margin: '8px 0 0' }}>
                 The open spot is a <b>midfielder or winger</b> — but any position welcome.
@@ -152,11 +163,11 @@ export default function GameDetailPage() {
             <div className="between">
               <span>
                 <b className="num" style={{ fontSize: 22 }}>
-                  ৳280
+                  \u09F3{game.pricePerPlayer || 0}
                 </b>{' '}
                 <span className="subtle">your share</span>
               </span>
-              <span className="badge red">1 spot left</span>
+              <span className="badge red">{game.spotsLeft} spot{game.spotsLeft !== 1 ? 's' : ''} left</span>
             </div>
             <div className="panel" style={{ margin: '12px 0' }}>
               <div className="between small">

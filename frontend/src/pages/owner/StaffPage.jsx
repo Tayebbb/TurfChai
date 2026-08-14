@@ -10,54 +10,10 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { initials as toInitials } from '@/utils/format';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
+import { useApi } from '@/hooks/useApi';
+import { getOwnerStaff, getOwnerStaffAuditLog } from '@/api/ownerStaff';
 
-const INITIAL_TEAM = [
-  {
-    id: 'mahmud',
-    name: 'Mahmudul Hasan',
-    initials: 'MH',
-    avatarStyle: { background: 'var(--info-soft)', color: 'var(--info)' },
-    role: 'Owner',
-    badge: 'blue',
-    detail: 'Full access · payouts · staff management',
-    permissions: false,
-  },
-  {
-    id: 'sumon',
-    name: 'Sumon Barua',
-    initials: 'SB',
-    tone: 'b',
-    role: 'Manager',
-    badge: 'green',
-    detail: 'Bookings · calendar · cash logging · promotions',
-    permissions: true,
-  },
-  {
-    id: 'jahid',
-    name: 'Jahid Rana',
-    initials: 'JR',
-    tone: 'c',
-    role: 'Front desk',
-    badge: 'gray',
-    detail: 'Check-ins · walk-in bookings · cash logging only',
-    permissions: true,
-  },
-];
 
-const ROLE_PRESETS = {
-  'Co-owner': { badge: 'blue', detail: 'Full access · payouts · staff management' },
-  Manager: { badge: 'green', detail: 'Bookings · calendar · cash logging' },
-  'Front desk': { badge: 'gray', detail: 'Check-ins · walk-in bookings · cash logging only' },
-  Accountant: { badge: 'amber', detail: 'View ledger, payouts & financial reports' },
-};
-
-const AUDIT_LOG = [
-  { id: 'open', title: 'Sumon opened evening shift', detail: '7:01 PM · opening cash float ৳2,000 counted' },
-  { id: 'cash', title: 'Jahid logged walk-in cash ৳1,700', detail: '3:05 PM · TC-48288 · Pitch 3' },
-  { id: 'phone', title: 'Sumon added phone booking TC-48293', detail: '1:22 PM · deposit ৳510 via Nagad' },
-  { id: 'refund', title: 'Owner approved refund ৳2,200', detail: '11:41 AM · TC-48102 · policy: free cancel 24h+' },
-  { id: 'close', title: 'Sumon closed afternoon shift', detail: '7:00 PM · drawer balanced ✓ · handover note left' },
-];
 
 const PERMISSIONS = [
   { id: 'bookings', label: 'Manage bookings & calendar', on: true },
@@ -75,20 +31,44 @@ export default function StaffPage() {
   const closeShift = useDisclosure(false);
   const inviteModal = useDisclosure(false);
 
-  const [team, setTeam] = useState(INITIAL_TEAM);
+  const { data: staffRes, loading: loadingStaff } = useApi(getOwnerStaff, []);
+  const { data: auditRes, loading: loadingAudit } = useApi(getOwnerStaffAuditLog, []);
+  
+  const teamApi = staffRes?.data || staffRes || [];
+  const auditLogApi = auditRes?.data || auditRes || [];
+
+  const [localTeam, setLocalTeam] = useState([]);
+  
+  const team = teamApi.length > 0 ? teamApi : localTeam;
+  const auditLog = auditLogApi;
+
   const [permissions, setPermissions] = useState(() =>
     Object.fromEntries(PERMISSIONS.map((item) => [item.id, item.on])),
   );
   const [handoverNote, setHandoverNote] = useState('');
-  const [counted, setCounted] = useState('৳3,785');
+  const [counted, setCounted] = useState('');
   const [invite, setInvite] = useState({ name: '', email: '', role: 'Front desk' });
 
   function sendInvite() {
     const name = invite.name.trim() || 'Invited Member';
     const email = invite.email.trim() || 'member@example.com';
-    const preset = ROLE_PRESETS[invite.role];
+    const badgeMap = {
+      'Co-owner': 'blue',
+      'Manager': 'green',
+      'Front desk': 'gray',
+      'Accountant': 'amber'
+    };
+    const detailMap = {
+      'Co-owner': 'Full access · payouts · staff management',
+      'Manager': 'Bookings · calendar · cash logging',
+      'Front desk': 'Check-ins · walk-in bookings · cash logging only',
+      'Accountant': 'View ledger, payouts & financial reports'
+    };
 
-    setTeam((current) => [
+    const presetBadge = badgeMap[invite.role] || 'gray';
+    const presetDetail = detailMap[invite.role] || '';
+
+    setLocalTeam((current) => [
       ...current,
       {
         id: `invite-${Date.now()}`,
@@ -96,8 +76,8 @@ export default function StaffPage() {
         initials: toInitials(name) || 'TM',
         avatarStyle: { background: 'var(--brand-soft)', color: 'var(--brand)' },
         role: invite.role,
-        badge: preset.badge,
-        detail: `${preset.detail} · ${email}`,
+        badge: presetBadge,
+        detail: `${presetDetail} · ${email}`,
         pending: true,
         permissions: true,
       },
@@ -154,6 +134,12 @@ export default function StaffPage() {
                   ) : null}
                 </div>
               ))}
+              {!loadingStaff && team.length === 0 && (
+                <div className="tiny subtle center" style={{ padding: 24 }}>No staff members</div>
+              )}
+              {loadingStaff && (
+                <div className="tiny subtle center" style={{ padding: 24 }}>Loading staff...</div>
+              )}
             </div>
           </section>
 
@@ -215,7 +201,7 @@ export default function StaffPage() {
             Every staff action is recorded — nothing disappears.
           </p>
           <ul className="tline">
-            {AUDIT_LOG.map((entry) => (
+            {auditLog.map((entry) => (
               <li key={entry.id}>
                 <b className="small">{entry.title}</b>
                 <p className="tiny muted" style={{ margin: 0 }}>
@@ -223,6 +209,12 @@ export default function StaffPage() {
                 </p>
               </li>
             ))}
+            {!loadingAudit && auditLog.length === 0 && (
+              <li className="tiny subtle">No audit logs available</li>
+            )}
+            {loadingAudit && (
+              <li className="tiny subtle">Loading logs...</li>
+            )}
           </ul>
           <Button
             size="sm"

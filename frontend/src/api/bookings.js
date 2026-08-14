@@ -24,3 +24,24 @@ export function getBooking(id) {
 export function cancelBooking(id) {
   return api(`/bookings/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
 }
+
+export function getMyBookings() {
+  return api('/bookings', { method: 'GET' });
+}
+
+export function toBookingCard(booking) {
+  const isUpcoming = booking.status === 'CONFIRMED' || booking.status === 'PENDING';
+  return {
+    id: booking.bookingCode,
+    status: booking.status,
+    statusTone: isUpcoming ? 'brand' : 'gray',
+    title: booking.title,
+    venue: booking.venue,
+    pitch: booking.pitch,
+    date: booking.date,
+    time: booking.time,
+    duration: booking.duration,
+    share: booking.share,
+    joinCode: booking.bookingCode,
+  };
+}

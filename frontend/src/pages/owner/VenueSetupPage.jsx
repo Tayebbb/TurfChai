@@ -56,9 +56,117 @@ import {
   useToast,
 } from '@/hooks/useToast';
 
-import {
-  paths,
-} from '@/routes/paths';
+import { paths } from '@/routes/paths';
+
+import { useApi } from '@/hooks/useApi';
+import { getOwnerVenueSetup } from '@/api/ownerVenueSetup';
+import { generateSlots } from '@/api/ownerSlots';
+
+function CustomDatePicker({ value, onChange, id }) {
+  const [textVal, setTextVal] = useState(() => {
+    if (!value) return '';
+    const [y, m, d] = value.split('-');
+    return `${d}/${m}/${y}`;
+  });
+
+  const handleTextChange = (e) => {
+    const newVal = e.target.value;
+    setTextVal(newVal);
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(newVal)) {
+      const [d, m, y] = newVal.split('/');
+      onChange({ target: { value: `${y}-${m}-${d}` } });
+    } else if (newVal === '') {
+      onChange({ target: { value: '' } });
+    }
+  };
+
+  const handleNativeChange = (e) => {
+    const val = e.target.value;
+    onChange(e);
+    if (val) {
+      const [y, m, d] = val.split('-');
+      setTextVal(`${d}/${m}/${y}`);
+    } else {
+      setTextVal('');
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+      <div style={{ position: 'absolute', left: 12, display: 'flex', color: 'var(--text-3, #888)', pointerEvents: 'none' }}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
+        </svg>
+      </div>
+
+      <input 
+        type="date"
+        value={value}
+        onChange={handleNativeChange}
+        style={{ position: 'absolute', left: 8, width: 22, height: 22, opacity: 0, cursor: 'pointer', zIndex: 10 }} 
+      />
+      
+      <Input
+        id={id}
+        type="text"
+        placeholder="DD/MM/YYYY"
+        maxLength="10"
+        value={textVal}
+        onChange={handleTextChange}
+        style={{ paddingLeft: 34, width: '100%' }}
+      />
+    </div>
+  );
+}
+
+function CustomTimePicker({ value, onChange, id }) {
+  const [textVal, setTextVal] = useState(value || '');
+
+  const handleTextChange = (e) => {
+    const newVal = e.target.value;
+    setTextVal(newVal);
+    if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newVal)) {
+      onChange({ target: { value: newVal } });
+    } else if (newVal === '') {
+      onChange({ target: { value: '' } });
+    }
+  };
+
+  const handleNativeChange = (e) => {
+    const val = e.target.value;
+    onChange(e);
+    setTextVal(val);
+  };
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+      <div style={{ position: 'absolute', left: 12, display: 'flex', color: 'var(--text-3, #888)', pointerEvents: 'none' }}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
+        </svg>
+      </div>
+
+      <input 
+        type="time"
+        value={value}
+        onChange={handleNativeChange}
+        style={{ position: 'absolute', left: 8, width: 22, height: 22, opacity: 0, cursor: 'pointer', zIndex: 10 }} 
+      />
+      
+      <Input
+        id={id}
+        type="text"
+        placeholder="HH:MM"
+        maxLength="5"
+        value={textVal}
+        onChange={handleTextChange}
+        style={{ paddingLeft: 34, width: '100%' }}
+      />
+    </div>
+  );
+}
+
 
 const PHOTO_TILE = {
   width: 72,
@@ -88,168 +196,7 @@ const PHOTOS = [
   },
 ];
 
-const INITIAL_PITCHES = [
-  {
-    id: 1,
-    name: 'Pitch 1 · 7-a-side',
-    desc: 'Artificial grass · floodlit · 30×50 m',
-    sports: ['Football', 'Cricket'],
-  },
-  {
-    id: 2,
-    name: 'Pitch 2 · 7-a-side',
-    desc: 'Artificial grass · floodlit · 30×50 m',
-    sports: ['Football'],
-  },
-  {
-    id: 3,
-    name: 'Pitch 3 · 5-a-side futsal',
-    desc: 'Indoor · rubber court',
-    sports: ['Futsal', 'Badminton'],
-  },
-];
 
-const SPORT_SLOT_SUMMARY = [
-  {
-    id: 'football',
-    title: '⚽ Football',
-    detail: '90 min slots · 10m buffer',
-    tone: 'blue',
-    price: '৳2,200/slot',
-  },
-  {
-    id: 'futsal',
-    title: '🥅 Futsal',
-    detail: '60 min slots · 10m buffer',
-    tone: 'green',
-    price: '৳1,500/slot',
-  },
-  {
-    id: 'cricket',
-    title: '🏏 Cricket',
-    detail: '120 min slots · 15m buffer',
-    tone: 'amber',
-    price: '৳3,000/slot',
-  },
-  {
-    id: 'badminton',
-    title: '🏸 Badminton',
-    detail: '40 min slots · 5m buffer',
-    tone: '',
-    style: {
-      background: 'var(--info-soft)',
-      color: 'var(--info)',
-    },
-    price: '৳1,000/slot',
-  },
-];
-
-const PRICING_RULES = [
-  {
-    id: 'fb-off',
-    sport: '⚽ Football',
-    window: '6:00 AM – 4:00 PM',
-    tag: {
-      tone: 'blue',
-      text: 'Off-peak',
-    },
-    days: 'Every day',
-    rate: '90m · ৳1,700',
-  },
-  {
-    id: 'fb-peak',
-    sport: '⚽ Football',
-    window: '4:00 PM – 11:00 PM',
-    tag: {
-      tone: 'amber',
-      text: 'Peak',
-    },
-    days: 'Sun–Thu',
-    rate: '90m · ৳2,200',
-  },
-  {
-    id: 'fs-peak',
-    sport: '🥅 Futsal',
-    window: '4:00 PM – 11:00 PM',
-    tag: {
-      tone: 'amber',
-      text: 'Peak',
-    },
-    days: 'Fri–Sat',
-    rate: '60m · ৳1,500',
-  },
-  {
-    id: 'ck-full',
-    sport: '🏏 Cricket',
-    window: '6:00 AM – 11:00 PM',
-    tag: {
-      tone: 'amber',
-      text: 'Full day',
-    },
-    days: 'Fri–Sat',
-    rate: '120m · ৳3,000',
-  },
-];
-
-const HOURS = [
-  {
-    id: 'open',
-    label: 'OPEN',
-    value: '6:00 AM',
-  },
-  {
-    id: 'close',
-    label: 'CLOSE',
-    value: '11:00 PM',
-  },
-  {
-    id: 'buffer',
-    label: 'BUFFER',
-    value: '10 min',
-  },
-];
-
-const DEPOSIT_OPTIONS = ['Full payment only', '30% deposit allowed', '50% deposit'];
-
-const AMENITIES = [
-  {
-    id: 'floodlights',
-    label: 'Floodlights',
-    on: true,
-  },
-  {
-    id: 'parking',
-    label: 'Parking',
-    on: true,
-  },
-  {
-    id: 'changing',
-    label: 'Changing room',
-    on: true,
-  },
-  {
-    id: 'washroom',
-    label: 'Washroom',
-    on: true,
-  },
-  {
-    id: 'water',
-    label: 'Drinking water',
-    on: true,
-  },
-  {
-    id: 'kit',
-    label: 'Bibs & balls',
-    on: true,
-  },
-  {
-    id: 'cafeteria',
-    label: 'Cafeteria',
-    on: false,
-  },
-];
-
-const ASSIGNABLE_SPORTS = ['Football', 'Cricket', 'Futsal', 'Badminton', 'Volleyball'];
 
 /** Renders the coloured badge row for a pitch's assigned sports. */
 function SportTags({ sports }) {
@@ -294,8 +241,21 @@ export default function VenueSetupPage() {
   const live = useDisclosure(false);
   const pitchModal = useDisclosure(false);
   const slotModal = useDisclosure(false);
+  const generateSlotsModal = useDisclosure(false);
 
-  const [pitches, setPitches] = useState(INITIAL_PITCHES);
+  const { data: res, loading } = useApi(getOwnerVenueSetup, []);
+  const apiData = res?.data || res || {};
+
+  const apiPitches = apiData.pitches || [];
+  const sportSlotSummary = apiData.sportSlotSummary || [];
+  const pricingRules = apiData.pricingRules || [];
+  const hours = apiData.hours || [];
+  const depositOptions = apiData.depositOptions || ['Full payment only', '30% deposit allowed', '50% deposit'];
+  const amenities = apiData.amenities || [];
+  const assignableSports = apiData.assignableSports || ['Football', 'Cricket', 'Futsal', 'Badminton', 'Volleyball'];
+
+  const [localPitches, setLocalPitches] = useState([]);
+  const pitches = apiPitches.length > 0 ? apiPitches : localPitches;
   const [editingId, setEditingId] = useState(null);
   const [pitchDraft, setPitchDraft] = useState({
     name: '',
@@ -308,6 +268,7 @@ export default function VenueSetupPage() {
     'Free cancel until 24h before · 50% within 24h · no refund within 6h',
   );
   const [allowSplit, setAllowSplit] = useState(true);
+  const [mlPricingEnabled, setMlPricingEnabled] = useState(apiData.mlPricingEnabled ?? true);
 
   const [slotDraft, setSlotDraft] = useState({
     sport: 'Football',
@@ -315,6 +276,16 @@ export default function VenueSetupPage() {
     buffer: '10',
     offpeak: '৳1,700',
     peak: '৳2,200',
+  });
+
+  const [generateDraft, setGenerateDraft] = useState({
+    pitchId: '',
+    startDate: '',
+    endDate: '',
+    startTime: '00:00',
+    endTime: '23:59',
+    slotDurationMinutes: '60',
+    basePrice: '1500',
   });
 
   function openAddPitch() {
@@ -355,14 +326,14 @@ export default function VenueSetupPage() {
     const desc = pitchDraft.desc.trim() || 'Standard turf court';
 
     if (editingId) {
-      setPitches((current) =>
+      setLocalPitches((current) =>
         current.map((pitch) =>
           pitch.id === editingId ? { ...pitch, name, desc, sports: pitchDraft.sports } : pitch,
         ),
       );
       showToast('Pitch details updated ✓');
     } else {
-      setPitches((current) => [...current, {
+      setLocalPitches((current) => [...current, {
         id: Date.now(),
         name,
         desc,
@@ -379,6 +350,24 @@ export default function VenueSetupPage() {
       `${slotDraft.sport} slots set to ${slotDraft.duration} min with ${slotDraft.buffer} min buffer ✓`,
     );
     slotModal.close();
+  }
+
+  async function handleGenerateSlots() {
+    try {
+      await generateSlots({
+        pitchId: Number(generateDraft.pitchId),
+        startDate: generateDraft.startDate,
+        endDate: generateDraft.endDate,
+        startTime: generateDraft.startTime + ':00',
+        endTime: generateDraft.endTime + ':00',
+        slotDurationMinutes: Number(generateDraft.slotDurationMinutes),
+        basePrice: Number(generateDraft.basePrice)
+      });
+      showToast('Slots generated successfully! ✓');
+      generateSlotsModal.close();
+    } catch (err) {
+      showToast(err.message || 'Error generating slots', 'error');
+    }
   }
 
   return (
@@ -570,6 +559,12 @@ export default function VenueSetupPage() {
                     </Button>
                   </div>
                 ))}
+                {!loading && pitches.length === 0 && (
+                  <div className="tiny subtle center">No pitches added yet</div>
+                )}
+                {loading && (
+                  <div className="tiny subtle center">Loading pitches...</div>
+                )}
               </div>
 
               <Button
@@ -617,7 +612,7 @@ export default function VenueSetupPage() {
                   marginBottom: 12,
                 }}
               >
-                {SPORT_SLOT_SUMMARY.map((sport) => (
+                {sportSlotSummary.map((sport) => (
                   <div
                     className="panel between"
                     key={sport.id}
@@ -637,6 +632,9 @@ export default function VenueSetupPage() {
                     </Badge>
                   </div>
                 ))}
+                {!loading && sportSlotSummary.length === 0 && (
+                  <div className="tiny subtle center">No pricing summary</div>
+                )}
               </div>
 
               <div className="table-wrap">
@@ -654,7 +652,7 @@ export default function VenueSetupPage() {
                   </thead>
 
                   <tbody>
-                    {PRICING_RULES.map((rule) => (
+                    {pricingRules.map((rule) => (
                       <tr key={rule.id}>
                         <td>{rule.sport}</td>
 
@@ -674,6 +672,11 @@ export default function VenueSetupPage() {
                         <td className="num">{rule.rate}</td>
                       </tr>
                     ))}
+                    {!loading && pricingRules.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="tiny subtle center">No rules configured</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -686,6 +689,40 @@ export default function VenueSetupPage() {
                 onClick={slotModal.open}
               >
                 Edit slot durations &amp; pricing rules
+              </Button>
+            </section>
+
+            <section className="card">
+              <div className="between">
+                <h3 style={{ margin: 0 }}>🤖 Dynamic ML Pricing</h3>
+                <Badge tone={mlPricingEnabled ? 'green' : 'gray'} dot={false}>
+                  {mlPricingEnabled ? 'Active' : 'Disabled'}
+                </Badge>
+              </div>
+              <p className="subtle small" style={{ margin: '6px 0 10px' }}>
+                Let TurfChai&apos;s AI model adjust your base prices based on real-time weather, holidays, and demand.
+              </p>
+              <Checkline
+                id="ml-toggle"
+                label="Enable AI Dynamic Pricing"
+                checked={mlPricingEnabled}
+                onChange={(e) => {
+                  setMlPricingEnabled(e.target.checked);
+                  showToast(e.target.checked ? 'ML Pricing enabled' : 'ML Pricing disabled');
+                }}
+              />
+            </section>
+
+            <section className="card">
+              <div className="between">
+                <h3 style={{ margin: 0 }}>📅 Slot Generation</h3>
+                <Badge tone="blue" dot={false}>Batch Tool</Badge>
+              </div>
+              <p className="subtle small" style={{ margin: '6px 0 10px' }}>
+                Quickly generate slots for your pitches across a date range.
+              </p>
+              <Button size="sm" onClick={generateSlotsModal.open}>
+                Open Generator
               </Button>
             </section>
 
@@ -714,7 +751,7 @@ export default function VenueSetupPage() {
                   gap: 10,
                 }}
               >
-                {HOURS.map((item) => (
+                {hours.map((item) => (
                   <div
                     className="panel"
                     key={item.id}
@@ -726,6 +763,9 @@ export default function VenueSetupPage() {
                     <b className="num">{item.value}</b>
                   </div>
                 ))}
+                {!loading && hours.length === 0 && (
+                  <div className="tiny subtle center">No operating hours</div>
+                )}
               </div>
             </section>
           </div>
@@ -758,7 +798,7 @@ export default function VenueSetupPage() {
                 <label>Booking deposit</label>
 
                 <div className="row-wrap">
-                  {DEPOSIT_OPTIONS.map((option) => (
+                  {depositOptions.map((option) => (
                     <Chip
                       key={option}
                       active={deposit === option}
@@ -831,7 +871,7 @@ export default function VenueSetupPage() {
                   marginTop: 10,
                 }}
               >
-                {AMENITIES.map((amenity) => (
+                {amenities.map((amenity) => (
                   <span
                     className={amenity.on ? 'chip on' : 'chip'}
                     key={amenity.id}
@@ -839,6 +879,9 @@ export default function VenueSetupPage() {
                     {amenity.label}
                   </span>
                 ))}
+                {!loading && amenities.length === 0 && (
+                  <div className="tiny subtle center">No amenities</div>
+                )}
               </div>
 
               <p
@@ -984,7 +1027,7 @@ export default function VenueSetupPage() {
               marginTop: 6,
             }}
           >
-            {ASSIGNABLE_SPORTS.map((sport) => (
+            {assignableSports.map((sport) => (
               <Chip
                 key={sport}
                 active={pitchDraft.sports.includes(sport)}
@@ -993,7 +1036,7 @@ export default function VenueSetupPage() {
                   cursor: 'pointer',
                 }}
               >
-                {SPORT_BADGES[sport].glyph}
+                {SPORT_BADGES[sport]?.glyph || sport}
               </Chip>
             ))}
           </div>
@@ -1164,6 +1207,74 @@ export default function VenueSetupPage() {
           >
             Cancel
           </Button>
+        </div>
+      </Overlay>
+
+      {/* Modal: Slot Generator */}
+      <Overlay
+        isOpen={generateSlotsModal.isOpen}
+        onClose={generateSlotsModal.close}
+        title="Batch Generate Slots"
+        maxWidth={520}
+      >
+        <p className="subtle small" style={{ margin: '4px 0 12px' }}>
+          Select a pitch and define the operating hours to generate bookable slots automatically.
+        </p>
+
+        <Field label="Pitch" htmlFor="genPitch">
+          <Select id="genPitch" value={generateDraft.pitchId} onChange={e => setGenerateDraft(c => ({...c, pitchId: e.target.value}))}>
+            <option value="">Select Pitch...</option>
+            {pitches.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+        </Field>
+
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Start Date (DD/MM/YYYY)" htmlFor="genStart">
+            <CustomDatePicker
+              id="genStart"
+              value={generateDraft.startDate}
+              onChange={e => setGenerateDraft(c => ({...c, startDate: e.target.value}))}
+            />
+          </Field>
+          <Field label="End Date (DD/MM/YYYY)" htmlFor="genEnd">
+            <CustomDatePicker
+              id="genEnd"
+              value={generateDraft.endDate}
+              onChange={e => setGenerateDraft(c => ({...c, endDate: e.target.value}))}
+            />
+          </Field>
+        </div>
+
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Daily Start Time (24h)" htmlFor="genTimeStart">
+            <CustomTimePicker
+              id="genTimeStart"
+              value={generateDraft.startTime}
+              onChange={e => setGenerateDraft(c => ({...c, startTime: e.target.value}))}
+            />
+          </Field>
+          <Field label="Daily End Time (24h)" htmlFor="genTimeEnd">
+            <CustomTimePicker
+              id="genTimeEnd"
+              value={generateDraft.endTime}
+              onChange={e => setGenerateDraft(c => ({...c, endTime: e.target.value}))}
+            />
+          </Field>
+        </div>
+
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Duration (mins)" htmlFor="genDur">
+            <Input id="genDur" type="number" min="15" value={generateDraft.slotDurationMinutes} onChange={e => setGenerateDraft(c => ({...c, slotDurationMinutes: e.target.value}))} />
+          </Field>
+          <Field label="Base Price (৳)" htmlFor="genPrice">
+            <Input id="genPrice" type="number" min="0" value={generateDraft.basePrice} onChange={e => setGenerateDraft(c => ({...c, basePrice: e.target.value}))} />
+          </Field>
+        </div>
+
+        <div className="stack-sm" style={{ marginTop: 16 }}>
+          <Button variant="primary" block onClick={handleGenerateSlots}>Generate Slots</Button>
         </div>
       </Overlay>
     </>

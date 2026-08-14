@@ -7,13 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface SlotRepository extends JpaRepository<Slot, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -22,4 +20,8 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
 
     /** HELD slots whose hold window has passed; candidates for cleanup. */
     List<Slot> findByStatusAndHoldExpiresAtBefore(SlotStatus status, OffsetDateTime before);
+
+    boolean existsByPitchIdAndSlotDateAndStartTime(Long pitchId, java.time.LocalDate slotDate, java.time.LocalTime startTime);
+
+    List<Slot> findByVenueIdAndSlotDateBetweenOrderBySlotDateAscStartTimeAsc(Long venueId, java.time.LocalDate startDate, java.time.LocalDate endDate);
 }

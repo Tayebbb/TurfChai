@@ -1,5 +1,6 @@
 package com.turfchai.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.turfchai.model.enums.RoleType;
 import com.turfchai.model.enums.SkillLevel;
 import jakarta.persistence.*;
@@ -44,6 +45,7 @@ public class User {
 
     @NotBlank
     @Column(name = "password_hash", nullable = false)
+    @JsonIgnore
     private String passwordHash;
 
     @Column(name = "two_factor_enabled", nullable = false)
@@ -51,13 +53,16 @@ public class User {
     private Boolean twoFactorEnabled = false;
 
     @Column(name = "two_factor_secret")
+    @JsonIgnore
     private String twoFactorSecret;
 
     @Column(name = "failed_login_count", nullable = false)
     @Builder.Default
+    @JsonIgnore
     private Integer failedLoginCount = 0;
 
     @Column(name = "locked_until")
+    @JsonIgnore
     private OffsetDateTime lockedUntil;
 
     @Enumerated(EnumType.STRING)

@@ -139,6 +139,35 @@ public class BookingService {
         return bookingRepository.findByUserId(userId);
     }
 
+    /** Lists bookings for all venues owned by the caller. */
+    @Transactional(readOnly = true)
+    public List<Booking> listOwnerBookings(Long ownerUserId) {
+        return bookingRepository.findBookingsByOwnerId(ownerUserId);
+    }
+
+    /** Approves a PENDING booking for an owner's venue. */
+    @Transactional
+    public void approveBooking(Long ownerUserId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new SlotUnavailableException("Booking not found with id: " + bookingId));
+        if (!isVenueOwner(ownerUserId, booking)) {
+            throw new AccessDeniedException("You do not have permission to approve this booking");
+        }
+        if (booking.getStatus() == BookingStatus.PENDING) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            bookingRepository.save(booking);
+        }
+    }
+
+    private boolean isVenueOwner(Long ownerUserId, Booking booking) {
+        // Simple check. Booking has venueId. We must look up Venue.owner.id.
+        // But since we can't easily join here without a venueRepository dependency,
+        // wait, we can just use the query or we need venueRepository.
+        // Actually, it's safer to just inject venueRepository or check via the DB.
+        return bookingRepository.findBookingsByOwnerId(ownerUserId).stream()
+                .anyMatch(b -> b.getId().equals(booking.getId()));
+    }
+
     private boolean canAccess(Long userId, Booking booking) {
         if (userId != null && userId.equals(booking.getUserId())) {
             return true;

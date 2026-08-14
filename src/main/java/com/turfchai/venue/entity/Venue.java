@@ -1,5 +1,6 @@
 package com.turfchai.venue.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -59,6 +60,7 @@ public class Venue {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id")
+    @JsonIgnore
     private com.turfchai.model.User owner;
 
     /** Lifecycle status: DRAFT | PENDING_LISTING | LIVE | SUSPENDED | REJECTED */
@@ -82,6 +84,15 @@ public class Venue {
 
     @Column(precision = 10, scale = 7)
     private BigDecimal lng;
+
+    /** Owner-defined base price in BDT. The ML multiplier is applied on top. */
+    @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal basePrice = new BigDecimal("1000.00");
+
+    @Column(name = "is_ml_pricing_enabled", nullable = false)
+    @Builder.Default
+    private boolean mlPricingEnabled = true;
 
     // ── Reputation (maintained by triggers / review service) ──────────────
 
@@ -201,10 +212,12 @@ public class Venue {
 
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonIgnore
     private List<Pitch> pitches = new ArrayList<>();
 
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonIgnore
     private List<SportPricingRule> pricingRules = new ArrayList<>();
 
     // ── Helper mutators ───────────────────────────────────────────────────

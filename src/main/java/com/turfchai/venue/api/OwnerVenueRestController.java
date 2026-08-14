@@ -44,6 +44,7 @@ import java.util.List;
  * DELETE /api/v1/owner/venues/{id}/pitches/{pitchId}       — deactivate pitch
  * POST   /api/v1/owner/venues/{id}/pricing-rules           — upsert pricing rule
  * DELETE /api/v1/owner/venues/{id}/pricing-rules/{ruleId}  — remove rule
+ * PUT    /api/v1/owner/venues/{id}/ml-settings             — toggle ML pricing
  * GET    /api/v1/owner/venues/{id}/slot-price              — calculate slot price
  * </pre>
  */
@@ -90,6 +91,15 @@ public class OwnerVenueRestController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateVenueRequest request) {
         return managementService.updateVenue(principal.getId(), id, request);
+    }
+
+    @PutMapping("/{id}/ml-settings")
+    public VenueManagementDto updateMlSettings(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Boolean> request) {
+        Boolean enabled = request.getOrDefault("mlPricingEnabled", true);
+        return managementService.updateMlSettings(principal.getId(), id, enabled);
     }
 
     // ── Pitches ────────────────────────────────────────────────────────────

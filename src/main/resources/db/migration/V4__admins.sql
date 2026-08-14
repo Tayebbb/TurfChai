@@ -36,13 +36,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_users_single_super_admin
 
 -- Promote the V2 demo admin to the platform's single super admin.
 UPDATE users SET role = 'SUPER_ADMIN'
- WHERE email = 'nadia@turfchai.com' AND role = 'ADMIN';
+ WHERE email = 'shahadat.cse.20230104008@aust.edu' AND role = 'ADMIN';
 
 INSERT INTO admins (user_id, admin_role, permissions, appointed_by, status)
 SELECT id, 'SUPER',
        '{"perm_review":true,"perm_listings":true,"perm_users":true,"perm_reports":true}',
        NULL, 'ACTIVE'
-  FROM users WHERE email = 'nadia@turfchai.com'
+  FROM users WHERE email = 'shahadat.cse.20230104008@aust.edu'
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Demo admins (password: TurfChai@123) — Farid: verification, Tania: support.
@@ -63,13 +63,13 @@ SELECT gen_random_uuid(), 'Tania Sultana', 'tania@turfchai.com', '+8801710000005
 INSERT INTO admins (user_id, admin_role, permissions, appointed_by, status)
 SELECT id, 'VERIFICATION',
        '{"perm_review":true,"perm_listings":true,"perm_users":false,"perm_reports":false}',
-       (SELECT id FROM users WHERE email = 'nadia@turfchai.com'), 'ACTIVE'
+       (SELECT id FROM users WHERE email = 'shahadat.cse.20230104008@aust.edu'), 'ACTIVE'
   FROM users WHERE email = 'farid@turfchai.com'
 ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO admins (user_id, admin_role, permissions, appointed_by, status)
 SELECT id, 'SUPPORT',
        '{"perm_review":false,"perm_listings":false,"perm_users":true,"perm_reports":false}',
-       (SELECT id FROM users WHERE email = 'nadia@turfchai.com'), 'ACTIVE'
+       (SELECT id FROM users WHERE email = 'shahadat.cse.20230104008@aust.edu'), 'ACTIVE'
   FROM users WHERE email = 'tania@turfchai.com'
 ON CONFLICT (user_id) DO NOTHING;

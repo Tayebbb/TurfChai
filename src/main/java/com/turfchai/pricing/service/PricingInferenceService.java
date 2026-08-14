@@ -37,15 +37,22 @@ public class PricingInferenceService {
     private OrtSession session;
 
     @PostConstruct
-    public void init() throws Exception {
-        env = OrtEnvironment.getEnvironment();
-        ClassPathResource resource = new ClassPathResource("ml_models/pricing_model.onnx");
-        byte[] modelArray = resource.getInputStream().readAllBytes();
-        session = env.createSession(modelArray, new OrtSession.SessionOptions());
-        log.info("ONNX pricing model loaded successfully.");
+    public void init() {
+        try {
+            env = OrtEnvironment.getEnvironment();
+            ClassPathResource resource = new ClassPathResource("ml_models/pricing_model.onnx");
+            byte[] modelArray = resource.getInputStream().readAllBytes();
+            session = env.createSession(modelArray, new OrtSession.SessionOptions());
+            log.info("ONNX pricing model loaded successfully.");
+        } catch (Throwable e) {
+            log.error("Failed to load ONNX pricing model. The ML API will not be available.", e);
+        }
     }
 
     public PricingQuoteResponse getQuote(PricingQuoteRequest request) throws Exception {
+        if (session == null) {
+            throw new IllegalStateException("ONNX model failed to initialize. Please check logs.");
+        }
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(() -> new IllegalArgumentException("Venue not found"));
 
@@ -88,7 +95,9 @@ public class PricingInferenceService {
             float[][] output = (float[][]) result.get(0).getValue();
             float multiplier = output[0][0];
 
-            float baseRate = 1000.0f; // default base rate
+            float baseRate = venue.getBasePrice() != null
+                    ? venue.getBasePrice().floatValue()
+                    : 1000.0f;
             float suggestedPrice = baseRate * multiplier;
 
             PricingQuoteResponse.FeatureBreakdown breakdown = PricingQuoteResponse.FeatureBreakdown.builder()
