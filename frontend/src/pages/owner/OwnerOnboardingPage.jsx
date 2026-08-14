@@ -133,7 +133,8 @@ export default function OwnerOnboardingPage() {
 
     const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
     const formattedSize = `${sizeMb > 0 ? sizeMb : '<0.1'} MB`;
-    const docInfo = { name: file.name, size: formattedSize };
+    const previewUrl = URL.createObjectURL(file);
+    const docInfo = { name: file.name, size: formattedSize, url: previewUrl };
 
     try {
       const formData = new FormData();
@@ -392,18 +393,24 @@ export default function OwnerOnboardingPage() {
                     </span>
                     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
                       {photos.map((photo) => (
-                        <img
+                        <div
                           key={photo.id}
-                          src={photo.url}
-                          alt={photo.name}
-                          style={{
-                            width: 64,
-                            height: 64,
-                            objectFit: 'cover',
-                            borderRadius: 8,
-                            border: '1px solid var(--border-soft)',
-                          }}
-                        />
+                          style={{ position: 'relative', cursor: 'pointer' }}
+                          onClick={() => window.open(photo.url, '_blank')}
+                          title="Click to view full image"
+                        >
+                          <img
+                            src={photo.url}
+                            alt="Venue preview"
+                            style={{
+                              width: 64,
+                              height: 64,
+                              objectFit: 'cover',
+                              borderRadius: 8,
+                              border: '1px solid var(--border-soft)',
+                            }}
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -493,7 +500,9 @@ export default function OwnerOnboardingPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <b style={{ color: 'var(--text-1)' }}>{documents.tradeLicense.name}</b>
+                          <a href={documents.tradeLicense.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', cursor: 'pointer' }} title="Click to view document">
+                            <b style={{ color: 'var(--brand-500)', textDecoration: 'underline' }}>{documents.tradeLicense.name}</b>
+                          </a>
                           <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ✓</span>
                         </div>
                       </div>
@@ -516,7 +525,9 @@ export default function OwnerOnboardingPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <b style={{ color: 'var(--text-1)' }}>{documents.leaseProof.name}</b>
+                          <a href={documents.leaseProof.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', cursor: 'pointer' }} title="Click to view document">
+                            <b style={{ color: 'var(--brand-500)', textDecoration: 'underline' }}>{documents.leaseProof.name}</b>
+                          </a>
                           <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ✓</span>
                         </div>
                       </div>
@@ -539,9 +550,9 @@ export default function OwnerOnboardingPage() {
                   </div>
                   <Row style={{ gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     {photos.map((photo) => (
-                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)' }}>
+                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }} onClick={() => window.open(photo.url, '_blank')} title="Click to view full image">
                         <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <button type="button" onClick={() => handleRemovePhoto(photo.id)} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, lineHeight: '18px', textAlign: 'center', padding: 0 }} title="Remove photo">x</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id); }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, lineHeight: '18px', textAlign: 'center', padding: 0 }} title="Remove photo">x</button>
                       </div>
                     ))}
                     <label style={{ cursor: 'pointer', margin: 0 }}>
