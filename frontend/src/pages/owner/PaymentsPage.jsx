@@ -17,9 +17,6 @@ import { useApi } from '@/hooks/useApi';
 import { fetchOwnerPayments, closeOwnerShift, getInvoiceUrl, getCsvExportUrl } from '@/api/ownerPayments';
 import { paths } from '@/routes/paths';
 
-import { getOwnerPaymentsLedger, getOwnerPaymentsChart, getOwnerPaymentsReports } from '@/api/ownerPayments';
-import { useApi } from '@/hooks/useApi';
-
 const TIMEFRAMES = [
   { id: 'daily', label: 'Daily (7 Days)' },
   { id: 'weekly', label: 'Weekly (14 Weeks)' },

@@ -25,6 +25,11 @@ import {
   uploadTurfDoc,
 } from '@/api/turfRequests';
 
+import { createVenue } from '@/api/ownerVenues';
+import { register, login } from '@/api/auth';
+import { setSession } from '@/api/client';
+import { useLocation } from 'react-router-dom';
+
 import {
   useApi,
 } from '@/hooks/useApi';
@@ -94,6 +99,9 @@ export default function OwnerOnboardingPage() {
   const { showToast } = useToast();
   const submitted = useDisclosure();
   const { data: myRequests, refetch: refetchRequests } = useApi(getMyTurfRequests, []);
+  
+  const routerLocation = useLocation();
+  const authState = routerLocation.state || null;
 
   const [step, setStep] = useState('business');
 
@@ -101,45 +109,10 @@ export default function OwnerOnboardingPage() {
   const [contactPhone, setContactPhone] = useState('+8801700000000');
   const [contactEmail, setContactEmail] = useState('owner@example.com');
 
-  const handleMapClick = (latlng) => {
-    setLat(latlng.lat);
-    setLng(latlng.lng);
-  };
-
-  const mapMarkers = [{ id: 'picked', lat, lng, label: '📍', title: 'Selected Location' }];
-
-  const handleSubmit = async () => {
-    if (!name || !address || !area || !basePrice) {
-      showToast('Please fill all required fields');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await createVenue({
-        name,
-        address,
-        area,
-        basePrice: parseFloat(basePrice),
-        lat,
-        lng,
-        openTime,
-        closeTime,
-        amenities: 'floodlights,parking', // Default amenities
-        contactPhone,
-        contactEmail,
-        depositPolicy: 'FULL_ONLY',
-        cancelPolicy: 'FREE_24H_50_6H',
-        allowSplitPayment: false,
-        rules: 'Standard rules',
-        photos: []
-      });
-      submitted.open();
-    } catch (err) {
-      showToast('Failed to create venue: ' + (err.message || 'Unknown error'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const [ownerName, setOwnerName] = useState('');
+  const [ownerPhone, setOwnerPhone] = useState('');
+  const [nid, setNid] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
 
   const [documents, setDocuments] = useState({
     tradeLicense: null,
@@ -231,37 +204,87 @@ export default function OwnerOnboardingPage() {
       showToast('Owner phone number is required');
       return;
     }
+    if (!nid.trim()) {
+      showToast('NID number is required');
+      return;
+    }
     if (!venueName.trim()) {
       showToast('Venue name is required');
       return;
     }
+    if (!location.address?.trim()) {
+      showToast('Exact turf location address is required');
+      return;
+    }
+    if (!location.lat || !location.lng) {
+      showToast('Please pick the exact location on the map');
+      return;
+    }
+    if (!documents.tradeLicense) {
+      showToast('Trade License document is required');
+      return;
+    }
+    if (!documents.leaseProof) {
+      showToast('Ownership / Lease Proof is required');
+      return;
+    }
+    if (photos.length < 3) {
+      showToast('A minimum of 3 venue photos are required');
+      return;
+    }
 
-    const finalAddr = location.address?.trim() || 'Dhaka, Bangladesh';
+    const finalAddr = location.address.trim();
 
     setSaving(true);
     try {
-      const tradeLicDoc = documents.tradeLicense?.name ? `Trade License (${documents.tradeLicense.name})` : 'Trade_License.pdf';
-      const leaseDoc = documents.leaseProof?.name ? `Ownership/Lease (${documents.leaseProof.name})` : 'Lease_Agreement.pdf';
-      const photoDoc = photos.length > 0 ? photos.map((p) => p.name).join(', ') : 'Venue_Photos';
+      if (authState?.signupEmail && authState?.signupPassword) {
+        try {
+          const authRes = await register({
+            fullName: ownerName || authState.fullName,
+            email: authState.signupEmail,
+            password: authState.signupPassword,
+            phone: ownerPhone,
+            role: 'OWNER',
+          });
+          setSession(authRes);
+        } catch (authErr) {
+          if (authErr.message?.toLowerCase().includes('exists')) {
+            const loginRes = await login({
+              email: authState.signupEmail,
+              password: authState.signupPassword,
+            });
+            setSession(loginRes);
+          } else {
+            throw authErr;
+          }
+        }
+      }
 
-      await createTurfRequest({
-        venueName: venueName.trim(),
-        area: (location.area || finalAddr.split(',')[0] || 'Dhaka').slice(0, 45),
-        pitchCount: 3,
-        sportsCsv: 'Football,Cricket,Futsal',
-        ownerPhone: ownerPhone || '+8801811223344',
-        ownerEmail: 'owner@turfchai.com',
-        docTradeLicense: tradeLicDoc,
-        docOwnerNid: leaseDoc,
-        docUtilityBill: photoDoc,
-      }).catch(() => ({ status: 'PENDING', requestCode: 'TRF-1042' }));
+      const photoUrls = photos.length > 0 ? photos.map((p) => p.url) : [];
 
-      setStep('submit');
-      showToast('Turf onboarding request submitted to admin ✓');
-      refetchRequests();
-    } catch {
-      setStep('submit');
-      showToast('Turf onboarding request submitted to admin ✓');
+      await createVenue({
+        name: venueName.trim(),
+        address: finalAddr,
+        area: (location.area || finalAddr.split(',')[0] || 'Dhaka').slice(0, 100),
+        lat: location.lat || 23.8103, // Default to Dhaka if missing
+        lng: location.lng || 90.4125,
+        basePrice: 2000,
+        openTime: '06:00',
+        closeTime: '23:00',
+        amenities: 'floodlights,parking',
+        contactPhone: ownerPhone || '+8801811223344',
+        contactEmail: 'owner@turfchai.com',
+        depositPolicy: 'FULL_ONLY',
+        cancelPolicy: 'FREE_24H_50_6H',
+        allowSplitPayment: false,
+        rules: 'Standard rules',
+        photos: photoUrls,
+        mlPricingEnabled: false,
+      });
+
+      submitted.open();
+    } catch (err) {
+      showToast('Failed to create venue: ' + (err.message || 'Unknown error'));
     } finally {
       setSaving(false);
     }

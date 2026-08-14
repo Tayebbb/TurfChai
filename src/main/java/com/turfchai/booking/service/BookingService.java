@@ -185,6 +185,27 @@ public class BookingService {
                 && slot.getHoldExpiresAt().isAfter(OffsetDateTime.now());
     }
 
+    @Transactional(readOnly = true)
+    public List<Booking> listOwnerBookings(Long ownerId) {
+        List<com.turfchai.venue.entity.Venue> venues = venueRepository.findByOwnerId(ownerId);
+        List<Long> venueIds = venues.stream().map(com.turfchai.venue.entity.Venue::getId).toList();
+        if (venueIds.isEmpty()) {
+            return List.of();
+        }
+        return bookingRepository.findByVenueIdIn(venueIds);
+    }
+
+    @Transactional
+    public void approveBooking(Long ownerId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new SlotUnavailableException("Booking not found with id: " + bookingId));
+        if (!canAccess(ownerId, booking)) {
+            throw new AccessDeniedException("You do not have permission to access this booking");
+        }
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+    }
+
     /**
      * Cancels a booking and releases its slot back to AVAILABLE. The caller
      * must be the booking owner or an admin/owner role.

@@ -134,12 +134,6 @@ export default function TicketPage() {
     },
   ];
 
-  // Fetching the first open game for demo ticket purposes
-  const gamesApi = useApi(() => searchOpenGames(), []);
-  const game = gamesApi.data?.[0];
-
-  if (gamesApi.loading) return <div className="wrap" style={{ paddingTop: 32 }}>Loading...</div>;
-  if (!game) return <div className="wrap" style={{ paddingTop: 32 }}>Ticket not found</div>;
 
   return (
     <>

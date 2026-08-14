@@ -63,6 +63,9 @@ public class Payout {
     @Column(name = "period_end", nullable = false)
     private LocalDate periodEnd;
 
+    @Column(name = "scheduled_date", nullable = false)
+    private LocalDate scheduledDate;
+
     @Column(name = "settled_at")
     private OffsetDateTime settledAt;
 

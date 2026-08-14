@@ -94,6 +94,13 @@ export default function AuthPage() {
     e?.preventDefault();
     setIsSubmitting(true);
 
+    if (role === 'owner') {
+      navigate(paths.owner.onboarding, {
+        state: { fullName, signupEmail, signupPassword }
+      });
+      return;
+    }
+
     try {
       const response = await register({
         fullName,
@@ -106,7 +113,6 @@ export default function AuthPage() {
       showToast(`Account created! Welcome to TurfChai ✓`);
       if (nextPath && nextPath.startsWith('/')) navigate(nextPath);
       else if (role === 'admin') navigate(paths.admin.dashboard);
-      else if (role === 'owner') navigate(paths.owner.onboarding);
       else navigate(paths.player.onboarding);
     } catch (error) {
       handleApiError(error);

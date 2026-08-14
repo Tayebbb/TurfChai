@@ -135,9 +135,6 @@ export default function CalendarPage() {
     });
   }
 
-  // Fetch setups to get pitches
-  const { data: venueRes, loading: venueLoading } = useApi(getOwnerVenueSetup, []);
-  const pitches = venueRes?.data?.pitches || venueRes?.pitches || [];
 
   function openForCell(rowIndex, cellIndex, cell, pitch, rowTime) {
     setTargetCell({ rowIndex, cellIndex, slotId: cell?.slotId, pitchName: pitch?.name, time: rowTime });
@@ -195,7 +192,6 @@ export default function CalendarPage() {
         // Continue fallback update
       }
     }
-  };
 
     showToast(`Manual booking confirmed for ${name} ✓`);
     manual.close();
@@ -208,7 +204,6 @@ export default function CalendarPage() {
     setSelectedDate(d);
   }
 
-  const loading = venueLoading || slotsLoading;
 
   return (
     <>
@@ -343,23 +338,6 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
-
-      {/* Edit Slot Drawer */}
-      <Overlay isOpen={manual.isOpen} onClose={manual.close} title="Edit Slot" mode="drawer">
-        <p className="subtle small">Modify the price or block this slot.</p>
-        
-        {selectedSlot && (
-          <>
-            <div className="stack-sm" style={{ marginBottom: 16 }}>
-              <div className="between small">
-                <span className="muted">Pitch</span>
-                <b>{selectedSlot.pitchName}</b>
-              </div>
-              <div className="between small">
-                <span className="muted">Time</span>
-                <b>{selectedSlot.startTime.substring(0,5)} - {selectedSlot.endTime.substring(0,5)}</b>
-              </div>
-            </div>
 
       {/* Manual booking drawer */}
       <Overlay isOpen={manual.isOpen} onClose={manual.close} title="Manual booking" mode="drawer">
