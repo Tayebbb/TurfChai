@@ -50,13 +50,14 @@ public class UserProfileRestController {
             } catch (IllegalArgumentException ignored) {
             }
         }
-        if (header != null && !header.isBlank()) {
-            try {
-                return UUID.fromString(header.trim());
-            } catch (IllegalArgumentException ignored) {
-            }
+        if (header == null || header.isBlank()) {
+            return DEMO_USER_ID;
         }
-        return DEMO_USER_ID;
+        try {
+            return UUID.fromString(header.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("X-User-Id must be a UUID");
+        }
     }
 
     @GetMapping("/me")
