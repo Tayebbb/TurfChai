@@ -30,20 +30,28 @@ public class OwnerTurfRequestRestController {
         TurfRequest request = TurfRequest.builder()
                 .requestCode(requestCode)
                 .ownerUserId(ownerId)
-                .venueName(dto.getVenueName())
-                .area(dto.getArea())
+                .venueName(safeTruncate(dto.getVenueName(), 120, "Kick Off Arena"))
+                .area(safeTruncate(dto.getArea(), 100, "Dhaka"))
                 .pitchCount(dto.getPitchCount() != null ? dto.getPitchCount() : 1)
-                .sportsCsv(dto.getSportsCsv() != null ? dto.getSportsCsv() : "Football,Cricket,Futsal")
-                .ownerPhone(dto.getOwnerPhone() != null ? dto.getOwnerPhone() : "+880 1811 223 344")
-                .ownerEmail(dto.getOwnerEmail() != null ? dto.getOwnerEmail() : "owner@turfchai.com")
-                .docTradeLicense(dto.getDocTradeLicense() != null ? dto.getDocTradeLicense() : "UPLOADED")
-                .docOwnerNid(dto.getDocOwnerNid() != null ? dto.getDocOwnerNid() : "UPLOADED")
-                .docUtilityBill(dto.getDocUtilityBill() != null ? dto.getDocUtilityBill() : "UPLOADED")
+                .sportsCsv(safeTruncate(dto.getSportsCsv(), 255, "Football,Cricket,Futsal"))
+                .ownerPhone(safeTruncate(dto.getOwnerPhone(), 20, "+8801811223344"))
+                .ownerEmail(safeTruncate(dto.getOwnerEmail(), 150, "owner@turfchai.com"))
+                .docTradeLicense(safeTruncate(dto.getDocTradeLicense(), 28, "UPLOADED"))
+                .docOwnerNid(safeTruncate(dto.getDocOwnerNid(), 28, "UPLOADED"))
+                .docUtilityBill(safeTruncate(dto.getDocUtilityBill(), 28, "UPLOADED"))
                 .status("PENDING")
                 .build();
 
         TurfRequest saved = turfRequestRepository.save(request);
         return ResponseEntity.ok(saved);
+    }
+
+    private String safeTruncate(String str, int maxLen, String defaultValue) {
+        if (str == null || str.isBlank()) {
+            return defaultValue;
+        }
+        String trimmed = str.trim();
+        return trimmed.length() > maxLen ? trimmed.substring(0, maxLen) : trimmed;
     }
 
     @GetMapping

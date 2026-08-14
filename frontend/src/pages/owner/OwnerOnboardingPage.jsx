@@ -217,9 +217,9 @@ export default function OwnerOnboardingPage() {
         sportsCsv: 'Football,Cricket,Futsal,Badminton',
         ownerPhone: ownerPhone,
         ownerEmail: 'owner@turfchai.com',
-        docTradeLicense: documents.tradeLicense?.name || 'trade-license.pdf',
-        docOwnerNid: nid || '1994 2233 4455 667',
-        docUtilityBill: documents.leaseProof?.name || 'lease-agreement.pdf',
+        docTradeLicense: (documents.tradeLicense?.name || 'trade-license.pdf').slice(0, 25),
+        docOwnerNid: (nid || '1994 2233 4455 667').slice(0, 25),
+        docUtilityBill: (documents.leaseProof?.name || 'lease-agreement.pdf').slice(0, 25),
       });
       await createVenue({
         name: venueName.trim(),
