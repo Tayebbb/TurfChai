@@ -41,5 +41,6 @@ public record UpdateVenueRequest(
         String promotionLabel,
 
         List<String> photos,
-        Boolean mlPricingEnabled
+        Boolean mlPricingEnabled,
+        BigDecimal basePrice
 ) {}

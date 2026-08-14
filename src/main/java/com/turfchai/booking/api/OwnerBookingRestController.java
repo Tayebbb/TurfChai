@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OwnerBookingRestController {
 
     private final BookingService bookingService;
+    private final com.turfchai.repository.UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<BookingResponse>> listOwnerBookings(
@@ -56,6 +57,37 @@ public class OwnerBookingRestController {
     }
 
     private BookingResponse toResponse(Booking booking) {
+        String customerName = "Guest";
+        String phone = "";
+        if (booking.getUserId() != null) {
+            com.turfchai.model.User user = userRepository.findById(booking.getUserId()).orElse(null);
+            if (user != null) {
+                customerName = user.getFullName();
+                phone = user.getPhone();
+            }
+        }
+        
+        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.ENGLISH);
+        String timeStr = booking.getStartTime() != null ? booking.getStartTime().format(timeFormatter) : "N/A";
+
+        String statusTone = "neutral";
+        String statusText = "Unknown";
+        if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CONFIRMED) {
+            statusTone = "green"; statusText = "Paid";
+        } else if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.PENDING) {
+            statusTone = "amber"; statusText = "Pending";
+        } else if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CANCELLED) {
+            statusTone = "red"; statusText = "Cancelled";
+        }
+
+        java.util.List<java.util.Map<String, String>> actions = new java.util.ArrayList<>();
+        if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.PENDING) {
+            actions.add(java.util.Map.of("variant", "primary", "label", "Approve", "toast", "Approved"));
+            actions.add(java.util.Map.of("variant", "secondary", "label", "Cancel", "toast", "Cancelled"));
+        } else if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CONFIRMED) {
+            actions.add(java.util.Map.of("variant", "secondary", "label", "Refund", "toast", "Refund initiated"));
+        }
+
         return BookingResponse.builder()
                 .id(booking.getId())
                 .bookingCode(booking.getBookingCode())
@@ -64,13 +96,16 @@ public class OwnerBookingRestController {
                 .status(booking.getStatus() != null ? booking.getStatus().name() : null)
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())
-                .title("Booking " + booking.getBookingCode())
-                .venue(booking.getSlot() != null ? booking.getSlot().getPitch().getVenue().getName() : "Venue")
-                .pitch(booking.getSlot() != null ? booking.getSlot().getPitch().getName() : "Pitch")
-                .date(booking.getBookingDate() != null ? booking.getBookingDate().toString() : "Date")
-                .time(booking.getStartTime() != null ? booking.getStartTime().toString() : "Time")
-                .duration("60 min")
-                .share("\u09F3" + booking.getGrossAmount() + " paid")
+                .customer(customerName)
+                .sub(phone)
+                .subNum(true)
+                .pitch(booking.getSlot() != null && booking.getSlot().getPitch() != null ? booking.getSlot().getPitch().getName() : "Pitch")
+                .time(timeStr)
+                .source(java.util.Map.of("tone", "green", "text", "Online")) // default online for now
+                .amountFormatted("৳" + (booking.getGrossAmount() != null ? booking.getGrossAmount().intValue() : 0))
+                .payment(java.util.Map.of("tone", statusTone, "text", statusText))
+                .actions(actions)
+                .dim(booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CANCELLED)
                 .build();
     }
 }

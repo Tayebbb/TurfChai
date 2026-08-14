@@ -12,6 +12,8 @@ import { paths } from '@/routes/paths';
 
 import { useApi } from '@/hooks/useApi';
 import { getOwnerPromotions } from '@/api/ownerPromotions';
+import { listMyVenues } from '@/api/ownerVenues';
+import { useCallback } from 'react';
 
 const TYPE_CHIPS = ['Off-peak discount', 'Repeat-customer reward', 'Limited-time deal', 'Venue loyalty'];
 const DAY_CHIPS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -32,7 +34,16 @@ export default function PromotionsPage() {
   const [fromTime, setFromTime] = useState('12:00 PM');
   const [toTime, setToTime] = useState('5:00 PM');
 
-  const { data: res, loading } = useApi(getOwnerPromotions, []);
+  const { data: venuesRes } = useApi(listMyVenues, []);
+  const venues = venuesRes?.data || venuesRes || [];
+  const activeVenueId = venues[0]?.id;
+
+  const getPromosCb = useCallback(() => {
+    if (!activeVenueId) return Promise.resolve([]);
+    return getOwnerPromotions(activeVenueId);
+  }, [activeVenueId]);
+
+  const { data: res, loading } = useApi(getPromosCb, [activeVenueId]);
   const promotions = res?.data || res || [];
 
   return (

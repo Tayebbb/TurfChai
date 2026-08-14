@@ -31,7 +31,7 @@ export default function BookingsPage() {
   const term = query.trim().toLowerCase();
   const visible = term
     ? bookings.filter((row) =>
-        `${row.customer} ${row.sub} ${row.id}`.toLowerCase().includes(term),
+        `${row.customer} ${row.sub} ${row.bookingCode}`.toLowerCase().includes(term),
       )
     : bookings;
 
@@ -82,7 +82,7 @@ export default function BookingsPage() {
             {visible.map((row) => (
               <tr key={row.id} style={row.dim ? { opacity: 0.65 } : undefined}>
                 <td className="num">{row.time}</td>
-                <td className="num">{row.id}</td>
+                <td className="num">{row.bookingCode}</td>
                 <td>
                   {row.customer}
                   <br />
@@ -94,7 +94,7 @@ export default function BookingsPage() {
                     {row.source.text}
                   </Badge>
                 </td>
-                <td className="num">{row.amount}</td>
+                <td className="num">{row.amountFormatted}</td>
                 <td>
                   <Badge tone={row.payment.tone}>{row.payment.text}</Badge>
                 </td>

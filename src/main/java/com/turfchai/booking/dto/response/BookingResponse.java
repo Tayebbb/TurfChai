@@ -75,11 +75,14 @@ public class BookingResponse {
     private OffsetDateTime updatedAt;
     
     // Enriched fields for frontend BookingsPage
-    private String title;
-    private String venue;
-    private String pitch;
-    private String date;
+    private String customer;
+    private String sub;
+    private Boolean subNum;
     private String time;
-    private String duration;
-    private String share;
+    private String pitch;
+    private java.util.Map<String, String> source;
+    private String amountFormatted;
+    private java.util.Map<String, String> payment;
+    private java.util.List<java.util.Map<String, String>> actions;
+    private Boolean dim;
 }
