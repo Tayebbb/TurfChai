@@ -2,7 +2,10 @@ import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
 import { PageTitle } from '@/components/common/PageTitle';
+import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
+import { api } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 
 const KPIS = [
   {
@@ -219,6 +222,53 @@ const BARE_TABLE_WRAP = {
 };
 
 export default function UserSegmentsPage() {
+  const { data: res } = useApi(() => api('/admin/analytics/segments'));
+  const segments = res?.data || res;
+
+  const kpiData = [
+    {
+      id: 'players',
+      label: 'Active Players',
+      icon: 'users',
+      color: 'var(--brand)',
+      value: segments?.activePlayers ? Number(segments.activePlayers) : 34200,
+      deltaClass: 'delta up',
+      deltaStyle: { fontSize: 12 },
+      deltaText: 'Regular turf bookers',
+    },
+    {
+      id: 'hosts',
+      label: 'Verified Hosts',
+      icon: 'pin',
+      color: 'var(--info)',
+      value: segments?.activeHosts ? Number(segments.activeHosts) : 1280,
+      deltaClass: 'delta nodot',
+      deltaStyle: { color: 'var(--info)', fontSize: 12 },
+      deltaText: 'Registered venue partners',
+    },
+    {
+      id: 'inactive',
+      label: 'Inactive Accounts',
+      icon: 'alert',
+      color: 'var(--warn)',
+      value: segments?.inactiveUsers ? Number(segments.inactiveUsers) : 5790,
+      deltaClass: 'delta down',
+      deltaStyle: { fontSize: 12 },
+      deltaText: 'No activity in 30 days',
+    },
+    {
+      id: 'ltv',
+      label: 'Avg Lifetime Value',
+      icon: 'money',
+      color: 'var(--brand-600)',
+      value: segments?.avgLtv ? Number(segments.avgLtv) : 4250,
+      prefix: '৳',
+      deltaClass: 'delta nodot',
+      deltaStyle: { color: 'var(--text-3)', fontSize: 12 },
+      deltaText: 'Per registered cohort',
+    },
+  ];
+
   return (
     <>
       <PageTitle title="User Segment Breakdown" />
@@ -233,7 +283,7 @@ export default function UserSegmentsPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>User Segment Breakdown</h1>
+            <h1>User Segment Breakdown</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Distribution across player roles, venue partners, and geographic regions
@@ -242,7 +292,7 @@ export default function UserSegmentsPage() {
       </div>
 
       <div className="grid4" style={{ gap: 20, marginBottom: 28 }}>
-        {KPIS.map((kpi) => (
+        {kpiData.map((kpi, index) => (
           <div className="liquid-glass kpi-card" key={kpi.id}>
             <div>
               <div className="between">
@@ -255,7 +305,8 @@ export default function UserSegmentsPage() {
                 className="value num"
                 style={{ color: kpi.color, fontSize: 36, display: 'block', margin: '6px 0 2px' }}
               >
-                {kpi.value}
+                {kpi.prefix && kpi.prefix}
+                <CountUp to={typeof kpi.value === 'number' ? kpi.value : Number(String(kpi.value).replace(/[^0-9.]/g, ''))} delay={index * 120} />
               </b>
               <span className={kpi.deltaClass} style={kpi.deltaStyle}>
                 {kpi.deltaText}
@@ -278,6 +329,7 @@ export default function UserSegmentsPage() {
           </div>
 
           <div
+            className="admin-stack-mobile"
             style={{
               display: 'grid',
               gridTemplateColumns: '170px 1fr',

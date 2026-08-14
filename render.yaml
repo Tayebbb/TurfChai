@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: turfchai-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: turfchai-db
+          property: connectionString
+
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: turfchai-db
+          property: user
+
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: turfchai-db
+          property: password
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: FRONTEND_URL
+        value: https://turf-chai.vercel.app
+
+      - key: OPENROUTER_API_KEY
+        sync: false
+
+      - key: HF_API_KEY
+        sync: false
+
+databases:
+  - name: turfchai-db
+    databaseName: turfchai
+    user: turfchai_user

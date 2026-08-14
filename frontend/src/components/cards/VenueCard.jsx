@@ -47,17 +47,22 @@ function VenueCardBase({ venue, compact = false, className }) {
                     ))}
                 </div>
                 <div className={compact ? 'subtle' : 'row-wrap subtle'}>
-                    {compact ? `${distanceKm} km · ` : `${area} · ${distanceKm} km `}
+                    {/* distance only exists on a near-me search; price only once a venue has pricing */}
+                    {distanceKm != null ? (compact ? `${distanceKm} km · ` : `${area} · ${distanceKm} km `) : (compact ? '' : `${area} `)}
                     <Rating value={rating} count={compact ? undefined : reviewCount} />
                 </div>
                 <div className="between">
-                    {compact ? (
-                        <b className="num">{formatBdt(price)}</b>
+                    {price ? (
+                        compact ? (
+                            <b className="num">{formatBdt(price)}</b>
+                        ) : (
+                            <span className="price">
+                                <b>{formatBdt(price)}</b>
+                                <span className="subtle">/{priceUnit}</span>
+                            </span>
+                        )
                     ) : (
-                        <span className="price">
-                            <b>{formatBdt(price)}</b>
-                            <span className="subtle">/{priceUnit}</span>
-                        </span>
+                        <span className="subtle small">Price on request</span>
                     )}
                     {nextSlot ? (
                         <span className="slot-pill">{compact ? nextSlot : `Next: ${nextSlot}`}</span>

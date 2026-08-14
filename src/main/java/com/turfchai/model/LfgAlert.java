@@ -2,6 +2,7 @@ package com.turfchai.model;
 
 import com.turfchai.model.enums.LfgStatus;
 import com.turfchai.model.enums.SkillLevel;
+import com.turfchai.venue.entity.Sport;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;

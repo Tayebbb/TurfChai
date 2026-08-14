@@ -1,21 +1,135 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { PageTitle } from "@/components/common/PageTitle";
+import { QrCode } from "@/components/common/QrCode";
 import { Button } from "@/components/buttons/Button";
-import { fridayBooking } from "@/data/bookings";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import {
+  bookingEnd,
+  bookingStart,
+  checkInBooking,
+  formatBookingDate,
+  formatTimeOfDay,
+  formatTimeRange,
+  getBooking,
+  listBookings,
+  nextUpcomingBooking,
+} from "@/api/bookings";
+import { useApi } from "@/hooks/useApi";
+import { useQueryParam } from "@/hooks/useQueryParam";
 import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
 
-const TEAM_AVATARS = [
-  { id: "rk", initials: "RK" },
-  { id: "ta", initials: "TA", tone: "b" },
-  { id: "sm", initials: "SM", tone: "c" },
-  { id: "nh", initials: "NH", tone: "d" },
-  { id: "ju", initials: "JU" },
-  { id: "more", initials: "+5", tone: "b" },
-];
+function MatchdayShell({ children }) {
+  return (
+    <>
+      <PageTitle title="Match day" />
+      <main
+        className="wrap-form"
+        id="main"
+        style={{ paddingTop: 28, paddingBottom: 80 }}
+      >
+        {children}
+      </main>
+    </>
+  );
+}
 
 export default function MatchdayPage() {
+  const [bookingId] = useQueryParam("bookingId");
   const { showToast } = useToast();
+  const [checkingIn, setCheckingIn] = useState(false);
+
+  // An explicit ?bookingId wins; otherwise show whatever is up next.
+  const {
+    data: booking,
+    loading,
+    error,
+    reload,
+  } = useApi(
+    () =>
+      bookingId
+        ? getBooking(bookingId)
+        : listBookings().then((items) => nextUpcomingBooking(items)),
+    [bookingId],
+  );
+
+  const onCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      await checkInBooking(booking.id);
+      showToast("Checked in — enjoy the match 🏅");
+      reload();
+    } catch (checkInError) {
+      showToast(checkInError.message || "Check-in failed — please try again");
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <MatchdayShell>
+        <SkeletonList count={3} height={90} />
+      </MatchdayShell>
+    );
+  }
+
+  if (error) {
+    const unauthorized = error.status === 401;
+    return (
+      <MatchdayShell>
+        <div className="card" style={{ padding: 20 }}>
+          <b>
+            {unauthorized
+              ? "Sign in to open your match-day ticket"
+              : "Could not load your ticket"}
+          </b>
+          <p className="subtle small" style={{ margin: "6px 0 12px" }}>
+            {error.message}
+          </p>
+          {unauthorized ? (
+            <Button variant="primary" size="sm" to={paths.auth}>
+              Sign in
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={reload}>
+              Try again
+            </Button>
+          )}
+        </div>
+      </MatchdayShell>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <MatchdayShell>
+        <EmptyState
+          glyph="🎫"
+          title="No upcoming booking"
+          description="Your match-day ticket appears here once you have a confirmed slot ahead of you."
+          action={
+            <Button variant="primary" to={paths.player.explore}>
+              Find a slot
+            </Button>
+          }
+        />
+      </MatchdayShell>
+    );
+  }
+
+  const code = booking.bookingCode ?? `#${booking.id}`;
+  const start = bookingStart(booking);
+  const arriveBy = start
+    ? formatTimeOfDay(new Date(start.getTime() - 10 * 60 * 1000))
+    : "—";
+  const isToday = start
+    ? start.toDateString() === new Date().toDateString()
+    : false;
+  const checkedIn = Boolean(booking.checkedInAt);
+  // Scanning the ticket opens this booking, so any phone camera is a valid reader.
+  const ticketUrl = `${window.location.origin}${paths.player.bookingDetail(booking.id)}`;
 
   return (
     <>
@@ -26,8 +140,10 @@ export default function MatchdayPage() {
         style={{ paddingTop: 28, paddingBottom: 80 }}
       >
         <div className="center" style={{ marginBottom: 16 }}>
-          <span className="badge green">
-            It&apos;s match day! Kickoff in 2h 10m
+          <span className={isToday ? "badge green" : "badge blue"}>
+            {isToday
+              ? `It's match day! Kick-off ${formatTimeOfDay(start)}`
+              : `Kick-off ${formatBookingDate(booking)}, ${formatTimeOfDay(start)}`}
           </span>
         </div>
 
@@ -35,25 +151,28 @@ export default function MatchdayPage() {
           <div className="head">
             <div className="between">
               <b style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>
-                {fridayBooking.venue}
+                {booking.venueName ?? "Your venue"}
               </b>
-              <span
-                className="badge nodot"
-                style={{ background: "rgba(255,255,255,.2)", color: "#fff" }}
-              >
-                Pitch 2
-              </span>
+              {booking.pitchName ? (
+                <span
+                  className="badge nodot"
+                  style={{ background: "rgba(255,255,255,.2)", color: "#fff" }}
+                >
+                  {booking.pitchName}
+                </span>
+              ) : null}
             </div>
             <div className="muted small" style={{ marginTop: 2 }}>
-              House 12, Road 27, Dhanmondi · Fri 8 Aug 2026
+              {[booking.venueArea, formatBookingDate(booking)]
+                .filter(Boolean)
+                .join(" · ")}
             </div>
           </div>
 
           <div className="center" style={{ padding: 20 }}>
-            <div
-              className="qr"
-              role="img"
-              aria-label="Check-in QR code for booking TC-48291"
+            <QrCode
+              value={ticketUrl}
+              label={`Check-in QR code for booking ${code}`}
             />
             <b
               className="num"
@@ -64,7 +183,7 @@ export default function MatchdayPage() {
                 marginTop: 12,
               }}
             >
-              {fridayBooking.ref}
+              {code}
             </b>
             <span className="subtle small">Show at the gate to check in</span>
           </div>
@@ -76,39 +195,49 @@ export default function MatchdayPage() {
               <div>
                 <span className="tiny subtle">PLAY TIME</span>
                 <br />
-                <b className="num">{fridayBooking.playTime}</b>
+                <b className="num">
+                  {formatTimeRange(booking.startTime, booking.endTime)}
+                </b>
               </div>
               <div>
                 <span className="tiny subtle">ARRIVE BY</span>
                 <br />
-                <b className="num">{fridayBooking.arriveBy}</b>
+                <b className="num">{arriveBy}</b>
               </div>
               <div>
                 <span className="tiny subtle">CHECK-IN</span>
                 <br />
-                <span className="badge amber">Not yet</span>
+                {checkedIn ? (
+                  <span className="badge green">Checked in</span>
+                ) : (
+                  <span className="badge amber">Not yet</span>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid2" style={{ marginTop: 14, gap: 10 }}>
-          <Button
-            variant="primary"
-            onClick={() =>
-              showToast("Opening directions — 12 min from your location 🗺️")
-            }
-          >
-            🗺️ Directions
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() =>
-              showToast("Calling Kick Off Arena · 01811 223 344 📞")
-            }
-          >
-            📞 Contact venue
-          </Button>
+        <div style={{ marginTop: 14 }}>
+          {checkedIn ? (
+            <div className="alert ok">
+              <span className="ico">🏅</span>
+              <div>
+                <b>You are checked in</b>
+                Checked in at {formatTimeOfDay(new Date(booking.checkedInAt))}.
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="primary"
+              block
+              size="lg"
+              onClick={onCheckIn}
+              loading={checkingIn}
+              disabled={checkingIn}
+            >
+              Check in now
+            </Button>
+          )}
         </div>
 
         <div className="card" style={{ marginTop: 14 }}>
@@ -118,49 +247,20 @@ export default function MatchdayPage() {
             style={{ margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.9 }}
           >
             <li>
-              Previous match ends <b>7:20 PM</b> — wait by the Pitch 2 gate
+              Arrive by <b>{arriveBy}</b> — 10 minutes before kick-off
             </li>
-            <li>Staff scans your QR, then the pitch is yours for warm-up</li>
+            <li>Staff scan your QR, then the pitch is yours for warm-up</li>
             <li>
-              Play ends <b>sharp at 9:00 PM</b> — next team takes over 9:10
+              Play ends at <b>{formatTimeOfDay(bookingEnd(booking))}</b> — the
+              next team takes over
             </li>
-            <li>Bibs and match ball available at the front desk</li>
           </ul>
         </div>
 
-        <div className="card" style={{ marginTop: 14 }}>
-          <div className="between">
-            <h4 style={{ margin: 0 }}>Team (10)</h4>
-            <Button
-              size="sm"
-              variant="secondary"
-              to={paths.player.splitPayment}
-            >
-              Roster
-            </Button>
-          </div>
-          <div className="row" style={{ marginTop: 10 }}>
-            <div className="avatar-group">
-              {TEAM_AVATARS.map((person) => (
-                <span
-                  className={person.tone ? `avatar ${person.tone}` : "avatar"}
-                  key={person.id}
-                >
-                  {person.initials}
-                </span>
-              ))}
-            </div>
-            <span className="subtle small">6 paid · 4 pay cash to you</span>
-          </div>
-        </div>
-
-        <div className="alert ok" style={{ marginTop: 14 }}>
-          <span className="ico">🏅</span>
-          <div>
-            <b>After the final whistle</b>~250 points credit automatically, and
-            we&apos;ll ask if you want to leave a quick review.{" "}
-            <Link to={paths.player.review}>Preview the review flow →</Link>
-          </div>
+        <div className="stack-sm" style={{ marginTop: 14 }}>
+          <Button variant="secondary" block to={paths.player.bookingDetail(booking.id)}>
+            Booking details
+          </Button>
         </div>
       </main>
     </>

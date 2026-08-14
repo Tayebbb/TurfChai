@@ -5,119 +5,37 @@ import { Chip } from '@/components/ui/Chip';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { listTurfRequests } from '@/api/turfRequests';
+import { useApi } from '@/hooks/useApi';
 
 const FILTERS = [
-  { id: 'pending', label: 'Pending (4)' },
-  { id: 'changes', label: 'Changes Requested (2)' },
-  { id: 'approved', label: 'Approved (3)' },
-  { id: 'rejected', label: 'Rejected (1)' },
-];
-
-const REQUESTS = [
-  {
-    id: 'TR-1042',
-    venue: 'Kick Off Arena',
-    venueNote: '3 pitches · Football / Futsal',
-    owner: 'Mahmudul Hasan',
-    phone: '+880 1811 ••• 344',
-    area: 'Dhanmondi',
-    docs: '3/3 Verified ✓',
-    docsTone: 'green',
-    wait: '4h',
-    status: 'Pending Review',
-    statusTone: 'amber',
-    action: { kind: 'review', label: 'Review Request →', variant: 'btn-primary' },
-  },
-  {
-    id: 'TR-1041',
-    venue: 'Uttara Champions Field',
-    venueNote: '2 pitches · Outdoor Grass',
-    owner: 'Salma Khatun',
-    phone: '+880 1717 ••• 505',
-    area: 'Uttara 11',
-    docs: '3/3 Verified ✓',
-    docsTone: 'green',
-    wait: '1d',
-    status: 'Pending Review',
-    statusTone: 'amber',
-    action: { kind: 'review', label: 'Review Request →', variant: 'btn-secondary' },
-  },
-  {
-    id: 'TR-1038',
-    venue: 'Banani Rooftop Futsal',
-    venueNote: '1 court · Synthetic Turf',
-    owner: 'Imran Chowdhury',
-    phone: '+880 1913 ••• 227',
-    area: 'Banani',
-    docs: '2/3 (Trade License pending)',
-    docsTone: 'amber',
-    wait: '3d ⚠️',
-    waitOverdue: true,
-    status: 'SLA Overdue',
-    statusTone: 'amber',
-    rowStyle: { background: 'rgba(251,191,36,0.08)' },
-    action: { kind: 'review', label: 'Priority Review →', variant: 'btn-primary' },
-  },
-  {
-    id: 'TR-1036',
-    venue: 'Khilgaon Turf Park',
-    venueNote: '2 pitches · Multi-sport',
-    owner: 'Rubel Mia',
-    phone: '+880 1610 ••• 883',
-    area: 'Khilgaon',
-    docs: '1/3 (Unreadable NID)',
-    docsTone: 'red',
-    wait: '2d',
-    status: 'Changes Requested',
-    statusTone: 'blue',
-    action: { kind: 'review', label: 'Open Details', variant: 'btn-secondary' },
-  },
-  {
-    id: 'TR-1039',
-    venue: 'GreenTurf Annex',
-    owner: 'Nusrat Jahan',
-    area: 'Mohammadpur',
-    docs: '3/3 Verified ✓',
-    docsTone: 'green',
-    wait: '—',
-    status: 'Approved by Farid',
-    statusTone: 'green',
-    rowStyle: { opacity: 0.75 },
-    action: { kind: 'listing', label: 'View Listing', variant: 'btn-tertiary' },
-  },
-  {
-    id: 'TR-1037',
-    venue: 'Old Town Court',
-    owner: 'Kamal Uddin',
-    area: 'Lalbagh',
-    docs: 'Expired Trade License',
-    docsTone: 'red',
-    wait: '—',
-    status: 'Rejected',
-    statusTone: 'red',
-    rowStyle: { opacity: 0.75 },
-    action: {
-      kind: 'reason',
-      label: 'Reason',
-      variant: 'btn-tertiary',
-      toast: 'Rejection Note: Trade license expired March 2026',
-    },
-  },
+  { id: 'pending', label: 'Pending' },
+  { id: 'changes_requested', label: 'Changes Requested' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'rejected', label: 'Rejected' },
 ];
 
 export default function TurfRequestsPage() {
   const { showToast } = useToast();
   const chips = useFilterChips(['pending']);
   const [search, setSearch] = useState('');
+  
+  const statusFilter = chips.isActive('pending') ? 'PENDING' : 
+                       chips.isActive('changes_requested') ? 'CHANGES_REQUESTED' : 
+                       chips.isActive('approved') ? 'APPROVED' : 
+                       chips.isActive('rejected') ? 'REJECTED' : null;
+
+  const { data: requestData, loading, error } = useApi(() => listTurfRequests(statusFilter), [statusFilter]);
 
   const rows = useMemo(() => {
+    const items = requestData || [];
     const term = search.trim().toLowerCase();
-    if (!term) return REQUESTS;
-    return REQUESTS.filter(
-      (request) =>
-        request.venue.toLowerCase().includes(term) || request.owner.toLowerCase().includes(term),
+    if (!term) return items;
+    return items.filter(
+      (req) =>
+        req.venueName?.toLowerCase().includes(term) || req.ownerEmail?.toLowerCase().includes(term),
     );
-  }, [search]);
+  }, [search, requestData]);
 
   return (
     <>
@@ -133,14 +51,16 @@ export default function TurfRequestsPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>Turf Listing Requests</h1>
+            <h1>Turf Listing Requests</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Verify new venue submissions · Target SLA: 48 hours
           </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <span className="badge amber">4 Pending Approval</span>
+          <span className="badge amber">
+            {Array.isArray(requestData) ? requestData.filter(r => r.status === 'PENDING' || !r.status).length : 0} Pending Approval
+          </span>
         </div>
       </div>
 
@@ -181,63 +101,50 @@ export default function TurfRequestsPage() {
             </tr>
           </thead>
           <tbody>
+            {loading && <tr><td colSpan="8" className="center">Loading requests...</td></tr>}
+            {error && <tr><td colSpan="8" className="center" style={{color:'var(--danger)'}}>Failed to load requests</td></tr>}
             {rows.map((request) => (
-              <tr key={request.id} style={request.rowStyle}>
+              <tr key={request.id}>
                 <td className="num">
-                  <b>{request.id}</b>
+                  <b>{request.requestCode}</b>
                 </td>
                 <td>
-                  <b>{request.venue}</b>
-                  {request.venueNote ? (
-                    <>
-                      <br />
-                      <span className="tiny subtle">{request.venueNote}</span>
-                    </>
-                  ) : null}
+                  <b>{request.venueName}</b>
+                  <br />
+                  <span className="tiny subtle">{request.pitchCount} pitches · {request.sportsCsv}</span>
                 </td>
                 <td>
-                  {request.owner}
-                  {request.phone ? (
-                    <>
-                      <br />
-                      <span className="tiny subtle num">{request.phone}</span>
-                    </>
-                  ) : null}
+                  {request.ownerEmail}
+                  <br />
+                  <span className="tiny subtle num">{request.ownerPhone}</span>
                 </td>
                 <td>{request.area}</td>
                 <td>
-                  <span className={`badge ${request.docsTone} nodot`}>{request.docs}</span>
+                  <span className={`badge nodot ${request.docTradeLicense === 'VERIFIED' && request.docOwnerNid === 'VERIFIED' && request.docUtilityBill === 'VERIFIED' ? 'green' : 'amber'}`}>
+                    Docs
+                  </span>
                 </td>
-                <td
-                  className="num"
-                  style={request.waitOverdue ? { color: 'var(--warn)', fontWeight: 700 } : undefined}
-                >
-                  {request.wait}
+                <td className="num">
+                  {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : '—'}
                 </td>
                 <td>
-                  <span className={`badge ${request.statusTone}`}>{request.status}</span>
+                  <span className={`badge ${request.status === 'APPROVED' ? 'green' : request.status === 'REJECTED' ? 'red' : request.status === 'CHANGES_REQUESTED' ? 'blue' : 'amber'}`}>{request.status}</span>
                 </td>
                 <td style={{ textAlign: 'right' }}>
-                  {request.action.kind === 'review' ? (
+                  {(request.status === 'PENDING' || request.status === 'CHANGES_REQUESTED') ? (
                     <Link
-                      className={`btn btn-sm ${request.action.variant}`}
-                      to={paths.admin.requestReview(request.id)}
+                      className="btn btn-sm btn-primary"
+                      to={paths.admin.requestReview(request.requestCode)}
                     >
-                      {request.action.label}
+                      Review Request →
                     </Link>
-                  ) : null}
-                  {request.action.kind === 'listing' ? (
-                    <Link className={`btn btn-sm ${request.action.variant}`} to={paths.admin.turfs}>
-                      {request.action.label}
-                    </Link>
-                  ) : null}
-                  {request.action.kind === 'reason' ? (
+                  ) : request.status === 'REJECTED' && request.adminNote ? (
                     <button
-                      className={`btn btn-sm ${request.action.variant}`}
+                      className="btn btn-sm btn-tertiary"
                       type="button"
-                      onClick={() => showToast(request.action.toast)}
+                      onClick={() => showToast(`Reason: ${request.adminNote}`)}
                     >
-                      {request.action.label}
+                      Reason
                     </button>
                   ) : null}
                 </td>

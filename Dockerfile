@@ -1,25 +1,20 @@
-# Multi-stage Dockerfile for Spring Boot (TurfChai Backend)
+# Build stage
+FROM eclipse-temurin:21-jdk AS builder
 
-# Stage 1: Build stage
-FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Copy pom.xml and source code
-COPY pom.xml .
-COPY src ./src
+COPY . .
 
-# Build production jar skipping tests
-RUN mvn clean package -DskipTests
+RUN chmod +x mvnw
+RUN ./mvnw clean package -DskipTests
 
-# Stage 2: Runtime stage
-FROM eclipse-temurin:21-jre-alpine
+# Runtime stage
+FROM eclipse-temurin:21-jre
+
 WORKDIR /app
 
-# Expose server port
+COPY --from=builder /app/target/turfchai-0.0.1-SNAPSHOT.jar app.jar
+
 EXPOSE 8080
 
-# Copy built jar from build stage
-COPY --from=build /app/target/turfchai-0.0.1-SNAPSHOT.jar app.jar
-
-# Run application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]

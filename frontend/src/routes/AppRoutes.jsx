@@ -1,6 +1,14 @@
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { RouteFallback } from '@/components/common/RouteFallback';
+import {
+  BookingsSection,
+  NetworkSection,
+  NotificationsSection,
+  StatsSection,
+  TeamsSection,
+  WalletSection,
+} from '@/pages/player/dashboard/PendingSections';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { HostLayout } from '@/layouts/HostLayout';
@@ -29,6 +37,13 @@ const Matchday = lazy(() => import('@/pages/player/MatchdayPage'));
 const Review = lazy(() => import('@/pages/player/ReviewPage'));
 const Cancel = lazy(() => import('@/pages/player/CancelPage'));
 const Rewards = lazy(() => import('@/pages/player/RewardsPage'));
+const ProfileSettings = lazy(() => import('@/pages/player/ProfileSettingsPage'));
+const DashboardLayout = lazy(() => import('@/pages/player/dashboard/DashboardLayout'));
+const DashboardOverview = lazy(() => import('@/pages/player/dashboard/OverviewSection'));
+const DashboardTournaments = lazy(() => import('@/pages/player/dashboard/TournamentsSection'));
+const DashboardVenues = lazy(() => import('@/pages/player/dashboard/SavedVenuesSection'));
+const TournamentDetail = lazy(() => import('@/pages/player/TournamentDetailPage'));
+const TournamentRegister = lazy(() => import('@/pages/player/TournamentRegisterPage'));
 
 const OpenGames = lazy(() => import('@/solo/OpenGamesPage'));
 const GameDetail = lazy(() => import('@/solo/GameDetailPage'));
@@ -91,6 +106,22 @@ export function AppRoutes() {
             <Route path="review" element={<Review />} />
             <Route path="cancel" element={<Cancel />} />
             <Route path="rewards" element={<Rewards />} />
+            <Route path="settings" element={<Navigate to="/player/dashboard/settings" replace />} />
+            <Route path="tournaments/:code" element={<TournamentDetail />} />
+            <Route path="tournaments/:code/register" element={<TournamentRegister />} />
+
+            <Route path="dashboard" element={<DashboardLayout />}>
+              <Route index element={<DashboardOverview />} />
+              <Route path="tournaments" element={<DashboardTournaments />} />
+              <Route path="venues" element={<DashboardVenues />} />
+              <Route path="bookings" element={<BookingsSection />} />
+              <Route path="teams" element={<TeamsSection />} />
+              <Route path="network" element={<NetworkSection />} />
+              <Route path="stats" element={<StatsSection />} />
+              <Route path="wallet" element={<WalletSection />} />
+              <Route path="notifications" element={<NotificationsSection />} />
+              <Route path="settings" element={<ProfileSettings />} />
+            </Route>
           </Route>
 
           <Route path="solo">

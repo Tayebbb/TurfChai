@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class LfgAlertRestController {
     private final LfgAlertService alertService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
     public ResponseEntity<LfgAlertResponse> createAlert(@Valid @RequestBody CreateLfgAlertRequest request) {
         LfgAlertResponse response = alertService.createAlert(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -33,6 +35,7 @@ public class LfgAlertRestController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
     public ResponseEntity<LfgAlertResponse> updateAlertStatus(
             @PathVariable Long id,
             @RequestParam Long userId,
@@ -42,6 +45,7 @@ public class LfgAlertRestController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
     public ResponseEntity<Void> deleteAlert(
             @PathVariable Long id,
             @RequestParam Long userId) {

@@ -4,6 +4,8 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { Chip } from '@/components/ui/Chip';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { api } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 
 const FILTERS = [
   'All Activity',
@@ -15,90 +17,8 @@ const FILTERS = [
 
 const DANGER_AVATAR = { background: 'var(--danger-soft)', color: 'var(--danger)' };
 
-const AUDIT_ENTRIES = [
-  {
-    id: 'log-1',
-    time: 'Today 6:24 PM',
-    admin: 'Farid Hasan',
-    avatarClass: 'avatar sm b',
-    avatarStyle: undefined,
-    action: 'Approved Request',
-    actionTone: 'green',
-    target: 'TR-1039',
-    targetNum: true,
-    details: 'GreenTurf Annex → Listing published as pending venue setup',
-    rowStyle: undefined,
-  },
-  {
-    id: 'log-2',
-    time: 'Today 4:02 PM',
-    admin: 'Nadia Amin',
-    avatarClass: 'avatar sm',
-    avatarStyle: DANGER_AVATAR,
-    action: 'Suspended Player',
-    actionTone: 'red',
-    target: '#38112',
-    targetNum: true,
-    details: 'Reason: Repeated no-shows & abusive chat reports',
-    rowStyle: undefined,
-  },
-  {
-    id: 'log-3',
-    time: 'Today 1:15 PM',
-    admin: 'Farid Hasan',
-    avatarClass: 'avatar sm b',
-    avatarStyle: undefined,
-    action: 'Rejected Request',
-    actionTone: 'red',
-    target: 'TR-1037',
-    targetNum: true,
-    details: 'Reason: Trade license expired March 2026',
-    rowStyle: undefined,
-  },
-  {
-    id: 'log-4',
-    time: 'Today 11:41 AM',
-    admin: 'Tania Sultana',
-    avatarClass: 'avatar sm c',
-    avatarStyle: undefined,
-    action: 'Approved Refund',
-    actionTone: 'blue',
-    target: 'TC-48102',
-    targetNum: true,
-    details: '৳2,200 refund issued (Free cancellation > 24h prior)',
-    rowStyle: undefined,
-  },
-  {
-    id: 'log-5',
-    time: 'Today 11:30 AM',
-    admin: '⚙️ System Automation',
-    avatarClass: undefined,
-    avatarStyle: undefined,
-    initials: undefined,
-    action: 'Risk Flag Raised',
-    actionTone: 'amber',
-    target: 'V-0077',
-    targetNum: true,
-    details: 'Payout Anomaly: Refund ratio 4× baseline · Venue auto-suspended',
-    rowStyle: { background: 'rgba(251,191,36,0.06)' },
-  },
-  {
-    id: 'log-6',
-    time: 'Today 9:02 AM',
-    admin: 'Nadia Amin',
-    avatarClass: 'avatar sm',
-    avatarStyle: DANGER_AVATAR,
-    action: 'Signed In',
-    actionTone: 'gray',
-    target: '—',
-    targetNum: false,
-    details: '2FA Passed · Chrome (Windows) · IP 103.205.x.x',
-    rowStyle: undefined,
-  },
-];
-
-/** Derives avatar initials from the administrator name (e.g. "Farid Hasan" → "FH"). */
 function initialsOf(name) {
+  if (!name) return '??';
   return name
     .split(' ')
     .map((part) => part[0])
@@ -106,20 +26,48 @@ function initialsOf(name) {
     .toUpperCase();
 }
 
+function formatDate(isoStr) {
+  if (!isoStr) return 'Recently';
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return isoStr;
+  }
+}
+
 export default function ActivityPage() {
   const { showToast } = useToast();
   const [filter, setFilter] = useState('All Activity');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+
+  const filterQuery = filter === 'All Activity' ? '' : filter;
+  const { data: res, loading } = useApi(
+    () => api(`/admin/audit-log?page=${page}&size=10${filterQuery ? `&filter=${encodeURIComponent(filterQuery)}` : ''}`),
+    [page, filter],
+  );
+
+  const pageData = res?.data || res;
+  const rawLogs = pageData?.content || [];
+  const totalElements = pageData?.totalElements || rawLogs.length;
 
   const term = search.trim().toLowerCase();
   const rows = term
-    ? AUDIT_ENTRIES.filter(
+    ? rawLogs.filter(
         (entry) =>
-          entry.action.toLowerCase().includes(term) ||
-          entry.admin.toLowerCase().includes(term) ||
-          entry.target.toLowerCase().includes(term),
+          entry.action?.toLowerCase().includes(term) ||
+          entry.adminName?.toLowerCase().includes(term) ||
+          entry.target?.toLowerCase().includes(term) ||
+          entry.details?.toLowerCase().includes(term),
       )
-    : AUDIT_ENTRIES;
+    : rawLogs;
 
   return (
     <>
@@ -135,9 +83,7 @@ export default function ActivityPage() {
             >
               ← Back
             </Link>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              System Audit &amp; Activity Log
-            </h1>
+            <h1>System Audit &amp; Activity Log</h1>
           </div>
           <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
             Immutable Record of Administrative &amp; Automated Actions
@@ -163,7 +109,7 @@ export default function ActivityPage() {
           onChange={(event) => setSearch(event.target.value)}
         />
         {FILTERS.map((item) => (
-          <Chip key={item} active={filter === item} onToggle={() => setFilter(item)}>
+          <Chip key={item} active={filter === item} onToggle={() => { setFilter(item); setPage(0); }}>
             {item}
           </Chip>
         ))}
@@ -182,46 +128,52 @@ export default function ActivityPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((entry) => (
-              <tr key={entry.id} style={entry.rowStyle}>
-                <td className="num">{entry.time}</td>
-                <td>
-                  {entry.avatarClass ? (
-                    <>
-                      <span className={entry.avatarClass} style={entry.avatarStyle}>
-                        {initialsOf(entry.admin)}
-                      </span>{' '}
-                      {entry.admin}
-                    </>
-                  ) : (
-                    entry.admin
-                  )}
-                </td>
-                <td>
-                  <span className={`badge ${entry.actionTone} nodot`}>{entry.action}</span>
-                </td>
-                <td className={entry.targetNum ? 'num' : undefined}>{entry.target}</td>
-                <td className="small muted">{entry.details}</td>
+            {loading ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>Loading audit entries...</td>
               </tr>
-            ))}
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>No audit entries found.</td>
+              </tr>
+            ) : (
+              rows.map((entry) => (
+                <tr key={entry.id}>
+                  <td className="num">{formatDate(entry.createdAt)}</td>
+                  <td>
+                    <span className="avatar sm">
+                      {initialsOf(entry.adminName)}
+                    </span>{' '}
+                    {entry.adminName}
+                  </td>
+                  <td>
+                    <span className={`badge ${entry.actionTone || 'blue'} nodot`}>{entry.action}</span>
+                  </td>
+                  <td className="num">{entry.target || '—'}</td>
+                  <td className="small muted">{entry.details}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="between small" style={{ marginTop: 14 }}>
-        <span className="subtle">Showing latest 6 of 3,412 audit entries</span>
+        <span className="subtle">Showing {rows.length} of {totalElements} audit entries</span>
         <div className="row" style={{ gap: 6 }}>
           <button
             className="btn btn-sm btn-tertiary"
             type="button"
-            onClick={() => showToast('Loading previous logs...')}
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
           >
             ‹ Previous
           </button>
           <button
             className="btn btn-sm btn-tertiary"
             type="button"
-            onClick={() => showToast('Loading next page...')}
+            disabled={pageData?.last ?? true}
+            onClick={() => setPage((p) => p + 1)}
           >
             Next ›
           </button>

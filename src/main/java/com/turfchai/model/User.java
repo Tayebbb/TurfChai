@@ -1,5 +1,6 @@
 package com.turfchai.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.turfchai.model.enums.RoleType;
 import com.turfchai.model.enums.SkillLevel;
 import jakarta.persistence.*;
@@ -44,7 +45,25 @@ public class User {
 
     @NotBlank
     @Column(name = "password_hash", nullable = false)
+    @JsonIgnore
     private String passwordHash;
+
+    @Column(name = "two_factor_enabled", nullable = false)
+    @Builder.Default
+    private Boolean twoFactorEnabled = false;
+
+    @Column(name = "two_factor_secret")
+    @JsonIgnore
+    private String twoFactorSecret;
+
+    @Column(name = "failed_login_count", nullable = false)
+    @Builder.Default
+    @JsonIgnore
+    private Integer failedLoginCount = 0;
+
+    @Column(name = "locked_until")
+    @JsonIgnore
+    private OffsetDateTime lockedUntil;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
@@ -88,6 +107,17 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(name = "play_style")
     private SkillLevel playStyle;
+
+    // Player-profile fields (profile module). CSV columns are the interim
+    // representation until the array/JSONB baseline columns get mapped types.
+    @Column(name = "player_role", length = 30)
+    private String playerRole;
+
+    @Column(name = "preferred_sports_csv")
+    private String preferredSports;
+
+    @Column(name = "preferred_times_csv")
+    private String preferredTimes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

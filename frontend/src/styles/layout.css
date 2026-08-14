@@ -12,10 +12,23 @@
 }
 
 .wrap-form {
-    max-width: 460px;
+    max-width: 720px;
+    width: 100%;
     margin: 0 auto;
-    padding: 0 20px
+    padding: 0 20px;
 }
+@media (max-width: 768px) {
+    .wrap-form {
+        max-width: 540px;
+    }
+}
+@media (max-width: 480px) {
+    .wrap-form {
+        max-width: 100%;
+        padding: 0 14px;
+    }
+}
+
 
 .stack {
     display: flex;

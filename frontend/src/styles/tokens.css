@@ -11,15 +11,16 @@
     --brand-600: #0C6A40;
     --brand-700: #095434;
     --brand-soft: #E3F4EB;
-    --mint: #59D999;
+    /* used as a text colour in the admin console, so it must stay AA on white */
+    --mint: #0F8050;
     --lime: #B5E655;
 
     /* Semantic */
     --info: #2660D8;
     --info-soft: #E8EFFD;
-    --warn: #9A6A0A;
+    --warn: #8A5D07;
     --warn-soft: #FCF1DC;
-    --danger: #C93B3B;
+    --danger: #BE3232;
     --danger-soft: #FBE9E9;
 
     /* Neutrals */
@@ -29,7 +30,8 @@
     --surface-3: #E7EDEA;
     --text: #122019;
     --text-2: #4C5F55;
-    --text-3: #71847A;
+    /* AA (4.5:1) on every light surface incl. --surface-3 */
+    --text-3: #596C62;
     --border: #E4EAE6;
     --border-strong: #CFDAD4;
 
@@ -78,7 +80,8 @@
     --surface-3: #1C291E;
     --text: #F2F6F2;
     --text-2: #A6B8AA;
-    --text-3: #7C8F80;
+    /* AA (4.5:1) on every dark surface incl. --surface-3 */
+    --text-3: #869A8B;
     --border: #1D2A1F;
     --border-strong: #2C3C2F;
 

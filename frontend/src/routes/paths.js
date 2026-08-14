@@ -19,9 +19,27 @@ export const paths = {
     splitPayment: '/player/split-payment',
     paymentRetry: '/player/payment-retry',
     matchday: '/player/matchday',
+    matchdayFor: (bookingId) => `/player/matchday?bookingId=${bookingId}`,
     review: '/player/review',
     cancel: '/player/cancel',
+    cancelFor: (bookingId) => `/player/cancel?bookingId=${bookingId}`,
     rewards: '/player/rewards',
+    settings: '/player/settings',
+    tournament: (code = ':code') => `/player/tournaments/${code}`,
+    tournamentRegister: (code = ':code') => `/player/tournaments/${code}/register`,
+
+    dashboard: {
+      root: '/player/dashboard',
+      tournaments: '/player/dashboard/tournaments',
+      venues: '/player/dashboard/venues',
+      bookings: '/player/dashboard/bookings',
+      teams: '/player/dashboard/teams',
+      network: '/player/dashboard/network',
+      stats: '/player/dashboard/stats',
+      wallet: '/player/dashboard/wallet',
+      notifications: '/player/dashboard/notifications',
+      settings: '/player/dashboard/settings',
+    },
   },
 
   solo: {
