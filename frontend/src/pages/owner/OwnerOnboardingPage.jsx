@@ -494,7 +494,7 @@ export default function OwnerOnboardingPage() {
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
                           <b style={{ color: 'var(--text-1)' }}>{documents.tradeLicense.name}</b>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ?</span>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ✓</span>
                         </div>
                       </div>
                     ) : (
@@ -517,7 +517,7 @@ export default function OwnerOnboardingPage() {
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
                           <b style={{ color: 'var(--text-1)' }}>{documents.leaseProof.name}</b>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ?</span>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ✓</span>
                         </div>
                       </div>
                     ) : (
@@ -571,7 +571,7 @@ export default function OwnerOnboardingPage() {
                     <div className="between small"><span className="muted">Owner Name</span><b>{ownerName}</b></div>
                     <div className="between small"><span className="muted">Venue Name</span><b>{venueName}</b></div>
                     <div className="between small"><span className="muted">Location</span><b>{location.address}</b></div>
-                    <div className="between small"><span className="muted">Documents</span><b>Attached ?</b></div>
+                    <div className="between small"><span className="muted">Documents</span><b style={{ color: 'var(--brand-500)' }}>Attached ✓</b></div>
                   </Stack>
                 </div>
 
