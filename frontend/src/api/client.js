@@ -51,12 +51,19 @@ export function clearSession() {
   notifySessionChange();
 }
 
+/**
+ * A rejected token means the session is over, not that the page is off
+ * limits: every player screen renders signed-out, so we clear the session
+ * and let the UI fall back. Only the admin console, which has nothing to
+ * show without an identity, is sent to its login.
+ */
 function handleUnauthorized() {
-  const onAdminRoute = window.location.pathname.startsWith('/admin');
-  const loginPath = onAdminRoute ? '/admin/login' : '/auth';
-  if (window.location.pathname === loginPath) return;
   clearSession();
-  window.location.assign(loginPath);
+
+  const onAdminRoute = window.location.pathname.startsWith('/admin');
+  if (!onAdminRoute) return;
+  if (window.location.pathname === '/admin/login') return;
+  window.location.assign('/admin/login');
 }
 
 function resolveUrl(path) {
@@ -74,6 +81,16 @@ function resolveUrl(path) {
 }
 
 /**
+ * Same base-URL resolution the fetch helpers use, for callers that need the
+ * URL rather than a request — `EventSource`, for one. Kept exported so no
+ * caller re-derives the origin by hand; that duplication has broken LAN and
+ * deployed builds before.
+ */
+export function apiUrl(path) {
+  return resolveUrl(path);
+}
+
+/**
  * Fetch wrapper for API calls.
  */
 export async function api(path, { method = 'GET', body, token = true } = {}) {
@@ -81,6 +98,10 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
   if (token) {
     const authToken = getToken();
     if (authToken) headers.Authorization = `Bearer ${authToken}`;
+    const user = getUser();
+    if (user?.publicId || user?.id) {
+      headers['X-User-Id'] = user.publicId || user.id;
+    }
   }
 
   const url = resolveUrl(path);

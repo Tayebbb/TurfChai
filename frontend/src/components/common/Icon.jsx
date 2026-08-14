@@ -149,4 +149,4 @@ export function Icon({ name, size, className, style, ...rest }) {
   );
 }
 
-export const iconNames = Object.keys(ICONS);
+

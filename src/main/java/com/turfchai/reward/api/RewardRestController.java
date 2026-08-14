@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Player Loyalty & Rewards Program REST API. Every endpoint resolves the
- * caller from the JWT security principal, so these routes require
- * authentication (they are not in {@code SecurityConfig}'s public list).
+ * Player Loyalty & Rewards Program REST API. Endpoints resolve the caller from
+ * the JWT security principal; all of them require authentication except the
+ * catalog, which visitors may browse before signing up.
  * Error handling is delegated to {@link com.turfchai.exception.GlobalExceptionHandler}.
  */
 @RestController
@@ -37,7 +37,7 @@ public class RewardRestController {
     /** GET /api/v1/rewards/products — active reward catalog, annotated with the caller's unlock state. */
     @GetMapping("/products")
     public ResponseEntity<ApiResponse<List<RewardProductResponse>>> listProducts(Authentication authentication) {
-        List<RewardProductResponse> products = rewardService.listRewardProducts(currentUserId(authentication));
+        List<RewardProductResponse> products = rewardService.listRewardProducts(optionalUserId(authentication));
         return ResponseEntity.ok(ApiResponse.ok(products));
     }
 
@@ -67,6 +67,14 @@ public class RewardRestController {
 
     private Long currentUserId(Authentication authentication) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        return principal.getId();
+    }
+
+    /** Null for anonymous callers on the public catalog route. */
+    private Long optionalUserId(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return null;
+        }
         return principal.getId();
     }
 }

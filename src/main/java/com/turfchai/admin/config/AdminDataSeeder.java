@@ -27,7 +27,7 @@ public class AdminDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDataSeeder.class);
 
-    public static final String SUPER_ADMIN_EMAIL = "fazle.rabbi.mugdho@gmail.com";
+    public static final String SUPER_ADMIN_EMAIL = "shahadat.cse.20230104008@aust.edu";
     public static final String SUPER_ADMIN_NAME = "Fazle Rabbi Mugdho";
     public static final String SUPER_ADMIN_PHONE = "+8801700000001";
     public static final String SUPER_ADMIN_PASSWORD = "TurfChai@123";

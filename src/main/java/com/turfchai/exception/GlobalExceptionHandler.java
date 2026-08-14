@@ -149,6 +149,32 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
 
+    /**
+     * Omitting a required query param, header, path variable or cookie is the
+     * caller's mistake. Without this the catch-all below turns it into a 500,
+     * which tells the client to retry something that can never succeed.
+     */
+    @ExceptionHandler(org.springframework.web.bind.ServletRequestBindingException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingRequestValue(
+            org.springframework.web.bind.ServletRequestBindingException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    /**
+     * The client went away mid-response — almost always a browser closing an
+     * SSE stream. Nothing can be written to a response that no longer has a
+     * peer, and letting this reach the catch-all below makes it try to render
+     * JSON into a {@code text/event-stream} response, logging a
+     * {@code HttpMessageNotWritableException} stack trace for every closed tab.
+     * An empty body and no content type is the whole correct response here.
+     */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(
+            org.springframework.web.context.request.async.AsyncRequestNotUsableException ex) {
+        // Intentionally empty: void signals "handled, write nothing".
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

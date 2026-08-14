@@ -10,7 +10,9 @@ export function SlotGrid({ slots, selectedId, onSelect, label = 'Available slots
       {slots.map((slot) => {
         const isSelected = slot.id === selectedId;
         const state = isSelected ? 'selected' : slot.status;
-        const disabled = slot.status === 'held' || slot.status === 'booked';
+        // Anything that is not free to book is unselectable — `blocked` counts,
+        // and so does any status added later.
+        const disabled = slot.status !== 'available';
 
         return (
           <button

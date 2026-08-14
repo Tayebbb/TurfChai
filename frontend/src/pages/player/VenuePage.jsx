@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -16,6 +16,7 @@ import { getVenueSlots } from '@/api/bookings';
 import { getSavedVenues, toggleSavedVenue } from '@/api/players';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSlotStream } from '@/hooks/useSlotStream';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './VenuePage.css';
@@ -46,7 +47,14 @@ function nextSevenDays(from) {
     const date = new Date(from);
     date.setDate(date.getDate() + offset);
     return {
-      id: date.toISOString().slice(0, 10),
+      // Local parts, not toISOString(): east of UTC the ISO date rolls back a
+      // day before dawn, so in Dhaka a 1am visitor saw "Fri 15" but queried
+      // the 14th. Matches `isoDay` in api/openGames.js.
+      id: [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+      ].join('-'),
       weekday: date.toLocaleDateString('en-GB', { weekday: 'short' }),
       day: String(date.getDate()),
     };
@@ -115,7 +123,10 @@ const bdt = (value) =>
 
 /** Backend SlotResponse -> the { id, time, price, status } shape SlotGrid renders. */
 function toGridSlot(slot) {
-  const status = slot.status.toLowerCase(); // 'available' | 'held' | 'booked'
+  // Defensive: the live stream overlays this field, so never assume it is set.
+  const status = String(slot.status ?? 'available').toLowerCase();
+  const unavailableLabel =
+    status === 'held' ? 'Held' : status === 'blocked' ? 'Unavailable' : 'Booked';
   const price =
     status === 'available' ? (
       <>
@@ -123,7 +134,7 @@ function toGridSlot(slot) {
         <span className="slot-meta">ends {formatTime(slot.endTime)}</span>
       </>
     ) : (
-      <span className="slot-meta">{status === 'held' ? 'Held' : 'Booked'}</span>
+      <span className="slot-meta">{unavailableLabel}</span>
     );
   return { id: slot.id, time: formatTime(slot.startTime), price, status };
 }
@@ -242,6 +253,12 @@ export default function VenuePage() {
   const [dateId, setDateId] = useState(() => dates[0].id);
   const [slotId, setSlotId] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
+  // Mirrors `slotId` for the stream callback, which must not depend on it —
+  // re-subscribing on every selection would tear down the connection.
+  const selectedSlotIdRef = useRef(slotId);
+  useEffect(() => {
+    selectedSlotIdRef.current = slotId;
+  });
 
   // Live venue details by slug; static prototype copy remains as fallback.
   const detail = useApi(() => getVenue(venueId), [venueId]);
@@ -259,7 +276,57 @@ export default function VenuePage() {
     () => (venue?.id ? getVenueSlots(venue.id, dateId) : Promise.resolve([])),
     [venue?.id, dateId],
   );
-  const slots = useMemo(() => (slotsApi.data ?? []).map(toGridSlot), [slotsApi.data]);
+
+  // Statuses pushed by the SSE stream since the last snapshot, keyed by slot
+  // id. Kept as an overlay rather than mutating `slotsApi.data` so a refetch
+  // always wins and the two sources can never drift apart permanently.
+  const [liveStatus, setLiveStatus] = useState({});
+  const streamKey = `${venue?.id ?? ''}@${dateId}`;
+  const [lastStreamKey, setLastStreamKey] = useState(streamKey);
+  if (lastStreamKey !== streamKey) {
+    // Adjust-state-during-render: a stale overlay must never survive a switch
+    // to another venue or day.
+    setLastStreamKey(streamKey);
+    setLiveStatus({});
+  }
+
+  const applyLiveChange = useCallback(
+    ({ slotId: changedId, status }) => {
+      setLiveStatus((current) =>
+        current[changedId] === status ? current : { ...current, [changedId]: status },
+      );
+      // Losing the slot you were about to book is the one case worth
+      // interrupting for — otherwise checkout would 409 on the hold. Read the
+      // selection from a ref: doing this inside a setState updater would fire
+      // the toast twice under StrictMode's double invocation.
+      if (status !== 'AVAILABLE' && selectedSlotIdRef.current === changedId) {
+        setSlotId(null);
+        showToast('That slot was just taken — pick another time');
+      }
+    },
+    [showToast],
+  );
+
+  const resyncSlots = useCallback(() => {
+    setLiveStatus({});
+    slotsApi.reload();
+  }, [slotsApi]);
+
+  useSlotStream({
+    venueId: venue?.id,
+    date: dateId,
+    enabled: Boolean(venue?.id),
+    onSlotChange: applyLiveChange,
+    onResync: resyncSlots,
+  });
+
+  const slots = useMemo(
+    () =>
+      (slotsApi.data ?? []).map((slot) =>
+        toGridSlot(liveStatus[slot.id] ? { ...slot, status: liveStatus[slot.id] } : slot),
+      ),
+    [slotsApi.data, liveStatus],
+  );
 
   const name = venue?.name ?? 'Kick Off Arena';
   const metaLine = venue ? `${venue.address}` : 'Road 27, Dhanmondi · 1.2 km';
@@ -342,7 +409,11 @@ export default function VenuePage() {
   const [slotWarn, setSlotWarn] = useState(false);
 
   const selectedSlot = slots.find((slot) => slot.id === slotId);
-  const checkoutHref = selectedSlot ? `${paths.player.checkout}?slotId=${selectedSlot.id}` : null;
+  // Checkout has no slot-by-id endpoint, so it re-reads the slot from this
+  // venue's day list — hence the venue slug and date travel with the slotId.
+  const checkoutHref = selectedSlot
+    ? `${paths.player.checkout}?slotId=${selectedSlot.id}&venue=${encodeURIComponent(venueId)}&date=${encodeURIComponent(dateId)}`
+    : null;
 
   const handleBookClick = (e) => {
     if (!selectedSlot) {
