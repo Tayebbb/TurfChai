@@ -1,38 +1,28 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/buttons/Button';
-import { Chip } from '@/components/ui/Chip';
 import { Field, Input, Select } from '@/components/forms/Field';
 import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
 import { useDisclosure } from '@/hooks/useDisclosure';
-import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 
 import { useApi } from '@/hooks/useApi';
-import { getOwnerPromotions } from '@/api/ownerPromotions';
+import { getOwnerPromotions, createPromotion, updatePromotion, deletePromotion } from '@/api/ownerPromotions';
 import { listMyVenues } from '@/api/ownerVenues';
-import { useCallback } from 'react';
-
-const TYPE_CHIPS = ['Off-peak discount', 'Repeat-customer reward', 'Limited-time deal', 'Venue loyalty'];
-const DAY_CHIPS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const PITCH_CHIPS = ['All pitches', 'Pitch 1', 'Pitch 2', 'Pitch 3'];
 
 export default function PromotionsPage() {
   const { showToast } = useToast();
   const drawer = useDisclosure(false);
 
-  const typeChips = useFilterChips(['Off-peak discount']);
-  const dayChips = useFilterChips(['Mon', 'Tue', 'Wed', 'Thu']);
-  const pitchChips = useFilterChips(['All pitches']);
+  const [code, setCode] = useState('');
+  const [label, setLabel] = useState('');
+  const [discountType, setDiscountType] = useState('PERCENT');
+  const [discountValue, setDiscountValue] = useState('');
+  const [usageLimit, setUsageLimit] = useState('');
 
-  const [name, setName] = useState('Weekday Off-Peak −30%');
-  const [discountUnit, setDiscountUnit] = useState('%');
-  const [discountAmount, setDiscountAmount] = useState('30');
-  const [cap, setCap] = useState('');
-  const [fromTime, setFromTime] = useState('12:00 PM');
-  const [toTime, setToTime] = useState('5:00 PM');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: venuesRes } = useApi(listMyVenues, []);
   const venues = venuesRes?.data || venuesRes || [];
@@ -43,8 +33,67 @@ export default function PromotionsPage() {
     return getOwnerPromotions(activeVenueId);
   }, [activeVenueId]);
 
-  const { data: res, loading } = useApi(getPromosCb, [activeVenueId]);
+  const { data: res, loading, refetch } = useApi(getPromosCb, [activeVenueId]);
   const promotions = res?.data || res || [];
+
+  const handleLaunch = async () => {
+    if (!activeVenueId) return;
+    
+    if (!code || !label || !discountValue) {
+      showToast('Please fill out all required fields');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await createPromotion(activeVenueId, {
+        code,
+        label,
+        discountType,
+        discountValue: Number(discountValue),
+        usageLimit: usageLimit ? Number(usageLimit) : null
+      });
+      
+      showToast('Promotion live — discounted slots now shown to players ✓');
+      drawer.close();
+      
+      // Reset form
+      setCode('');
+      setLabel('');
+      setDiscountValue('');
+      setUsageLimit('');
+      
+      refetch();
+    } catch {
+      showToast('Failed to create promotion');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggle = async (promoId, currentActive) => {
+    if (!activeVenueId) return;
+    try {
+      await updatePromotion(activeVenueId, promoId, { active: !currentActive });
+      showToast(!currentActive ? 'Promotion activated ✓' : 'Promotion paused ✓');
+      refetch();
+    } catch {
+      showToast('Failed to update promotion status');
+    }
+  };
+
+  const handleDelete = async (promoId) => {
+    if (!activeVenueId) return;
+    if (!confirm('Are you sure you want to delete this promotion?')) return;
+    
+    try {
+      await deletePromotion(activeVenueId, promoId);
+      showToast('Promotion deleted ✓');
+      refetch();
+    } catch {
+      showToast('Failed to delete promotion');
+    }
+  };
 
   return (
     <>
@@ -63,44 +112,47 @@ export default function PromotionsPage() {
       <div className="grid2" style={{ alignItems: 'start' }}>
         <div className="stack">
           {promotions.map((promo) => (
-            <div className="card" key={promo.id} style={{ borderLeft: `3px solid ${promo.tone || 'var(--brand)'}` }}>
+            <div className="card" key={promo.id} style={{ borderLeft: `3px solid ${promo.active ? 'var(--brand)' : 'var(--muted)'}` }}>
               <div className="between">
-                <h3 style={{ margin: 0 }}>{promo.title}</h3>
-                <Badge tone={promo.badgeTone}>{promo.badgeText}</Badge>
+                <h3 style={{ margin: 0 }}>{promo.label}</h3>
+                <Badge tone={promo.active ? 'green' : 'gray'}>{promo.active ? 'Active' : 'Paused'}</Badge>
               </div>
               <p className="subtle small" style={{ margin: '4px 0 10px' }}>
-                {promo.description}
+                Code: <strong>{promo.code}</strong>
               </p>
-              {promo.stats && (
-                <div className="grid3" style={{ gap: 8 }}>
-                  {promo.stats.map((stat) => (
-                    <div className="panel center" key={stat.id}>
-                      <b className="num">{stat.value}</b>
-                      <div className="tiny subtle">{stat.label}</div>
-                    </div>
-                  ))}
+              
+              <div className="grid3" style={{ gap: 8 }}>
+                <div className="panel center">
+                  <b className="num">
+                    {promo.discountType === 'PERCENT' ? `${promo.discountValue}%` : `৳${promo.discountValue}`}
+                  </b>
+                  <div className="tiny subtle">Discount</div>
                 </div>
-              )}
-              {promo.tags && (
-                <div className="row-wrap">
-                  {promo.tags.map((tag) => (
-                    <Badge key={tag.text} tone={tag.tone} dot={false}>
-                      {tag.text}
-                    </Badge>
-                  ))}
+                <div className="panel center">
+                  <b className="num">{promo.usageCount}</b>
+                  <div className="tiny subtle">Times used</div>
                 </div>
-              )}
+                <div className="panel center">
+                  <b className="num">{promo.usageLimit ? promo.usageLimit : '∞'}</b>
+                  <div className="tiny subtle">Usage limit</div>
+                </div>
+              </div>
+              
               <div className="row" style={{ marginTop: 10 }}>
-                {promo.actions.map((action) => (
-                  <Button
-                    key={action.label}
-                    size="sm"
-                    variant={action.variant}
-                    onClick={action.openDrawer ? drawer.open : () => showToast(action.toast)}
-                  >
-                    {action.label}
-                  </Button>
-                ))}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleToggle(promo.id, promo.active)}
+                >
+                  {promo.active ? 'Pause' : 'Activate'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="tertiary"
+                  onClick={() => handleDelete(promo.id)}
+                >
+                  Delete
+                </Button>
               </div>
             </div>
           ))}
@@ -124,7 +176,13 @@ export default function PromotionsPage() {
               <p className="tiny muted" style={{ margin: '2px 0 6px' }}>
                 A 25–35% off-peak discount typically fills 60% of these slots.
               </p>
-              <Button size="sm" variant="primary" onClick={drawer.open}>
+              <Button size="sm" variant="primary" onClick={() => {
+                  setLabel('Off-Peak Deal');
+                  setCode('OFFPEAK30');
+                  setDiscountType('PERCENT');
+                  setDiscountValue('30');
+                  drawer.open();
+              }}>
                 Create off-peak promo
               </Button>
             </div>
@@ -143,36 +201,31 @@ export default function PromotionsPage() {
 
       {/* New promotion drawer */}
       <Overlay isOpen={drawer.isOpen} onClose={drawer.close} title="New promotion" mode="drawer">
-        <div className="field" style={{ marginTop: 8 }}>
-          <label>Type</label>
-          <div className="row-wrap">
-            {TYPE_CHIPS.map((chip) => (
-              <Chip key={chip} active={typeChips.isActive(chip)} onToggle={() => typeChips.toggle(chip)}>
-                {chip}
-              </Chip>
-            ))}
-          </div>
-        </div>
-        <Field label="Name" htmlFor="npName">
-          <Input id="npName" value={name} onChange={(event) => setName(event.target.value)} />
+        <Field label="Label (e.g. Weekday Off-Peak)" htmlFor="npLabel">
+          <Input id="npLabel" value={label} onChange={(event) => setLabel(event.target.value)} />
         </Field>
+        
+        <Field label="Promo Code (e.g. OFFPEAK30)" htmlFor="npCode">
+          <Input id="npCode" value={code} onChange={(event) => setCode(event.target.value)} style={{textTransform: 'uppercase'}} />
+        </Field>
+        
         <div className="grid2" style={{ gap: 10 }}>
           <Field label="Discount" htmlFor="npDisc">
             <div className="row">
               <Select
                 id="npDisc"
                 style={{ maxWidth: 100 }}
-                value={discountUnit}
-                onChange={(event) => setDiscountUnit(event.target.value)}
+                value={discountType}
+                onChange={(event) => setDiscountType(event.target.value)}
               >
-                <option>%</option>
-                <option>৳ fixed</option>
+                <option value="PERCENT">%</option>
+                <option value="FLAT">৳ fixed</option>
               </Select>
               <Input
                 className="num"
                 aria-label="Discount amount"
-                value={discountAmount}
-                onChange={(event) => setDiscountAmount(event.target.value)}
+                value={discountValue}
+                onChange={(event) => setDiscountValue(event.target.value)}
               />
             </div>
           </Field>
@@ -181,56 +234,21 @@ export default function PromotionsPage() {
               className="num"
               id="npCap"
               placeholder="e.g. 40 bookings"
-              value={cap}
-              onChange={(event) => setCap(event.target.value)}
+              value={usageLimit}
+              onChange={(event) => setUsageLimit(event.target.value)}
             />
           </Field>
         </div>
-        <div className="field">
-          <label>Days &amp; window</label>
-          <div className="row-wrap">
-            {DAY_CHIPS.map((day) => (
-              <Chip key={day} active={dayChips.isActive(day)} onToggle={() => dayChips.toggle(day)}>
-                {day}
-              </Chip>
-            ))}
-          </div>
-          <div className="grid2" style={{ gap: 10, marginTop: 8 }}>
-            <Select aria-label="From time" value={fromTime} onChange={(event) => setFromTime(event.target.value)}>
-              <option>12:00 PM</option>
-            </Select>
-            <Select aria-label="To time" value={toTime} onChange={(event) => setToTime(event.target.value)}>
-              <option>5:00 PM</option>
-            </Select>
-          </div>
-        </div>
-        <div className="field">
-          <label>Pitches</label>
-          <div className="row-wrap">
-            {PITCH_CHIPS.map((pitch) => (
-              <Chip key={pitch} active={pitchChips.isActive(pitch)} onToggle={() => pitchChips.toggle(pitch)}>
-                {pitch}
-              </Chip>
-            ))}
-          </div>
-        </div>
-        <div className="panel between">
-          <span className="small muted">Preview price (peak ৳2,200)</span>
-          <b className="num">
-            ৳1,540 <span className="tiny subtle">−30%</span>
-          </b>
-        </div>
+        
         <Button
           variant="primary"
           size="lg"
           block
           style={{ marginTop: 12 }}
-          onClick={() => {
-            drawer.close();
-            showToast('Promotion live — discounted slots now shown to players ✓');
-          }}
+          onClick={handleLaunch}
+          disabled={isSubmitting}
         >
-          Launch promotion
+          {isSubmitting ? 'Launching...' : 'Launch promotion'}
         </Button>
       </Overlay>
     </>
