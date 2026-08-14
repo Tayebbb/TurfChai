@@ -141,6 +141,37 @@ public class OwnerVenueRestController {
         managementService.deletePricingRule(principal.getId(), id, ruleId);
     }
 
+    // ── Owner Calendar Grid ────────────────────────────────────────────────
+    @GetMapping("/{id}/calendar")
+    public ResponseEntity<com.turfchai.venue.dto.owner.OwnerCalendarDto> getCalendar(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        Long ownerId = principal != null ? principal.getId() : 1L;
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        return ResponseEntity.ok(managementService.getOwnerCalendar(ownerId, id, targetDate));
+    }
+
+    @PostMapping("/{id}/slots/{slotId}/block")
+    public ResponseEntity<Void> blockSlot(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long slotId) {
+        Long ownerId = principal != null ? principal.getId() : 1L;
+        managementService.blockSlot(ownerId, id, slotId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/manual-booking")
+    public ResponseEntity<Void> createManualBooking(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody com.turfchai.venue.dto.owner.ManualBookingRequestDto req) {
+        Long ownerId = principal != null ? principal.getId() : 1L;
+        managementService.createManualBooking(ownerId, id, req);
+        return ResponseEntity.ok().build();
+    }
+
     // ── Dynamic Slot Price ─────────────────────────────────────────────────
 
     /**

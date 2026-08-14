@@ -204,6 +204,10 @@ export default function OwnerOnboardingPage() {
 
     setSaving(true);
     try {
+      const tradeLicDoc = documents.tradeLicense?.name ? `Trade License (${documents.tradeLicense.name})` : 'Trade_License.pdf';
+      const leaseDoc = documents.leaseProof?.name ? `Ownership/Lease (${documents.leaseProof.name})` : 'Lease_Agreement.pdf';
+      const photoDoc = photos.length > 0 ? photos.map((p) => p.name).join(', ') : 'Venue_Photos';
+
       await createTurfRequest({
         venueName: venueName.trim(),
         area: (location.area || finalAddr.split(',')[0] || 'Dhaka').slice(0, 45),
@@ -211,9 +215,9 @@ export default function OwnerOnboardingPage() {
         sportsCsv: 'Football,Cricket,Futsal',
         ownerPhone: ownerPhone || '+8801811223344',
         ownerEmail: 'owner@turfchai.com',
-        docTradeLicense: 'UPLOADED',
-        docOwnerNid: 'UPLOADED',
-        docUtilityBill: 'UPLOADED',
+        docTradeLicense: tradeLicDoc,
+        docOwnerNid: leaseDoc,
+        docUtilityBill: photoDoc,
       }).catch(() => ({ status: 'PENDING', requestCode: 'TRF-1042' }));
 
       setStep('submit');
@@ -335,6 +339,30 @@ export default function OwnerOnboardingPage() {
                     <b>{photos.length > 0 ? `${photos.length} photo(s) attached` : 'Default photos'}</b>
                   </div>
                 </Stack>
+
+                {photos.length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    <span className="muted small" style={{ display: 'block', marginBottom: 8 }}>
+                      Uploaded Pitch Photos ({photos.length}):
+                    </span>
+                    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                      {photos.map((photo) => (
+                        <img
+                          key={photo.id}
+                          src={photo.url}
+                          alt={photo.name}
+                          style={{
+                            width: 64,
+                            height: 64,
+                            objectFit: 'cover',
+                            borderRadius: 8,
+                            border: '1px solid var(--border-soft)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="row" style={{ gap: 12, marginTop: 24, justifyContent: 'center' }}>
@@ -356,7 +384,8 @@ export default function OwnerOnboardingPage() {
                     <Panel key={req.requestCode || req.id} className="between" style={{ padding: '12px 16px' }}>
                       <div>
                         <b>{req.venueName}</b>
-                        <p className="tiny muted" style={{ margin: 0 }}>Code: {req.requestCode}</p>
+                        <p className="tiny muted" style={{ margin: 0 }}>Code: {req.requestCode} · Area: {req.area}</p>
+                        <p className="tiny muted" style={{ margin: '2px 0 0' }}>Docs: {req.docTradeLicense} | {req.docOwnerNid}</p>
                       </div>
                       <Badge tone={req.status === 'APPROVED' ? 'green' : req.status === 'REJECTED' ? 'red' : 'amber'}>
                         {req.status}
