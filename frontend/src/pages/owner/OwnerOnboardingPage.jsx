@@ -252,24 +252,17 @@ export default function OwnerOnboardingPage() {
 
       const photoUrls = photos.length > 0 ? photos.map((p) => p.url) : [];
 
-      await createVenue({
-        name: venueName.trim(),
-        address: finalAddr,
-        area: (location.area || finalAddr.split(',')[0] || 'Dhaka').slice(0, 100),
-        lat: location.lat || 23.8103, // Default to Dhaka if missing
-        lng: location.lng || 90.4125,
-        basePrice: 2000,
-        openTime: '06:00',
-        closeTime: '23:00',
-        amenities: 'floodlights,parking',
-        contactPhone: ownerPhone || '+8801811223344',
-        contactEmail: 'owner@turfchai.com',
-        depositPolicy: 'FULL_ONLY',
-        cancelPolicy: 'FREE_24H_50_6H',
-        allowSplitPayment: false,
-        rules: 'Standard rules',
+      await createTurfRequest({
+        venueName: venueName.trim(),
+        area: location.address.trim(),
+        pitchCount: 1,
+        sportsCsv: 'Football',
+        ownerPhone: ownerPhone,
+        ownerEmail: authState?.signupEmail || 'owner@turfchai.com',
+        docTradeLicense: documents.tradeLicense?.name || 'Trade_License.pdf',
+        docOwnerNid: nid || 'NID.pdf',
+        docUtilityBill: documents.leaseProof?.name || 'Lease_Agreement.pdf',
         photos: photoUrls,
-        mlPricingEnabled: false,
       });
 
       submitted.open();
@@ -606,10 +599,10 @@ export default function OwnerOnboardingPage() {
         )}
       </div>
 
-      <Overlay isOpen={submitted.isOpen} onClose={submitted.close} title="Venue Created" hideHeader className="center">
+      <Overlay isOpen={submitted.isOpen} onClose={submitted.close} title="Request Submitted" hideHeader className="center">
         <div className="check-anim" style={{ background: 'var(--green)' }} aria-hidden="true">✓</div>
-        <h3>Venue Registered</h3>
-        <p className="muted small">Your venue has been successfully created.</p>
+        <h3>Request Submitted</h3>
+        <p className="muted small">Your registration has been submitted for admin approval.</p>
         <div style={{ marginTop: '20px' }}>
           <Button variant="primary" block to={paths.owner.dashboard}>
             Go to Dashboard →

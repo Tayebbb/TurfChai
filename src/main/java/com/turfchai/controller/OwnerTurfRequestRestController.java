@@ -23,9 +23,18 @@ public class OwnerTurfRequestRestController {
     @PostMapping
     public ResponseEntity<TurfRequest> createRequest(
             @Valid @RequestBody CreateTurfRequestDto dto,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        Long ownerId = 1L;
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
+        
+        Long ownerId = userDetails != null ? userDetails.getId() : 1L;
+        String email = userDetails != null ? userDetails.getUsername() : "owner@turfchai.com";
         String requestCode = "TRF-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+
+        String photosJson = "[]";
+        if (dto.getPhotos() != null && !dto.getPhotos().isEmpty()) {
+            try {
+                photosJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(dto.getPhotos());
+            } catch (Exception e) {}
+        }
 
         TurfRequest request = TurfRequest.builder()
                 .requestCode(requestCode)
@@ -35,20 +44,16 @@ public class OwnerTurfRequestRestController {
                 .pitchCount(dto.getPitchCount() != null ? dto.getPitchCount() : 1)
                 .sportsCsv(safeTruncate(dto.getSportsCsv(), 100, "Football,Cricket,Futsal"))
                 .ownerPhone(safeTruncate(dto.getOwnerPhone(), 20, "+8801811223344"))
-                .ownerEmail(safeTruncate(dto.getOwnerEmail(), 100, "owner@turfchai.com"))
+                .ownerEmail(safeTruncate(dto.getOwnerEmail(), 100, email))
                 .docTradeLicense(safeTruncate(dto.getDocTradeLicense(), 200, "Trade_License.pdf"))
-                .docOwnerNid(safeTruncate(dto.getDocOwnerNid(), 200, "Lease_Agreement.pdf"))
-                .docUtilityBill(safeTruncate(dto.getDocUtilityBill(), 500, "Venue_Photos"))
+                .docOwnerNid(safeTruncate(dto.getDocOwnerNid(), 200, "NID.pdf"))
+                .docUtilityBill(safeTruncate(dto.getDocUtilityBill(), 500, "Utility_Bill.pdf"))
+                .photosJson(photosJson)
                 .status("PENDING")
                 .build();
 
-        try {
-            TurfRequest saved = turfRequestRepository.save(request);
-            return ResponseEntity.ok(saved);
-        } catch (Exception e) {
-            request.setId(System.currentTimeMillis());
-            return ResponseEntity.ok(request);
-        }
+        TurfRequest saved = turfRequestRepository.save(request);
+        return ResponseEntity.ok(saved);
     }
 
     private String safeTruncate(String str, int maxLen, String defaultValue) {

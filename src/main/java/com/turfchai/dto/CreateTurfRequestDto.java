@@ -25,4 +25,5 @@ public class CreateTurfRequestDto {
     private String docTradeLicense;
     private String docOwnerNid;
     private String docUtilityBill;
+    private java.util.List<String> photos;
 }
