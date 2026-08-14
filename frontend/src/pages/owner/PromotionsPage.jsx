@@ -21,6 +21,8 @@ export default function PromotionsPage() {
   const [discountType, setDiscountType] = useState('PERCENT');
   const [discountValue, setDiscountValue] = useState('');
   const [usageLimit, setUsageLimit] = useState('');
+  const [validFrom, setValidFrom] = useState('');
+  const [validUntil, setValidUntil] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,7 +53,9 @@ export default function PromotionsPage() {
         label,
         discountType,
         discountValue: Number(discountValue),
-        usageLimit: usageLimit ? Number(usageLimit) : null
+        usageLimit: usageLimit ? Number(usageLimit) : null,
+        validFrom: validFrom ? new Date(validFrom).toISOString() : null,
+        validUntil: validUntil ? new Date(validUntil).toISOString() : null
       });
       
       showToast('Promotion live — discounted slots now shown to players ✓');
@@ -62,10 +66,13 @@ export default function PromotionsPage() {
       setLabel('');
       setDiscountValue('');
       setUsageLimit('');
+      setValidFrom('');
+      setValidUntil('');
       
       refetch();
-    } catch {
-      showToast('Failed to create promotion');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to create promotion';
+      showToast(`Error: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -77,8 +84,9 @@ export default function PromotionsPage() {
       await updatePromotion(activeVenueId, promoId, { active: !currentActive });
       showToast(!currentActive ? 'Promotion activated ✓' : 'Promotion paused ✓');
       refetch();
-    } catch {
-      showToast('Failed to update promotion status');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update promotion status';
+      showToast(`Error: ${msg}`);
     }
   };
 
@@ -90,8 +98,9 @@ export default function PromotionsPage() {
       await deletePromotion(activeVenueId, promoId);
       showToast('Promotion deleted ✓');
       refetch();
-    } catch {
-      showToast('Failed to delete promotion');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to delete promotion';
+      showToast(`Error: ${msg}`);
     }
   };
 
@@ -236,6 +245,25 @@ export default function PromotionsPage() {
               placeholder="e.g. 40 bookings"
               value={usageLimit}
               onChange={(event) => setUsageLimit(event.target.value)}
+            />
+          </Field>
+        </div>
+
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Valid From (optional)" htmlFor="npValidFrom">
+            <Input
+              type="datetime-local"
+              id="npValidFrom"
+              value={validFrom}
+              onChange={(event) => setValidFrom(event.target.value)}
+            />
+          </Field>
+          <Field label="Valid Until (optional)" htmlFor="npValidUntil">
+            <Input
+              type="datetime-local"
+              id="npValidUntil"
+              value={validUntil}
+              onChange={(event) => setValidUntil(event.target.value)}
             />
           </Field>
         </div>
