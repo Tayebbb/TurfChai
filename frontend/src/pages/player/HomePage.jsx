@@ -407,7 +407,7 @@ function SoloMode() {
 /** Real LFG alert count for the signed-in player. */
 function LfgAlertsCard() {
   const userId = getUser()?.id ?? null;
-  const alertsApi = useApi(() => (userId ? listLfgAlerts(userId) : Promise.resolve([])), [userId]);
+  const alertsApi = useApi(() => (userId ? listLfgAlerts() : Promise.resolve([])), [userId]);
   const active = (Array.isArray(alertsApi.data) ? alertsApi.data : []).filter(
     (alert) => alert.status === 'ACTIVE',
   );
