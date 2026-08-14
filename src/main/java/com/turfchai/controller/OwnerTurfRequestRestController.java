@@ -36,9 +36,9 @@ public class OwnerTurfRequestRestController {
                 .sportsCsv(safeTruncate(dto.getSportsCsv(), 100, "Football,Cricket,Futsal"))
                 .ownerPhone(safeTruncate(dto.getOwnerPhone(), 20, "+8801811223344"))
                 .ownerEmail(safeTruncate(dto.getOwnerEmail(), 100, "owner@turfchai.com"))
-                .docTradeLicense("UPLOADED")
-                .docOwnerNid("UPLOADED")
-                .docUtilityBill("UPLOADED")
+                .docTradeLicense(safeTruncate(dto.getDocTradeLicense(), 200, "Trade_License.pdf"))
+                .docOwnerNid(safeTruncate(dto.getDocOwnerNid(), 200, "Lease_Agreement.pdf"))
+                .docUtilityBill(safeTruncate(dto.getDocUtilityBill(), 500, "Venue_Photos"))
                 .status("PENDING")
                 .build();
 

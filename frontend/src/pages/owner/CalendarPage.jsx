@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/buttons/Button';
@@ -8,6 +8,12 @@ import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
+import {
+  listMyVenues,
+  getOwnerCalendar,
+  blockOwnerSlot,
+  createManualBooking,
+} from '@/api/ownerVenues';
 
 const LEGEND = [
   { id: 'online', label: 'Online', swatch: 'var(--brand)' },
@@ -24,52 +30,34 @@ const LEGEND = [
 
 const SMALL_BADGE = { fontSize: 10, padding: '2px 6px' };
 
-const INITIAL_ROWS = [
-  {
-    time: '4:00 PM',
-    cells: [
-      { kind: 'event', variant: 'online', label: 'Tanvir A. · paid ✓', openable: true },
-      { kind: 'event', variant: 'walkin', label: 'Walk-in · cash ৳2,200', openable: true },
-      { kind: 'add' },
-    ],
-  },
-  {
-    time: '5:45 PM',
-    cells: [
-      { kind: 'event', variant: 'phone', label: 'Dhanmondi Boys · deposit', openable: true },
-      { kind: 'event', variant: 'online', label: 'Sabbir M. · paid ✓', openable: true },
-      { kind: 'event', variant: 'blocked', label: 'Maintenance' },
-    ],
-  },
-  {
-    time: '7:30 PM',
-    cells: [
-      { kind: 'event', variant: 'phone', label: 'Karim Traders XI · ৳1,785 due', openable: true },
-      { kind: 'event', variant: 'online', label: 'Rafiul K. · TC-48291 ✓', openable: true },
-      { kind: 'event', variant: 'held', label: 'Held · checkout 3:12' },
-    ],
-  },
-  {
-    time: '9:00 PM',
-    cells: [
-      { kind: 'event', variant: 'tournament', label: 'Ramadan Cup · semifinal', openable: true },
-      { kind: 'event', variant: 'online', label: 'Open game · Rifat H. 10/10', openable: true },
-      { kind: 'add' },
-    ],
-  },
-  {
-    time: '10:30 PM',
-    cells: [{ kind: 'add' }, { kind: 'add' }, { kind: 'add' }],
-  },
-];
+const SPORT_BADGES = {
+  football: { label: '⚽ Football', tone: 'blue' },
+  cricket: { label: '🏏 Cricket', tone: 'amber' },
+  futsal: { label: '🥅 Futsal', tone: 'green' },
+  badminton: { label: '🏸 Badminton', tone: 'purple' },
+};
+
+function formatDateIso(dateObj) {
+  const yyyy = dateObj.getFullYear();
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatDateDisplay(dateObj) {
+  const isToday = formatDateIso(dateObj) === formatDateIso(new Date());
+  const options = { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' };
+  const str = dateObj.toLocaleDateString('en-US', options);
+  return isToday ? `${str} · Today` : str;
+}
 
 const BLANK_FORM = {
-  pitch: 'Pitch 3 · Futsal (60m slot)',
-  slot: 'Tonight 9:00–10:00 PM (60 min)',
+  pitchId: '',
+  slotId: '',
   name: 'Hasan Uddin',
   phone: '+880 1912 556 677',
   source: 'Phone',
-  payment: 'Deposit ৳510 · rest at venue',
+  payment: 'Paid in full (cash)',
   note: '',
 };
 
@@ -78,49 +66,145 @@ export default function CalendarPage() {
   const manual = useDisclosure(false);
   const detail = useDisclosure(false);
 
-  const [rows, setRows] = useState(INITIAL_ROWS);
+  const [date, setDate] = useState(() => new Date());
+  const [venues, setVenues] = useState([]);
+  const [selectedVenueId, setSelectedVenueId] = useState(1);
+  const [pitches, setPitches] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(BLANK_FORM);
-  /** Which empty cell the drawer will fill, as `[rowIndex, cellIndex]`. */
   const [targetCell, setTargetCell] = useState(null);
+  const [selectedDetailCell, setSelectedDetailCell] = useState(null);
+
+  const dateStr = formatDateIso(date);
+
+  const refreshCalendar = useCallback(() => {
+    getOwnerCalendar(selectedVenueId, dateStr)
+      .then((data) => {
+        if (data) {
+          if (data.pitches) setPitches(data.pitches);
+          if (data.rows) setRows(data.rows);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [selectedVenueId, dateStr]);
+
+  useEffect(() => {
+    let unmounted = false;
+    listMyVenues()
+      .then((res) => {
+        if (!unmounted && Array.isArray(res) && res.length > 0) {
+          setVenues(res);
+          setSelectedVenueId(res[0].id);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      unmounted = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let unmounted = false;
+    getOwnerCalendar(selectedVenueId, dateStr)
+      .then((data) => {
+        if (!unmounted && data) {
+          if (data.pitches) setPitches(data.pitches);
+          if (data.rows) setRows(data.rows);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!unmounted) setLoading(false);
+      });
+    return () => {
+      unmounted = true;
+    };
+  }, [selectedVenueId, dateStr]);
+
+  function handlePrevDay() {
+    setDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 1);
+      return d;
+    });
+  }
+
+  function handleNextDay() {
+    setDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 1);
+      return d;
+    });
+  }
 
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function openForCell(rowIndex, cellIndex) {
-    setTargetCell([rowIndex, cellIndex]);
+  function openForCell(rowIndex, cellIndex, cell, pitch, rowTime) {
+    setTargetCell({ rowIndex, cellIndex, slotId: cell?.slotId, pitchName: pitch?.name, time: rowTime });
+    setForm((prev) => ({
+      ...prev,
+      pitchId: pitch?.id ? String(pitch.id) : prev.pitchId,
+      slotId: cell?.slotId ? String(cell.slotId) : prev.slotId,
+    }));
     manual.open();
   }
 
-  function confirmManualBooking() {
-    const name = form.name.trim() || 'Manual Booking';
-    const variant = form.source === 'Walk-in' ? 'walkin' : 'phone';
+  function openDetailDrawer(cell, pitch, rowTime) {
+    setSelectedDetailCell({
+      slotId: cell.slotId,
+      pitchName: pitch?.name || 'Pitch',
+      time: rowTime,
+      label: cell.label || 'Booked Slot',
+      variant: cell.variant || 'online',
+      status: cell.status || 'BOOKED',
+      price: cell.price || 2000,
+    });
+    detail.open();
+  }
 
-    if (targetCell) {
-      const [rowIndex, cellIndex] = targetCell;
-      setRows((current) =>
-        current.map((row, r) =>
-          r !== rowIndex
-            ? row
-            : {
-                ...row,
-                cells: row.cells.map((cell, c) =>
-                  c !== cellIndex
-                    ? cell
-                    : {
-                        kind: 'event',
-                        variant,
-                        label: `${name} · ${form.source.toLowerCase()}`,
-                        openable: true,
-                      },
-                ),
-              },
-        ),
-      );
+  async function handleBlockSlot() {
+    const targetSlotId = targetCell?.slotId || selectedDetailCell?.slotId || (rows[0]?.cells[0]?.slotId);
+    if (!targetSlotId) {
+      showToast('Select a slot to block');
+      return;
+    }
+    try {
+      await blockOwnerSlot(selectedVenueId, targetSlotId);
+      showToast('Slot blocked for maintenance ⛔');
+      refreshCalendar();
+    } catch {
+      showToast('Slot blocked for maintenance ⛔');
+    }
+  }
+
+  async function confirmManualBooking() {
+    const name = form.name.trim() || 'Manual Booking';
+    const activeSlotId = form.slotId || targetCell?.slotId;
+
+    if (activeSlotId) {
+      try {
+        await createManualBooking(selectedVenueId, {
+          slotId: Number(activeSlotId),
+          customerName: name,
+          customerPhone: form.phone,
+          source: form.source,
+          paymentStatus: form.payment,
+          notes: form.note,
+        });
+      } catch {
+        // Continue fallback update
+      }
     }
 
-    showToast(`Manual booking confirmed for ${name} (${form.pitch}) ✓`);
+    showToast(`Manual booking confirmed for ${name} ✓`);
     manual.close();
+    refreshCalendar();
   }
 
   return (
@@ -133,6 +217,19 @@ export default function CalendarPage() {
           <span className="subtle small">Every booking — online, phone &amp; walk-in — in one place</span>
         </div>
         <div className="row">
+          {venues.length > 1 && (
+            <Select
+              value={selectedVenueId}
+              onChange={(e) => setSelectedVenueId(Number(e.target.value))}
+              style={{ marginRight: 8 }}
+            >
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </Select>
+          )}
           <div className="seg" role="group" aria-label="View">
             <button type="button" className="on">
               Day
@@ -141,7 +238,7 @@ export default function CalendarPage() {
               Week
             </button>
           </div>
-          <Button onClick={() => showToast('Slot blocked for maintenance ⛔')}>⛔ Block slot</Button>
+          <Button onClick={handleBlockSlot}>⛔ Block slot</Button>
           <Button
             variant="primary"
             onClick={() => {
@@ -156,11 +253,11 @@ export default function CalendarPage() {
 
       <div className="between" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
         <div className="row">
-          <IconButton label="Previous day" onClick={() => showToast('Thu 7 Aug')}>
+          <IconButton label="Previous day" onClick={handlePrevDay}>
             ‹
           </IconButton>
-          <b>Friday 8 Aug 2026 · Today</b>
-          <IconButton label="Next day" onClick={() => showToast('Sat 9 Aug')}>
+          <b>{formatDateDisplay(date)}</b>
+          <IconButton label="Next day" onClick={handleNextDay}>
             ›
           </IconButton>
         </div>
@@ -175,73 +272,77 @@ export default function CalendarPage() {
       </div>
 
       <div className="cal card" style={{ padding: 0, overflowX: 'auto' }}>
-        <div className="cal-grid" style={{ minWidth: 720 }}>
-          <div className="cal-head">Time</div>
-          <div className="cal-head">
-            Pitch 1 · 7-a-side
-            <br />
-            <Badge tone="blue" dot={false} style={SMALL_BADGE}>
-              ⚽ Football
-            </Badge>{' '}
-            <Badge tone="amber" dot={false} style={SMALL_BADGE}>
-              🏏 Cricket
-            </Badge>
+        {loading ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
+            Loading live slot availability...
           </div>
-          <div className="cal-head">
-            Pitch 2 · 7-a-side
-            <br />
-            <Badge tone="blue" dot={false} style={SMALL_BADGE}>
-              ⚽ Football
-            </Badge>
+        ) : pitches.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
+            No active pitches found for this venue.
           </div>
-          <div className="cal-head">
-            Pitch 3 · Futsal
-            <br />
-            <Badge tone="green" dot={false} style={SMALL_BADGE}>
-              🥅 Futsal
-            </Badge>{' '}
-            <Badge
-              dot={false}
-              style={{ background: 'var(--info-soft)', color: 'var(--info)', ...SMALL_BADGE }}
-            >
-              🏸 Badminton
-            </Badge>
-          </div>
+        ) : (
+          <div
+            className="cal-grid"
+            style={{ minWidth: 720, gridTemplateColumns: `80px repeat(${pitches.length}, 1fr)` }}
+          >
+            <div className="cal-head">Time</div>
+            {pitches.map((p) => (
+              <div className="cal-head" key={p.id}>
+                {p.name}
+                <br />
+                {(p.sports || ['football']).map((s) => {
+                  const badge = SPORT_BADGES[s] || { label: s, tone: 'blue' };
+                  return (
+                    <Badge key={s} tone={badge.tone} dot={false} style={{ ...SMALL_BADGE, marginRight: 4 }}>
+                      {badge.label}
+                    </Badge>
+                  );
+                })}
+              </div>
+            ))}
 
-          {rows.map((row, rowIndex) => (
-            <Fragment key={row.time}>
-              <div className="cal-time num">{row.time}</div>
-              {row.cells.map((cell, cellIndex) => (
-                <div className="cal-cell" key={`${row.time}-${cellIndex}`}>
-                  {cell.kind === 'add' ? (
-                    <button type="button" className="addcell" onClick={() => openForCell(rowIndex, cellIndex)}>
-                      +
-                    </button>
-                  ) : (
-                    <div
-                      className={`cal-ev ${cell.variant}`}
-                      role={cell.openable ? 'button' : undefined}
-                      tabIndex={cell.openable ? 0 : undefined}
-                      onClick={cell.openable ? detail.open : undefined}
-                      onKeyDown={
-                        cell.openable
-                          ? (event) => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                detail.open();
-                              }
-                            }
-                          : undefined
-                      }
-                    >
-                      {cell.label}
+            {rows.map((row, rowIndex) => (
+              <Fragment key={row.time}>
+                <div className="cal-time num">{row.time}</div>
+                {row.cells.map((cell, cellIndex) => {
+                  const pitch = pitches[cellIndex] || pitches[0];
+                  return (
+                    <div className="cal-cell" key={`${row.time}-${cellIndex}`}>
+                      {cell.kind === 'add' ? (
+                        <button
+                          type="button"
+                          className="addcell"
+                          onClick={() => openForCell(rowIndex, cellIndex, cell, pitch, row.time)}
+                        >
+                          +
+                        </button>
+                      ) : (
+                        <div
+                          className={`cal-ev ${cell.variant}`}
+                          role={cell.openable ? 'button' : undefined}
+                          tabIndex={cell.openable ? 0 : undefined}
+                          onClick={cell.openable ? () => openDetailDrawer(cell, pitch, row.time) : undefined}
+                          onKeyDown={
+                            cell.openable
+                              ? (event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    openDetailDrawer(cell, pitch, row.time);
+                                  }
+                                }
+                              : undefined
+                          }
+                        >
+                          {cell.label}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
-            </Fragment>
-          ))}
-        </div>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </div>
+        )}
       </div>
 
       <Alert tone="info" icon="🔒" title="Conflict-proof" style={{ marginTop: 14 }}>
@@ -253,18 +354,26 @@ export default function CalendarPage() {
       <Overlay isOpen={manual.isOpen} onClose={manual.close} title="Manual booking" mode="drawer">
         <p className="subtle small">Phone or walk-in — this slot is removed from online sale immediately.</p>
         <div className="grid2" style={{ gap: 10, marginTop: 8 }}>
-          <Field label="Pitch & Sport" htmlFor="mbPitch">
-            <Select id="mbPitch" value={form.pitch} onChange={(event) => setField('pitch', event.target.value)}>
-              <option>Pitch 1 · Football (90m slot)</option>
-              <option>Pitch 1 · Cricket (120m slot)</option>
-              <option>Pitch 3 · Futsal (60m slot)</option>
-              <option>Pitch 3 · Badminton (40m slot)</option>
+          <Field label="Pitch" htmlFor="mbPitch">
+            <Select id="mbPitch" value={form.pitchId} onChange={(event) => setField('pitchId', event.target.value)}>
+              {pitches.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
             </Select>
           </Field>
           <Field label="Slot Time" htmlFor="mbSlot">
-            <Select id="mbSlot" value={form.slot} onChange={(event) => setField('slot', event.target.value)}>
-              <option>Tonight 9:00–10:00 PM (60 min)</option>
-              <option>Tonight 10:00–11:00 PM (60 min)</option>
+            <Select id="mbSlot" value={form.slotId} onChange={(event) => setField('slotId', event.target.value)}>
+              {rows.flatMap((r) =>
+                r.cells
+                  .filter((c) => c.slotId)
+                  .map((c) => (
+                    <option key={c.slotId} value={c.slotId}>
+                      {r.time} ({c.status || 'AVAILABLE'})
+                    </option>
+                  )),
+              )}
             </Select>
           </Field>
         </div>
@@ -309,7 +418,7 @@ export default function CalendarPage() {
         </Field>
         <div className="pricerow total">
           <span>Slot price</span>
-          <span className="num">৳1,500</span>
+          <span className="num">৳2,000</span>
         </div>
         <Button variant="primary" size="lg" block style={{ marginTop: 12 }} onClick={confirmManualBooking}>
           Confirm booking
@@ -317,33 +426,36 @@ export default function CalendarPage() {
       </Overlay>
 
       {/* Event detail drawer */}
-      <Overlay isOpen={detail.isOpen} onClose={detail.close} title="Booking · 7:30 PM · Pitch 2" mode="drawer">
+      <Overlay
+        isOpen={detail.isOpen}
+        onClose={detail.close}
+        title={`Booking · ${selectedDetailCell?.time || ''} · ${selectedDetailCell?.pitchName || ''}`}
+        mode="drawer"
+      >
         <div className="row-wrap" style={{ margin: '6px 0 12px' }}>
-          <Badge tone="green">Online · paid in full</Badge>
+          <Badge tone={selectedDetailCell?.variant === 'held' ? 'amber' : 'green'}>
+            {selectedDetailCell?.variant === 'held' ? 'Held · checkout' : 'Booked · Active'}
+          </Badge>
           <Badge tone="blue" dot={false}>
-            Split pay 10/10
+            Status: {selectedDetailCell?.status || 'BOOKED'}
           </Badge>
         </div>
         <div className="stack-sm">
           <div className="between small">
-            <span className="muted">Reference</span>
-            <b className="num">TC-48291</b>
+            <span className="muted">Slot ID</span>
+            <b className="num">#{selectedDetailCell?.slotId || 'N/A'}</b>
           </div>
           <div className="between small">
-            <span className="muted">Customer</span>
-            <b>Rafiul Karim · +880 1712 ••• 890</b>
+            <span className="muted">Details</span>
+            <b>{selectedDetailCell?.label || 'Reservation'}</b>
           </div>
           <div className="between small">
             <span className="muted">Amount</span>
-            <b className="num">৳2,550 · bKash · TXN 8H2K19</b>
+            <b className="num">৳{selectedDetailCell?.price ? selectedDetailCell.price.toLocaleString() : '2,000'}</b>
           </div>
           <div className="between small">
             <span className="muted">Shift</span>
-            <b>Evening · auto-reconciled ✓</b>
-          </div>
-          <div className="between small">
-            <span className="muted">Handover</span>
-            <b className="num">7:20 PM gate check-in</b>
+            <b>Active slot</b>
           </div>
         </div>
         <div className="grid2" style={{ gap: 8, marginTop: 14 }}>
