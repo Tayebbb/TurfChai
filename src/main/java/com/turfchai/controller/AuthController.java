@@ -45,4 +45,9 @@ public class AuthController {
     public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody OtpVerifyRequest request) {
         return ResponseEntity.ok(authService.verifyOtp(request));
     }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<java.util.Map<String, Boolean>> checkEmail(@RequestParam String email) {
+        return ResponseEntity.ok(java.util.Map.of("exists", authService.checkEmail(email)));
+    }
 }

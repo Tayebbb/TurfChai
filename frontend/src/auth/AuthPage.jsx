@@ -7,7 +7,7 @@ import { Field, Input } from '@/components/forms/Field';
 import { Tabs, TabPanel } from '@/components/navigation/Tabs';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
-import { login, register } from '@/api/auth';
+import { login, register, checkEmail } from '@/api/auth';
 import { setSession } from '@/api/client';
 
 const ROLE_TO_API = { player: 'PLAYER', owner: 'OWNER', admin: 'ADMIN' };
@@ -95,9 +95,21 @@ export default function AuthPage() {
     setIsSubmitting(true);
 
     if (role === 'owner') {
-      navigate(paths.owner.onboarding, {
-        state: { fullName, signupEmail, signupPassword }
-      });
+      try {
+        const emailCheck = await checkEmail(signupEmail);
+        if (emailCheck?.exists) {
+          showToast('An account with this email already exists. Please sign in instead.');
+          setIsSubmitting(false);
+          return;
+        }
+        navigate(paths.owner.onboarding, {
+          state: { fullName, signupEmail, signupPassword }
+        });
+      } catch (err) {
+        handleApiError(err);
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 

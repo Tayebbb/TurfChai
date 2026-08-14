@@ -20,6 +20,11 @@ export function verifyOtp(payload) {
   return api('/auth/otp/verify', { method: 'POST', body: payload, token: false });
 }
 
+/** Check if an email is already registered. */
+export function checkEmail(email) {
+  return api(`/auth/check-email?email=${encodeURIComponent(email)}`, { token: false });
+}
+
 /** Fetch the currently authenticated user. */
 export function getMe() {
   return api('/me');
