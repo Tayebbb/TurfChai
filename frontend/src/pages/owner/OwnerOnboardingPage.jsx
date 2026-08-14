@@ -25,7 +25,7 @@ import {
   uploadTurfDoc,
 } from '@/api/turfRequests';
 
-import { createVenue } from '@/api/ownerVenues';
+
 import { register, login } from '@/api/auth';
 import { setSession } from '@/api/client';
 import { useLocation } from 'react-router-dom';
@@ -86,16 +86,14 @@ const VENUE_PITCHES = '3 pitches (custom slot times per sport)';
 export default function OwnerOnboardingPage() {
   const { showToast } = useToast();
   const submitted = useDisclosure();
-  const { data: myRequests, refetch: refetchRequests } = useApi(getMyTurfRequests, []);
+  const { data: myRequests } = useApi(getMyTurfRequests, []);
   
   const routerLocation = useLocation();
   const authState = routerLocation.state || null;
 
   const [step, setStep] = useState('owner');
 
-  // Fallback contact info since form is simple
-  const [contactPhone, setContactPhone] = useState('+8801700000000');
-  const [contactEmail, setContactEmail] = useState('owner@example.com');
+
 
   const [ownerName, setOwnerName] = useState(authState?.fullName || '');
   const [ownerPhone, setOwnerPhone] = useState('');
@@ -223,7 +221,6 @@ export default function OwnerOnboardingPage() {
       return;
     }
 
-    const finalAddr = location.address.trim();
 
     setSaving(true);
     try {

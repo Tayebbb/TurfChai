@@ -136,6 +136,9 @@ export default function CalendarPage() {
   }
 
 
+  function setField(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
   function openForCell(rowIndex, cellIndex, cell, pitch, rowTime) {
     setTargetCell({ rowIndex, cellIndex, slotId: cell?.slotId, pitchName: pitch?.name, time: rowTime });
     setForm((prev) => ({
@@ -198,11 +201,7 @@ export default function CalendarPage() {
     refreshCalendar();
   }
 
-  function goNextDay() {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
-    setSelectedDate(d);
-  }
+
 
 
   return (
