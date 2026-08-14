@@ -99,8 +99,10 @@ function toGameCardModel(game) {
 export default function HomePage() {
   const [mode, setMode] = useQueryParam('mode', 'player');
   const me = useApi(() => getMyProfile(), []);
-  const player = me.data;
-  const firstName = player?.fullName?.split(/\s+/)[0];
+  const localUser = getUser();
+  const fullName = localUser?.fullName || me.data?.fullName;
+  const player = me.data ? { ...me.data, fullName: fullName || me.data.fullName } : localUser;
+  const firstName = fullName?.split(/\s+/)[0];
 
   return (
     <>

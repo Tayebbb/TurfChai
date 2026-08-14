@@ -117,7 +117,7 @@ export default function AuthPage() {
     <>
       <PageTitle title="Authentication — TurfChai" />
 
-      <div className="wrap-form" style={{ paddingTop: 36, paddingBottom: 64, maxWidth: 480, margin: '0 auto' }}>
+      <div className="wrap-form" style={{ paddingTop: 36, paddingBottom: 64 }}>
         {/* Main Card Container */}
         <Card style={{ padding: 24, borderRadius: 20 }}>
           {/* Sign In vs Create Account Tabs */}

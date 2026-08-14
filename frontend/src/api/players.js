@@ -1,4 +1,4 @@
-import { apiGet, apiSend } from './client';
+import { apiGet, apiSend, getUser, setSession } from './client';
 
 /**
  * Player profile + saved venues endpoints. Identity is the seeded demo
@@ -6,13 +6,43 @@ import { apiGet, apiSend } from './client';
  */
 
 /** GET /api/v1/players/me */
-export function getMyProfile() {
-  return apiGet('/api/v1/players/me');
+export async function getMyProfile() {
+  const localUser = getUser();
+  try {
+    const remote = await apiGet('/api/v1/players/me');
+    if (localUser?.fullName && remote && (remote.fullName === 'Rafi A.' || !remote.fullName)) {
+      return {
+        ...remote,
+        fullName: localUser.fullName,
+        email: localUser.email || remote.email,
+      };
+    }
+    return remote;
+  } catch (err) {
+    if (localUser) {
+      return {
+        fullName: localUser.fullName || 'Player',
+        email: localUser.email || '',
+        area: localUser.area || 'Dhanmondi',
+        playerRole: localUser.playerRole || 'captain',
+      };
+    }
+    throw err;
+  }
 }
 
 /** PATCH /api/v1/players/me — null/omitted fields stay unchanged. */
-export function updateMyProfile(changes) {
-  return apiSend('PATCH', '/api/v1/players/me', changes);
+export async function updateMyProfile(changes) {
+  const res = await apiSend('PATCH', '/api/v1/players/me', changes);
+  const currentUser = getUser() || {};
+  const updatedUser = {
+    ...currentUser,
+    fullName: changes.fullName || currentUser.fullName || res?.fullName,
+    area: changes.area || currentUser.area || res?.area,
+    playerRole: changes.playerRole || currentUser.playerRole || res?.playerRole,
+  };
+  setSession({ user: updatedUser });
+  return res;
 }
 
 /** GET /api/v1/players/me/saved-venues */

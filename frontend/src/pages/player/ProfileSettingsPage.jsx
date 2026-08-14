@@ -67,14 +67,14 @@ function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reload
   const completion = profileCompletion(initial);
 
   const initials =
-    initial.avatarInitials ||
-    (initial.fullName ?? '')
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('') ||
-    '·';
+    (fullName ?? '').split(/\s+/).filter(Boolean).length === 1
+      ? (fullName ?? '').trim().slice(0, 2).toUpperCase()
+      : (fullName ?? '')
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0]?.toUpperCase())
+          .join('') || '·';
 
   const dirty = useMemo(() => {
     const sameSet = (set, list) =>
