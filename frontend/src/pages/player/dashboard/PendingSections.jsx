@@ -1,32 +1,58 @@
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/buttons/Button';
+import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Panel';
 import { paths } from '@/routes/paths';
+import { listBookings, formatBookingDate, formatTimeRange } from '@/api/bookings';
 import { getNotifications, markAllRead } from '@/api/notifications';
 import { useApi } from '@/hooks/useApi';
-import { DashHeader, ServicePending } from './DashboardKit';
-
-/**
- * Sections whose backing service does not exist yet. They state exactly which
- * endpoint is missing rather than rendering invented bookings, payments or
- * notifications — fake data here would be indistinguishable from real data.
- */
+import { DashCard, DashEmpty, DashError, DashHeader, DashSkeleton, ServicePending } from './DashboardKit';
 
 export function BookingsSection() {
+  const { data: bookings, loading, error, reload } = useApi(listBookings, []);
+  const bookingList = Array.isArray(bookings) ? bookings : [];
+
   return (
     <>
       <DashHeader title="My bookings" subtitle="Upcoming, past and cancelled turf bookings." />
-      <ServicePending
-        icon="📅"
-        title="Bookings aren’t connected yet"
-        description="Slot availability, reservations, invoices and cancellations all come from the booking service, which is still being built."
-        endpoints={['GET /api/v1/bookings', 'POST /api/v1/bookings', 'DELETE /api/v1/bookings/{id}']}
-        owner="booking engine"
-        cta={
-          <Button size="sm" to={paths.player.explore}>
-            Browse venues meanwhile
-          </Button>
-        }
-      />
+
+      {loading ? (
+        <DashSkeleton rows={3} />
+      ) : error ? (
+        <DashError message="Could not load your bookings." onRetry={reload} />
+      ) : bookingList.length === 0 ? (
+        <DashEmpty
+          icon="📅"
+          title="No bookings yet"
+          actions={
+            <Button size="sm" to={paths.player.explore}>
+              Explore turfs & book a slot
+            </Button>
+          }
+        >
+          When you book pitches across Dhaka, your slot details, confirmation codes and check-in QR codes will appear here.
+        </DashEmpty>
+      ) : (
+        <div className="dash-rows">
+          {bookingList.map((booking) => (
+            <Link
+              key={booking.id || booking.referenceCode}
+              className="dash-row"
+              to={paths.player.booking(booking.id || booking.referenceCode)}
+            >
+              <div className="dash-row-main">
+                <b>{booking.venueName || 'Turf Booking'}</b>
+                <span>
+                  {formatBookingDate(booking)} · {formatTimeRange(booking.startTime, booking.endTime)}
+                </span>
+              </div>
+              <Badge tone={booking.status === 'CONFIRMED' ? 'green' : 'gray'}>
+                {booking.status || 'CONFIRMED'}
+              </Badge>
+            </Link>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -34,12 +60,11 @@ export function BookingsSection() {
 export function TeamsSection() {
   return (
     <>
-      <DashHeader title="My teams" subtitle="Teams you own, teams you’ve joined and invitations." />
+      <DashHeader title="My teams" subtitle="Teams you own, teams you’ve joined and squad invites." />
       <ServicePending
         icon="👥"
-        title="Teams aren’t connected yet"
-        description="Persistent squads, rosters, invitations and team statistics need the team service. Tournament squads you register are shown under Tournaments."
-        endpoints={['GET /api/v1/teams', 'POST /api/v1/teams', 'GET /api/v1/teams/invitations']}
+        title="Teams & Squads"
+        description="Build persistent team squads, invite players, manage pitch rosters, and track win streaks."
         cta={
           <Button size="sm" to={paths.player.dashboard.tournaments}>
             See tournament squads
@@ -55,13 +80,12 @@ export function NetworkSection() {
     <>
       <DashHeader
         title="Player network"
-        subtitle="People you’ve played with, and who to invite next."
+        subtitle="People you’ve played with and who to invite next."
       />
       <ServicePending
         icon="🤝"
-        title="Your network isn’t connected yet"
-        description="Recently-played-with players are derived from completed matches, so this needs both the booking service and the open-games attendance records."
-        endpoints={['GET /api/v1/players/me/network', 'GET /api/v1/bookings/{id}/participants']}
+        title="Player Network"
+        description="Connect with recently-played teammates, view match attendance records, and invite players to your next game."
         cta={
           <Button size="sm" to={paths.solo.openGames}>
             Find open games
@@ -78,9 +102,13 @@ export function StatsSection() {
       <DashHeader title="Statistics" subtitle="Matches, hours played, streaks and win rate." />
       <ServicePending
         icon="📈"
-        title="Statistics aren’t available yet"
-        description="Every figure here is aggregated from completed bookings and match results, so the charts stay empty until those services land. Your reliability score is already on your profile."
-        endpoints={['GET /api/v1/players/me/stats']}
+        title="Player Statistics"
+        description="Track your completed matches, total play time, attendance reliability, and performance metrics across all Dhaka venues."
+        cta={
+          <Button size="sm" to={paths.player.explore}>
+            Explore turfs
+          </Button>
+        }
       />
     </>
   );
@@ -92,10 +120,13 @@ export function WalletSection() {
       <DashHeader title="Wallet & payments" subtitle="Transactions, refunds and invoices." />
       <ServicePending
         icon="৳"
-        title="Payments aren’t connected yet"
-        description="Balances, transaction history, refunds and downloadable invoices all come from the payments service. Tournament entry fees currently show as due and are settled with the organiser."
-        endpoints={['GET /api/v1/payments', 'GET /api/v1/payments/{id}/invoice', 'GET /api/v1/wallet']}
-        owner="payments module"
+        title="Wallet & Payment History"
+        description="View your digital pitch receipts, split-payment breakdowns, transaction histories, and active refunds."
+        cta={
+          <Button size="sm" to={paths.player.explore}>
+            Explore venues
+          </Button>
+        }
       />
     </>
   );
@@ -125,15 +156,17 @@ export function NotificationsSection() {
           </button>
         ) : null}
       />
-      {loading && <div style={{padding:40}} className="center">Loading notifications...</div>}
-      {error && <div style={{padding:40, color:'var(--danger)'}} className="center">Failed to load notifications</div>}
+      {loading && <div style={{ padding: 40 }} className="center">Loading notifications...</div>}
+      {error && <div style={{ padding: 40, color: 'var(--danger)' }} className="center">Failed to load notifications</div>}
       
       {!loading && !error && notificationsList.length === 0 ? (
-        <ServicePending
-          icon="🔔"
-          title="All caught up!"
-          description="You don't have any notifications right now."
-        />
+        <DashCard>
+          <DashEmpty
+            icon="🔔"
+            title="All caught up!"
+            description="You don't have any notifications right now."
+          />
+        </DashCard>
       ) : (
         <div className="stack-sm">
           {notificationsList.map((item) => (
