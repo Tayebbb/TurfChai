@@ -80,6 +80,7 @@ public class VenueManagementService {
         venue.setArea(req.area());
         venue.setLat(req.lat());
         venue.setLng(req.lng());
+        venue.setBasePrice(req.basePrice() != null ? req.basePrice() : new java.math.BigDecimal("1000.00"));
         venue.setOpenTime(parseTime(req.openTime()));
         venue.setCloseTime(parseTime(req.closeTime()));
         venue.setAmenities(req.amenities());
@@ -90,6 +91,7 @@ public class VenueManagementService {
         venue.setAllowSplitPayment(req.allowSplitPayment() != null ? req.allowSplitPayment() : true);
         venue.setRules(req.rules());
         venue.setPhotos(req.photos() != null ? String.join(",", req.photos()) : "");
+        venue.setMlPricingEnabled(req.mlPricingEnabled() != null ? req.mlPricingEnabled() : true);
         venue.setStatus("DRAFT");
 
         Venue saved = venueRepository.save(venue);
@@ -133,6 +135,7 @@ public class VenueManagementService {
         if (req.hasPromotion() != null) venue.setHasPromotion(req.hasPromotion());
         if (req.promotionLabel() != null) venue.setPromotionLabel(req.promotionLabel());
         if (req.photos() != null) venue.setPhotos(String.join(",", req.photos()));
+        if (req.mlPricingEnabled() != null) venue.setMlPricingEnabled(req.mlPricingEnabled());
 
         return toDto(venueRepository.save(venue));
     }
@@ -249,6 +252,13 @@ public class VenueManagementService {
 
     // ── Helpers ────────────────────────────────────────────────────────────
 
+    /** Dedicated method to just toggle ML Pricing */
+    public VenueManagementDto updateMlSettings(Long ownerUserId, Long venueId, boolean mlPricingEnabled) {
+        Venue venue = requireOwnership(ownerUserId, venueId);
+        venue.setMlPricingEnabled(mlPricingEnabled);
+        return toDto(venueRepository.save(venue));
+    }
+
     private Venue requireOwnership(Long ownerUserId, Long venueId) {
         Venue venue = venueRepository.findById(venueId)
                 .orElseThrow(() -> new IllegalArgumentException("Venue not found: " + venueId));
@@ -303,7 +313,7 @@ public class VenueManagementService {
                 v.getContactPhone(), v.getContactEmail(),
                 v.getDepositPolicy(), v.getCancelPolicy(), v.isAllowSplitPayment(),
                 v.isVerified(), v.isTournamentReady(), v.isHasPromotion(), v.getPromotionLabel(),
-                photos, pitches, rules
+                v.isMlPricingEnabled(), photos, pitches, rules
         );
     }
 

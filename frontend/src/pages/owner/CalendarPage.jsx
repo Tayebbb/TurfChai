@@ -16,16 +16,10 @@ import {
 } from '@/api/ownerVenues';
 
 const LEGEND = [
-  { id: 'online', label: 'Online', swatch: 'var(--brand)' },
-  { id: 'phone', label: 'Phone', swatch: 'var(--warn)' },
-  { id: 'walkin', label: 'Walk-in', swatch: 'var(--info)' },
-  { id: 'tournament', label: 'Tournament', swatch: '#8B5CF6' },
-  { id: 'blocked', label: 'Blocked', swatch: 'var(--text-3)' },
-  {
-    id: 'held',
-    label: 'Held',
-    swatch: 'repeating-linear-gradient(45deg,var(--warn),var(--warn) 3px,transparent 3px,transparent 6px)',
-  },
+  { id: 'AVAILABLE', label: 'Available', swatch: 'var(--success)' },
+  { id: 'BOOKED', label: 'Booked', swatch: 'var(--brand)' },
+  { id: 'HELD', label: 'Held', swatch: 'repeating-linear-gradient(45deg,var(--warn),var(--warn) 3px,transparent 3px,transparent 6px)' },
+  { id: 'BLOCKED', label: 'Blocked', swatch: 'var(--text-3)' },
 ];
 
 const SMALL_BADGE = { fontSize: 10, padding: '2px 6px' };
@@ -63,8 +57,8 @@ const BLANK_FORM = {
 
 export default function CalendarPage() {
   const { showToast } = useToast();
-  const manual = useDisclosure(false);
   const detail = useDisclosure(false);
+  const manual = useDisclosure(false); // Used for editing slots now
 
   const [date, setDate] = useState(() => new Date());
   const [venues, setVenues] = useState([]);
@@ -141,9 +135,6 @@ export default function CalendarPage() {
     });
   }
 
-  function setField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
 
   function openForCell(rowIndex, cellIndex, cell, pitch, rowTime) {
     setTargetCell({ rowIndex, cellIndex, slotId: cell?.slotId, pitchName: pitch?.name, time: rowTime });
@@ -207,6 +198,13 @@ export default function CalendarPage() {
     refreshCalendar();
   }
 
+  function goNextDay() {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d);
+  }
+
+
   return (
     <>
       <PageTitle title="Calendar" />
@@ -214,7 +212,7 @@ export default function CalendarPage() {
       <div className="main-header">
         <div>
           <h1>Calendar</h1>
-          <span className="subtle small">Every booking — online, phone &amp; walk-in — in one place</span>
+          <span className="subtle small">View and manage your slots</span>
         </div>
         <div className="row">
           {venues.length > 1 && (
@@ -231,12 +229,8 @@ export default function CalendarPage() {
             </Select>
           )}
           <div className="seg" role="group" aria-label="View">
-            <button type="button" className="on">
-              Day
-            </button>
-            <button type="button" onClick={() => showToast('Week view (concept)')}>
-              Week
-            </button>
+            <button type="button" className="on">Day</button>
+            <button type="button" onClick={() => showToast('Week view (concept)')}>Week</button>
           </div>
           <Button onClick={handleBlockSlot}>⛔ Block slot</Button>
           <Button
@@ -344,11 +338,6 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
-
-      <Alert tone="info" icon="🔒" title="Conflict-proof" style={{ marginTop: 14 }}>
-        Online slots lock during checkout (striped = held), and manual entries instantly block online booking for
-        that slot — double-booking is impossible.
-      </Alert>
 
       {/* Manual booking drawer */}
       <Overlay isOpen={manual.isOpen} onClose={manual.close} title="Manual booking" mode="drawer">

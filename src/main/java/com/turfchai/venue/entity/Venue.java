@@ -85,6 +85,15 @@ public class Venue {
     @Column(precision = 10, scale = 7)
     private BigDecimal lng;
 
+    /** Owner-defined base price in BDT. The ML multiplier is applied on top. */
+    @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal basePrice = new BigDecimal("1000.00");
+
+    @Column(name = "is_ml_pricing_enabled", nullable = false)
+    @Builder.Default
+    private boolean mlPricingEnabled = true;
+
     // ── Reputation (maintained by triggers / review service) ──────────────
 
     @Column(name = "rating_avg", nullable = false, precision = 3, scale = 2)

@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.transaction.annotation.Transactional;
+
 /**
  * Booking engine REST API. Every endpoint resolves the caller from the JWT
  * security principal, so the routes live under {@code /api/v1/bookings/**},

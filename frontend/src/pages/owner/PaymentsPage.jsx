@@ -17,47 +17,6 @@ import { useApi } from '@/hooks/useApi';
 import { fetchOwnerPayments, closeOwnerShift, getInvoiceUrl, getCsvExportUrl } from '@/api/ownerPayments';
 import { paths } from '@/routes/paths';
 
-/* ═══ API-Ready mock data: sport × timeframe ═══ */
-const TF_LABELS = {
-  daily: ['2 Aug', '3 Aug', '4 Aug', '5 Aug', '6 Aug', '7 Aug', '8 Aug'],
-  weekly: ['W22', 'W23', 'W24', 'W25', 'W26', 'W27', 'W28', 'W29', 'W30', 'W31', 'W32', 'W33', 'W34', 'W35'],
-  monthly: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
-  yearly: ['2022', '2023', '2024', '2025', '2026'],
-};
-
-const CHART_DATA = {
-  football: {
-    daily: [6200, 8400, 4100, 10200, 9800, 7600, 8900],
-    weekly: [42000, 49800, 45600, 54200, 51800, 47400, 56700, 60300, 53500, 50600, 58300, 61800, 55000, 59400],
-    monthly: [156000, 171000, 163000, 189000, 170000, 157000, 195000, 207000, 187000, 216000, 229000, 245000],
-    yearly: [980000, 1240000, 1650000, 2060000, 2368000],
-  },
-  cricket: {
-    daily: [3800, 4200, 3100, 5000, 4800, 3900, 4500],
-    weekly: [22000, 25600, 23800, 28400, 26900, 24800, 29400, 31200, 27800, 26200, 30100, 32000, 28500, 30800],
-    monthly: [78000, 85600, 81400, 94200, 84600, 78200, 97000, 103000, 93300, 107800, 114000, 121800],
-    yearly: [520000, 658000, 876000, 1094000, 1218000],
-  },
-  badminton: {
-    daily: [2400, 3200, 2000, 3400, 3200, 2700, 2965],
-    weekly: [14500, 16900, 15700, 18600, 17700, 16500, 19500, 20900, 18500, 17500, 20300, 21400, 19000, 20600],
-    monthly: [51000, 55400, 53600, 61800, 55400, 51800, 64000, 68000, 61700, 71200, 75000, 80000],
-    yearly: [350000, 442000, 594000, 736000, 882000],
-  },
-  futsal: {
-    daily: [1800, 2100, 1400, 2600, 2400, 1900, 2200],
-    weekly: [11200, 13400, 12200, 14800, 14100, 12900, 15300, 16500, 14600, 13800, 15900, 16800, 14900, 16200],
-    monthly: [38000, 41200, 39800, 46000, 41200, 38600, 47600, 50600, 45900, 53000, 55800, 59500],
-    yearly: [260000, 328000, 441000, 547000, 595000],
-  },
-  volleyball: {
-    daily: [1200, 1500, 900, 1800, 1700, 1300, 1600],
-    weekly: [8400, 9900, 9100, 10800, 10300, 9400, 11200, 11900, 10600, 10000, 11500, 12200, 10800, 11700],
-    monthly: [28500, 31200, 29700, 34400, 30900, 28600, 35500, 37700, 34200, 39500, 41800, 44600],
-    yearly: [195000, 246000, 327000, 409000, 468000],
-  },
-};
-
 const TIMEFRAMES = [
   { id: 'daily', label: 'Daily (7 Days)' },
   { id: 'weekly', label: 'Weekly (14 Weeks)' },
@@ -65,119 +24,9 @@ const TIMEFRAMES = [
   { id: 'yearly', label: 'Yearly (5 Years)' },
 ];
 
-const KPIS = [
-  { label: 'Gross today', value: '৳19,750', delta: '14 transactions' },
-  { label: 'Platform fees', value: '−৳1,185', delta: '6% on online only' },
-  { label: 'Refunds', value: '−৳2,200', delta: '1 cancellation', trend: 'down' },
-  { label: 'Net to you', value: '৳16,365', delta: 'Settles Mon 11 Aug', trend: 'up', valueColor: 'var(--brand-600)' },
-];
-
 const METHOD_FILTERS = ['Today', 'bKash', 'Nagad', 'Cash', 'Card', 'Refunds', 'Unmatched'];
 
 const DANGER = { color: 'var(--danger)' };
-
-const LEDGER = [
-  {
-    id: 'tc-48291',
-    time: '6:12 PM',
-    booking: 'TC-48291',
-    customer: 'Rafiul Karim',
-    method: 'bKash · ',
-    txn: '8H2K19',
-    gross: '৳2,550',
-    fee: '−৳153',
-    net: '৳2,397',
-    status: { tone: 'green', text: 'Reconciled ✓' },
-    shift: 'Evening · Online',
-  },
-  {
-    id: 'og-7734',
-    time: '5:47 PM',
-    booking: 'OG-7734',
-    customer: 'Open game (10 shares)',
-    method: 'bKash / Nagad mix',
-    gross: '৳2,800',
-    fee: '−৳168',
-    net: '৳2,632',
-    status: { tone: 'green', text: 'Reconciled ✓' },
-    shift: 'Evening · Online',
-  },
-  {
-    id: 'tc-48277',
-    time: '4:02 PM',
-    booking: 'TC-48277',
-    customer: 'Tanvir Ahmed',
-    method: 'Card · Visa •••4412',
-    gross: '৳2,500',
-    fee: '−৳150',
-    net: '৳2,350',
-    status: { tone: 'green', text: 'Reconciled ✓' },
-    shift: 'Evening · Online',
-  },
-  {
-    id: 'tc-48288',
-    time: '3:05 PM',
-    booking: 'TC-48288',
-    customer: 'Walk-in customer',
-    method: 'Cash',
-    gross: '৳1,700',
-    fee: '—',
-    net: '৳1,700',
-    status: { tone: 'green', text: 'Logged by Sumon' },
-    shift: 'Afternoon · Walk-in',
-  },
-  {
-    id: 'tc-48285',
-    time: '1:22 PM',
-    booking: 'TC-48285',
-    customer: 'Karim Traders XI',
-    method: 'Nagad · ',
-    txn: 'N7761',
-    gross: '৳765',
-    fee: '−৳46',
-    net: '৳719',
-    status: { tone: 'amber', text: 'Deposit · ৳1,785 due' },
-    shift: 'Afternoon · Phone',
-  },
-  {
-    id: 'tc-48102',
-    time: '11:40 AM',
-    booking: 'TC-48102',
-    customer: 'Sadia Rahman',
-    method: 'bKash refund · ',
-    txn: 'R-2210',
-    gross: '−৳2,200',
-    grossStyle: DANGER,
-    fee: '+৳132',
-    net: '−৳2,068',
-    netStyle: DANGER,
-    status: { tone: 'blue', text: 'Refund sent' },
-    shift: 'Morning · Online',
-  },
-  {
-    id: 'unmatched',
-    time: '10:15 AM',
-    booking: '—',
-    customer: 'Unknown sender',
-    method: 'bKash · ',
-    txn: '5T9Q02',
-    gross: '৳1,700',
-    fee: '—',
-    net: '৳1,700',
-    status: { tone: 'amber', text: 'Unmatched' },
-    rowStyle: { background: 'var(--warn-soft)' },
-    shiftAction: { label: 'Match…', toast: 'Matched to TC-48293 deposit ✓' },
-  },
-];
-
-
-const METHOD_SPLIT = [
-  { id: 'bkash', label: 'bKash', value: '54% · ৳2,41,300', width: '54%' },
-  { id: 'cash', label: 'Cash', value: '21% · ৳93,800', width: '21%', color: 'var(--info)' },
-  { id: 'nagad', label: 'Nagad', value: '15% · ৳67,000', width: '15%', color: 'var(--warn)' },
-  { id: 'card', label: 'Card', value: '10% · ৳44,700', width: '10%', color: '#8B5CF6' },
-];
-
 
 const SPORT_FILTERS = [
   { id: 'all', label: 'All Sports' },
@@ -185,78 +34,6 @@ const SPORT_FILTERS = [
   { id: 'Cricket', label: '🏏 Cricket' },
   { id: 'Futsal', label: '🥅 Futsal' },
   { id: 'Badminton', label: '🏸 Badminton' },
-];
-
-
-const SPORT_REPORT = [
-  {
-    sport: 'Football',
-    title: '⚽ Football',
-    occ: { tone: 'blue', text: '88% Occ.' },
-    booked: '42 slots · ৳92,400',
-    missed: '5 slots · −৳11,000',
-    bar: { width: '88%' },
-    cta: 'View 5 missed slots →',
-    missedCount: '5 slots',
-    missedLoss: '৳11,000',
-    items: [
-      'Tue 2:00–3:30 PM (Off-peak unbooked)',
-      'Wed 10:00–11:30 AM (Rainy morning)',
-      'Thu 4:00–5:30 PM (Late cancellation)',
-      'Fri 1:00–2:30 PM (Jumma time window)',
-      'Sun 2:00–3:30 PM (Off-peak unbooked)',
-    ],
-  },
-  {
-    sport: 'Cricket',
-    title: '🏏 Cricket',
-    occ: { tone: 'amber', text: '94% Occ.' },
-    booked: '16 slots · ৳48,000',
-    missed: '1 slot · −৳3,000',
-    bar: { width: '94%', background: 'var(--warn)' },
-    cta: 'View 1 missed slot →',
-    missedCount: '1 slot',
-    missedLoss: '৳3,000',
-    items: ['Monday 10:00 AM–12:00 PM (Off-peak weekday)'],
-  },
-  {
-    sport: 'Futsal',
-    title: '🥅 Futsal',
-    occ: { tone: 'green', text: '76% Occ.' },
-    booked: '35 slots · ৳52,500',
-    missed: '8 slots · −৳12,000',
-    bar: { width: '76%', background: 'var(--success)' },
-    cta: 'View 8 missed slots →',
-    missedCount: '8 slots',
-    missedLoss: '৳12,000',
-    items: [
-      'Mon 2:00 PM (Unfilled)',
-      'Mon 3:00 PM (Unfilled)',
-      'Tue 1:00 PM (Off-peak)',
-      'Tue 2:00 PM (Off-peak)',
-      'Wed 11:00 AM (Unfilled)',
-      'Wed 12:00 PM (Unfilled)',
-      'Thu 2:00 PM (Off-peak)',
-      'Sun 1:00 PM (Unfilled)',
-    ],
-  },
-  {
-    sport: 'Badminton',
-    title: '🏸 Badminton',
-    occ: { tone: '', style: { background: 'var(--info-soft)', color: 'var(--info)' }, text: '82% Occ.' },
-    booked: '24 slots · ৳24,000',
-    missed: '4 slots · −৳4,000',
-    bar: { width: '82%', background: 'var(--info)' },
-    cta: 'View 4 missed slots →',
-    missedCount: '4 slots',
-    missedLoss: '৳4,000',
-    items: [
-      'Tue 11:00 AM (Unbooked)',
-      'Wed 10:00 AM (Unbooked)',
-      'Thu 11:20 AM (No-show)',
-      'Sat 1:00 PM (Off-peak)',
-    ],
-  },
 ];
 
 
@@ -311,12 +88,13 @@ export default function PaymentsPage() {
 
   const chartData = useMemo(
     () => ({
-      labels: TF_LABELS[timeframe],
+      labels: chartDataApi.labels || [],
       datasets: selectedSports.map((key) => {
         const sport = SPORTS.find((item) => item.key === key);
+        const data = chartDataApi.datasets?.[key] || [];
         return {
           label: sport.label,
-          data: CHART_DATA[key][timeframe],
+          data,
           borderColor: sport.color,
           backgroundColor: (context) => makeGradient(context, sport.color),
           borderWidth: 2.5,
@@ -330,7 +108,7 @@ export default function PaymentsPage() {
         };
       }),
     }),
-    [timeframe, selectedSports, dark],
+    [chartDataApi, selectedSports, dark],
   );
 
   const chartOptions = useMemo(() => {
@@ -390,7 +168,7 @@ export default function PaymentsPage() {
 
   const allSelected = selectedSports.length === SPORTS.length;
   const visibleSportCards =
-    sportFilter === 'all' ? SPORT_REPORT : SPORT_REPORT.filter((card) => card.sport === sportFilter);
+    sportFilter === 'all' ? sportReport : sportReport.filter((card) => card.sport === sportFilter);
 
   const resolvedKpis = useMemo(() => {
     if (!apiSummary?.kpis) return KPIS;
@@ -616,6 +394,13 @@ export default function PaymentsPage() {
                 </td>
               </tr>
             ))}
+            {ledgers.length === 0 && (
+              <tr>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '24px 0' }}>
+                  No payments found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -656,7 +441,7 @@ export default function PaymentsPage() {
         <section className="card">
           <h3>Reports · this month</h3>
           <div className="stack-sm" style={{ marginTop: 10 }}>
-            {METHOD_SPLIT.map((method) => (
+            {methodSplit.map((method) => (
               <div key={method.id}>
                 <div className="between small">
                   <span className="muted">{method.label}</span>
@@ -667,6 +452,9 @@ export default function PaymentsPage() {
                 </div>
               </div>
             ))}
+            {methodSplit.length === 0 && (
+              <span className="muted small">No data</span>
+            )}
           </div>
           <div className="panel between" style={{ marginTop: 12 }}>
             <div>

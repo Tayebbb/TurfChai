@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Chip } from '@/components/ui/Chip';
-import { adminVenues as fallbackVenues } from '@/data/admin';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { paths } from '@/routes/paths';
 import { listAdminVenues } from '@/api/adminVenues';
@@ -42,7 +41,7 @@ export default function TurfsPage() {
         pitches: v.pitches?.length || 2,
       }));
     }
-    return fallbackVenues;
+    return [];
   }, [apiVenues]);
 
   const filteredVenues = useMemo(() => {

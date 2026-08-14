@@ -145,6 +145,9 @@ export default function GameDetailPage() {
     }
   };
 
+  if (gameApi.loading) return <div className="wrap" style={{ paddingTop: 20 }}>Loading...</div>;
+  if (!game) return <div className="wrap" style={{ paddingTop: 20 }}>Game not found.</div>;
+
   return (
     <>
       <PageTitle title={game.title ?? 'Open game'} />

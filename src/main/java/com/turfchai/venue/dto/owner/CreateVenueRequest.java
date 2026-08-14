@@ -23,6 +23,9 @@ public record CreateVenueRequest(
         BigDecimal lat,
         BigDecimal lng,
 
+        /** Owner-set base price (BDT). The ML multiplier is applied on top. */
+        BigDecimal basePrice,
+
         /** "HH:mm" — daily open time, e.g. "06:00" */
         @NotBlank
         String openTime,
@@ -49,5 +52,8 @@ public record CreateVenueRequest(
         String rules,
 
         /** Photo URLs (Cloudinary) */
-        List<String> photos
+        List<String> photos,
+
+        /** Toggle ML dynamic pricing on/off */
+        Boolean mlPricingEnabled
 ) {}

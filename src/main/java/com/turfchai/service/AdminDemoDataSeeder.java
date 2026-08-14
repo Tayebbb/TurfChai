@@ -224,19 +224,23 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
                     .updatedAt(OffsetDateTime.now())
                     .build());
         }
-        allUsers.add(User.builder()
-                .fullName("Super Admin")
-                .email("superadmin@turfchai.com")
-                .phone("+8801800000099")
-                .passwordHash(hash)
-                .role(RoleType.SUPER_ADMIN)
-                .status("ACTIVE")
-                .area("Dhaka")
-                .avatarInitials("SA")
-                .reliabilityScore(100)
-                .createdAt(OffsetDateTime.now().minusMonths(7))
-                .updatedAt(OffsetDateTime.now())
-                .build());
+        boolean hasSuperAdmin = allUsers.stream().anyMatch(u -> u.getRole() == RoleType.SUPER_ADMIN)
+                || userRepository.findAll().stream().anyMatch(u -> u.getRole() == RoleType.SUPER_ADMIN);
+        if (!hasSuperAdmin) {
+            allUsers.add(User.builder()
+                    .fullName("Super Admin")
+                    .email("superadmin@turfchai.com")
+                    .phone("+8801800000099")
+                    .passwordHash(hash)
+                    .role(RoleType.SUPER_ADMIN)
+                    .status("ACTIVE")
+                    .area("Dhaka")
+                    .avatarInitials("SA")
+                    .reliabilityScore(100)
+                    .createdAt(OffsetDateTime.now().minusMonths(7))
+                    .updatedAt(OffsetDateTime.now())
+                    .build());
+        }
 
         userRepository.saveAll(allUsers);
         log.info("[Seeder] Saved {} users", allUsers.size());

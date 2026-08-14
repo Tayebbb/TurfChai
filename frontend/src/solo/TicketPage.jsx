@@ -134,6 +134,7 @@ export default function TicketPage() {
     },
   ];
 
+
   return (
     <>
       <PageTitle title={`Ticket · ${game.title ?? 'Match'}`} />

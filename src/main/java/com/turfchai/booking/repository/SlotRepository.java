@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,4 +35,8 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
     /** Single-slot lookup with the pitch fetched eagerly, for callers outside a transaction. */
     @Query("SELECT s FROM Slot s JOIN FETCH s.pitch WHERE s.id = :id")
     Optional<Slot> findByIdWithPitch(@Param("id") Long id);
+
+    boolean existsByPitchIdAndSlotDateAndStartTime(Long pitchId, LocalDate slotDate, LocalTime startTime);
+
+    List<Slot> findByVenueIdAndSlotDateBetweenOrderBySlotDateAscStartTimeAsc(Long venueId, LocalDate startDate, LocalDate endDate);
 }

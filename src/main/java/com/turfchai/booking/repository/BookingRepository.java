@@ -15,4 +15,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     /** An existing pending attempt for this user+slot — payment retries reuse it instead of duplicating. */
     Optional<Booking> findBySlotIdAndUserIdAndStatus(Long slotId, Long userId, BookingStatus status);
+
+    List<Booking> findByVenueIdIn(List<Long> venueIds);
 }

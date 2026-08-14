@@ -73,4 +73,13 @@ public class BookingResponse {
 
     @Schema(description = "When the booking was last updated", example = "2026-08-06T18:05:00+06:00")
     private OffsetDateTime updatedAt;
+    
+    // Enriched fields for frontend BookingsPage
+    private String title;
+    private String venue;
+    private String pitch;
+    private String date;
+    private String time;
+    private String duration;
+    private String share;
 }

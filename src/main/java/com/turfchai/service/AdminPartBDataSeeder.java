@@ -85,6 +85,7 @@ public class AdminPartBDataSeeder {
 
         List<Booking> bookingsToSave = new ArrayList<>();
         List<Slot> slotsToSave = new ArrayList<>();
+        java.util.Set<String> generatedSlots = new java.util.HashSet<>();
 
         int bookingIndex = 1;
 
@@ -94,14 +95,21 @@ public class AdminPartBDataSeeder {
             int lengthOfMonth = monthStart.lengthOfMonth();
 
             for (int i = 0; i < bookingsThisMonth; i++) {
-                User player = players.get(random.nextInt(players.size()));
                 Pitch pitch = pitches.get(random.nextInt(pitches.size()));
-                Venue venue = venues.stream().filter(v -> v.getId().equals(pitch.getVenue().getId())).findFirst().orElse(venues.get(0));
-
                 LocalDate bookingDate = monthStart.plusDays(random.nextInt(lengthOfMonth));
                 
                 int[] availableHours = {6, 8, 10, 14, 16, 18, 20};
                 int startHour = availableHours[random.nextInt(availableHours.length)];
+                
+                String slotKey = pitch.getId() + "_" + bookingDate + "_" + startHour;
+                if (!generatedSlots.add(slotKey)) {
+                    // Collision detected, skip this booking to avoid unique constraint violation
+                    continue;
+                }
+
+                User player = players.get(random.nextInt(players.size()));
+                Venue venue = venues.stream().filter(v -> v.getId().equals(pitch.getVenue().getId())).findFirst().orElse(venues.get(0));
+
                 int durationHours = random.nextBoolean() ? 1 : 2;
 
                 LocalTime startTime = LocalTime.of(startHour, 0);
@@ -185,6 +193,7 @@ public class AdminPartBDataSeeder {
                 String anomalyReason = anomalyFlag ? "Refund ratio spike > 4.2% threshold" : null;
                 OffsetDateTime settledAt = "SETTLED".equals(status) ? periodEnd.plusDays(5).atStartOfDay().atOffset(ZoneOffset.UTC) : null;
                 OffsetDateTime createdAt = periodEnd.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+                LocalDate scheduledDate = periodEnd.plusDays(5);
 
                 String payoutCode = String.format("PAY-%04d%02d-%d", periodStart.getYear(), periodStart.getMonthValue(), venue.getId());
 
@@ -200,6 +209,7 @@ public class AdminPartBDataSeeder {
                         .anomalyReason(anomalyReason)
                         .periodStart(periodStart)
                         .periodEnd(periodEnd)
+                        .scheduledDate(scheduledDate)
                         .settledAt(settledAt)
                         .createdAt(createdAt)
                         .updatedAt(createdAt)

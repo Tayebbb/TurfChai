@@ -21,6 +21,7 @@ export default function VenueMap({
   centerLng = 90.39,
   zoom = 13,
   onMarkerClick,
+  onMapClick,
   className,
   style,
 }) {
@@ -28,9 +29,11 @@ export default function VenueMap({
   const mapRef = useRef(null);
   const layerRef = useRef(null);
   const clickRef = useRef(onMarkerClick);
+  const mapClickRef = useRef(onMapClick);
 
   useEffect(() => {
     clickRef.current = onMarkerClick;
+    mapClickRef.current = onMapClick;
   });
 
   useEffect(() => {
@@ -38,6 +41,12 @@ export default function VenueMap({
     L.tileLayer(OSM_TILES, { maxZoom: 19, attribution: OSM_ATTRIBUTION }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+    
+    map.on('click', (e) => {
+      if (mapClickRef.current) {
+        mapClickRef.current(e.latlng);
+      }
+    });
     // The container is often 0-sized on first paint (lazy chunk / route
     // transition) — recalc dimensions whenever it settles or resizes.
     const observer = new ResizeObserver(() => map.invalidateSize());

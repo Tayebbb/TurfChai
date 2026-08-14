@@ -58,9 +58,117 @@ import {
   useToast,
 } from '@/hooks/useToast';
 
-import {
-  paths,
-} from '@/routes/paths';
+import { paths } from '@/routes/paths';
+
+import { useApi } from '@/hooks/useApi';
+import { getOwnerVenueSetup } from '@/api/ownerVenueSetup';
+import { generateSlots } from '@/api/ownerSlots';
+
+function CustomDatePicker({ value, onChange, id }) {
+  const [textVal, setTextVal] = useState(() => {
+    if (!value) return '';
+    const [y, m, d] = value.split('-');
+    return `${d}/${m}/${y}`;
+  });
+
+  const handleTextChange = (e) => {
+    const newVal = e.target.value;
+    setTextVal(newVal);
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(newVal)) {
+      const [d, m, y] = newVal.split('/');
+      onChange({ target: { value: `${y}-${m}-${d}` } });
+    } else if (newVal === '') {
+      onChange({ target: { value: '' } });
+    }
+  };
+
+  const handleNativeChange = (e) => {
+    const val = e.target.value;
+    onChange(e);
+    if (val) {
+      const [y, m, d] = val.split('-');
+      setTextVal(`${d}/${m}/${y}`);
+    } else {
+      setTextVal('');
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+      <div style={{ position: 'absolute', left: 12, display: 'flex', color: 'var(--text-3, #888)', pointerEvents: 'none' }}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
+        </svg>
+      </div>
+
+      <input 
+        type="date"
+        value={value}
+        onChange={handleNativeChange}
+        style={{ position: 'absolute', left: 8, width: 22, height: 22, opacity: 0, cursor: 'pointer', zIndex: 10 }} 
+      />
+      
+      <Input
+        id={id}
+        type="text"
+        placeholder="DD/MM/YYYY"
+        maxLength="10"
+        value={textVal}
+        onChange={handleTextChange}
+        style={{ paddingLeft: 34, width: '100%' }}
+      />
+    </div>
+  );
+}
+
+function CustomTimePicker({ value, onChange, id }) {
+  const [textVal, setTextVal] = useState(value || '');
+
+  const handleTextChange = (e) => {
+    const newVal = e.target.value;
+    setTextVal(newVal);
+    if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newVal)) {
+      onChange({ target: { value: newVal } });
+    } else if (newVal === '') {
+      onChange({ target: { value: '' } });
+    }
+  };
+
+  const handleNativeChange = (e) => {
+    const val = e.target.value;
+    onChange(e);
+    setTextVal(val);
+  };
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+      <div style={{ position: 'absolute', left: 12, display: 'flex', color: 'var(--text-3, #888)', pointerEvents: 'none' }}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
+        </svg>
+      </div>
+
+      <input 
+        type="time"
+        value={value}
+        onChange={handleNativeChange}
+        style={{ position: 'absolute', left: 8, width: 22, height: 22, opacity: 0, cursor: 'pointer', zIndex: 10 }} 
+      />
+      
+      <Input
+        id={id}
+        type="text"
+        placeholder="HH:MM"
+        maxLength="5"
+        value={textVal}
+        onChange={handleTextChange}
+        style={{ paddingLeft: 34, width: '100%' }}
+      />
+    </div>
+  );
+}
+
 
 import {
   listMyVenues,
@@ -174,6 +282,7 @@ export default function VenueSetupPage() {
   const live = useDisclosure(false);
   const pitchModal = useDisclosure(false);
   const slotModal = useDisclosure(false);
+  const generateSlotsModal = useDisclosure(false);
 
   const [venues, setVenues] = useState([]);
   const [selectedVenueId, setSelectedVenueId] = useState(null);
@@ -191,6 +300,7 @@ export default function VenueSetupPage() {
   const [deposit, setDeposit] = useState('30% deposit allowed');
   const [policy, setPolicy] = useState('Free cancel until 24h before · 50% within 24h · no refund within 6h');
   const [allowSplit, setAllowSplit] = useState(true);
+  const [mlPricingEnabled, setMlPricingEnabled] = useState(apiData.mlPricingEnabled ?? true);
 
   const [slotDraft, setSlotDraft] = useState({
     sport: 'football',
@@ -368,7 +478,7 @@ export default function VenueSetupPage() {
     }
 
     if (editingId) {
-      setPitches((current) =>
+      setLocalPitches((current) =>
         current.map((pitch) =>
           pitch.id === editingId ? { ...pitch, name, desc, sports: pitchDraft.sports } : pitch,
         ),
@@ -907,6 +1017,74 @@ export default function VenueSetupPage() {
           <Button variant="tertiary" block onClick={slotModal.close}>
             Cancel
           </Button>
+        </div>
+      </Overlay>
+
+      {/* Modal: Slot Generator */}
+      <Overlay
+        isOpen={generateSlotsModal.isOpen}
+        onClose={generateSlotsModal.close}
+        title="Batch Generate Slots"
+        maxWidth={520}
+      >
+        <p className="subtle small" style={{ margin: '4px 0 12px' }}>
+          Select a pitch and define the operating hours to generate bookable slots automatically.
+        </p>
+
+        <Field label="Pitch" htmlFor="genPitch">
+          <Select id="genPitch" value={generateDraft.pitchId} onChange={e => setGenerateDraft(c => ({...c, pitchId: e.target.value}))}>
+            <option value="">Select Pitch...</option>
+            {pitches.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+        </Field>
+
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Start Date (DD/MM/YYYY)" htmlFor="genStart">
+            <CustomDatePicker
+              id="genStart"
+              value={generateDraft.startDate}
+              onChange={e => setGenerateDraft(c => ({...c, startDate: e.target.value}))}
+            />
+          </Field>
+          <Field label="End Date (DD/MM/YYYY)" htmlFor="genEnd">
+            <CustomDatePicker
+              id="genEnd"
+              value={generateDraft.endDate}
+              onChange={e => setGenerateDraft(c => ({...c, endDate: e.target.value}))}
+            />
+          </Field>
+        </div>
+
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Daily Start Time (24h)" htmlFor="genTimeStart">
+            <CustomTimePicker
+              id="genTimeStart"
+              value={generateDraft.startTime}
+              onChange={e => setGenerateDraft(c => ({...c, startTime: e.target.value}))}
+            />
+          </Field>
+          <Field label="Daily End Time (24h)" htmlFor="genTimeEnd">
+            <CustomTimePicker
+              id="genTimeEnd"
+              value={generateDraft.endTime}
+              onChange={e => setGenerateDraft(c => ({...c, endTime: e.target.value}))}
+            />
+          </Field>
+        </div>
+
+        <div className="grid2" style={{ gap: 10 }}>
+          <Field label="Duration (mins)" htmlFor="genDur">
+            <Input id="genDur" type="number" min="15" value={generateDraft.slotDurationMinutes} onChange={e => setGenerateDraft(c => ({...c, slotDurationMinutes: e.target.value}))} />
+          </Field>
+          <Field label="Base Price (৳)" htmlFor="genPrice">
+            <Input id="genPrice" type="number" min="0" value={generateDraft.basePrice} onChange={e => setGenerateDraft(c => ({...c, basePrice: e.target.value}))} />
+          </Field>
+        </div>
+
+        <div className="stack-sm" style={{ marginTop: 16 }}>
+          <Button variant="primary" block onClick={handleGenerateSlots}>Generate Slots</Button>
         </div>
       </Overlay>
     </>
