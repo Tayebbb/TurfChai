@@ -5,6 +5,7 @@ import com.turfchai.booking.entity.BookingStatus;
 import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.dto.response.BookingResponse;
+import com.turfchai.booking.event.SlotStatusChangedEvent;
 import com.turfchai.booking.exception.SlotUnavailableException;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
@@ -14,6 +15,7 @@ import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.repository.PitchRepository;
 import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,11 @@ public class BookingService {
     private final UserRepository userRepository;
     private final VenueRepository venueRepository;
     private final PitchRepository pitchRepository;
+    /**
+     * Slot changes are announced here but delivered only after this
+     * transaction commits — see {@link SlotEventBroadcaster}.
+     */
+    private final ApplicationEventPublisher events;
 
     /**
      * Acquires a 5-minute hold on a slot. The row is locked with
@@ -68,6 +75,8 @@ public class BookingService {
             slot.setHeldByUserId(userId);
             slot.setHoldExpiresAt(heldUntil);
             slotRepository.save(slot);
+            events.publishEvent(SlotStatusChangedEvent.held(
+                    slot.getId(), slot.getVenueId(), slot.getSlotDate(), heldUntil));
             return heldUntil;
         }
         throw new SlotUnavailableException("Slot is not available for booking");
@@ -91,6 +100,8 @@ public class BookingService {
         slot.setHeldByUserId(null);
         slot.setHoldExpiresAt(null);
         slotRepository.save(slot);
+        events.publishEvent(SlotStatusChangedEvent.of(
+                slot.getId(), slot.getVenueId(), slot.getSlotDate(), SlotStatus.BOOKED));
 
         Booking booking = Booking.builder()
                 .bookingCode(generateBookingCode())
@@ -159,6 +170,8 @@ public class BookingService {
         slot.setHeldByUserId(null);
         slot.setHoldExpiresAt(null);
         slotRepository.save(slot);
+        events.publishEvent(SlotStatusChangedEvent.of(
+                slot.getId(), slot.getVenueId(), slot.getSlotDate(), SlotStatus.BOOKED));
 
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
@@ -193,6 +206,8 @@ public class BookingService {
 
         bookingRepository.save(booking);
         slotRepository.save(slot);
+        events.publishEvent(SlotStatusChangedEvent.of(
+                slot.getId(), slot.getVenueId(), slot.getSlotDate(), SlotStatus.AVAILABLE));
     }
 
     /** Returns a booking only to its owner or an admin/owner role. */
