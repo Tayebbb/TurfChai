@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 
 import { useApi } from '@/hooks/useApi';
-import { getOwnerPromotions, createPromotion, updatePromotion, deletePromotion } from '@/api/ownerPromotions';
+import { getOwnerPromotions, createPromotion, deletePromotion } from '@/api/ownerPromotions';
 import { listMyVenues } from '@/api/ownerVenues';
 
 export default function PromotionsPage() {
