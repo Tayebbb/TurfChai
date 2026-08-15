@@ -5,6 +5,7 @@ import com.turfchai.dto.analytics.RevenueDto;
 import com.turfchai.dto.analytics.SegmentsDto;
 import com.turfchai.repository.AnalyticsRepository;
 import com.turfchai.booking.repository.BookingRepository;
+import com.turfchai.venue.repository.VenueRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,6 +42,9 @@ class AdminAnalyticsServiceTest {
 
     @Mock
     private BookingRepository bookingRepository;
+
+    @Mock
+    private VenueRepository venueRepository;
 
     @InjectMocks
     private AdminAnalyticsService analyticsService;
@@ -96,17 +100,18 @@ class AdminAnalyticsServiceTest {
     // ── Revenue tests ──────────────────────────────────────────────────────
 
     @Test
-    void getRevenue_alwaysReturnsTwelveMonthSeries() {
+    void getRevenue_returnsEmptySeries_whenNoBookings() {
         when(bookingRepository.findAll()).thenReturn(Collections.emptyList());
         RevenueDto dto = analyticsService.getRevenue(2026, "monthly");
 
         assertNotNull(dto);
-        assertEquals(12, dto.getLabels().size());
-        assertEquals(12, dto.getGmv().size());
-        assertEquals(12, dto.getBookings().size());
+        assertTrue(dto.getLabels().isEmpty(),
+                "Empty dataset should produce no trimmed monthly labels");
+        assertTrue(dto.getGmv().isEmpty());
+        assertTrue(dto.getBookings().isEmpty());
         assertEquals(0, dto.getTotalGmv(), "Total GMV should be 0 when empty");
         assertEquals(0, dto.getTotalBookings(), "Total bookings should be 0 when empty");
-        assertNotNull(dto.getGrowthPercent());
+        assertEquals("+0.0%", dto.getGrowthPercent());
     }
 
     @Test

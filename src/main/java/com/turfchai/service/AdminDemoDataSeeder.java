@@ -41,7 +41,7 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Order(1)
+@Order(4) // after the demo player/venue/tournament/reward/slot seeders (orders 0-3)
 public class AdminDemoDataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;

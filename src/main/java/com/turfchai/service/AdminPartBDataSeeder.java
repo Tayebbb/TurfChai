@@ -20,6 +20,7 @@ import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,8 @@ import java.util.Random;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Order(2)
+@Order(5) // runs last, after AdminDemoDataSeeder (@Order 4) has populated users/venues/pitches
+@Profile("!test") // never runs in the automated test suite - bookings/slots would break fixtures
 public class AdminPartBDataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
