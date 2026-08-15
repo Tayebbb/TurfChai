@@ -85,6 +85,12 @@
     box-shadow: var(--shadow-sm);
 }
 
+.tier-ico.bronze {
+    background: linear-gradient(135deg, #F3E0CD, #E0B693);
+    border-color: #CD9A6E;
+    color: #8A5A2B
+}
+
 .tier-ico.silver {
     background: linear-gradient(135deg, #E8EDEB, #C9D2CD);
     border-color: #B9C4BE;
@@ -101,6 +107,12 @@
     background: linear-gradient(135deg, var(--brand-soft), #CFF3DF);
     border-color: #7FD6A8;
     color: var(--brand-600)
+}
+
+[data-theme="dark"] .tier-ico.bronze {
+    background: linear-gradient(135deg, #3A2A1B, #2A1E12);
+    border-color: #6B4A28;
+    color: #E0A96A
 }
 
 [data-theme="dark"] .tier-ico.silver {

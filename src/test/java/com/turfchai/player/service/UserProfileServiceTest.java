@@ -66,7 +66,7 @@ class UserProfileServiceTest {
     void partialUpdateChangesOnlyProvidedFields() {
         PlayerProfileDto before = service.getProfile(DEMO);
         PlayerProfileDto after = service.updateProfile(DEMO, new UpdateProfileRequest(
-                "Nazia Rahman", null, "Weekend striker", "advanced", null, List.of("Futsal"), null));
+                "Nazia Rahman", null, "Weekend striker", "advanced", null, List.of("Futsal"), null, "Goalkeeper"));
 
         assertThat(after.fullName()).isEqualTo("Nazia Rahman");
         assertThat(after.avatarInitials()).isEqualTo("NR");   // derived from new name
@@ -75,6 +75,7 @@ class UserProfileServiceTest {
         assertThat(after.preferredSports()).containsExactly("futsal");  // normalized lower-case
         assertThat(after.area()).isEqualTo(before.area());              // untouched
         assertThat(after.playerRole()).isEqualTo(before.playerRole());  // untouched
+        assertThat(after.position()).isEqualTo("Goalkeeper");           // new field
     }
 
     @Test

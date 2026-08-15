@@ -12,7 +12,6 @@ import com.turfchai.payment.entity.PaymentStatus;
 import com.turfchai.payment.entity.PaymentType;
 import com.turfchai.payment.repository.PaymentRepository;
 import com.turfchai.reward.entity.PointLedgerEntry;
-import com.turfchai.reward.entity.PointReason;
 import com.turfchai.reward.service.RewardService;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
@@ -108,8 +107,8 @@ public class PaymentService {
         }
         bookingService.finalizeConfirmedBooking(booking);
 
-        int pointsEarned = PointReason.BOOKING.defaultPoints();
-        rewardService.awardBookingPoints(userId, booking.getId());
+        int pointsEarned = booking.getNetAmount().setScale(0, java.math.RoundingMode.HALF_UP).intValue();
+        rewardService.awardBookingPoints(userId, booking.getId(), booking.getNetAmount());
         Optional<PointLedgerEntry> offPeak = rewardService.awardOffPeakBonusIfApplicable(userId, booking.getId(),
                 booking.getStartTime());
         if (offPeak.isPresent()) {

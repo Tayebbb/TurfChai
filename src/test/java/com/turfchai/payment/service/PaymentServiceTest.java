@@ -95,7 +95,7 @@ class PaymentServiceTest {
             p.setId(1L);
             return p;
         });
-        when(rewardService.awardBookingPoints(anyLong(), anyLong())).thenReturn(null);
+        when(rewardService.awardBookingPoints(anyLong(), anyLong(), any(BigDecimal.class))).thenReturn(null);
         when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
         when(rewardService.getWalletBalance(USER_ID)).thenReturn(BigDecimal.ZERO);
 
@@ -108,7 +108,7 @@ class PaymentServiceTest {
         assertEquals(BigDecimal.valueOf(2000), response.getPayment().getAmount());
 
         verify(bookingService).finalizeConfirmedBooking(pendingBooking);
-        verify(rewardService).awardBookingPoints(USER_ID, BOOKING_ID);
+        verify(rewardService).awardBookingPoints(USER_ID, BOOKING_ID, BigDecimal.valueOf(2000));
         verify(rewardService, never()).applyWalletAtCheckout(any(), any(), any());
     }
 
@@ -123,7 +123,7 @@ class PaymentServiceTest {
             p.setId(1L);
             return p;
         });
-        when(rewardService.awardBookingPoints(anyLong(), anyLong())).thenReturn(null);
+        when(rewardService.awardBookingPoints(anyLong(), anyLong(), any(BigDecimal.class))).thenReturn(null);
         when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
 
         CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.NAGAD, BigDecimal.valueOf(500), false);
@@ -145,7 +145,7 @@ class PaymentServiceTest {
             p.setId(1L);
             return p;
         });
-        when(rewardService.awardBookingPoints(anyLong(), anyLong())).thenReturn(null);
+        when(rewardService.awardBookingPoints(anyLong(), anyLong(), any(BigDecimal.class))).thenReturn(null);
         when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
 
         // Caller asks to apply 2000, but only has 100 in the wallet.
@@ -174,7 +174,7 @@ class PaymentServiceTest {
         assertNotNull(response.getPayment().getFailureReason());
 
         verify(bookingService, never()).finalizeConfirmedBooking(any());
-        verify(rewardService, never()).awardBookingPoints(any(), any());
+        verify(rewardService, never()).awardBookingPoints(any(), any(), any());
         verify(rewardService, never()).applyWalletAtCheckout(any(), any(), any());
     }
 
@@ -184,7 +184,7 @@ class PaymentServiceTest {
         Booking cheapBooking = booking(BookingStatus.PENDING, BigDecimal.valueOf(300));
         when(bookingService.createPendingBooking(USER_ID, SLOT_ID)).thenReturn(cheapBooking);
         when(rewardService.getWalletBalance(USER_ID)).thenReturn(BigDecimal.valueOf(500));
-        when(rewardService.awardBookingPoints(anyLong(), anyLong())).thenReturn(null);
+        when(rewardService.awardBookingPoints(anyLong(), anyLong(), any(BigDecimal.class))).thenReturn(null);
         when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
 
         CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.BKASH, BigDecimal.valueOf(300), true);

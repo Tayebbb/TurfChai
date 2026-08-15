@@ -119,6 +119,9 @@ public class User {
     @Column(name = "preferred_times_csv")
     private String preferredTimes;
 
+    @Column(name = "preferred_position", length = 50)
+    private String preferredPosition;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private OffsetDateTime createdAt = OffsetDateTime.now();

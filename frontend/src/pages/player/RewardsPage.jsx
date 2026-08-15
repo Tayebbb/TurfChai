@@ -16,14 +16,15 @@ import './RewardsPage.css';
 // current/next tier, so the fixed thresholds/perks for the other rungs are
 // kept here; which card is "current" vs "locked" is computed from /my-points.
 const TIER_LADDER = [
-  { name: 'SILVER', label: 'Silver', glyph: '🥈', points: '0 pts · Starter', perk: '0% off bookings' },
-  { name: 'GOLD', label: 'Gold', glyph: '🥇', points: '1,000 pts', perk: '10% off bookings' },
-  { name: 'PLATINUM', label: 'Platinum', glyph: '💎', points: '2,000 pts', perk: 'Priority booking · 15% off' },
+  { name: 'BRONZE', label: 'Bronze', glyph: '🥉', points: '0 pts · Starter', perk: '0% off bookings' },
+  { name: 'SILVER', label: 'Silver', glyph: '🥈', points: '500 pts', perk: '5% off bookings' },
+  { name: 'GOLD', label: 'Gold', glyph: '🥇', points: '1,500 pts', perk: '10% off bookings' },
+  { name: 'PLATINUM', label: 'Platinum', glyph: '💎', points: '5,000 pts', perk: 'Priority booking · 15% off' },
 ];
-const TIER_ORDER = { SILVER: 0, GOLD: 1, PLATINUM: 2 };
+const TIER_ORDER = { BRONZE: 0, SILVER: 1, GOLD: 2, PLATINUM: 3 };
 
 const EARN_WAYS = [
-  { id: 'book', glyph: '⚽', label: 'Book a turf', points: '+50' },
+  { id: 'book', glyph: '⚽', label: 'Book a turf', points: '৳1 = 1 pt' },
   { id: 'play', glyph: '🏟️', label: 'Attend & play your match', points: '+30' },
   { id: 'review', glyph: '⭐', label: 'Leave a review after a match', points: '+20' },
   { id: 'profile', glyph: '👤', label: 'Complete your profile', note: 'one-time', points: '+10' },

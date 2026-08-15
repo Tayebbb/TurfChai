@@ -3,7 +3,7 @@ package com.turfchai.booking.api;
 import com.turfchai.booking.dto.response.SlotResponse;
 import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
-import com.turfchai.booking.repository.SlotRepository;
+import com.turfchai.booking.service.SlotAvailabilityService;
 import com.turfchai.booking.service.SlotEventBroadcaster;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -37,15 +37,20 @@ public class SlotRestController {
     /** Refuse absurd dates outright rather than opening a stream nothing will ever publish to. */
     private static final int MAX_STREAM_DAYS_AHEAD = 365;
 
-    private final SlotRepository slotRepository;
+    private final SlotAvailabilityService slotAvailabilityService;
     private final SlotEventBroadcaster slotEventBroadcaster;
 
-    /** GET /api/v1/venues/{venueId}/slots?date=YYYY-MM-DD — a venue's slots for one day, earliest first. */
+    /**
+     * GET /api/v1/venues/{venueId}/slots?date=YYYY-MM-DD — a venue's slots for
+     * one day, earliest first. Slots are generated on demand for a date that
+     * has none yet (there is no generation job), so a player can always pick
+     * a time in the 7-day availability strip.
+     */
     @GetMapping("/{venueId}/slots")
     public ResponseEntity<List<SlotResponse>> listSlots(
             @PathVariable Long venueId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        List<SlotResponse> slots = slotRepository.findByVenueIdAndSlotDateOrderByStartTimeAsc(venueId, date)
+        List<SlotResponse> slots = slotAvailabilityService.ensureSlots(venueId, date)
                 .stream()
                 .map(this::toResponse)
                 .toList();

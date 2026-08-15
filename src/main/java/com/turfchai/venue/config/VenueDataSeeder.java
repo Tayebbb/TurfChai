@@ -49,6 +49,7 @@ public class VenueDataSeeder {
         Sport cricket = sport(sports, "Cricket", "cricket");
         Sport badminton = sport(sports, "Badminton", "badminton");
         Sport futsal = sport(sports, "Futsal", "futsal");
+        Sport basketball = sport(sports, "Basketball", "basketball");
 
         record Seed(String slug, String name, String address, String area, double lat, double lng,
                 double rating, int reviews, boolean verified, String promo, String amenities,
@@ -62,18 +63,30 @@ public class VenueDataSeeder {
                 new Seed("greenturf-mohammadpur", "GreenTurf Mohammadpur", "Ring Road, Mohammadpur", "Mohammadpur",
                         23.7658, 90.3589, 4.6, 128, true, "Buy 5 get 1 free",
                         "floodlights,changing_room", "6_a_side", List.of(football), 1800, 60),
-                new Seed("lalmatia-play-zone", "Lalmatia Play Zone", "Block D, Lalmatia", "Lalmatia",
-                        23.7551, 90.3668, 4.3, 64, false, null,
-                        "indoor,youth_friendly", "5_a_side", List.of(football, futsal), 1500, 60),
                 new Seed("mirpur-sports-city", "Mirpur Sports City", "Mirpur DOHS", "Mirpur",
                         23.8370, 90.3630, 4.7, 301, true, "20% off after 10 PM",
                         "floodlights,cafeteria,parking", "11_a_side", List.of(football, cricket), 2200, 90),
-                new Seed("shuttlezone-lalmatia", "ShuttleZone Lalmatia", "Block B, Lalmatia", "Lalmatia",
-                        23.7543, 90.3702, 4.5, 89, false, null,
-                        "indoor,changing_room", "5_a_side", List.of(badminton), 600, 60),
-                new Seed("baridhara-sports-hub", "Baridhara Sports Hub", "Park Road, Baridhara", "Baridhara",
-                        23.8103, 90.4224, 4.9, 86, true, "20% off-peak",
-                        "floodlights,parking,cafeteria", "7_a_side", List.of(football, cricket), 3200, 90));
+                new Seed("gulshan-turf-park", "Gulshan Turf Park", "Gulshan-2, Dhaka", "Gulshan",
+                        23.7805, 90.4150, 4.5, 167, true, "20% off-peak",
+                        "floodlights,parking,cafeteria", "7_a_side", List.of(football, cricket), 2800, 90),
+                new Seed("uttara-sports-complex", "Uttara Sports Complex", "Uttara Sector 7, Dhaka", "Uttara",
+                        23.8759, 90.3995, 4.4, 132, true, null,
+                        "floodlights,parking,changing_room", "11_a_side", List.of(football, cricket), 2400, 90),
+                new Seed("bashundhara-arena", "Bashundhara Arena", "Bashundhara R/A, Dhaka", "Bashundhara",
+                        23.8170, 90.4230, 4.3, 94, false, null,
+                        "indoor,youth_friendly,cafeteria", "5_a_side", List.of(badminton, basketball), 1500, 60),
+                new Seed("banani-futsal-hub", "Banani Futsal Hub", "Banani Block-F, Dhaka", "Banani",
+                        23.7937, 90.4012, 4.6, 203, true, "Buy 5 get 1 free",
+                        "floodlights,changing_room", "5_a_side", List.of(futsal, basketball), 2000, 60),
+                new Seed("tejgaon-kick-zone", "Tejgaon Kick Zone", "Tejgaon Industrial Area, Dhaka", "Tejgaon",
+                        23.7559, 90.3868, 4.2, 58, false, null,
+                        "floodlights,parking", "7_a_side", List.of(football), 1900, 90),
+                new Seed("khilgaon-sports-center", "Khilgaon Sports Center", "Khilgaon Taltola, Dhaka", "Khilgaon",
+                        23.7559, 90.4354, 4.1, 46, false, null,
+                        "indoor,youth_friendly", "5_a_side", List.of(badminton, basketball), 1300, 60),
+                new Seed("rampura-play-ground", "Rampura Play Ground", "Rampura Bazar, Dhaka", "Rampura",
+                        23.7672, 90.4261, 4.0, 39, false, "20% off-peak",
+                        "floodlights,parking", "11_a_side", List.of(football, cricket), 1700, 90));
 
         Map<String, LocalTime[]> windows = Map.of(
                 "OFF_PEAK", new LocalTime[] { LocalTime.of(6, 0), LocalTime.of(16, 0) },
