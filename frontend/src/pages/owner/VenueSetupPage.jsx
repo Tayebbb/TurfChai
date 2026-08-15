@@ -237,14 +237,25 @@ const bdt = (value) => `৳${Number(value).toLocaleString('en-US')}`;
 
 const DEPOSIT_OPTIONS = ['Full payment only', '30% deposit allowed', '50% deposit'];
 
-const AMENITIES = [
-  { id: 'floodlights', label: 'Floodlights', on: true },
-  { id: 'parking', label: 'Parking', on: true },
-  { id: 'changing', label: 'Changing room', on: true },
-  { id: 'washroom', label: 'Washroom', on: true },
-  { id: 'water', label: 'Drinking water', on: true },
-  { id: 'kit', label: 'Bibs & balls', on: true },
-  { id: 'cafeteria', label: 'Cafeteria', on: false },
+const INITIAL_AMENITIES = [
+  { id: 'floodlights', label: '💡 Floodlights', on: true },
+  { id: 'parking', label: '🅿️ Parking', on: true },
+  { id: 'changing', label: '👕 Changing room', on: true },
+  { id: 'washroom', label: '🚿 Washroom', on: true },
+  { id: 'water', label: '🚰 Drinking water', on: true },
+  { id: 'kit', label: '⚽ Bibs & balls', on: true },
+  { id: 'cafeteria', label: '☕ Cafeteria', on: false },
+  { id: 'firstaid', label: '🩹 First aid kit', on: true },
+  { id: 'seating', label: '🪑 Spectator seating', on: false },
+  { id: 'wifi', label: '📶 Free Wi-Fi', on: false },
+];
+
+const INITIAL_RULES = [
+  { id: 'shoes', label: '👟 Turf / Astro shoes only (no metal studs)', on: true },
+  { id: 'smoking', label: '🚭 No smoking or vaping inside venue', on: true },
+  { id: 'arrival', label: '⏱️ Arrive 10 min before slot time', on: true },
+  { id: 'trash', label: '🗑️ Keep venue clean - disposal in bins', on: true },
+  { id: 'food', label: '🍕 No outside heavy food on pitch', on: false },
 ];
 
 const ASSIGNABLE_SPORTS = ['Football', 'Cricket', 'Futsal', 'Badminton', 'Volleyball'];
@@ -314,6 +325,47 @@ export default function VenueSetupPage() {
   const [sportPricing, setSportPricing] = useState(INITIAL_SPORT_PRICING);
 
   const [photos, setPhotos] = useState([]);
+  const [amenities, setAmenities] = useState(INITIAL_AMENITIES);
+  const [rules, setRules] = useState(INITIAL_RULES);
+  const [customRuleText, setCustomRuleText] = useState('');
+
+  function toggleAmenity(id) {
+    setAmenities((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          const nextOn = !item.on;
+          showToast(`${item.label} ${nextOn ? 'enabled ✓' : 'disabled'}`);
+          return { ...item, on: nextOn };
+        }
+        return item;
+      })
+    );
+  }
+
+  function toggleRule(id) {
+    setRules((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          const nextOn = !item.on;
+          showToast(`Rule ${nextOn ? 'activated ✓' : 'deactivated'}`);
+          return { ...item, on: nextOn };
+        }
+        return item;
+      })
+    );
+  }
+
+  function handleAddCustomRule() {
+    if (!customRuleText.trim()) return;
+    const newRule = {
+      id: `rule-${Date.now()}`,
+      label: `📌 ${customRuleText.trim()}`,
+      on: true,
+    };
+    setRules((prev) => [...prev, newRule]);
+    setCustomRuleText('');
+    showToast('Custom venue rule added ✓');
+  }
 
   const [generateDraft, setGenerateDraft] = useState({
     pitchId: '',
@@ -475,7 +527,8 @@ export default function VenueSetupPage() {
                 const fallbackVenue = {
                   id: req.venueId || null,
                   name: req.venueName || 'My Venue',
-                  status: req.status === 'APPROVED' ? 'LIVE' : 'PENDING',
+                  status: req.status === 'APPROVED' ? 'APPROVED' : req.status === 'REJECTED' ? 'REJECTED' : 'PENDING',
+                  verified: req.status === 'APPROVED',
                   area: req.area || 'Dhanmondi',
                   openTime: '06:00 AM',
                   closeTime: '11:00 PM',
@@ -679,13 +732,14 @@ export default function VenueSetupPage() {
     const vId = await getActiveVenueId();
     if (!vId) return;
 
-    if (venueData?.status === 'PENDING' || venueData?.status === 'DRAFT') {
+    const isApprovedOrVerified = venueData?.verified || venueData?.status === 'APPROVED' || venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED' || venueData?.status === 'PENDING_LISTING';
+    if (!isApprovedOrVerified) {
       showToast('Verification Pending — Please wait for admin approval before going live');
       return;
     }
 
     const isCurrentlyLive = venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED';
-    const nextStatus = isCurrentlyLive ? 'OFFLINE' : 'LIVE';
+    const nextStatus = isCurrentlyLive ? 'PENDING_LISTING' : 'LIVE';
 
     try {
       const updated = await updateVenueStatus(vId, nextStatus);
@@ -694,7 +748,7 @@ export default function VenueSetupPage() {
       } else {
         setVenueData((prev) => (prev ? { ...prev, status: nextStatus } : null));
       }
-      showToast(`Turf is now ${nextStatus === 'LIVE' ? 'LIVE' : 'OFFLINE'} ✓`);
+      showToast(nextStatus === 'LIVE' ? 'Turf is now LIVE & visible to players ✓' : 'Turf is set to Offline ✓');
       refreshVenueDetails(vId);
       if (nextStatus === 'LIVE') {
         live.open();
@@ -724,11 +778,29 @@ export default function VenueSetupPage() {
             {venueData?.status === 'PUBLISHED' || venueData?.status === 'LIVE' ? (
               <Alert
                 tone="ok"
+                icon="🟢"
+                title={`${venueData?.name || 'Venue'} is LIVE & Bookable`}
+                style={{ marginBottom: 16, borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.08)' }}
+              >
+                Your venue is live and visible to all players! Players can browse pitches and book slots in real time.
+              </Alert>
+            ) : venueData?.verified || venueData?.status === 'APPROVED' || venueData?.status === 'PENDING_LISTING' ? (
+              <Alert
+                tone="ok"
                 icon="✓"
-                title={`${venueData?.name || 'Venue'} is LIVE`}
+                title={`${venueData?.name || 'Venue'} is Verified & Approved`}
                 style={{ marginBottom: 16 }}
               >
-                Your venue is verified and live! You are currently taking player bookings.
+                Your venue has been verified and approved by admin! You can now toggle <b>Go Live</b> to start accepting player bookings.
+              </Alert>
+            ) : venueData?.status === 'REJECTED' ? (
+              <Alert
+                tone="danger"
+                icon="✕"
+                title="Application Rejected"
+                style={{ marginBottom: 16 }}
+              >
+                Your venue application was rejected by the admin team. Please contact support or submit updated documents.
               </Alert>
             ) : (
               <Alert
@@ -762,8 +834,8 @@ export default function VenueSetupPage() {
                       ))}
                     </Select>
                   )}
-                  <Badge tone={venueData?.status === 'PUBLISHED' ? 'green' : 'amber'}>
-                    {venueData?.status === 'PUBLISHED' ? 'Live · Bookable' : 'Pending — not visible to players'}
+                  <Badge tone={venueData?.status === 'PUBLISHED' || venueData?.status === 'LIVE' ? 'green' : (venueData?.status === 'APPROVED' || venueData?.status === 'PENDING_LISTING' || venueData?.verified) ? 'blue' : venueData?.status === 'REJECTED' ? 'red' : 'amber'}>
+                    {venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED' ? '🟢 LIVE · Bookable by Players' : (venueData?.status === 'APPROVED' || venueData?.status === 'PENDING_LISTING' || venueData?.verified) ? '✓ Verified · Ready to Go Live' : venueData?.status === 'REJECTED' ? '✕ Rejected' : '⏳ Pending — not visible to players'}
                   </Badge>
 
                   <span className="subtle small">
@@ -884,17 +956,53 @@ export default function VenueSetupPage() {
                     Set one base price per sport. TurfChai prices each slot around it automatically.
                   </p>
 
-                  <div className="grid2" style={{ gap: 8, marginBottom: 12 }}>
+                  <div className="grid2" style={{ gap: 10, marginBottom: 12 }}>
                     {sportPricing.map((sport) => (
-                      <div className="panel between" key={sport.id}>
-                        <div>
-                          <b className="small">{sport.title}</b>
-                          <div className="tiny subtle">
+                      <div
+                        className="panel"
+                        key={sport.id}
+                        onClick={() => {
+                          selectSlotSport(sport.id);
+                          slotModal.open();
+                        }}
+                        style={{
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                          padding: '12px 14px',
+                          minWidth: 0,
+                          transition: 'all 0.15s ease',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: 10,
+                          background: 'var(--surface-1)',
+                        }}
+                        title={`Click to edit ${sport.title} time duration, buffer & base price`}
+                      >
+                        <div style={{ flex: '1 1 120px', minWidth: 0 }}>
+                          <b className="small" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+                            {sport.title}
+                            <span style={{ fontSize: 11, opacity: 0.7 }}>✏️</span>
+                          </b>
+                          <div className="tiny subtle" style={{ marginTop: 2 }}>
                             {sport.duration} min slots · {sport.buffer}m buffer
                           </div>
                         </div>
 
-                        <Badge tone={sport.tone} dot={false} style={sport.style}>
+                        <Badge
+                          tone={sport.tone}
+                          dot={false}
+                          style={{
+                            flexShrink: 0,
+                            whiteSpace: 'nowrap',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            padding: '4px 10px',
+                            ...sport.style,
+                          }}
+                        >
                           {bdt(sport.basePrice)} base
                         </Badge>
                       </div>
@@ -995,33 +1103,104 @@ export default function VenueSetupPage() {
 
                 <section className="card">
                   <div className="between">
-                    <h3 style={{ margin: 0 }}>📋 Amenities &amp; rules</h3>
+                    <h3 style={{ margin: 0 }}>📋 Amenities &amp; Rules</h3>
                     <Badge tone="green" dot={false}>
-                      Done
+                      {amenities.filter((a) => a.on).length} active
                     </Badge>
                   </div>
 
-                  <div className="row-wrap" style={{ marginTop: 10 }}>
-                    {AMENITIES.map((amenity) => (
-                      <span className={amenity.on ? 'chip on' : 'chip'} key={amenity.id}>
+                  <p className="subtle small" style={{ margin: '6px 0 10px' }}>
+                    Click any amenity or facility to toggle it on/off for player view.
+                  </p>
+
+                  <div className="row-wrap" style={{ gap: 8, marginTop: 10 }}>
+                    {amenities.map((amenity) => (
+                      <Chip
+                        key={amenity.id}
+                        active={amenity.on}
+                        onToggle={() => toggleAmenity(amenity.id)}
+                        style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
+                      >
                         {amenity.label}
-                      </span>
+                      </Chip>
                     ))}
                   </div>
 
-                  <p className="small muted" style={{ margin: '10px 0 0' }}>
-                    Rules: turf shoes only · no smoking · arrive 10 min early for handover.
-                  </p>
+                  <hr style={{ border: 0, borderTop: '1px solid var(--border-soft)', margin: '16px 0 12px' }} />
+
+                  <div className="between">
+                    <b className="small">Venue Rules</b>
+                    <span className="tiny subtle">Click rule to enable / disable</span>
+                  </div>
+
+                  <div className="stack-sm" style={{ marginTop: 8 }}>
+                    {rules.map((rule) => (
+                      <div
+                        key={rule.id}
+                        onClick={() => toggleRule(rule.id)}
+                        style={{
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          background: rule.on ? 'rgba(16, 185, 129, 0.08)' : 'var(--surface-1)',
+                          border: rule.on ? '1px solid rgba(16, 185, 129, 0.3)' : '1px dashed var(--border-medium)',
+                          opacity: rule.on ? 1 : 0.65,
+                          transition: 'all 0.15s ease',
+                        }}
+                        title="Click to toggle rule state"
+                      >
+                        <span className="small" style={{ textDecoration: rule.on ? 'none' : 'line-through' }}>
+                          {rule.label}
+                        </span>
+                        <Badge tone={rule.on ? 'green' : 'gray'} dot={false} style={{ fontSize: 11 }}>
+                          {rule.on ? 'Active' : 'Off'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <Input
+                      placeholder="Add custom rule..."
+                      value={customRuleText}
+                      onChange={(e) => setCustomRuleText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomRule()}
+                      style={{ fontSize: 13 }}
+                    />
+                    <Button size="sm" variant="secondary" onClick={handleAddCustomRule} style={{ flexShrink: 0 }}>
+                      + Add
+                    </Button>
+                  </div>
                 </section>
 
-                <div className="glass glass-card center">
-                  <h3>{venueData?.status === 'PUBLISHED' ? 'Venue is Live 🎉' : 'Ready to go live?'}</h3>
+                <div className="glass glass-card center" style={{ border: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-soft)' }}>
+                  <h3>{(venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '🟢 Venue is LIVE & Bookable' : 'Ready to go live?'}</h3>
                   <p className="subtle small" style={{ margin: '4px 0 12px' }}>
-                    Your slots open to every player on TurfChai instantly.
+                    {(venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED')
+                      ? 'Your turf is currently active and accepting player bookings in real-time.'
+                      : 'Publish your venue to make slots instantly bookable by all players on TurfChai.'}
                   </p>
 
-                  <Button variant="primary" size="lg" block onClick={handleGoLive}>
-                    🚀 {venueData?.status === 'PUBLISHED' ? 'Update Live Venue' : 'Go Live'}
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    block
+                    onClick={handleGoLive}
+                    style={{
+                      background: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED')
+                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                        : 'var(--brand)',
+                      borderColor: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '#059669' : 'var(--brand)',
+                      fontWeight: 600,
+                      boxShadow: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '0 4px 14px rgba(16, 185, 129, 0.4)' : 'none',
+                    }}
+                  >
+                    {(venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED')
+                      ? '🟢 Venue is LIVE (Click to Pause / Offline)'
+                      : '🚀 Go Live (Publish Venue)'}
                   </Button>
 
                   <Button
@@ -1128,11 +1307,11 @@ export default function VenueSetupPage() {
       <Overlay
         isOpen={slotModal.isOpen}
         onClose={slotModal.close}
-        title="Slot times & base price by sport"
+        title="Edit Sport Slot Times, Buffer & Base Price"
         maxWidth={520}
       >
         <p className="subtle small" style={{ margin: '4px 0 12px' }}>
-          Set the slot length and one base price per sport.
+          Select a sport to edit its play duration, handover buffer time, and base price per slot.
         </p>
 
         <Field label="Select Sport" htmlFor="spSportSelect">
@@ -1150,7 +1329,7 @@ export default function VenueSetupPage() {
         </Field>
 
         <div className="grid2" style={{ gap: 10 }}>
-          <Field label="Slot Duration" htmlFor="spDuration">
+          <Field label="Play Duration (mins)" htmlFor="spDuration">
             <Select
               id="spDuration"
               value={slotDraft.duration}
@@ -1158,21 +1337,25 @@ export default function VenueSetupPage() {
             >
               <option value="30">30 minutes</option>
               <option value="40">40 minutes</option>
+              <option value="45">45 minutes</option>
               <option value="60">60 minutes (1 hr)</option>
+              <option value="75">75 minutes</option>
               <option value="90">90 minutes (1.5 hrs)</option>
               <option value="120">120 minutes (2 hrs)</option>
             </Select>
           </Field>
 
-          <Field label="Handover Buffer" htmlFor="spBuffer">
+          <Field label="Handover Buffer (mins)" htmlFor="spBuffer">
             <Select
               id="spBuffer"
               value={slotDraft.buffer}
               onChange={(event) => setSlotDraft((current) => ({ ...current, buffer: event.target.value }))}
             >
+              <option value="0">0 minutes</option>
               <option value="5">5 minutes</option>
               <option value="10">10 minutes</option>
               <option value="15">15 minutes</option>
+              <option value="20">20 minutes</option>
             </Select>
           </Field>
         </div>
@@ -1187,9 +1370,13 @@ export default function VenueSetupPage() {
           />
         </Field>
 
+        <Alert tone="info" style={{ marginTop: 10 }}>
+          💡 Total slot block = <b>{Number(slotDraft.duration) + Number(slotDraft.buffer)} mins</b> ({slotDraft.duration}m play + {slotDraft.buffer}m buffer).
+        </Alert>
+
         <div className="stack-sm" style={{ marginTop: 16 }}>
           <Button variant="primary" block onClick={saveSlotSettings}>
-            Save base price ✓
+            Save duration, buffer & price ✓
           </Button>
 
           <Button variant="tertiary" block onClick={slotModal.close}>
@@ -1198,22 +1385,22 @@ export default function VenueSetupPage() {
         </div>
       </Overlay>
 
-      {/* Modal: Slot Generator */}
+      {/* Modal: Slot Generator & Time Slot Modifier */}
       <Overlay
         isOpen={generateSlotsModal.isOpen}
         onClose={generateSlotsModal.close}
-        title="Batch Generate Slots"
-        maxWidth={520}
+        title="Time Slot Modifier & Batch Generator"
+        maxWidth={560}
       >
         <p className="subtle small" style={{ margin: '4px 0 12px' }}>
-          Select a pitch and define the operating hours to generate bookable slots automatically.
+          Select a pitch and enter starting times. End times and 2nd slot validity are calculated automatically based on sport duration + buffer.
         </p>
 
-        <Field label="Pitch" htmlFor="genPitch">
+        <Field label="Select Pitch" htmlFor="genPitch">
           <Select id="genPitch" value={generateDraft.pitchId} onChange={e => setGenerateDraft(c => ({...c, pitchId: e.target.value}))}>
             <option value="">Select Pitch...</option>
             {pitches.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>{p.name} ({p.sports?.join(', ') || 'Football'})</option>
             ))}
           </Select>
         </Field>
@@ -1236,14 +1423,14 @@ export default function VenueSetupPage() {
         </div>
 
         <div className="grid2" style={{ gap: 10 }}>
-          <Field label="Daily Start Time (24h)" htmlFor="genTimeStart">
+          <Field label="1st Slot Starting Time (24h)" htmlFor="genTimeStart">
             <CustomTimePicker
               id="genTimeStart"
               value={generateDraft.startTime}
               onChange={e => setGenerateDraft(c => ({...c, startTime: e.target.value}))}
             />
           </Field>
-          <Field label="Daily End Time (24h)" htmlFor="genTimeEnd">
+          <Field label="Daily Operating End Time (24h)" htmlFor="genTimeEnd">
             <CustomTimePicker
               id="genTimeEnd"
               value={generateDraft.endTime}

@@ -34,6 +34,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import com.turfchai.booking.entity.Booking;
+import com.turfchai.booking.entity.BookingStatus;
+import com.turfchai.booking.repository.BookingRepository;
+import java.math.BigDecimal;
+import java.util.UUID;
+
 /**
  * Handles all owner-side venue management: create, update, pitches, pricing rules.
  * The player-facing read path lives in {@link VenueSearchService}.
@@ -51,6 +57,7 @@ public class VenueManagementService {
     private final UserRepository userRepository;
     private final SlotRepository slotRepository;
     private final com.turfchai.repository.TurfRequestRepository turfRequestRepository;
+    private final BookingRepository bookingRepository;
 
     public VenueManagementService(VenueRepository venueRepository,
                                    PitchRepository pitchRepository,
@@ -58,7 +65,8 @@ public class VenueManagementService {
                                    SportPricingRuleRepository pricingRuleRepository,
                                    UserRepository userRepository,
                                    SlotRepository slotRepository,
-                                   com.turfchai.repository.TurfRequestRepository turfRequestRepository) {
+                                   com.turfchai.repository.TurfRequestRepository turfRequestRepository,
+                                   BookingRepository bookingRepository) {
         this.venueRepository = venueRepository;
         this.pitchRepository = pitchRepository;
         this.sportRepository = sportRepository;
@@ -66,37 +74,51 @@ public class VenueManagementService {
         this.userRepository = userRepository;
         this.slotRepository = slotRepository;
         this.turfRequestRepository = turfRequestRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     // ── Venue ──────────────────────────────────────────────────────────────
 
     /** Create a new venue owned by the given user. */
+    /** Create a new venue or update existing venue for the owner. */
     public VenueManagementDto createVenue(Long ownerUserId, CreateVenueRequest req) {
         User owner = userRepository.findById(ownerUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Owner not found"));
 
-        Venue venue = new Venue();
-        venue.setOwner(owner);
+        List<Venue> existing = venueRepository.findByOwnerId(ownerUserId);
+        Venue venue = existing.isEmpty() ? new Venue() : existing.get(0);
+        if (venue.getId() == null) {
+            venue.setOwner(owner);
+            venue.setSlug(generateUniqueSlug(req.name()));
+            venue.setVenueCode(generateVenueCode());
+        }
         venue.setName(req.name());
-        venue.setSlug(generateUniqueSlug(req.name()));
-        venue.setVenueCode(generateVenueCode());
-        venue.setAddress(req.address());
-        venue.setArea(req.area());
-        venue.setLat(req.lat());
-        venue.setLng(req.lng());
-        venue.setBasePrice(req.basePrice() != null ? req.basePrice() : new java.math.BigDecimal("1000.00"));
-        venue.setOpenTime(parseTime(req.openTime()));
-        venue.setCloseTime(parseTime(req.closeTime()));
-        venue.setAmenities(req.amenities());
-        venue.setContactPhone(req.contactPhone());
-        venue.setContactEmail(req.contactEmail());
-        venue.setDepositPolicy(req.depositPolicy() != null ? req.depositPolicy() : "FULL_ONLY");
-        venue.setCancelPolicy(req.cancelPolicy() != null ? req.cancelPolicy() : "FREE_24H_50_6H");
-        venue.setAllowSplitPayment(req.allowSplitPayment() != null ? req.allowSplitPayment() : true);
-        venue.setRules(req.rules());
-        venue.setPhotos(req.photos() != null ? String.join(",", req.photos()) : "");
-        venue.setMlPricingEnabled(req.mlPricingEnabled() != null ? req.mlPricingEnabled() : true);
-        venue.setStatus("DRAFT");
+        if (req.address() != null && !req.address().isBlank()) venue.setAddress(req.address());
+        if (req.area() != null && !req.area().isBlank()) venue.setArea(req.area());
+        if (req.lat() != null) venue.setLat(req.lat());
+        if (req.lng() != null) venue.setLng(req.lng());
+        if (req.basePrice() != null) venue.setBasePrice(req.basePrice());
+        if (req.openTime() != null) venue.setOpenTime(parseTime(req.openTime()));
+        if (req.closeTime() != null) venue.setCloseTime(parseTime(req.closeTime()));
+        if (req.amenities() != null) venue.setAmenities(req.amenities());
+        if (req.contactPhone() != null) venue.setContactPhone(req.contactPhone());
+        if (req.contactEmail() != null) venue.setContactEmail(req.contactEmail());
+        if (req.depositPolicy() != null) venue.setDepositPolicy(req.depositPolicy());
+        if (req.cancelPolicy() != null) venue.setCancelPolicy(req.cancelPolicy());
+        if (req.allowSplitPayment() != null) venue.setAllowSplitPayment(req.allowSplitPayment());
+        if (req.rules() != null) venue.setRules(req.rules());
+        if (req.photos() != null && !req.photos().isEmpty()) venue.setPhotos(String.join(",", req.photos()));
+        if (req.mlPricingEnabled() != null) venue.setMlPricingEnabled(req.mlPricingEnabled());
+
+        var requests = (turfRequestRepository != null) ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId) : List.<com.turfchai.model.TurfRequest>of();
+        if (!requests.isEmpty() && "APPROVED".equalsIgnoreCase(requests.get(0).getStatus())) {
+            venue.setVerified(true);
+            if ("DRAFT".equalsIgnoreCase(venue.getStatus()) || "PENDING".equalsIgnoreCase(venue.getStatus())) {
+                venue.setStatus("PENDING_LISTING");
+            }
+        } else if (venue.getId() == null) {
+            venue.setStatus("DRAFT");
+        }
 
         Venue saved = venueRepository.save(venue);
         return toDto(saved);
@@ -106,10 +128,13 @@ public class VenueManagementService {
     @Transactional
     public List<VenueManagementDto> listOwnerVenues(Long ownerUserId) {
         List<Venue> venues = venueRepository.findByOwnerId(ownerUserId);
+        var requests = (turfRequestRepository != null) ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId) : List.<com.turfchai.model.TurfRequest>of();
+        boolean isApproved = !requests.isEmpty() && "APPROVED".equalsIgnoreCase(requests.get(0).getStatus());
+        boolean isRejected = !requests.isEmpty() && "REJECTED".equalsIgnoreCase(requests.get(0).getStatus());
+
         if (venues.isEmpty()) {
             User owner = userRepository.findById(ownerUserId).orElse(null);
             if (owner != null) {
-                var requests = turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId);
                 String venueName = (!requests.isEmpty() && requests.get(0).getVenueName() != null && !requests.get(0).getVenueName().isBlank())
                         ? requests.get(0).getVenueName() : "Kick Off Arena";
                 String area = (!requests.isEmpty() && requests.get(0).getArea() != null && !requests.get(0).getArea().isBlank())
@@ -123,17 +148,58 @@ public class VenueManagementService {
                         "FULL_ONLY", "FREE_24H_50_6H", true,
                         "Standard rules", null, false
                 );
-                VenueManagementDto created = createVenue(ownerUserId, autoReq);
-                return List.of(created);
+                createVenue(ownerUserId, autoReq);
+                venues = venueRepository.findByOwnerId(ownerUserId);
+            }
+        }
+
+        for (Venue v : venues) {
+            boolean updated = false;
+            if (isApproved) {
+                if (!v.isVerified()) {
+                    v.setVerified(true);
+                    updated = true;
+                }
+                if ("DRAFT".equalsIgnoreCase(v.getStatus()) || "PENDING".equalsIgnoreCase(v.getStatus())) {
+                    v.setStatus("PENDING_LISTING");
+                    updated = true;
+                }
+            } else if (isRejected && !"REJECTED".equalsIgnoreCase(v.getStatus())) {
+                v.setStatus("REJECTED");
+                updated = true;
+            }
+            if (updated) {
+                venueRepository.save(v);
             }
         }
         return venues.stream().map(this::toDto).toList();
     }
 
     /** Get a single venue owned by the given user (throws if not owner). */
-    @Transactional(readOnly = true)
+    @Transactional
     public VenueManagementDto getOwnerVenue(Long ownerUserId, Long venueId) {
         Venue venue = requireOwnership(ownerUserId, venueId);
+        var requests = turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId);
+        if (!requests.isEmpty()) {
+            String reqStatus = requests.get(0).getStatus();
+            if ("APPROVED".equalsIgnoreCase(reqStatus)) {
+                boolean updated = false;
+                if (!venue.isVerified()) {
+                    venue.setVerified(true);
+                    updated = true;
+                }
+                if ("DRAFT".equalsIgnoreCase(venue.getStatus()) || "PENDING".equalsIgnoreCase(venue.getStatus())) {
+                    venue.setStatus("PENDING_LISTING");
+                    updated = true;
+                }
+                if (updated) {
+                    venue = venueRepository.save(venue);
+                }
+            } else if ("REJECTED".equalsIgnoreCase(reqStatus) && !"REJECTED".equalsIgnoreCase(venue.getStatus())) {
+                venue.setStatus("REJECTED");
+                venue = venueRepository.save(venue);
+            }
+        }
         return toDto(venue);
     }
 
@@ -306,10 +372,14 @@ public class VenueManagementService {
         return toDto(venueRepository.save(venue));
     }
 
-    /** Dedicated method to update venue status (e.g. LIVE / OFFLINE) */
+    /** Dedicated method to update venue status (e.g. LIVE / PENDING_LISTING) */
     public VenueManagementDto updateVenueStatus(Long ownerUserId, Long venueId, String status) {
         Venue venue = requireOwnership(ownerUserId, venueId);
-        venue.setStatus(status);
+        String targetStatus = status;
+        if ("OFFLINE".equalsIgnoreCase(status)) {
+            targetStatus = "PENDING_LISTING";
+        }
+        venue.setStatus(targetStatus);
         return toDto(venueRepository.save(venue));
     }
 
@@ -350,6 +420,27 @@ public class VenueManagementService {
     // ── Mapping ────────────────────────────────────────────────────────────
 
     private VenueManagementDto toDto(Venue v) {
+        boolean isVerified = v.isVerified();
+        String status = v.getStatus();
+
+        if (v.getOwner() != null && turfRequestRepository != null) {
+            var requests = turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(v.getOwner().getId());
+            if (requests.isEmpty() && v.getOwner().getEmail() != null) {
+                requests = turfRequestRepository.findByOwnerEmailOrderByCreatedAtDesc(v.getOwner().getEmail());
+            }
+            if (!requests.isEmpty()) {
+                String reqStatus = requests.get(0).getStatus();
+                if ("APPROVED".equalsIgnoreCase(reqStatus)) {
+                    isVerified = true;
+                    if ("DRAFT".equalsIgnoreCase(status) || "PENDING".equalsIgnoreCase(status)) {
+                        status = "PENDING_LISTING";
+                    }
+                } else if ("REJECTED".equalsIgnoreCase(reqStatus)) {
+                    status = "REJECTED";
+                }
+            }
+        }
+
         List<VenueManagementDto.PitchDto> pitches = (v.getPitches() == null)
                 ? List.of()
                 : v.getPitches().stream().filter(Objects::nonNull).map(this::toPitchDto).toList();
@@ -363,13 +454,13 @@ public class VenueManagementService {
                 : List.of(v.getPhotos().split(","));
 
         return new VenueManagementDto(
-                v.getId(), v.getVenueCode(), v.getSlug(), v.getName(), v.getStatus(),
+                v.getId(), v.getVenueCode(), v.getSlug(), v.getName(), status,
                 v.getAddress(), v.getArea(), v.getLat(), v.getLng(),
                 v.getOpenTime(), v.getCloseTime(),
                 v.getAmenities(), v.getRules(),
                 v.getContactPhone(), v.getContactEmail(),
                 v.getDepositPolicy(), v.getCancelPolicy(), v.getBasePrice(), v.isAllowSplitPayment(),
-                v.isVerified(), v.isTournamentReady(), v.isHasPromotion(), v.getPromotionLabel(),
+                isVerified, v.isTournamentReady(), v.isHasPromotion(), v.getPromotionLabel(),
                 v.isMlPricingEnabled(), photos, pitches, rules
         );
     }
@@ -500,6 +591,26 @@ public class VenueManagementService {
             slotRepository.findById(req.getSlotId()).ifPresent(s -> {
                 s.setStatus(SlotStatus.BOOKED);
                 slotRepository.save(s);
+
+                // Create confirmed Booking record so manual calendar bookings appear in Reports, Revenue & Customer logs
+                BigDecimal amount = (s.getPrice() != null) ? s.getPrice() : BigDecimal.valueOf(2000);
+                String bookingCode = "MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+                Booking booking = Booking.builder()
+                        .bookingCode(bookingCode)
+                        .slot(s)
+                        .userId(ownerUserId)
+                        .venueId(venueId)
+                        .pitchId(s.getPitch() != null ? s.getPitch().getId() : 0L)
+                        .bookingDate(s.getSlotDate() != null ? s.getSlotDate() : LocalDate.now())
+                        .startTime(s.getStartTime() != null ? s.getStartTime() : LocalTime.of(16, 0))
+                        .endTime(s.getEndTime() != null ? s.getEndTime() : LocalTime.of(17, 30))
+                        .grossAmount(amount)
+                        .netAmount(amount)
+                        .status(BookingStatus.CONFIRMED)
+                        .build();
+
+                bookingRepository.save(booking);
             });
         }
     }
