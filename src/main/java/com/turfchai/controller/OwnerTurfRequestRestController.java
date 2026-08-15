@@ -45,8 +45,8 @@ public class OwnerTurfRequestRestController {
                 .sportsCsv(safeTruncate(dto.getSportsCsv(), 100, "Football,Cricket,Futsal"))
                 .ownerPhone(safeTruncate(dto.getOwnerPhone(), 20, "+8801811223344"))
                 .ownerEmail(safeTruncate(dto.getOwnerEmail(), 100, email))
-                .docTradeLicense(safeTruncate(dto.getDocTradeLicense(), 200, "Trade_License.pdf"))
-                .docOwnerNid(safeTruncate(dto.getDocOwnerNid(), 200, "NID.pdf"))
+                .docTradeLicense(safeTruncate(dto.getDocTradeLicense(), 500, "Trade_License.pdf"))
+                .docOwnerNid(safeTruncate(dto.getDocOwnerNid(), 500, "NID.pdf"))
                 .docUtilityBill(safeTruncate(dto.getDocUtilityBill(), 500, "Utility_Bill.pdf"))
                 .photosJson(photosJson)
                 .status("PENDING")
@@ -66,9 +66,20 @@ public class OwnerTurfRequestRestController {
 
     @GetMapping
     public ResponseEntity<List<TurfRequest>> getMyRequests(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails,
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
         Long ownerId = 1L;
+        if (userDetails != null) {
+            ownerId = userDetails.getId();
+        } else if (userIdHeader != null && !userIdHeader.isBlank()) {
+            try {
+                ownerId = Long.parseLong(userIdHeader);
+            } catch (Exception ignored) {}
+        }
         List<TurfRequest> requests = turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerId);
+        if (requests.isEmpty()) {
+            requests = turfRequestRepository.findAllByOrderByCreatedAtDesc();
+        }
         return ResponseEntity.ok(requests);
     }
 

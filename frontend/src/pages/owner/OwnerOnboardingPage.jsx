@@ -221,7 +221,6 @@ export default function OwnerOnboardingPage() {
       return;
     }
 
-
     setSaving(true);
     try {
       if (authState?.signupEmail && authState?.signupPassword) {
@@ -235,14 +234,18 @@ export default function OwnerOnboardingPage() {
           });
           setSession(authRes);
         } catch (authErr) {
-          if (authErr.message?.toLowerCase().includes('exists')) {
+          try {
             const loginRes = await login({
               email: authState.signupEmail,
               password: authState.signupPassword,
             });
             setSession(loginRes);
-          } else {
-            throw authErr;
+          } catch (loginErr) {
+            console.warn('Registration fallback failed:', authErr.message || loginErr.message);
+            // If phone or password format failed validation specifically, alert the user
+            if (authErr.message?.includes('phone') || authErr.message?.includes('Password')) {
+              throw authErr;
+            }
           }
         }
       }
@@ -270,10 +273,12 @@ export default function OwnerOnboardingPage() {
     }
   };
 
+  const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
 
   const nextToVenue = () => {
     if (!ownerName.trim()) return showToast('Owner full name is required');
     if (!ownerPhone.trim()) return showToast('Owner phone number is required');
+    if (!phoneRegex.test(ownerPhone.trim())) return showToast('Please enter a valid phone number (e.g. +8801712345678)');
     if (!nid.trim()) return showToast('NID number is required');
     setStep('venue');
   };

@@ -10,6 +10,14 @@ import { paths } from '@/routes/paths';
 import { login, register, checkEmail } from '@/api/auth';
 import { setSession } from '@/api/client';
 
+const EyeIcon = ({ off = false }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+    <circle cx="12" cy="12" r="3" />
+    {off && <path d="M3 3l18 18" />}
+  </svg>
+);
+
 const ROLE_TO_API = { player: 'PLAYER', owner: 'OWNER', admin: 'ADMIN' };
 
 const ROLES = [
@@ -51,11 +59,12 @@ export default function AuthPage() {
   // Form states
   const [signinEmail, setSigninEmail] = useState('');
   const [signinPassword, setSigninPassword] = useState('');
+  const [showSigninPassword, setShowSigninPassword] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,7 +73,7 @@ export default function AuthPage() {
   /** Map the DB role (returned by the login API) to a redirect destination */
   const getDestinationByRole = (apiRole) => {
     if (nextPath && nextPath.startsWith('/')) return nextPath;
-    if (apiRole === 'ADMIN') return paths.admin.dashboard;
+    if (apiRole === 'ADMIN' || apiRole === 'SUPER_ADMIN') return paths.admin.dashboard;
     if (apiRole === 'OWNER') return paths.owner.dashboard;
     return paths.player.home;
   };
@@ -131,6 +140,23 @@ export default function AuthPage() {
     }
   };
 
+  const eyeButtonStyle = {
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-3)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+    borderRadius: 8,
+    transition: 'color 0.2s ease',
+  };
+
   return (
     <>
       <PageTitle title="Authentication — TurfChai" />
@@ -160,14 +186,27 @@ export default function AuthPage() {
                   onChange={(e) => setSigninEmail(e.target.value)}
                 />
               </Field>
+
               <Field label="Password" htmlFor="pw">
-                <Input
-                  id="pw"
-                  type="password"
-                  placeholder="••••••••"
-                  value={signinPassword}
-                  onChange={(e) => setSigninPassword(e.target.value)}
-                />
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Input
+                    id="pw"
+                    type={showSigninPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={signinPassword}
+                    onChange={(e) => setSigninPassword(e.target.value)}
+                    style={{ paddingRight: 40 }}
+                  />
+                  <button
+                    type="button"
+                    style={eyeButtonStyle}
+                    onClick={() => setShowSigninPassword((prev) => !prev)}
+                    aria-label={showSigninPassword ? 'Hide password' : 'Show password'}
+                    title={showSigninPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeIcon off={showSigninPassword} />
+                  </button>
+                </div>
               </Field>
 
               <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>
@@ -230,7 +269,6 @@ export default function AuthPage() {
             </div>
 
             <form onSubmit={handleSignupSubmit}>
-
               <Field label="Full Name" htmlFor="nm">
                 <Input
                   id="nm"
@@ -249,14 +287,27 @@ export default function AuthPage() {
                   onChange={(e) => setSignupEmail(e.target.value)}
                 />
               </Field>
+
               <Field label="Create Password" htmlFor="pw2">
-                <Input
-                  id="pw2"
-                  type="password"
-                  placeholder="At least 8 characters"
-                  value={signupPassword}
-                  onChange={(e) => setSignupPassword(e.target.value)}
-                />
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Input
+                    id="pw2"
+                    type={showSignupPassword ? 'text' : 'password'}
+                    placeholder="At least 8 characters"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    style={{ paddingRight: 40 }}
+                  />
+                  <button
+                    type="button"
+                    style={eyeButtonStyle}
+                    onClick={() => setShowSignupPassword((prev) => !prev)}
+                    aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
+                    title={showSignupPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeIcon off={showSignupPassword} />
+                  </button>
+                </div>
               </Field>
 
               <Button variant="primary" block type="submit" style={{ marginTop: 8 }} disabled={isSubmitting}>

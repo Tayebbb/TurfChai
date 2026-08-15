@@ -311,16 +311,15 @@ export default function PaymentsPage() {
               </div>
             </div>
           </div>
-          <div className="income-chart-filters" role="group" aria-label="Time range">
+          <div className="row-wrap" style={{ gap: 6 }} role="group" aria-label="Time range">
             {TIMEFRAMES.map((item) => (
-              <button
+              <Chip
                 key={item.id}
-                type="button"
-                className={`income-tf-btn${timeframe === item.id ? ' active' : ''}`}
-                onClick={() => setTimeframe(item.id)}
+                active={timeframe === item.id}
+                onToggle={() => setTimeframe(item.id)}
               >
                 {item.label}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>

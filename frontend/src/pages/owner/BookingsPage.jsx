@@ -8,17 +8,8 @@ import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { useApi } from '@/hooks/useApi';
 import { getOwnerBookings } from '@/api/ownerBookings';
-
-const FILTERS = [
-  'Today',
-  'This week',
-  'Pitch 2',
-  'Online',
-  'Phone',
-  'Walk-in',
-  'Payment pending',
-];
-
+import { listMyVenues } from '@/api/ownerVenues';
+import { getMyTurfRequests } from '@/api/turfRequests';
 
 export default function BookingsPage() {
   const { showToast } = useToast();
@@ -28,10 +19,30 @@ export default function BookingsPage() {
   const { data: res, loading } = useApi(getOwnerBookings, []);
   const bookings = res?.data || res || [];
 
+  const { data: venuesRes } = useApi(listMyVenues, []);
+  const venues = venuesRes?.data || venuesRes || [];
+  const activeVenue = venues[0];
+
+  const { data: requestsRes } = useApi(getMyTurfRequests, []);
+  const latestRequest = Array.isArray(requestsRes) ? requestsRes[0] : null;
+
+  const pitchCount = activeVenue?.pitchCount || activeVenue?.pitches?.length || latestRequest?.pitchCount || 1;
+  const pitchFilters = Array.from({ length: pitchCount }, (_, i) => `Pitch ${i + 1}`);
+
+  const filters = [
+    'Today',
+    'This week',
+    ...pitchFilters,
+    'Online',
+    'Phone',
+    'Walk-in',
+    'Payment pending',
+  ];
+
   const term = query.trim().toLowerCase();
   const visible = term
     ? bookings.filter((row) =>
-        `${row.customer} ${row.sub} ${row.bookingCode}`.toLowerCase().includes(term),
+        `${row.customer} ${row.sub} ${row.bookingCode} ${row.pitch}`.toLowerCase().includes(term),
       )
     : bookings;
 
@@ -42,7 +53,7 @@ export default function BookingsPage() {
       <div className="main-header">
         <div>
           <h1>Bookings</h1>
-          <span className="subtle small">All sources · searchable &amp; filterable</span>
+          <span className="subtle small">All sources · searchable &amp; filterable ({pitchCount} Pitch{pitchCount > 1 ? 'es' : ''})</span>
         </div>
         <Button variant="primary" onClick={() => showToast('Manual booking drawer — see Calendar page')}>
           + Manual booking
@@ -57,7 +68,7 @@ export default function BookingsPage() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        {FILTERS.map((filter) => (
+        {filters.map((filter) => (
           <Chip key={filter} active={chips.isActive(filter)} onToggle={() => chips.toggle(filter)}>
             {filter}
           </Chip>
