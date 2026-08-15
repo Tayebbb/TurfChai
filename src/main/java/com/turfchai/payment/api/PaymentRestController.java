@@ -41,7 +41,7 @@ public class PaymentRestController {
             Authentication authentication,
             @Valid @RequestBody CheckoutRequest request) {
         CheckoutResponse result = paymentService.pay(currentUserId(authentication), request.getSlotId(),
-                request.getMethod(), request.getApplyWalletAmount(), request.isSimulateFailure());
+                request.getMethod(), request.getApplyWalletAmount());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 

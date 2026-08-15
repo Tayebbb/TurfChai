@@ -9,13 +9,12 @@ import { api } from './client';
 
 /**
  * POST /api/v1/payments/checkout — pays for the caller's currently held
- * slot (mock bKash/Nagad/Card/Cash). Always resolves — a declined payment
- * is `{ status: 'FAILED', ... }` in the response, not a thrown error.
+ * slot (mock bKash/Nagad/Card/Cash).
  */
-export async function checkout({ slotId, method, applyWalletAmount, simulateFailure }) {
+export async function checkout({ slotId, method, applyWalletAmount }) {
   const res = await api('/payments/checkout', {
     method: 'POST',
-    body: { slotId, method, applyWalletAmount, simulateFailure },
+    body: { slotId, method, applyWalletAmount },
   });
   return res.data;
 }

@@ -99,7 +99,7 @@ class PaymentServiceTest {
         when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
         when(rewardService.getWalletBalance(USER_ID)).thenReturn(BigDecimal.ZERO);
 
-        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.BKASH, null, false);
+        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.BKASH, null);
 
         assertEquals("SUCCESS", response.getStatus());
         assertEquals(BOOKING_ID, response.getBookingId());
@@ -126,7 +126,7 @@ class PaymentServiceTest {
         when(rewardService.awardBookingPoints(anyLong(), anyLong(), any(BigDecimal.class))).thenReturn(null);
         when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
 
-        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.NAGAD, BigDecimal.valueOf(500), false);
+        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.NAGAD, BigDecimal.valueOf(500));
 
         assertEquals("SUCCESS", response.getStatus());
         assertEquals(BigDecimal.valueOf(500), response.getWalletApplied());
@@ -149,50 +149,10 @@ class PaymentServiceTest {
         when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
 
         // Caller asks to apply 2000, but only has 100 in the wallet.
-        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.CARD, BigDecimal.valueOf(2000), false);
+        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.CARD, BigDecimal.valueOf(2000));
 
         assertEquals(BigDecimal.valueOf(100), response.getWalletApplied());
         assertEquals(BigDecimal.valueOf(1900), response.getPayment().getAmount());
-    }
-
-    @Test
-    @DisplayName("pay() with simulateFailure declines the gateway charge and leaves the booking PENDING")
-    void pay_simulatedFailure_declinesAndLeavesBookingPending() {
-        when(bookingService.createPendingBooking(USER_ID, SLOT_ID)).thenReturn(pendingBooking);
-        when(rewardService.getWalletBalance(USER_ID)).thenReturn(BigDecimal.ZERO);
-        when(paymentRepository.existsByTxnReference(any())).thenReturn(false);
-        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> {
-            Payment p = inv.getArgument(0);
-            p.setId(1L);
-            return p;
-        });
-
-        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.BKASH, null, true);
-
-        assertEquals("FAILED", response.getStatus());
-        assertEquals(PaymentStatus.FAILED, response.getPayment().getStatus());
-        assertNotNull(response.getPayment().getFailureReason());
-
-        verify(bookingService, never()).finalizeConfirmedBooking(any());
-        verify(rewardService, never()).awardBookingPoints(any(), any(), any());
-        verify(rewardService, never()).applyWalletAtCheckout(any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("pay() ignores simulateFailure when the wallet fully covers the price — nothing to decline")
-    void pay_walletFullyCovers_ignoresSimulateFailure() {
-        Booking cheapBooking = booking(BookingStatus.PENDING, BigDecimal.valueOf(300));
-        when(bookingService.createPendingBooking(USER_ID, SLOT_ID)).thenReturn(cheapBooking);
-        when(rewardService.getWalletBalance(USER_ID)).thenReturn(BigDecimal.valueOf(500));
-        when(rewardService.awardBookingPoints(anyLong(), anyLong(), any(BigDecimal.class))).thenReturn(null);
-        when(rewardService.awardOffPeakBonusIfApplicable(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
-
-        CheckoutResponse response = paymentService.pay(USER_ID, SLOT_ID, PaymentMethod.BKASH, BigDecimal.valueOf(300), true);
-
-        assertEquals("SUCCESS", response.getStatus());
-        assertNull(response.getPayment()); // no gateway charge at all — $0 payments rows aren't allowed
-        verify(paymentRepository, never()).save(any());
-        verify(bookingService).finalizeConfirmedBooking(cheapBooking);
     }
 
     @Test
