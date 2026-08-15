@@ -77,9 +77,6 @@ public class OwnerTurfRequestRestController {
             } catch (Exception ignored) {}
         }
         List<TurfRequest> requests = turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerId);
-        if (requests.isEmpty()) {
-            requests = turfRequestRepository.findAllByOrderByCreatedAtDesc();
-        }
         return ResponseEntity.ok(requests);
     }
 

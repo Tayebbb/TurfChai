@@ -35,11 +35,11 @@ export default function DashboardPage() {
   const profileApi = useApi(() => getMyProfile(), []);
   const owner = profileApi.data;
 
-  const { data: venuesRes } = useApi(listMyVenues, []);
+  const { data: venuesRes } = useApi(listMyVenues, [], { intervalMs: 30000 });
   const venues = venuesRes?.data || venuesRes || [];
   const activeVenue = venues[0];
 
-  const { data: requestsRes } = useApi(getMyTurfRequests, []);
+  const { data: requestsRes, reload: reloadRequests } = useApi(getMyTurfRequests, [], { intervalMs: 20000 });
   const myRequests = Array.isArray(requestsRes) ? requestsRes : [];
   const latestRequest = myRequests[0] || null;
 
@@ -162,7 +162,7 @@ export default function DashboardPage() {
               <Button variant="secondary" to={paths.owner.onboarding}>
                 Edit Onboarding Request ✏️
               </Button>
-              <Button variant="primary" onClick={() => showToast('Refreshed status — still pending approval ⏳')}>
+              <Button variant="primary" onClick={() => { reloadRequests(); showToast('Checking verification status…'); }}>
                 Check Verification Status 🔄
               </Button>
             </div>

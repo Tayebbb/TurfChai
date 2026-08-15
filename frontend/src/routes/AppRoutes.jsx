@@ -15,6 +15,7 @@ import { HostLayout } from '@/layouts/HostLayout';
 import { OwnerLayout } from '@/layouts/OwnerLayout';
 import { PlayerLayout } from '@/layouts/PlayerLayout';
 import { PublicLayout } from '@/layouts/PublicLayout';
+import RequireAdmin from '@/guards/RequireAdmin';
 
 /* Every page is its own chunk so a first paint only ships one screen. */
 const Landing = lazy(() => import('@/public/LandingPage'));
@@ -154,7 +155,7 @@ export function AppRoutes() {
           <Route path="staff" element={<OwnerStaff />} />
         </Route>
 
-        <Route path="admin" element={<AdminLayout />}>
+        <Route path="admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
           <Route index element={<AdminDashboard />} />
           <Route path="turf-requests" element={<AdminTurfRequests />} />
           <Route path="turf-requests/:requestId" element={<AdminRequestReview />} />
