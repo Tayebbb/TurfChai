@@ -367,9 +367,11 @@ public class VenueManagementService {
                 ? List.of()
                 : v.getPricingRules().stream().filter(Objects::nonNull).map(this::toPricingRuleDto).toList();
 
-        List<String> photos = (v.getPhotos() == null || v.getPhotos().isBlank())
+        List<String> photos = (v.getPhotos() == null || v.getPhotos().isBlank() || "[]".equals(v.getPhotos().trim()))
                 ? List.of()
-                : List.of(v.getPhotos().split(","));
+                : java.util.Arrays.stream(v.getPhotos().split(","))
+                        .filter(p -> !p.trim().isEmpty() && !"[]".equals(p.trim()))
+                        .toList();
 
         return new VenueManagementDto(
                 v.getId(), v.getVenueCode(), v.getSlug(), v.getName(), v.getStatus(),
