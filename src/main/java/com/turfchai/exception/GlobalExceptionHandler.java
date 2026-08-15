@@ -173,11 +173,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
-    }
+
 
     /**
      * A path/query value that cannot be coerced to the declared type is a client

@@ -35,7 +35,7 @@ export default function PromotionsPage() {
     return getOwnerPromotions(activeVenueId);
   }, [activeVenueId]);
 
-  const { data: res, loading, refetch } = useApi(getPromosCb, [activeVenueId]);
+  const { data: res, loading, reload } = useApi(getPromosCb, [activeVenueId]);
   const promotions = res?.data || res || [];
 
   const handleLaunch = async () => {
@@ -69,24 +69,12 @@ export default function PromotionsPage() {
       setValidFrom('');
       setValidUntil('');
       
-      refetch();
+      reload();
     } catch (err) {
       const msg = err.message || 'Failed to create promotion';
       showToast(`Error: ${msg}`);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleToggle = async (promoId, currentActive) => {
-    if (!activeVenueId) return;
-    try {
-      await updatePromotion(activeVenueId, promoId, { active: !currentActive });
-      showToast(!currentActive ? 'Promotion activated ✓' : 'Promotion paused ✓');
-      refetch();
-    } catch (err) {
-      const msg = err.message || 'Failed to update promotion status';
-      showToast(`Error: ${msg}`);
     }
   };
 
@@ -97,11 +85,24 @@ export default function PromotionsPage() {
     try {
       await deletePromotion(activeVenueId, promoId);
       showToast('Promotion deleted ✓');
-      refetch();
+      reload();
     } catch (err) {
       const msg = err.message || 'Failed to delete promotion';
       showToast(`Error: ${msg}`);
     }
+  };
+
+  const getRemainingDays = (validUntil) => {
+    if (!validUntil) return 'No expiry';
+    const diff = new Date(validUntil).getTime() - new Date().getTime();
+    if (diff <= 0) return 'Expired';
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return `${days} days`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
@@ -146,15 +147,23 @@ export default function PromotionsPage() {
                   <div className="tiny subtle">Usage limit</div>
                 </div>
               </div>
+
+              <div className="grid3" style={{ gap: 8, marginTop: 8 }}>
+                <div className="panel center">
+                  <b className="small" style={{ fontSize: '0.85em' }}>{formatDate(promo.validFrom)}</b>
+                  <div className="tiny subtle">Start Date</div>
+                </div>
+                <div className="panel center">
+                  <b className="small" style={{ fontSize: '0.85em' }}>{formatDate(promo.validUntil)}</b>
+                  <div className="tiny subtle">End Date</div>
+                </div>
+                <div className="panel center">
+                  <b className="small" style={{ fontSize: '0.85em' }}>{getRemainingDays(promo.validUntil)}</b>
+                  <div className="tiny subtle">Remaining</div>
+                </div>
+              </div>
               
               <div className="row" style={{ marginTop: 10 }}>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleToggle(promo.id, promo.active)}
-                >
-                  {promo.active ? 'Pause' : 'Activate'}
-                </Button>
                 <Button
                   size="sm"
                   variant="tertiary"

@@ -1,5 +1,5 @@
 -- ============================================================================
--- V11: Drop legacy promotion columns
+-- V25: Drop legacy promotion columns
 -- 
 -- The V10 migration added the new Promotion columns, but it left the legacy
 -- columns (title, kind, starts_at, ends_at) which were defined as NOT NULL.
