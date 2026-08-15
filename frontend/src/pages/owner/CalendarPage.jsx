@@ -15,6 +15,7 @@ import {
   blockOwnerSlot,
   createManualBooking,
 } from '@/api/ownerVenues';
+import { getMyTurfRequests } from '@/api/turfRequests';
 
 const LEGEND = [
   { id: 'AVAILABLE', label: 'Available', swatch: 'var(--success)' },
@@ -78,7 +79,9 @@ export default function CalendarPage() {
     getOwnerCalendar(selectedVenueId, dateStr)
       .then((data) => {
         if (data) {
-          if (data.pitches) setPitches(data.pitches);
+          if (Array.isArray(data.pitches) && data.pitches.length > 0) {
+            setPitches(data.pitches);
+          }
           if (data.rows) setRows(data.rows);
         }
       })
@@ -92,9 +95,28 @@ export default function CalendarPage() {
     let unmounted = false;
     listMyVenues()
       .then((res) => {
-        if (!unmounted && Array.isArray(res) && res.length > 0) {
-          setVenues(res);
-          setSelectedVenueId(res[0].id);
+        const venueList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (!unmounted && venueList.length > 0) {
+          setVenues(venueList);
+          setSelectedVenueId(venueList[0].id);
+        } else if (!unmounted) {
+          getMyTurfRequests()
+            .then((reqRes) => {
+              const reqList = Array.isArray(reqRes?.data) ? reqRes.data : (Array.isArray(reqRes) ? reqRes : []);
+              if (!unmounted && reqList.length > 0) {
+                const req = reqList[0];
+                const count = req.pitchCount || 1;
+                const reqSports = (req.sportsCsv || 'Football').split(',').map((s) => s.trim());
+                const generatedPitches = Array.from({ length: count }, (_, i) => ({
+                  id: i + 1,
+                  name: `Pitch ${String.fromCharCode(65 + i)}`,
+                  format: '7-a-side',
+                  sports: reqSports,
+                }));
+                setPitches(generatedPitches);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -108,7 +130,27 @@ export default function CalendarPage() {
     getOwnerCalendar(selectedVenueId, dateStr)
       .then((data) => {
         if (!unmounted && data) {
-          if (data.pitches) setPitches(data.pitches);
+          if (Array.isArray(data.pitches) && data.pitches.length > 0) {
+            setPitches(data.pitches);
+          } else {
+            getMyTurfRequests()
+              .then((reqRes) => {
+                const reqList = Array.isArray(reqRes?.data) ? reqRes.data : (Array.isArray(reqRes) ? reqRes : []);
+                if (!unmounted && reqList.length > 0) {
+                  const req = reqList[0];
+                  const count = req.pitchCount || 1;
+                  const reqSports = (req.sportsCsv || 'Football').split(',').map((s) => s.trim());
+                  const generatedPitches = Array.from({ length: count }, (_, i) => ({
+                    id: i + 1,
+                    name: `Pitch ${String.fromCharCode(65 + i)}`,
+                    format: '7-a-side',
+                    sports: reqSports,
+                  }));
+                  setPitches(generatedPitches);
+                }
+              })
+              .catch(() => {});
+          }
           if (data.rows) setRows(data.rows);
         }
       })

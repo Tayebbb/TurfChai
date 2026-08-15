@@ -141,8 +141,8 @@ export default function ReviewsPage() {
                 <div className="tiny subtle">{totalReviews} verified reviews</div>
               </div>
               <div style={{ flex: 1 }} className="stack-sm">
-                {ratingBreakdown.map((row) => (
-                  <div className="row" style={{ gap: 8 }} key={row.star}>
+                {ratingBreakdown.map((row, idx) => (
+                  <div className="row" style={{ gap: 8 }} key={row.star ?? row.stars ?? idx}>
                     <span className="tiny num" style={{ width: 12 }}>
                       {row.star}
                     </span>
