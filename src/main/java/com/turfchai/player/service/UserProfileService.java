@@ -71,6 +71,9 @@ public class UserProfileService {
         if (request.preferredTimes() != null) {
             user.setPreferredTimes(toCsv(request.preferredTimes()));
         }
+        if (request.position() != null) {
+            user.setPreferredPosition(request.position().trim());
+        }
         return toDto(users.save(user));
     }
 
@@ -134,6 +137,7 @@ public class UserProfileService {
                 user.getArea(), user.getBio(), user.getAvatarInitials(),
                 user.getPlayStyle() == null ? null : user.getPlayStyle().name().toLowerCase(Locale.ROOT),
                 user.getPlayerRole(), fromCsv(user.getPreferredSports()), fromCsv(user.getPreferredTimes()),
+                user.getPreferredPosition(),
                 user.getReliabilityScore(), user.getGamesAttended());
     }
 

@@ -79,10 +79,19 @@ public class RewardService {
         return recordLedgerEntry(userId, reason, points, bookingId, openGameId, null, note);
     }
 
-    /** +50 pts for completing a booking. */
+    /**
+     * Credits booking points at the loyalty program rate of ৳1 spent = 1 point:
+     * the award is the booking's net amount rounded to whole taka. Bookings are
+     * the biggest source of points, so this must never silently drop below the
+     * positive floor {@link #earnPoints} enforces.
+     */
     @Transactional
-    public PointLedgerEntry awardBookingPoints(Long userId, Long bookingId) {
-        return earnPoints(userId, PointReason.BOOKING, PointReason.BOOKING.defaultPoints(), bookingId, null, "Booked a turf");
+    public PointLedgerEntry awardBookingPoints(Long userId, Long bookingId, BigDecimal netAmount) {
+        if (netAmount == null || netAmount.signum() <= 0) {
+            throw new IllegalArgumentException("Booking net amount must be positive");
+        }
+        int points = netAmount.setScale(0, java.math.RoundingMode.HALF_UP).intValue();
+        return earnPoints(userId, PointReason.BOOKING, points, bookingId, null, "Booked a turf");
     }
 
     /** +30 pts for attending and playing a booked match. */

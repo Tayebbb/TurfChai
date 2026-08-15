@@ -3,8 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 /**
  * Small data-fetch hook: runs `fetcher` whenever `deps` change and exposes
  * { data, loading, error, reload }. Ignores out-of-order responses.
+ *
+ * Pass `{ intervalMs }` as the third argument to poll: the fetcher re-runs
+ * every `intervalMs` while mounted (used by owner screens so an admin
+ * approval flips the request status without a manual page reload).
  */
-export function useApi(fetcher, deps = []) {
+export function useApi(fetcher, deps = [], options = {}) {
+  const { intervalMs } = options;
   const [reloadTick, setReloadTick] = useState(0);
   const key = `${JSON.stringify(deps)}#${reloadTick}`;
   const [state, setState] = useState({ key, data: null, loading: true, error: null });
@@ -34,6 +39,12 @@ export function useApi(fetcher, deps = []) {
       cancelled = true;
     };
   }, [key]);
+
+  useEffect(() => {
+    if (!intervalMs || intervalMs <= 0) return;
+    const id = setInterval(() => setReloadTick((tick) => tick + 1), intervalMs);
+    return () => clearInterval(id);
+  }, [key, intervalMs]);
 
   return {
     data: state.data,

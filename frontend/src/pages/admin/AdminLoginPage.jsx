@@ -44,6 +44,7 @@ export default function AdminLoginPage() {
 
   const [challenge, setChallenge] = useState('');
   const [code, setCode] = useState('');
+  const [devCode, setDevCode] = useState('');
   const [remaining, setRemaining] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -73,6 +74,7 @@ export default function AdminLoginPage() {
       setChallenge(response.challenge);
       setRemaining(response.ttlSeconds);
       setCode('');
+      setDevCode(response.devCode || '');
       setStep('otp');
     } catch (error) {
       showToast(error?.message || 'Invalid email or password', { duration: 5000 });
@@ -87,6 +89,7 @@ export default function AdminLoginPage() {
       setChallenge(response.challenge);
       setRemaining(response.ttlSeconds);
       setCode('');
+      setDevCode(response.devCode || '');
       otpRefs.current[0]?.focus();
       showToast('A new verification code was sent');
     } catch (error) {
@@ -189,52 +192,6 @@ export default function AdminLoginPage() {
           </div>
 
           <Card className="tc-login-card" style={{ padding: 28, borderRadius: 24 }}>
-            {/* Quick Demo Access Option */}
-            <div
-              style={{
-                marginBottom: 20,
-                padding: 12,
-                borderRadius: 14,
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-              }}
-            >
-              <div>
-                <b style={{ fontSize: 13, display: 'block', color: 'var(--text)' }}>
-                  🛡️ Demo Admin Mode
-                </b>
-                <span className="tiny subtle">
-                  Bypass DB check &amp; enter dashboard directly
-                </span>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                style={{
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
-                  background: 'var(--brand)',
-                  color: '#fff',
-                  borderColor: 'var(--brand)',
-                }}
-                onClick={() => {
-                  setSession({
-                    token: 'demo-admin-token-12345',
-                    user: { id: 1, fullName: 'Demo Admin', email: 'admin@turfchai.com', role: 'ADMIN' },
-                  });
-                  showToast('Signed in as Demo Admin ✓');
-                  navigate(paths.admin.dashboard);
-                }}
-              >
-                ⚡ Quick Demo Login
-              </Button>
-            </div>
-
             {/* Step indicator */}
             <div
               role="tablist"
@@ -348,6 +305,26 @@ export default function AdminLoginPage() {
                     Check your email for the 6-digit code
                   </p>
                 </div>
+
+                {devCode && (
+                  <div
+                    style={{
+                      margin: '12px 0',
+                      padding: '10px 14px',
+                      borderRadius: 12,
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px dashed rgba(34, 197, 94, 0.4)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <span className="tiny subtle" style={{ display: 'block' }}>
+                      Development code (also emailed to the admin)
+                    </span>
+                    <b className="num" style={{ fontSize: 22, letterSpacing: 6, color: 'var(--green)' }}>
+                      {devCode}
+                    </b>
+                  </div>
+                )}
 
                 <div className="tc-otp-cells" role="group" aria-label="Verification code" onPaste={handleOtpPaste}>
                   {Array.from({ length: OTP_LENGTH }, (_, index) => (

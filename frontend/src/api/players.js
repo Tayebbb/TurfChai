@@ -21,10 +21,10 @@ export async function getMyProfile() {
   } catch (err) {
     if (localUser) {
       return {
-        fullName: localUser.fullName || 'Player',
+        fullName: localUser.fullName || '',
         email: localUser.email || '',
-        area: localUser.area || 'Dhanmondi',
-        playerRole: localUser.playerRole || 'captain',
+        area: localUser.area || '',
+        playerRole: localUser.playerRole || '',
       };
     }
     throw err;
@@ -40,6 +40,10 @@ export async function updateMyProfile(changes) {
     fullName: changes.fullName || currentUser.fullName || res?.fullName,
     area: changes.area || currentUser.area || res?.area,
     playerRole: changes.playerRole || currentUser.playerRole || res?.playerRole,
+    playStyle: changes.playStyle || currentUser.playStyle || res?.playStyle,
+    position: changes.position || currentUser.position || res?.position,
+    preferredSports: changes.preferredSports ?? currentUser.preferredSports ?? res?.preferredSports,
+    preferredTimes: changes.preferredTimes ?? currentUser.preferredTimes ?? res?.preferredTimes,
   };
   setSession({ user: updatedUser });
   return res;

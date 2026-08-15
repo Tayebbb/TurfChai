@@ -51,27 +51,34 @@ public class RewardDataSeeder {
     void seedCatalog(LoyaltyTierRepository tiers, RewardProductRepository products) {
         if (tiers.count() == 0) {
             tiers.save(LoyaltyTier.builder()
-                    .name("SILVER")
+                    .name("BRONZE")
                     .minPoints(0)
                     .discountPercent(BigDecimal.ZERO)
                     .perks(Map.of("priority_booking", false, "free_extension_min", 0))
                     .sortOrder((short) 1)
                     .build());
             tiers.save(LoyaltyTier.builder()
-                    .name("GOLD")
-                    .minPoints(1000)
-                    .discountPercent(BigDecimal.TEN)
-                    .perks(Map.of("priority_booking", false, "free_extension_min", 30))
+                    .name("SILVER")
+                    .minPoints(500)
+                    .discountPercent(BigDecimal.valueOf(5))
+                    .perks(Map.of("priority_booking", false, "free_extension_min", 15))
                     .sortOrder((short) 2)
                     .build());
             tiers.save(LoyaltyTier.builder()
-                    .name("PLATINUM")
-                    .minPoints(2000)
-                    .discountPercent(BigDecimal.valueOf(15))
-                    .perks(Map.of("priority_booking", true, "free_extension_min", 30))
+                    .name("GOLD")
+                    .minPoints(1500)
+                    .discountPercent(BigDecimal.TEN)
+                    .perks(Map.of("priority_booking", false, "free_extension_min", 30))
                     .sortOrder((short) 3)
                     .build());
-            log.info("Seeded 3 loyalty tiers");
+            tiers.save(LoyaltyTier.builder()
+                    .name("PLATINUM")
+                    .minPoints(5000)
+                    .discountPercent(BigDecimal.valueOf(15))
+                    .perks(Map.of("priority_booking", true, "free_extension_min", 30))
+                    .sortOrder((short) 4)
+                    .build());
+            log.info("Seeded 4 loyalty tiers");
         }
 
         if (products.count() == 0) {
@@ -95,8 +102,9 @@ public class RewardDataSeeder {
     }
 
     /**
-     * Grants the demo player a realistic point history (1,240 pts — Gold tier,
-     * 62% of the way to Platinum) so the rewards page isn't empty on first load.
+     * Grants the demo player a realistic point history (2,740 pts — Gold tier,
+     * 35% of the way to Platinum) so the rewards page isn't empty on first load.
+     * Booking points use the live ৳1 = 1 pt rule against the demo net amounts.
      * Idempotent: skipped if the demo user already has any ledger entries.
      */
     @Transactional
@@ -108,7 +116,7 @@ public class RewardDataSeeder {
             }
 
             for (long bookingId = 101; bookingId < 111; bookingId++) {
-                rewardService.awardBookingPoints(userId, bookingId); // 10 x 50 = 500
+                rewardService.awardBookingPoints(userId, bookingId, BigDecimal.valueOf(200)); // 10 x 200 = 2,000
             }
             for (long bookingId = 101; bookingId < 107; bookingId++) {
                 rewardService.awardMatchAttendedPoints(userId, bookingId); // 6 x 30 = 180
@@ -125,9 +133,9 @@ public class RewardDataSeeder {
             rewardService.awardProfileCompletionPointsOnce(userId); // 10
             rewardService.awardMonthlyActivityBonus(userId, 200, "Welcome bonus");
             rewardService.awardMonthlyActivityBonus(userId, 165, "5th booking this month");
-            // Total: 500 + 180 + 100 + 40 + 45 + 10 + 200 + 165 = 1,240 pts
+            // Total: 2,000 + 180 + 100 + 40 + 45 + 10 + 200 + 165 = 2,740 pts
 
-            log.info("Seeded demo player point history: 1,240 pts for {}", demoUser.getEmail());
+            log.info("Seeded demo player point history: 2,740 pts for {}", demoUser.getEmail());
         });
     }
 }

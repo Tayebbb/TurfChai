@@ -16,6 +16,7 @@ public record PlayerProfileDto(
         String playerRole,
         List<String> preferredSports,
         List<String> preferredTimes,
+        String position,
         Integer reliabilityScore,
         Integer gamesAttended) {
 }

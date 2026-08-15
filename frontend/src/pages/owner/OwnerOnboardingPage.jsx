@@ -86,7 +86,7 @@ const VENUE_PITCHES = '3 pitches (custom slot times per sport)';
 export default function OwnerOnboardingPage() {
   const { showToast } = useToast();
   const submitted = useDisclosure();
-  const { data: myRequests } = useApi(getMyTurfRequests, []);
+  const { data: myRequests } = useApi(getMyTurfRequests, [], { intervalMs: 20000 });
   
   const routerLocation = useLocation();
   const authState = routerLocation.state || null;

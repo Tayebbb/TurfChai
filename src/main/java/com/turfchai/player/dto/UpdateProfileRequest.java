@@ -15,5 +15,6 @@ public record UpdateProfileRequest(
         @Pattern(regexp = "captain|solo", message = "must be captain or solo")
         String playerRole,
         @Size(max = 10) List<@Size(max = 30) String> preferredSports,
-        @Size(max = 10) List<@Size(max = 30) String> preferredTimes) {
+        @Size(max = 10) List<@Size(max = 30) String> preferredTimes,
+        @Size(max = 50) String position) {
 }
