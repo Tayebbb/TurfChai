@@ -181,7 +181,6 @@ import {
   updatePitch,
   upsertPricingRule,
 } from '@/api/ownerVenues';
-import { useApi } from '@/hooks/useApi';
 
 const PHOTO_TILE = {
   width: 72,
@@ -294,9 +293,6 @@ export default function VenueSetupPage() {
   const [venueData, setVenueData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const { data: requestsRes } = useApi(getMyTurfRequests, []);
-  const latestRequest = Array.isArray(requestsRes) ? requestsRes[0] : null;
-
   const [pitches, setPitches] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [pitchDraft, setPitchDraft] = useState({
@@ -318,17 +314,6 @@ export default function VenueSetupPage() {
   const [sportPricing, setSportPricing] = useState(INITIAL_SPORT_PRICING);
 
   const [photos, setPhotos] = useState([]);
-
-  useEffect(() => {
-    if (latestRequest?.photosJson && photos.length === 0) {
-      try {
-        const parsed = JSON.parse(latestRequest.photosJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setPhotos(parsed.map((url, idx) => ({ id: String(idx), url, name: `Photo ${idx + 1}` })));
-        }
-      } catch {}
-    }
-  }, [latestRequest, photos.length]);
 
   const [generateDraft, setGenerateDraft] = useState({
     pitchId: '',
@@ -509,14 +494,20 @@ export default function VenueSetupPage() {
                     if (Array.isArray(parsed)) {
                       setPhotos(parsed.map((url, idx) => ({ id: String(idx), url, name: `Photo ${idx + 1}` })));
                     }
-                  } catch {}
+                  } catch {
+                    // Ignore JSON parsing errors for photos
+                  }
                 }
               }
             })
-            .catch(() => {});
+            .catch(() => {
+              // Ignore turf request fetch errors
+            });
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Ignore venue list fetch errors
+      })
       .finally(() => {
         if (!unmounted) setLoading(false);
       });
