@@ -200,7 +200,7 @@ public class BookingService {
         if (venueIds.isEmpty()) {
             return List.of();
         }
-        return bookingRepository.findByVenueIdIn(venueIds);
+        return bookingRepository.findByVenueIdInOrderByCreatedAtDesc(venueIds);
     }
 
     @Transactional

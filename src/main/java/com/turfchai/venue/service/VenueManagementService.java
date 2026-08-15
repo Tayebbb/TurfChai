@@ -595,12 +595,13 @@ public class VenueManagementService {
                 // Create confirmed Booking record so manual calendar bookings appear in Reports, Revenue & Customer logs
                 BigDecimal amount = (s.getPrice() != null) ? s.getPrice() : BigDecimal.valueOf(2000);
                 String bookingCode = "MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                Long targetVenueId = (s.getVenueId() != null && s.getVenueId() > 0) ? s.getVenueId() : venueId;
 
                 Booking booking = Booking.builder()
                         .bookingCode(bookingCode)
                         .slot(s)
                         .userId(ownerUserId)
-                        .venueId(venueId)
+                        .venueId(targetVenueId)
                         .pitchId(s.getPitch() != null ? s.getPitch().getId() : 0L)
                         .bookingDate(s.getSlotDate() != null ? s.getSlotDate() : LocalDate.now())
                         .startTime(s.getStartTime() != null ? s.getStartTime() : LocalTime.of(16, 0))
