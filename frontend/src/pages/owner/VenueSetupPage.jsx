@@ -325,6 +325,8 @@ export default function VenueSetupPage() {
     basePrice: 2000
   });
 
+  const [previewFile, setPreviewFile] = useState(null);
+
   async function handleGenerateSlots() {
     try {
       await apiGenerateSlots(generateDraft);
@@ -793,18 +795,19 @@ export default function VenueSetupPage() {
                   <div className="row" style={{ marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
                     {photos.length > 0 ? (
                       photos.map((p) => (
-                        <img
-                          key={p.id || p.name || p.url}
-                          src={p.url || p}
-                          alt={p.name || 'Venue Photo'}
-                          style={{
-                            width: 72,
-                            height: 72,
-                            objectFit: 'cover',
-                            borderRadius: 8,
-                            border: '1px solid var(--border-soft)',
-                          }}
-                        />
+                        <div key={p.id || p.name || p.url} style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setPreviewFile(p)} title="Click to view full image">
+                          <img
+                            src={p.url || p}
+                            alt={p.name || 'Venue Photo'}
+                            style={{
+                              width: 72,
+                              height: 72,
+                              objectFit: 'cover',
+                              borderRadius: 8,
+                              border: '1px solid var(--border-soft)',
+                            }}
+                          />
+                        </div>
                       ))
                     ) : (
                       <div className="subtle small" style={{ display: 'inline-flex', alignItems: 'center', padding: '0 8px' }}>
@@ -1263,6 +1266,12 @@ export default function VenueSetupPage() {
 
         <div className="stack-sm" style={{ marginTop: 16 }}>
           <Button variant="primary" block onClick={handleGenerateSlots}>Generate Slots</Button>
+        </div>
+      </Overlay>
+
+      <Overlay isOpen={!!previewFile} onClose={() => setPreviewFile(null)} title={previewFile?.name || 'Photo Preview'} maxWidth={800}>
+        <div style={{ height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src={previewFile?.url || previewFile} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
         </div>
       </Overlay>
     </>
