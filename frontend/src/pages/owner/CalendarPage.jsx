@@ -63,6 +63,7 @@ export default function CalendarPage() {
   const detail = useDisclosure(false);
   const manual = useDisclosure(false); // Used for editing slots now
 
+  const [viewMode, setViewMode] = useState('day'); // 'day' | 'week'
   const [date, setDate] = useState(() => new Date());
   const [venues, setVenues] = useState([]);
   const [selectedVenueId, setSelectedVenueId] = useState(null);
@@ -146,20 +147,48 @@ export default function CalendarPage() {
     };
   }, [selectedVenueId, dateStr]);
 
-  function handlePrevDay() {
+  function handlePrevNav() {
     setDate((prev) => {
       const d = new Date(prev);
-      d.setDate(d.getDate() - 1);
+      d.setDate(d.getDate() - (viewMode === 'week' ? 7 : 1));
       return d;
     });
   }
 
-  function handleNextDay() {
+  function handleNextNav() {
     setDate((prev) => {
       const d = new Date(prev);
-      d.setDate(d.getDate() + 1);
+      d.setDate(d.getDate() + (viewMode === 'week' ? 7 : 1));
       return d;
     });
+  }
+
+  function getWeekDays(baseDate) {
+    const days = [];
+    const start = new Date(baseDate);
+    const dayOfWeek = start.getDay();
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    start.setDate(start.getDate() - diffToMonday);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  const weekDays = getWeekDays(date);
+
+  function formatWeekRangeDisplay(baseDate) {
+    const days = getWeekDays(baseDate);
+    const first = days[0];
+    const last = days[6];
+    const fMonth = first.toLocaleDateString('en-US', { month: 'short' });
+    const lMonth = last.toLocaleDateString('en-US', { month: 'short' });
+    if (fMonth === lMonth) {
+      return `${first.getDate()} – ${last.getDate()} ${fMonth} ${last.getFullYear()}`;
+    }
+    return `${first.getDate()} ${fMonth} – ${last.getDate()} ${lMonth} ${last.getFullYear()}`;
   }
 
   function setField(field, value) {
@@ -276,7 +305,7 @@ export default function CalendarPage() {
             </Select>
           )}
 
-          {/* Pitch Filter: Dropdown if >4 pitches, Chips if <=4 pitches */}
+          {/* Pitch Filter */}
           {pitches.length > 4 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span className="tiny subtle" style={{ fontWeight: 700 }}>PITCH:</span>
@@ -314,8 +343,20 @@ export default function CalendarPage() {
           ) : null}
 
           <div className="seg" role="group" aria-label="View">
-            <button type="button" className="on">Day</button>
-            <button type="button" onClick={() => showToast('Week view (concept)')}>Week</button>
+            <button
+              type="button"
+              className={viewMode === 'day' ? 'on' : ''}
+              onClick={() => setViewMode('day')}
+            >
+              Day
+            </button>
+            <button
+              type="button"
+              className={viewMode === 'week' ? 'on' : ''}
+              onClick={() => setViewMode('week')}
+            >
+              Week
+            </button>
           </div>
           <Button onClick={handleBlockSlot}>⛔ Block slot</Button>
           <Button
@@ -332,11 +373,11 @@ export default function CalendarPage() {
 
       <div className="between" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
         <div className="row">
-          <IconButton label="Previous day" onClick={handlePrevDay}>
+          <IconButton label={viewMode === 'week' ? 'Previous week' : 'Previous day'} onClick={handlePrevNav}>
             ‹
           </IconButton>
-          <b>{formatDateDisplay(date)}</b>
-          <IconButton label="Next day" onClick={handleNextDay}>
+          <b>{viewMode === 'week' ? formatWeekRangeDisplay(date) : formatDateDisplay(date)}</b>
+          <IconButton label={viewMode === 'week' ? 'Next week' : 'Next day'} onClick={handleNextNav}>
             ›
           </IconButton>
         </div>
@@ -366,7 +407,77 @@ export default function CalendarPage() {
               + Add Pitch in Venue Setup
             </Button>
           </div>
+        ) : viewMode === 'week' ? (
+          /* WEEK VIEW GRID */
+          <div className="cal-grid" style={{ minWidth: 900, gridTemplateColumns: `80px repeat(7, 1fr)` }}>
+            <div className="cal-head">Time</div>
+            {weekDays.map((d) => {
+              const isToday = formatDateIso(d) === formatDateIso(new Date());
+              const isSelected = formatDateIso(d) === dateStr;
+              return (
+                <div
+                  className="cal-head"
+                  key={d.toISOString()}
+                  style={{
+                    background: isToday ? 'rgba(34, 197, 94, 0.12)' : isSelected ? 'var(--surface-2)' : undefined,
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    setDate(d);
+                    setViewMode('day');
+                  }}
+                  title="Click to jump to this day"
+                >
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>
+                    {d.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: isToday ? 'var(--success)' : 'var(--text-1)' }}>
+                    {d.getDate()} {d.toLocaleDateString('en-US', { month: 'short' })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {rows.map((row, rowIndex) => (
+              <Fragment key={row.time}>
+                <div className="cal-time num">{row.time}</div>
+                {weekDays.map((dayObj) => {
+                  const dayIso = formatDateIso(dayObj);
+                  const isToday = dayIso === formatDateIso(new Date());
+                  const pitchIndex = visiblePitchesWithIndices.length > 0 ? visiblePitchesWithIndices[0].originalIndex : 0;
+                  const pitchObj = visiblePitchesWithIndices.length > 0 ? visiblePitchesWithIndices[0].pitch : pitches[0];
+                  const cell = row.cells[pitchIndex];
+
+                  return (
+                    <div
+                      key={`${dayIso}-${row.time}`}
+                      className={`cal-cell ${(cell?.status || 'AVAILABLE').toLowerCase()}`}
+                      style={{ background: isToday ? 'rgba(34, 197, 94, 0.03)' : undefined }}
+                      onClick={() => {
+                        if (!cell) return;
+                        if (cell.status === 'AVAILABLE') {
+                          openForCell(rowIndex, pitchIndex, cell, pitchObj, row.time);
+                        } else if (cell.status === 'BOOKED' || cell.status === 'HELD' || cell.status === 'BLOCKED') {
+                          openDetailDrawer(cell, pitchObj, row.time);
+                        }
+                      }}
+                    >
+                      {cell?.label ? (
+                        <div className="cal-booking">
+                          <b>{cell.label}</b>
+                          <span className="tiny">{cell.variant}</span>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 10, opacity: 0.6 }}>Available</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </div>
         ) : (
+          /* DAY VIEW GRID */
           <div
             className="cal-grid"
             style={{ minWidth: 720, gridTemplateColumns: `80px repeat(${visiblePitchesWithIndices.length}, 1fr)` }}

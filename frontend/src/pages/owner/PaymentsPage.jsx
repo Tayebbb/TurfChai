@@ -79,11 +79,11 @@ export default function PaymentsPage() {
     return apiSummary?.configuredSports || apiSummary?.sports || [];
   }, [apiSummary]);
 
-  const chartDataApi = apiSummary?.chartData || { labels: [], datasets: {} };
+  const chartDataApi = useMemo(() => apiSummary?.chartData || { labels: [], datasets: {} }, [apiSummary]);
   const sportReport = apiSummary?.sportReport || [];
   const methodSplit = apiSummary?.methodSplit || [];
-  const KPIS = apiSummary?.kpis || [];
-  const LEDGER = apiSummary?.ledger || [];
+  const KPIS = useMemo(() => apiSummary?.kpis || [], [apiSummary]);
+  const LEDGER = useMemo(() => apiSummary?.ledger || [], [apiSummary]);
   const reconciliation = apiSummary?.reconciliation || {};
   
   const dark = theme === 'dark';
