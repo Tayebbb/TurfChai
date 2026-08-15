@@ -3,12 +3,14 @@ import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/buttons/Button';
 import { KpiCard } from '@/components/cards/KpiCard';
+import { Card, GlassCard } from '@/components/cards/Card';
 import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Progress } from '@/components/ui/Progress';
 import { getMyProfile } from '@/api/players';
 import { getOwnerAnalytics } from '@/api/ownerAnalytics';
 import { listMyVenues } from '@/api/ownerVenues';
+import { getMyTurfRequests } from '@/api/turfRequests';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -16,12 +18,11 @@ import { paths } from '@/routes/paths';
 import { useState } from 'react';
 import './DashboardPage.css';
 
-
-
 export default function DashboardPage() {
   const { showToast } = useToast();
   const scanner = useDisclosure(false);
   const [scanResult, setScanResult] = useState(null);
+  const [previewPhoto, setPreviewPhoto] = useState(null);
 
   /** Simulated gate scan: `ok` matches the current slot, `bad` is a slot mismatch. */
   function simulateScan(result) {
@@ -38,30 +39,156 @@ export default function DashboardPage() {
   const venues = venuesRes?.data || venuesRes || [];
   const activeVenue = venues[0];
 
+  const { data: requestsRes } = useApi(getMyTurfRequests, []);
+  const myRequests = Array.isArray(requestsRes) ? requestsRes : [];
+  const latestRequest = myRequests[0] || null;
+
+  const isPendingVerification = latestRequest?.status === 'PENDING' || (!activeVenue && latestRequest);
+
   const { data: analyticsRes, loading } = useApi(getOwnerAnalytics, []);
   const analyticsData = analyticsRes?.data || analyticsRes || {};
 
-  const KPIS = analyticsData.kpis || [];
-  const NEXT_UP = analyticsData.nextUp || [];
-  const ACTIVITY = analyticsData.activity || [];
-  const ATTENTION = analyticsData.attention || [];
+  const rawKpis = analyticsData.kpis;
+  const KPIS = Array.isArray(rawKpis)
+    ? rawKpis
+    : (rawKpis && typeof rawKpis === 'object'
+        ? [
+            { label: "Today's revenue", value: rawKpis.revenue || '৳0' },
+            { label: 'Bookings today', value: rawKpis.booked || '0' },
+            { label: 'Occupancy', value: rawKpis.occupancy || '0%' },
+            { label: 'Pending payments', value: rawKpis.pending || '0' },
+          ]
+        : []);
+
+  const NEXT_UP = Array.isArray(analyticsData.nextUp) ? analyticsData.nextUp : [];
+  const ACTIVITY = Array.isArray(analyticsData.activity) ? analyticsData.activity : [];
+  const ATTENTION = Array.isArray(analyticsData.attention) ? analyticsData.attention : [];
+
+  let requestPhotos = [];
+  if (latestRequest?.photosJson) {
+    try {
+      requestPhotos = JSON.parse(latestRequest.photosJson);
+    } catch {
+      requestPhotos = [];
+    }
+  }
 
   return (
     <>
       <PageTitle title="Dashboard" />
 
-      <div className="main-header">
+      {/* Verification Pending Banner / Account Lock Card */}
+      {isPendingVerification ? (
+        <div style={{ maxWidth: 860, margin: '16px auto 32px' }}>
+          <Alert tone="amber" icon="⏳" title="Venue Verification Pending (Account Locked)" style={{ marginBottom: 20, padding: 18 }}>
+            Your venue registration request for <b>{latestRequest?.venueName || 'Your Venue'}</b> is currently under review by the TurfChai admin team.
+            Core operational features (live QR scanner, manual slot bookings, ledger payouts) will unlock automatically once approved.
+          </Alert>
+
+          <GlassCard style={{ padding: 24, marginBottom: 20 }}>
+            <div className="between" style={{ marginBottom: 16 }}>
+              <div>
+                <h2 style={{ margin: 0 }}>{latestRequest?.venueName || 'Kick Off Arena'}</h2>
+                <span className="subtle small">
+                  Request Code: <b className="num">{latestRequest?.requestCode || 'TRF-1042'}</b> · Area: {latestRequest?.area || 'Dhanmondi'}
+                </span>
+              </div>
+              <Badge tone="amber">Status: PENDING ADMIN APPROVAL</Badge>
+            </div>
+
+            <div className="grid2" style={{ gap: 16, marginBottom: 16 }}>
+              <div className="panel stack-sm" style={{ padding: 14 }}>
+                <span className="tiny subtle">PITCH & SPORTS DETAILS</span>
+                <div className="between small">
+                  <span className="muted">Pitch Count</span>
+                  <b>{latestRequest?.pitchCount || 1} pitch(es)</b>
+                </div>
+                <div className="between small">
+                  <span className="muted">Sports Supported</span>
+                  <b>{latestRequest?.sportsCsv || 'Football'}</b>
+                </div>
+                <div className="between small">
+                  <span className="muted">Owner Phone</span>
+                  <b className="num">{latestRequest?.ownerPhone || '—'}</b>
+                </div>
+              </div>
+
+              <div className="panel stack-sm" style={{ padding: 14 }}>
+                <span className="tiny subtle">VERIFICATION DOCUMENTS</span>
+                <div className="between small">
+                  <span className="muted">Trade License</span>
+                  <b style={{ color: 'var(--brand-500)' }}>{latestRequest?.docTradeLicense || 'Attached ✓'}</b>
+                </div>
+                <div className="between small">
+                  <span className="muted">Owner NID</span>
+                  <b style={{ color: 'var(--brand-500)' }}>{latestRequest?.docOwnerNid || 'Attached ✓'}</b>
+                </div>
+                <div className="between small">
+                  <span className="muted">Utility / Lease Proof</span>
+                  <b style={{ color: 'var(--brand-500)' }}>{latestRequest?.docUtilityBill || 'Attached ✓'}</b>
+                </div>
+              </div>
+            </div>
+
+            {/* Submitted Pitch Photos Gallery */}
+            {requestPhotos.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <span className="subtle small" style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
+                  Submitted Pitch Photos ({requestPhotos.length}):
+                </span>
+                <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+                  {requestPhotos.map((url, idx) => (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`Pitch photo ${idx + 1}`}
+                      onClick={() => setPreviewPhoto(url)}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: 'cover',
+                        borderRadius: 10,
+                        border: '1px solid var(--border-soft)',
+                        cursor: 'pointer',
+                      }}
+                      title="Click to view photo"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="row" style={{ marginTop: 24, gap: 12, justifyContent: 'flex-end' }}>
+              <Button variant="secondary" to={paths.owner.onboarding}>
+                Edit Onboarding Request ✏️
+              </Button>
+              <Button variant="primary" onClick={() => showToast('Refreshed status — still pending approval ⏳')}>
+                Check Verification Status 🔄
+              </Button>
+            </div>
+          </GlassCard>
+
+          {/* Photo Preview Modal */}
+          <Overlay isOpen={!!previewPhoto} onClose={() => setPreviewPhoto(null)} title="Venue Pitch Photo Preview" maxWidth={680}>
+            <div style={{ textAlign: 'center', padding: 12 }}>
+              <img src={previewPhoto} alt="Venue preview" style={{ maxWidth: '100%', maxHeight: '60vh', borderRadius: 12, objectFit: 'contain' }} />
+            </div>
+          </Overlay>
+        </div>
+      ) : null}
+
+      <div className="main-header" style={isPendingVerification ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
         <div>
           <h1>Good evening, {owner?.name ?? 'Owner'} 🏟️</h1>
           <span className="subtle small">
-            {activeVenue ? `${activeVenue.name} · ${activeVenue.area} · ` : 'Loading... '}
-            <Badge tone="green">Live</Badge>
+            {activeVenue ? `${activeVenue.name} · ${activeVenue.area} · ` : (latestRequest ? `${latestRequest.venueName} · ` : 'Kick Off Arena · ')}
+            <Badge tone={isPendingVerification ? 'amber' : 'green'}>{isPendingVerification ? 'Pending Approval' : 'Live'}</Badge>
           </span>
         </div>
         <div className="row">
-          <Button to={paths.owner.calendar}>🗓️ Calendar</Button>
-          <Button to={paths.owner.calendar}>+ Manual booking</Button>
-          <Button variant="primary" onClick={scanner.open}>
+          <Button to={paths.owner.calendar} disabled={isPendingVerification}>🗓️ Calendar</Button>
+          <Button to={paths.owner.calendar} disabled={isPendingVerification}>+ Manual booking</Button>
+          <Button variant="primary" onClick={scanner.open} disabled={isPendingVerification}>
             📷 Scan player QR
           </Button>
         </div>

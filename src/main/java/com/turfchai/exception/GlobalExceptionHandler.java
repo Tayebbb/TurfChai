@@ -130,6 +130,18 @@ public class GlobalExceptionHandler {
                 .body(buildErrorResponse(HttpStatus.FORBIDDEN, "You do not have permission to perform this action"));
     }
 
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, Object>> handleSecurity(SecurityException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
     @ExceptionHandler(OtpException.class)
     public ResponseEntity<Map<String, Object>> handleOtp(OtpException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -141,6 +153,13 @@ public class GlobalExceptionHandler {
             com.turfchai.booking.exception.SlotUnavailableException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(
+            org.springframework.dao.DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildErrorResponse(HttpStatus.CONFLICT, "Database constraint error: duplicate or invalid data"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

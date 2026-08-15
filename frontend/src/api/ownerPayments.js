@@ -1,7 +1,7 @@
 import { apiGet, apiSend } from './client';
 
-export async function fetchOwnerPayments() {
-  return apiGet('/api/v1/owner/payments');
+export async function fetchOwnerPayments(timeframe = 'daily') {
+  return apiGet(`/api/v1/owner/payments?timeframe=${encodeURIComponent(timeframe)}`);
 }
 
 export async function closeOwnerShift() {

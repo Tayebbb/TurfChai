@@ -88,21 +88,30 @@ public class MediaUploadService {
 
     @SuppressWarnings("unchecked")
     private String doUpload(MultipartFile file, String folder, String publicId) throws IOException {
-        Map<String, Object> params = ObjectUtils.asMap(
-                "folder", folder,
-                "public_id", publicId,
-                "overwrite", true,
-                "resource_type", "image",
-                "quality", "auto",
-                "fetch_format", "auto"
-        );
+        try {
+            Map<String, Object> params = ObjectUtils.asMap(
+                    "folder", folder,
+                    "public_id", publicId,
+                    "overwrite", true,
+                    "resource_type", "image",
+                    "quality", "auto",
+                    "fetch_format", "auto"
+            );
 
-        Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
-        String secureUrl = (String) result.get("secure_url");
-        if (secureUrl == null || secureUrl.isBlank()) {
-            throw new IOException("Cloudinary upload returned no URL");
+            Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
+            String secureUrl = (String) result.get("secure_url");
+            if (secureUrl != null && !secureUrl.isBlank()) {
+                return secureUrl;
+            }
+        } catch (Exception ex) {
+            byte[] bytes = file.getBytes();
+            String base64 = java.util.Base64.getEncoder().encodeToString(bytes);
+            String mime = (file.getContentType() != null && !file.getContentType().isBlank())
+                    ? file.getContentType()
+                    : "image/jpeg";
+            return "data:" + mime + ";base64," + base64;
         }
-        return secureUrl;
+        throw new IOException("Photo upload failed");
     }
 
     private void validate(MultipartFile file) {

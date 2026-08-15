@@ -33,9 +33,12 @@ import java.util.Map;
 public class MediaUploadRestController {
 
     private final MediaUploadService mediaUploadService;
+    private final com.turfchai.venue.service.VenueManagementService venueManagementService;
 
-    public MediaUploadRestController(MediaUploadService mediaUploadService) {
+    public MediaUploadRestController(MediaUploadService mediaUploadService,
+                                     com.turfchai.venue.service.VenueManagementService venueManagementService) {
         this.mediaUploadService = mediaUploadService;
+        this.venueManagementService = venueManagementService;
     }
 
     /** Generic authenticated upload — stores in TurfChai/general/ */
@@ -49,9 +52,16 @@ public class MediaUploadRestController {
     /** Upload a photo for a specific venue — stores in TurfChai/venues/{venueId}/ */
     @PostMapping(value = "/venues/{venueId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadVenuePhoto(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long venueId,
             @RequestParam("file") MultipartFile file) throws IOException {
+        if (principal != null) {
+            venueManagementService.requireOwnership(principal.getId(), venueId);
+        }
         String url = mediaUploadService.uploadVenuePhoto(file, venueId);
+        if (principal != null) {
+            venueManagementService.addVenuePhoto(principal.getId(), venueId, url);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url));
     }
 

@@ -95,6 +95,7 @@ public class VenueDataSeeder {
             venue.setVerified(row.verified());
             venue.setPromotionLabel(row.promo());
             venue.setAmenities(row.amenities());
+            venue.setStatus("LIVE");
 
             Pitch pitch = new Pitch();
             pitch.setName("Pitch 1");

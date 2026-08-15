@@ -37,6 +37,8 @@ class BookingServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private com.turfchai.venue.repository.VenueRepository venueRepository;
+    @Mock
     private ApplicationEventPublisher events;
 
     @InjectMocks
@@ -232,5 +234,20 @@ class BookingServiceTest {
         assertNull(slot.getHoldExpiresAt());
         verify(bookingRepository).save(booking);
         verify(slotRepository).save(slot);
+    }
+
+    @Test
+    @DisplayName("holdSlot fails when venue is OFFLINE")
+    void holdSlot_fails_whenVenueIsOffline() {
+        slot.setVenueId(100L);
+        com.turfchai.venue.entity.Venue offlineVenue = com.turfchai.venue.entity.Venue.builder()
+                .id(100L)
+                .status("OFFLINE")
+                .build();
+        when(slotRepository.findByIdForUpdate(SLOT_ID)).thenReturn(Optional.of(slot));
+        when(venueRepository.findById(100L)).thenReturn(Optional.of(offlineVenue));
+
+        assertThrows(SlotUnavailableException.class, () -> bookingService.holdSlot(USER_ID, SLOT_ID));
+        verify(slotRepository, never()).save(any());
     }
 }

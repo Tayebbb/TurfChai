@@ -102,6 +102,18 @@ public class OwnerVenueRestController {
         return managementService.updateMlSettings(principal.getId(), id, enabled);
     }
 
+    @PutMapping("/{id}/status")
+    public VenueManagementDto updateStatus(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> request) {
+        String status = request.get("status");
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("Status cannot be empty");
+        }
+        return managementService.updateVenueStatus(principal.getId(), id, status);
+    }
+
     // ── Pitches ────────────────────────────────────────────────────────────
 
     @PostMapping("/{id}/pitches")
@@ -169,6 +181,16 @@ public class OwnerVenueRestController {
             @PathVariable Long slotId) {
         Long ownerId = principal != null ? principal.getId() : 1L;
         managementService.blockSlot(ownerId, id, slotId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/slots/{slotId}/unblock")
+    public ResponseEntity<Void> unblockSlot(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long slotId) {
+        Long ownerId = principal != null ? principal.getId() : 1L;
+        managementService.unblockSlot(ownerId, id, slotId);
         return ResponseEntity.ok().build();
     }
 

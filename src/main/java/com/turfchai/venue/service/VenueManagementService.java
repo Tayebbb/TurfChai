@@ -28,6 +28,7 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -49,19 +50,22 @@ public class VenueManagementService {
     private final SportPricingRuleRepository pricingRuleRepository;
     private final UserRepository userRepository;
     private final SlotRepository slotRepository;
+    private final com.turfchai.repository.TurfRequestRepository turfRequestRepository;
 
     public VenueManagementService(VenueRepository venueRepository,
                                    PitchRepository pitchRepository,
                                    SportRepository sportRepository,
                                    SportPricingRuleRepository pricingRuleRepository,
                                    UserRepository userRepository,
-                                   SlotRepository slotRepository) {
+                                   SlotRepository slotRepository,
+                                   com.turfchai.repository.TurfRequestRepository turfRequestRepository) {
         this.venueRepository = venueRepository;
         this.pitchRepository = pitchRepository;
         this.sportRepository = sportRepository;
         this.pricingRuleRepository = pricingRuleRepository;
         this.userRepository = userRepository;
         this.slotRepository = slotRepository;
+        this.turfRequestRepository = turfRequestRepository;
     }
 
     // ── Venue ──────────────────────────────────────────────────────────────
@@ -98,12 +102,32 @@ public class VenueManagementService {
         return toDto(saved);
     }
 
-    /** List all venues owned by the given user. */
-    @Transactional(readOnly = true)
+    /** List all venues owned by the given user (auto-creates a draft venue if owner has none). */
+    @Transactional
     public List<VenueManagementDto> listOwnerVenues(Long ownerUserId) {
-        return venueRepository.findByOwnerId(ownerUserId).stream()
-                .map(this::toDto)
-                .toList();
+        List<Venue> venues = venueRepository.findByOwnerId(ownerUserId);
+        if (venues.isEmpty()) {
+            User owner = userRepository.findById(ownerUserId).orElse(null);
+            if (owner != null) {
+                var requests = turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId);
+                String venueName = (!requests.isEmpty() && requests.get(0).getVenueName() != null && !requests.get(0).getVenueName().isBlank())
+                        ? requests.get(0).getVenueName() : "Kick Off Arena";
+                String area = (!requests.isEmpty() && requests.get(0).getArea() != null && !requests.get(0).getArea().isBlank())
+                        ? requests.get(0).getArea() : "Dhanmondi";
+
+                CreateVenueRequest autoReq = new CreateVenueRequest(
+                        venueName, area, area,
+                        new java.math.BigDecimal("23.8103"), new java.math.BigDecimal("90.4125"),
+                        new java.math.BigDecimal("2000"), "06:00", "23:00",
+                        "floodlights,parking", owner.getPhone(), owner.getEmail(),
+                        "FULL_ONLY", "FREE_24H_50_6H", true,
+                        "Standard rules", null, false
+                );
+                VenueManagementDto created = createVenue(ownerUserId, autoReq);
+                return List.of(created);
+            }
+        }
+        return venues.stream().map(this::toDto).toList();
     }
 
     /** Get a single venue owned by the given user (throws if not owner). */
@@ -147,20 +171,30 @@ public class VenueManagementService {
     public VenueManagementDto.PitchDto addPitch(Long ownerUserId, Long venueId, CreatePitchRequest req) {
         Venue venue = requireOwnership(ownerUserId, venueId);
 
+        String pitchName = (req.name() != null && !req.name().isBlank()) ? req.name().trim() : "New Pitch";
+        int counter = 2;
+        String baseName = pitchName;
+        while (pitchRepository.existsByVenueIdAndName(venueId, pitchName)) {
+            pitchName = baseName + " " + counter++;
+        }
+
         Pitch pitch = new Pitch();
-        pitch.setName(req.name());
-        pitch.setFormat(req.format());
-        pitch.setSurfaceType(req.surfaceType());
-        pitch.setSurfaceDetail(req.surfaceDetail());
-        pitch.setDimensions(req.dimensions());
-        pitch.setLighting(req.lighting());
-        pitch.setMaxPlayers(req.maxPlayers() != null ? req.maxPlayers() : 10);
+        pitch.setName(pitchName);
+        pitch.setFormat(req.format() != null ? req.format() : "7_a_side");
+        pitch.setSurfaceType(req.surfaceType() != null ? req.surfaceType() : "Artificial grass");
+        pitch.setSurfaceDetail(req.surfaceDetail() != null ? req.surfaceDetail() : "Standard synthetic turf");
+        pitch.setDimensions(req.dimensions() != null ? req.dimensions() : "30×50 m");
+        pitch.setLighting(req.lighting() != null ? req.lighting() : "Full LED floodlights");
+        pitch.setMaxPlayers(req.maxPlayers() != null ? req.maxPlayers() : 14);
         pitch.setIndoor(req.indoor());
         pitch.setActive(true);
 
-        if (req.sportSlugs() != null) {
+        if (req.sportSlugs() != null && !req.sportSlugs().isEmpty()) {
             req.sportSlugs().forEach(slug ->
-                    sportRepository.findBySlug(slug).ifPresent(pitch.getSports()::add));
+                    sportRepository.findBySlug(slug.toLowerCase(Locale.ROOT)).ifPresent(pitch.getSports()::add));
+        }
+        if (pitch.getSports().isEmpty()) {
+            sportRepository.findBySlug("football").ifPresent(pitch.getSports()::add);
         }
 
         venue.addPitch(pitch);
@@ -260,9 +294,28 @@ public class VenueManagementService {
         return toDto(venueRepository.save(venue));
     }
 
-    private Venue requireOwnership(Long ownerUserId, Long venueId) {
+    /** Add a photo URL to the venue photos list */
+    public VenueManagementDto addVenuePhoto(Long ownerUserId, Long venueId, String photoUrl) {
+        Venue venue = requireOwnership(ownerUserId, venueId);
+        String currentPhotos = venue.getPhotos();
+        if (currentPhotos == null || currentPhotos.isBlank()) {
+            venue.setPhotos(photoUrl);
+        } else {
+            venue.setPhotos(currentPhotos + "," + photoUrl);
+        }
+        return toDto(venueRepository.save(venue));
+    }
+
+    /** Dedicated method to update venue status (e.g. LIVE / OFFLINE) */
+    public VenueManagementDto updateVenueStatus(Long ownerUserId, Long venueId, String status) {
+        Venue venue = requireOwnership(ownerUserId, venueId);
+        venue.setStatus(status);
+        return toDto(venueRepository.save(venue));
+    }
+
+    public Venue requireOwnership(Long ownerUserId, Long venueId) {
         Venue venue = venueRepository.findById(venueId)
-                .orElseThrow(() -> new IllegalArgumentException("Venue not found: " + venueId));
+                .orElseThrow(() -> new com.turfchai.exception.VenueNotFoundException("Venue not found: " + venueId));
         if (venue.getOwner() == null || !venue.getOwner().getId().equals(ownerUserId)) {
             throw new SecurityException("Access denied: you do not own venue " + venueId);
         }
@@ -297,10 +350,13 @@ public class VenueManagementService {
     // ── Mapping ────────────────────────────────────────────────────────────
 
     private VenueManagementDto toDto(Venue v) {
-        List<VenueManagementDto.PitchDto> pitches = v.getPitches().stream()
-                .map(this::toPitchDto).toList();
-        List<VenueManagementDto.PricingRuleDto> rules = v.getPricingRules().stream()
-                .map(this::toPricingRuleDto).toList();
+        List<VenueManagementDto.PitchDto> pitches = (v.getPitches() == null)
+                ? List.of()
+                : v.getPitches().stream().filter(Objects::nonNull).map(this::toPitchDto).toList();
+
+        List<VenueManagementDto.PricingRuleDto> rules = (v.getPricingRules() == null)
+                ? List.of()
+                : v.getPricingRules().stream().filter(Objects::nonNull).map(this::toPricingRuleDto).toList();
 
         List<String> photos = (v.getPhotos() == null || v.getPhotos().isBlank())
                 ? List.of()
@@ -319,8 +375,9 @@ public class VenueManagementService {
     }
 
     private VenueManagementDto.PitchDto toPitchDto(Pitch p) {
-        List<String> sportSlugs = p.getSports().stream()
-                .map(Sport::getSlug).toList();
+        List<String> sportSlugs = (p.getSports() == null)
+                ? List.of()
+                : p.getSports().stream().filter(Objects::nonNull).map(Sport::getSlug).filter(Objects::nonNull).toList();
         return new VenueManagementDto.PitchDto(
                 p.getId(), p.getName(), p.getFormat(), p.getSurfaceType(),
                 p.getSurfaceDetail(), p.getDimensions(), p.getLighting(),
@@ -329,8 +386,9 @@ public class VenueManagementService {
     }
 
     private VenueManagementDto.PricingRuleDto toPricingRuleDto(SportPricingRule r) {
+        String sportSlug = (r.getSport() != null) ? r.getSport().getSlug() : "football";
         return new VenueManagementDto.PricingRuleDto(
-                r.getId(), r.getSport().getSlug(), r.getWindowType(),
+                r.getId(), sportSlug, r.getWindowType(),
                 r.getRate(), r.getSlotDurationMin(), r.getBufferMin(),
                 r.getWindowStart(), r.getWindowEnd(), r.getDaysOfWeek(), r.isActive()
         );
@@ -340,29 +398,34 @@ public class VenueManagementService {
 
     @Transactional
     public OwnerCalendarDto getOwnerCalendar(Long ownerUserId, Long venueId, LocalDate date) {
-        Venue venue = venueRepository.findById(venueId).orElse(null);
-        if (venue == null) {
-            List<Venue> userVenues = venueRepository.findByOwnerId(ownerUserId);
-            if (!userVenues.isEmpty()) {
-                venue = userVenues.get(0);
-            } else {
-                venue = venueRepository.findAll().stream().findFirst().orElse(null);
-            }
-        }
-
-        if (venue == null) {
+        List<Venue> userVenues = venueRepository.findByOwnerId(ownerUserId);
+        if (userVenues.isEmpty()) {
             return OwnerCalendarDto.builder()
                     .venueId(venueId)
-                    .venueName("Venue " + venueId)
+                    .venueName("No Venue")
                     .date(date)
                     .pitches(List.of())
                     .rows(List.of())
                     .build();
         }
 
+        Venue venue = (venueId != null)
+                ? userVenues.stream().filter(v -> v.getId().equals(venueId)).findFirst().orElse(userVenues.get(0))
+                : userVenues.get(0);
+
         List<Pitch> pitches = pitchRepository.findByVenueIdAndActiveTrue(venue.getId());
         if (pitches.isEmpty()) {
             pitches = pitchRepository.findByVenueId(venue.getId());
+        }
+
+        if (pitches.isEmpty()) {
+            return OwnerCalendarDto.builder()
+                    .venueId(venue.getId())
+                    .venueName(venue.getName())
+                    .date(date)
+                    .pitches(List.of())
+                    .rows(List.of())
+                    .build();
         }
 
         List<Slot> dbSlots = slotRepository.findByVenueIdAndSlotDateOrderByStartTimeAsc(venue.getId(), date);
@@ -389,12 +452,47 @@ public class VenueManagementService {
     }
 
     public void blockSlot(Long ownerUserId, Long venueId, Long slotId) {
-        if (slotId != null) {
-            slotRepository.findById(slotId).ifPresent(s -> {
-                s.setStatus(SlotStatus.BLOCKED);
-                slotRepository.save(s);
-            });
+        if (slotId == null) {
+            throw new IllegalArgumentException("Slot ID cannot be null");
         }
+        Slot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new IllegalArgumentException("Slot not found: " + slotId));
+
+        Venue venue = venueRepository.findById(slot.getVenueId())
+                .orElseThrow(() -> new IllegalArgumentException("Venue not found: " + slot.getVenueId()));
+
+        if (venue.getOwner() == null || !venue.getOwner().getId().equals(ownerUserId)) {
+            throw new SecurityException("Access denied: you do not own this slot");
+        }
+
+        if (slot.getStatus() == SlotStatus.BOOKED) {
+            throw new IllegalArgumentException("Cannot block an already booked slot");
+        }
+
+        slot.setStatus(SlotStatus.BLOCKED);
+        slotRepository.save(slot);
+    }
+
+    public void unblockSlot(Long ownerUserId, Long venueId, Long slotId) {
+        if (slotId == null) {
+            throw new IllegalArgumentException("Slot ID cannot be null");
+        }
+        Slot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new IllegalArgumentException("Slot not found: " + slotId));
+
+        Venue venue = venueRepository.findById(slot.getVenueId())
+                .orElseThrow(() -> new IllegalArgumentException("Venue not found: " + slot.getVenueId()));
+
+        if (venue.getOwner() == null || !venue.getOwner().getId().equals(ownerUserId)) {
+            throw new SecurityException("Access denied: you do not own this slot");
+        }
+
+        if (slot.getStatus() != SlotStatus.BLOCKED) {
+            throw new IllegalArgumentException("Slot is not currently blocked");
+        }
+
+        slot.setStatus(SlotStatus.AVAILABLE);
+        slotRepository.save(slot);
     }
 
     public void createManualBooking(Long ownerUserId, Long venueId, ManualBookingRequestDto req) {

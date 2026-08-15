@@ -46,15 +46,15 @@ public class TurfRequest {
     @Column(name = "owner_email", length = 150)
     private String ownerEmail;
 
-    @Column(name = "doc_trade_license", nullable = false, length = 255)
+    @Column(name = "doc_trade_license", nullable = false, length = 500)
     @Builder.Default
     private String docTradeLicense = "PENDING";
 
-    @Column(name = "doc_owner_nid", nullable = false, length = 255)
+    @Column(name = "doc_owner_nid", nullable = false, length = 500)
     @Builder.Default
     private String docOwnerNid = "PENDING";
 
-    @Column(name = "doc_utility_bill", nullable = false, length = 1000)
+    @Column(name = "doc_utility_bill", nullable = false, length = 500)
     @Builder.Default
     private String docUtilityBill = "PENDING";
 

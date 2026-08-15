@@ -129,8 +129,14 @@ public class OwnerAnalyticsService {
     }
 
     private Map<String, Object> emptyDashboard() {
+        List<Map<String, Object>> kpis = List.of(
+            Map.of("label", "Today's revenue", "value", "৳0", "delta", "", "trend", ""),
+            Map.of("label", "Bookings today", "value", "0", "delta", "", "trend", ""),
+            Map.of("label", "Occupancy", "value", "0%", "delta", "", "trend", ""),
+            Map.of("label", "Pending payments", "value", "0", "delta", "", "trend", "")
+        );
         return Map.of(
-            "kpis", Map.of("booked", "0", "occupancy", "0%", "revenue", "৳0", "pending", "0"),
+            "kpis", kpis,
             "nextUp", List.of(),
             "activity", List.of(),
             "attention", List.of()

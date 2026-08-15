@@ -60,6 +60,14 @@ public class BookingService {
         Slot slot = slotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + slotId));
 
+        if (slot.getVenueId() != null) {
+            venueRepository.findById(slot.getVenueId()).ifPresent(v -> {
+                if (v.getStatus() != null && ("OFFLINE".equalsIgnoreCase(v.getStatus().trim()) || "SUSPENDED".equalsIgnoreCase(v.getStatus().trim()))) {
+                    throw new SlotUnavailableException("Turf is currently unavailable / offline.");
+                }
+            });
+        }
+
         OffsetDateTime now = OffsetDateTime.now();
         boolean expiredHold = slot.getStatus() == SlotStatus.HELD
                 && slot.getHoldExpiresAt() != null

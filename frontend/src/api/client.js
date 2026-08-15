@@ -123,8 +123,16 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
     let message = `Request failed with status ${response.status}`;
     try {
       const errorBody = await response.json();
-      if (errorBody?.message) message = errorBody.message;
-      else if (errorBody?.error) message = errorBody.error;
+      if (errorBody?.validationErrors) {
+        const details = Object.entries(errorBody.validationErrors)
+          .map(([field, msg]) => `${field}: ${msg}`)
+          .join(', ');
+        message = `${errorBody.message || 'Validation failed'}: ${details}`;
+      } else if (errorBody?.message) {
+        message = errorBody.message;
+      } else if (errorBody?.error) {
+        message = errorBody.error;
+      }
     } catch {
       // keep default message
     }
@@ -169,8 +177,16 @@ async function throwApiError(response) {
   let message = `Request failed (${response.status})`;
   try {
     const body = await response.json();
-    if (body?.error) message = body.error;
-    else if (body?.message) message = body.message;
+    if (body?.validationErrors) {
+      const details = Object.entries(body.validationErrors)
+        .map(([field, msg]) => `${field}: ${msg}`)
+        .join(', ');
+      message = `${body.message || 'Validation failed'}: ${details}`;
+    } else if (body?.error) {
+      message = body.error;
+    } else if (body?.message) {
+      message = body.message;
+    }
   } catch {
     /* non-JSON error body */
   }
@@ -205,4 +221,17 @@ export async function apiSend(method, path, body) {
   });
   if (!response.ok) await throwApiError(response);
   return response.status === 204 ? null : response.json();
+}
+
+/** Multipart FormData upload request against backend origin */
+export async function apiUpload(path, formData) {
+  const url = resolveUrl(path);
+  const headers = authHeaders(); // omit Content-Type so browser sets boundary
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  if (!response.ok) await throwApiError(response);
+  return response.json();
 }

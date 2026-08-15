@@ -23,6 +23,11 @@ public class VenueApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, String>> handleSecurity(SecurityException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, HandlerMethodValidationException.class,
             ConstraintViolationException.class,
             org.springframework.http.converter.HttpMessageNotReadableException.class})
