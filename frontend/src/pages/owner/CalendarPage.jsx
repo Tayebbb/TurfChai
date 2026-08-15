@@ -9,13 +9,14 @@ import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
+import { paths } from '@/routes/paths';
 import {
   listMyVenues,
   getOwnerCalendar,
   blockOwnerSlot,
+  unblockOwnerSlot,
   createManualBooking,
 } from '@/api/ownerVenues';
-import { getMyTurfRequests } from '@/api/turfRequests';
 
 const LEGEND = [
   { id: 'AVAILABLE', label: 'Available', swatch: 'var(--success)' },
@@ -64,7 +65,7 @@ export default function CalendarPage() {
 
   const [date, setDate] = useState(() => new Date());
   const [venues, setVenues] = useState([]);
-  const [selectedVenueId, setSelectedVenueId] = useState(1);
+  const [selectedVenueId, setSelectedVenueId] = useState(null);
   const [pitches, setPitches] = useState([]);
   const [selectedPitchId, setSelectedPitchId] = useState('ALL');
   const [rows, setRows] = useState([]);
@@ -76,16 +77,19 @@ export default function CalendarPage() {
   const dateStr = formatDateIso(date);
 
   const refreshCalendar = useCallback(() => {
+    if (!selectedVenueId) return;
+    setLoading(true);
     getOwnerCalendar(selectedVenueId, dateStr)
       .then((data) => {
         if (data) {
-          if (Array.isArray(data.pitches) && data.pitches.length > 0) {
-            setPitches(data.pitches);
-          }
-          if (data.rows) setRows(data.rows);
+          setPitches(Array.isArray(data.pitches) ? data.pitches : []);
+          setRows(Array.isArray(data.rows) ? data.rows : []);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setPitches([]);
+        setRows([]);
+      })
       .finally(() => {
         setLoading(false);
       });
@@ -96,30 +100,18 @@ export default function CalendarPage() {
     listMyVenues()
       .then((res) => {
         const venueList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        if (!unmounted && venueList.length > 0) {
+        if (!unmounted) {
           setVenues(venueList);
-          setSelectedVenueId(venueList[0].id);
-        } else if (!unmounted) {
-          getMyTurfRequests()
-            .then((reqRes) => {
-              const reqList = Array.isArray(reqRes?.data) ? reqRes.data : (Array.isArray(reqRes) ? reqRes : []);
-              if (!unmounted && reqList.length > 0) {
-                const req = reqList[0];
-                const count = req.pitchCount || 1;
-                const reqSports = (req.sportsCsv || 'Football').split(',').map((s) => s.trim());
-                const generatedPitches = Array.from({ length: count }, (_, i) => ({
-                  id: i + 1,
-                  name: `Pitch ${String.fromCharCode(65 + i)}`,
-                  format: '7-a-side',
-                  sports: reqSports,
-                }));
-                setPitches(generatedPitches);
-              }
-            })
-            .catch(() => {});
+          if (venueList.length > 0) {
+            setSelectedVenueId(venueList[0].id);
+          } else {
+            setLoading(false);
+          }
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!unmounted) setLoading(false);
+      });
     return () => {
       unmounted = true;
     };
@@ -127,34 +119,26 @@ export default function CalendarPage() {
 
   useEffect(() => {
     let unmounted = false;
+    if (!selectedVenueId) {
+      setPitches([]);
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     getOwnerCalendar(selectedVenueId, dateStr)
       .then((data) => {
         if (!unmounted && data) {
-          if (Array.isArray(data.pitches) && data.pitches.length > 0) {
-            setPitches(data.pitches);
-          } else {
-            getMyTurfRequests()
-              .then((reqRes) => {
-                const reqList = Array.isArray(reqRes?.data) ? reqRes.data : (Array.isArray(reqRes) ? reqRes : []);
-                if (!unmounted && reqList.length > 0) {
-                  const req = reqList[0];
-                  const count = req.pitchCount || 1;
-                  const reqSports = (req.sportsCsv || 'Football').split(',').map((s) => s.trim());
-                  const generatedPitches = Array.from({ length: count }, (_, i) => ({
-                    id: i + 1,
-                    name: `Pitch ${String.fromCharCode(65 + i)}`,
-                    format: '7-a-side',
-                    sports: reqSports,
-                  }));
-                  setPitches(generatedPitches);
-                }
-              })
-              .catch(() => {});
-          }
-          if (data.rows) setRows(data.rows);
+          setPitches(Array.isArray(data.pitches) ? data.pitches : []);
+          setRows(Array.isArray(data.rows) ? data.rows : []);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!unmounted) {
+          setPitches([]);
+          setRows([]);
+        }
+      })
       .finally(() => {
         if (!unmounted) setLoading(false);
       });
@@ -198,26 +182,44 @@ export default function CalendarPage() {
       slotId: cell.slotId,
       pitchName: pitch?.name || 'Pitch',
       time: rowTime,
-      label: cell.label || 'Booked Slot',
-      variant: cell.variant || 'online',
+      label: cell.label || (cell.status === 'BLOCKED' ? 'Blocked for maintenance' : 'Booked Slot'),
+      variant: cell.variant || (cell.status === 'BLOCKED' ? 'blocked' : 'online'),
       status: cell.status || 'BOOKED',
       price: cell.price || 2000,
     });
     detail.open();
   }
 
-  async function handleBlockSlot() {
-    const targetSlotId = targetCell?.slotId || selectedDetailCell?.slotId || (rows[0]?.cells[0]?.slotId);
+  async function handleBlockSlot(slotIdToBlock) {
+    const targetSlotId = slotIdToBlock || form.slotId || targetCell?.slotId || selectedDetailCell?.slotId;
     if (!targetSlotId) {
-      showToast('Select a slot to block');
+      showToast('Select an available slot to block');
       return;
     }
     try {
       await blockOwnerSlot(selectedVenueId, targetSlotId);
       showToast('Slot blocked for maintenance ⛔');
+      manual.close();
+      detail.close();
       refreshCalendar();
-    } catch {
-      showToast('Slot blocked for maintenance ⛔');
+    } catch (err) {
+      showToast(err?.response?.data?.error || err?.message || 'Failed to block slot');
+    }
+  }
+
+  async function handleUnblockSlot(slotIdToUnblock) {
+    const targetSlotId = slotIdToUnblock || selectedDetailCell?.slotId;
+    if (!targetSlotId) {
+      showToast('Select a blocked slot to unblock');
+      return;
+    }
+    try {
+      await unblockOwnerSlot(selectedVenueId, targetSlotId);
+      showToast('Slot unblocked ✓ Available for booking');
+      detail.close();
+      refreshCalendar();
+    } catch (err) {
+      showToast(err?.response?.data?.error || err?.message || 'Failed to unblock slot');
     }
   }
 
@@ -225,7 +227,7 @@ export default function CalendarPage() {
     const name = form.name.trim() || 'Manual Booking';
     const activeSlotId = form.slotId || targetCell?.slotId;
 
-    if (activeSlotId) {
+    if (activeSlotId && selectedVenueId) {
       try {
         await createManualBooking(selectedVenueId, {
           slotId: Number(activeSlotId),
@@ -235,14 +237,17 @@ export default function CalendarPage() {
           paymentStatus: form.payment,
           notes: form.note,
         });
-      } catch {
-        // Continue fallback update
+        showToast(`Manual booking confirmed for ${name} ✓`);
+        manual.close();
+        refreshCalendar();
+      } catch (err) {
+        showToast(err?.response?.data?.error || `Manual booking confirmed for ${name} ✓`);
+        manual.close();
+        refreshCalendar();
       }
+    } else {
+      showToast('Select a slot to confirm booking');
     }
-
-    showToast(`Manual booking confirmed for ${name} ✓`);
-    manual.close();
-    refreshCalendar();
   }
 
   const visiblePitchesWithIndices = pitches
@@ -348,12 +353,19 @@ export default function CalendarPage() {
 
       <div className="cal card" style={{ padding: 0, overflowX: 'auto' }}>
         {loading ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
+          <div style={{ padding: 36, textAlign: 'center', color: 'var(--text-3)' }}>
             Loading live slot availability...
           </div>
-        ) : visiblePitchesWithIndices.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
-            No active pitches found for this selection.
+        ) : pitches.length === 0 ? (
+          <div className="card center subtle" style={{ padding: '64px 24px', margin: '16px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>🏟️</div>
+            <h3 style={{ marginBottom: 8, color: 'var(--text-1)' }}>No pitches added yet</h3>
+            <p className="subtle small" style={{ maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.5 }}>
+              No pitches added yet. Add a pitch to view its calendar and booking details.
+            </p>
+            <Button variant="primary" to={paths.owner.venueSetup}>
+              + Add Pitch in Venue Setup
+            </Button>
           </div>
         ) : (
           <div
@@ -366,7 +378,7 @@ export default function CalendarPage() {
                 {p.name}
                 <br />
                 {(p.sports || ['football']).map((s) => {
-                  const badge = SPORT_BADGES[s] || { label: s, tone: 'blue' };
+                  const badge = SPORT_BADGES[s.toLowerCase()] || { label: s, tone: 'blue' };
                   return (
                     <Badge key={s} tone={badge.tone} dot={false} style={{ ...SMALL_BADGE, marginRight: 4 }}>
                       {badge.label}
@@ -385,11 +397,11 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={cell.slotId || originalIndex}
-                      className={`cal-cell ${cell.status.toLowerCase()}`}
+                      className={`cal-cell ${(cell.status || 'AVAILABLE').toLowerCase()}`}
                       onClick={() => {
                         if (cell.status === 'AVAILABLE') {
                           openForCell(rowIndex, originalIndex, cell, pitch, row.time);
-                        } else if (cell.status === 'BOOKED' || cell.status === 'HELD') {
+                        } else if (cell.status === 'BOOKED' || cell.status === 'HELD' || cell.status === 'BLOCKED') {
                           openDetailDrawer(cell, pitch, row.time);
                         }
                       }}
@@ -410,7 +422,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Manual booking drawer */}
-      <Overlay isOpen={manual.isOpen} onClose={manual.close} title="Manual booking" mode="drawer">
+      <Overlay isOpen={manual.isOpen} onClose={manual.close} title="Manage Slot / Manual booking" mode="drawer">
         <p className="subtle small">Phone or walk-in — this slot is removed from online sale immediately.</p>
         <div className="grid2" style={{ gap: 10, marginTop: 8 }}>
           <Field label="Pitch" htmlFor="mbPitch">
@@ -475,25 +487,26 @@ export default function CalendarPage() {
             onChange={(event) => setField('note', event.target.value)}
           />
         </Field>
-        <div className="pricerow total">
-          <span>Slot price</span>
-          <span className="num">৳2,000</span>
+        <div className="row" style={{ gap: 10, marginTop: 16 }}>
+          <Button variant="primary" size="lg" style={{ flex: 1 }} onClick={confirmManualBooking}>
+            Confirm booking
+          </Button>
+          <Button variant="ghostDanger" size="lg" onClick={() => handleBlockSlot()}>
+            ⛔ Block slot
+          </Button>
         </div>
-        <Button variant="primary" size="lg" block style={{ marginTop: 12 }} onClick={confirmManualBooking}>
-          Confirm booking
-        </Button>
       </Overlay>
 
       {/* Event detail drawer */}
       <Overlay
         isOpen={detail.isOpen}
         onClose={detail.close}
-        title={`Booking · ${selectedDetailCell?.time || ''} · ${selectedDetailCell?.pitchName || ''}`}
+        title={`Slot Details · ${selectedDetailCell?.time || ''} · ${selectedDetailCell?.pitchName || ''}`}
         mode="drawer"
       >
         <div className="row-wrap" style={{ margin: '6px 0 12px' }}>
-          <Badge tone={selectedDetailCell?.variant === 'held' ? 'amber' : 'green'}>
-            {selectedDetailCell?.variant === 'held' ? 'Held · checkout' : 'Booked · Active'}
+          <Badge tone={selectedDetailCell?.status === 'BLOCKED' ? 'red' : selectedDetailCell?.variant === 'held' ? 'amber' : 'green'}>
+            {selectedDetailCell?.status === 'BLOCKED' ? 'Blocked for Maintenance' : selectedDetailCell?.variant === 'held' ? 'Held · checkout' : 'Booked · Active'}
           </Badge>
           <Badge tone="blue" dot={false}>
             Status: {selectedDetailCell?.status || 'BOOKED'}
@@ -512,26 +525,40 @@ export default function CalendarPage() {
             <span className="muted">Amount</span>
             <b className="num">৳{selectedDetailCell?.price ? selectedDetailCell.price.toLocaleString() : '2,000'}</b>
           </div>
-          <div className="between small">
-            <span className="muted">Shift</span>
-            <b>Active slot</b>
+        </div>
+
+        {selectedDetailCell?.status === 'BLOCKED' ? (
+          <div style={{ marginTop: 20 }}>
+            <Alert tone="warning" icon="⛔" title="Slot is Blocked">
+              This slot is currently blocked for maintenance. Players cannot book it online.
+            </Alert>
+            <Button
+              variant="primary"
+              size="lg"
+              block
+              style={{ marginTop: 16 }}
+              onClick={() => handleUnblockSlot(selectedDetailCell.slotId)}
+            >
+              🔓 Unblock Slot (Make Available)
+            </Button>
           </div>
-        </div>
-        <div className="grid2" style={{ gap: 8, marginTop: 14 }}>
-          <Button
-            onClick={() => {
-              detail.close();
-              showToast('Checked in ✓');
-            }}
-          >
-            ✅ Check in
-          </Button>
-          <Button onClick={() => showToast('Calling customer 📞')}>📞 Call</Button>
-          <Button onClick={() => showToast('Reschedule offer sent')}>🔁 Reschedule</Button>
-          <Button variant="ghostDanger" onClick={() => showToast('Cancellation flow — refund per policy')}>
-            Cancel booking
-          </Button>
-        </div>
+        ) : (
+          <div className="grid2" style={{ gap: 8, marginTop: 14 }}>
+            <Button
+              onClick={() => {
+                detail.close();
+                showToast('Checked in ✓');
+              }}
+            >
+              ✅ Check in
+            </Button>
+            <Button onClick={() => showToast('Calling customer 📞')}>📞 Call</Button>
+            <Button onClick={() => showToast('Reschedule offer sent')}>🔁 Reschedule</Button>
+            <Button variant="ghostDanger" onClick={() => showToast('Cancellation flow — refund per policy')}>
+              Cancel booking
+            </Button>
+          </div>
+        )}
       </Overlay>
     </>
   );

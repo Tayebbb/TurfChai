@@ -4,10 +4,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/buttons/Button';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Chip } from '@/components/ui/Chip';
-import { KpiCard } from '@/components/cards/KpiCard';
 import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
-import { SPORTS } from '@/data/owner';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFilterChips } from '@/hooks/useFilterChips';
@@ -27,15 +25,6 @@ const TIMEFRAMES = [
 const METHOD_FILTERS = ['Today', 'bKash', 'Nagad', 'Cash', 'Card', 'Refunds', 'Unmatched'];
 
 const DANGER = { color: 'var(--danger)' };
-
-const SPORT_FILTERS = [
-  { id: 'all', label: 'All Sports' },
-  { id: 'Football', label: '⚽ Football' },
-  { id: 'Cricket', label: '🏏 Cricket' },
-  { id: 'Futsal', label: '🥅 Futsal' },
-  { id: 'Badminton', label: '🏸 Badminton' },
-];
-
 
 const CURRENCY = (value) => `৳${value.toLocaleString('en-IN')}`;
 const AXIS_TICK = (v) =>
@@ -57,10 +46,11 @@ export default function PaymentsPage() {
   const { theme } = useTheme();
   const methodChips = useFilterChips(['Today']);
 
-  const { data: apiSummary } = useApi(fetchOwnerPayments, []);
-
   const [timeframe, setTimeframe] = useState('daily');
-  const [selectedSports, setSelectedSports] = useState(() => SPORTS.map((sport) => sport.key));
+  const fetchPaymentsFn = useCallback(() => fetchOwnerPayments(timeframe), [timeframe]);
+  const { data: apiSummary } = useApi(fetchPaymentsFn, [timeframe]);
+
+  const [selectedSports, setSelectedSports] = useState([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sportFilter, setSportFilter] = useState('all');
   const [missed, setMissed] = useState(null);
@@ -78,43 +68,63 @@ export default function PaymentsPage() {
   const handleCloseShift = async () => {
     try {
       await closeOwnerShift();
-      showToast('Evening shift closed successfully. Ledger balanced ✓');
+      showToast('Shift closed successfully. Ledger balanced ✓');
     } catch {
-      showToast('Evening shift closed — see Staff & Shifts');
+      showToast('Shift closed — see Staff & Shifts');
     }
   };
+
+  // Dynamic configured sports list derived from backend API for this owner
+  const configuredSports = useMemo(() => {
+    return apiSummary?.configuredSports || apiSummary?.sports || [];
+  }, [apiSummary]);
 
   const chartDataApi = apiSummary?.chartData || { labels: [], datasets: {} };
   const sportReport = apiSummary?.sportReport || [];
   const methodSplit = apiSummary?.methodSplit || [];
   const KPIS = apiSummary?.kpis || [];
   const LEDGER = apiSummary?.ledger || [];
+  const reconciliation = apiSummary?.reconciliation || {};
   
   const dark = theme === 'dark';
 
+  // Dynamic sport filter options derived from configured sports
+  const sportFilters = useMemo(() => [
+    { id: 'all', label: 'All Sports' },
+    ...configuredSports.map((s) => ({ id: s.name, label: s.label || s.name }))
+  ], [configuredSports]);
+
   const chartData = useMemo(
-    () => ({
-      labels: chartDataApi.labels || [],
-      datasets: selectedSports.map((key) => {
-        const sport = SPORTS.find((item) => item.key === key);
-        const data = chartDataApi.datasets?.[key] || [];
-        return {
-          label: sport.label,
-          data,
-          borderColor: sport.color,
-          backgroundColor: (context) => makeGradient(context, sport.color),
-          borderWidth: 2.5,
-          tension: 0.4,
-          fill: true,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          pointBackgroundColor: sport.color,
-          pointBorderColor: dark ? '#10170F' : '#FFFFFF',
-          pointBorderWidth: 2,
-        };
-      }),
-    }),
-    [chartDataApi, selectedSports, dark],
+    () => {
+      const activeSports = selectedSports.length > 0 ? selectedSports : configuredSports.map(s => s.name);
+      return {
+        labels: chartDataApi.labels || [],
+        datasets: activeSports.map((name) => {
+          const sportObj = configuredSports.find((item) => item.name === name || item.key === name) || {
+            name,
+            label: name,
+            color: '#06B6D4'
+          };
+          const data = chartDataApi.datasets?.[name] || chartDataApi.datasets?.[sportObj.key] || [];
+          const color = sportObj.color || '#06B6D4';
+          return {
+            label: sportObj.label || sportObj.name,
+            data,
+            borderColor: color,
+            backgroundColor: (context) => makeGradient(context, color),
+            borderWidth: 2.5,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            pointBackgroundColor: color,
+            pointBorderColor: dark ? '#10170F' : '#FFFFFF',
+            pointBorderWidth: 2,
+          };
+        }),
+      };
+    },
+    [chartDataApi, selectedSports, configuredSports, dark],
   );
 
   const chartOptions = useMemo(() => {
@@ -162,33 +172,32 @@ export default function PaymentsPage() {
     };
   }, [dark]);
 
-  function toggleSport(key) {
+  function toggleSport(name) {
     setSelectedSports((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
+      current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
     );
   }
 
   function toggleAllSports(checked) {
-    setSelectedSports(checked ? SPORTS.map((sport) => sport.key) : []);
+    setSelectedSports(checked ? configuredSports.map((sport) => sport.name) : []);
   }
 
-  const allSelected = selectedSports.length === SPORTS.length;
+  const allSelected = configuredSports.length > 0 && selectedSports.length === configuredSports.length;
   const visibleSportCards =
     sportFilter === 'all' ? sportReport : sportReport.filter((card) => card.sport === sportFilter);
 
   const resolvedKpis = useMemo(() => {
-    if (!apiSummary?.kpis) return KPIS;
-    return [
-      { label: 'Gross today', value: apiSummary.kpis.grossToday, delta: apiSummary.kpis.deltaInfo },
-      { label: 'Platform fees', value: apiSummary.kpis.platformFees, delta: '6% on online only' },
-      { label: 'Refunds', value: apiSummary.kpis.refunds, delta: '1 cancellation', trend: 'down' },
-      { label: 'Net to you', value: apiSummary.kpis.netToYou, delta: apiSummary.kpis.nextSettlementDate, trend: 'up', valueColor: 'var(--brand-600)' },
-    ];
-  }, [apiSummary]);
+    return KPIS.map((kpi) => ({
+      label: kpi.label,
+      value: kpi.value,
+      delta: kpi.delta,
+      trend: kpi.trend,
+      valueColor: kpi.label === 'Net to you' ? 'var(--brand-600)' : undefined
+    }));
+  }, [KPIS]);
 
   const resolvedLedger = useMemo(() => {
-    if (!apiSummary?.ledger) return LEDGER;
-    return apiSummary.ledger.map((row) => ({
+    return LEDGER.map((row) => ({
       id: row.id,
       time: row.time,
       booking: row.booking,
@@ -198,21 +207,21 @@ export default function PaymentsPage() {
       gross: row.gross,
       fee: row.fee,
       net: row.net,
-      status: { tone: row.statusTone || 'green', text: row.statusText },
+      status: row.status || { tone: 'green', text: 'Settled' },
       shift: row.shift,
       grossStyle: row.isRefund ? DANGER : undefined,
       netStyle: row.isRefund ? DANGER : undefined,
     }));
-  }, [apiSummary]);
+  }, [LEDGER]);
 
   return (
     <>
-      <PageTitle title="Payments" />
+      <PageTitle title="Payments & Reports" />
 
       <div className="main-header">
         <div>
           <h1>Payments &amp; reconciliation</h1>
-          <span className="subtle small">Friday 8 Aug · every taka accounted for</span>
+          <span className="subtle small">Real-time owner financials &amp; settlement statement</span>
         </div>
         <div className="row">
           <Button onClick={handleExportCsv}>⬇ Export CSV</Button>
@@ -221,8 +230,6 @@ export default function PaymentsPage() {
           </Button>
         </div>
       </div>
-
-
 
       {/* ═══════ Net Income Over Time Chart ═══════ */}
       <div className="card income-chart-card" style={{ marginBottom: 16, padding: '20px 24px 16px' }}>
@@ -263,60 +270,59 @@ export default function PaymentsPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  {selectedSports.length === 0 ? (
-                    <span className="subtle small">Select sports…</span>
-                  ) : (
-                    [...selectedSports].reverse().map((key) => {
-                      const sport = SPORTS.find((item) => item.key === key);
-                      return (
+                  {configuredSports.length === 0 ? (
+                    <span className="subtle small">No pitches configured</span>
+                  ) : (selectedSports.length === 0 ? configuredSports.map(s => s.name) : selectedSports).map((name) => {
+                    const sport = configuredSports.find((item) => item.name === name) || { name, label: name, color: '#06B6D4' };
+                    return (
+                      <span
+                        className="sport-tag"
+                        key={name}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: 'rgba(6,182,212,.15)',
+                          color: 'var(--text-1)',
+                        }}
+                      >
                         <span
-                          className="sport-tag"
-                          key={key}
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            background: sport.tagBg,
-                            color: 'var(--text-1)',
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: sport.color || '#06B6D4',
+                          }}
+                        />
+                        {sport.name}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Remove ${sport.name}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleSport(name);
+                          }}
+                          style={{
+                            marginLeft: 2,
+                            cursor: 'pointer',
+                            opacity: 0.7,
+                            fontWeight: 700,
                           }}
                         >
-                          <span
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              background: sport.color,
-                            }}
-                          />
-                          {sport.name}
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Remove ${sport.name}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleSport(key);
-                            }}
-                            style={{
-                              marginLeft: 2,
-                              cursor: 'pointer',
-                              opacity: 0.7,
-                              fontWeight: 700,
-                            }}
-                          >
-                            ×
-                          </span>
+                          ×
                         </span>
-                      );
-                    })
-                  )}
+                      </span>
+                    );
+                  })}
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 4 }}>▾</span>
               </div>
+
               <div
                 className="sport-picker-dropdown"
                 role="listbox"
@@ -337,7 +343,6 @@ export default function PaymentsPage() {
                   flexDirection: 'column',
                   gap: 4,
                 }}
-              >
               >
                 <div
                   onClick={() => toggleAllSports(!allSelected)}
@@ -373,17 +378,17 @@ export default function PaymentsPage() {
                   >
                     {allSelected ? '✓' : ''}
                   </span>
-                  Select All Sports
+                  Select All Configured Sports
                 </div>
 
                 <div style={{ height: 1, background: 'var(--border-soft)', margin: '4px 0' }} />
 
-                {SPORTS.map((sport) => {
-                  const isSelected = selectedSports.includes(sport.key);
+                {configuredSports.map((sport) => {
+                  const isSelected = selectedSports.includes(sport.name);
                   return (
                     <div
-                      key={sport.key}
-                      onClick={() => toggleSport(sport.key)}
+                      key={sport.name}
+                      onClick={() => toggleSport(sport.name)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -405,8 +410,8 @@ export default function PaymentsPage() {
                             height: 16,
                             borderRadius: 4,
                             border: '2px solid',
-                            borderColor: isSelected ? sport.color : 'var(--text-3)',
-                            background: isSelected ? sport.color : 'transparent',
+                            borderColor: isSelected ? (sport.color || '#06B6D4') : 'var(--text-3)',
+                            background: isSelected ? (sport.color || '#06B6D4') : 'transparent',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -417,23 +422,15 @@ export default function PaymentsPage() {
                         >
                           {isSelected ? '✓' : ''}
                         </span>
-                        <span>{sport.label}</span>
+                        <span>{sport.label || sport.name}</span>
                       </div>
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: sport.color,
-                          boxShadow: `0 0 6px ${sport.color}`,
-                        }}
-                      />
                     </div>
                   );
                 })}
               </div>
             </div>
           </div>
+
           <div className="row-wrap" style={{ gap: 6 }} role="group" aria-label="Time range">
             {TIMEFRAMES.map((item) => (
               <Chip
@@ -455,7 +452,7 @@ export default function PaymentsPage() {
         />
       </div>
 
-
+      {/* KPI Cards */}
       <div className="grid4" style={{ marginBottom: 16 }}>
         {resolvedKpis.map((kpi) => (
           <div className="kpi" key={kpi.label}>
@@ -476,6 +473,7 @@ export default function PaymentsPage() {
         ))}
       </div>
 
+      {/* Ledger Table */}
       <div className="card table-wrap" style={{ padding: 0, marginBottom: 16 }}>
         <table className="table">
           <thead>
@@ -493,7 +491,7 @@ export default function PaymentsPage() {
           </thead>
           <tbody>
             {resolvedLedger.map((row) => (
-              <tr key={row.id} style={row.rowStyle}>
+              <tr key={row.id}>
                 <td className="num">{row.time}</td>
                 <td className="num">{row.booking}</td>
                 <td>{row.customer}</td>
@@ -511,21 +509,13 @@ export default function PaymentsPage() {
                 <td>
                   <Badge tone={row.status.tone}>{row.status.text}</Badge>
                 </td>
-                <td>
-                  {row.shiftAction ? (
-                    <Button size="sm" onClick={() => showToast(row.shiftAction.toast)}>
-                      {row.shiftAction.label}
-                    </Button>
-                  ) : (
-                    row.shift
-                  )}
-                </td>
+                <td>{row.shift}</td>
               </tr>
             ))}
             {resolvedLedger.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ textAlign: 'center', padding: '24px 0' }}>
-                  No payments found
+                  No booking transactions logged yet
                 </td>
               </tr>
             )}
@@ -533,41 +523,39 @@ export default function PaymentsPage() {
         </table>
       </div>
 
-
-
+      {/* Reconciliation Summary & Monthly Report */}
       <div className="grid2" style={{ alignItems: 'start' }} id="reports">
         <section className="card">
           <h3>Reconciliation summary</h3>
           <div className="stack-sm" style={{ marginTop: 10 }}>
             <div className="between small">
               <span className="muted">Online (bKash · Nagad · card)</span>
-              <b className="num">৳7,850 · auto-matched ✓</b>
+              <b className="num">{reconciliation.onlineMatched || '৳0 · auto-matched ✓'}</b>
             </div>
             <div className="between small">
               <span className="muted">Cash collected (staff-logged)</span>
-              <b className="num">৳1,700</b>
+              <b className="num">{reconciliation.cashCollected || '৳0'}</b>
             </div>
             <div className="between small">
               <span className="muted">Deposits outstanding</span>
               <b className="num" style={{ color: 'var(--warn)' }}>
-                ৳4,300
+                {reconciliation.depositsOutstanding || '৳0'}
               </b>
             </div>
             <div className="between small">
               <span className="muted">Unmatched incoming</span>
               <b className="num" style={{ color: 'var(--warn)' }}>
-                ৳1,700 (1)
+                {reconciliation.unmatchedIncoming || '৳0 (0)'}
               </b>
             </div>
           </div>
           <Alert tone="ok" icon="🧾" title="Cash drawer vs ledger" style={{ marginTop: 12 }}>
-            Afternoon shift closed by Sumon: expected ৳1,700, counted ৳1,700 — <b>balanced ✓</b>
+            {reconciliation.drawerStatus || 'Ledger balanced ✓'}
           </Alert>
         </section>
 
-
         <section className="card">
-          <h3>Reports · this month</h3>
+          <h3>Reports · method split</h3>
           <div className="stack-sm" style={{ marginTop: 10 }}>
             {methodSplit.map((method) => (
               <div key={method.id}>
@@ -581,15 +569,15 @@ export default function PaymentsPage() {
               </div>
             ))}
             {methodSplit.length === 0 && (
-              <span className="muted small">No data</span>
+              <span className="muted small">No payment methods recorded yet</span>
             )}
           </div>
           <div className="panel between" style={{ marginTop: 12 }}>
             <div>
-              <b className="small">Next settlement</b>
-              <div className="tiny subtle">Online net → City Bank •••2214</div>
+              <b className="small">Available Payout</b>
+              <div className="tiny subtle">Verified Net Earnings</div>
             </div>
-            <b className="num">৳48,220 · Mon 11 Aug</b>
+            <b className="num">{resolvedKpis.find((k) => k.label === 'Net to you')?.value || '৳0'}</b>
           </div>
           <div className="row-wrap" style={{ marginTop: 10, gap: 8 }}>
             <Button
@@ -609,24 +597,23 @@ export default function PaymentsPage() {
         </section>
       </div>
 
-
+      {/* Sport Performance Report */}
       <section className="card" style={{ marginTop: 16 }}>
         <div className="between" style={{ flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h3 style={{ margin: 0 }}>🏆 Sport Performance &amp; Missed Slots Report</h3>
             <p className="subtle small" style={{ margin: '2px 0 0' }}>
-              Detailed breakdown of revenue, occupancy, and missed/unbooked slots for each sport
+              Detailed breakdown of revenue, occupancy, and missed/unbooked slots for your configured sports
             </p>
           </div>
           <div className="row-wrap" style={{ gap: 6 }}>
-            {SPORT_FILTERS.map((filter) => (
+            {sportFilters.map((filter) => (
               <Chip key={filter.id} active={sportFilter === filter.id} onToggle={() => setSportFilter(filter.id)}>
                 {filter.label}
               </Chip>
             ))}
           </div>
         </div>
-
 
         <div className="grid4" style={{ marginTop: 14, gap: 10 }}>
           {visibleSportCards.map((card) => (
@@ -661,6 +648,11 @@ export default function PaymentsPage() {
               </Button>
             </div>
           ))}
+          {visibleSportCards.length === 0 && (
+            <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '24px 0' }} className="subtle small">
+              No sport performance data available for this owner.
+            </div>
+          )}
         </div>
       </section>
 
@@ -694,7 +686,7 @@ export default function PaymentsPage() {
 
         <h4 style={{ margin: '10px 0 6px' }}>Missed Slot Log &amp; Reasons</h4>
         <div className="stack-sm" style={{ maxHeight: 220, overflowY: 'auto' }}>
-          {missed?.items.map((item) => (
+          {missed?.items?.map((item) => (
             <div className="panel between" key={item}>
               <span className="small">{item}</span>
               <Badge tone="red" dot={false}>

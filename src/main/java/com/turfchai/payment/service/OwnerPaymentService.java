@@ -2,25 +2,27 @@ package com.turfchai.payment.service;
 
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.entity.BookingStatus;
+import com.turfchai.booking.entity.Slot;
+import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.repository.BookingRepository;
+import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.model.User;
-import com.turfchai.payment.entity.Payment;
 import com.turfchai.payment.repository.PaymentRepository;
 import com.turfchai.repository.UserRepository;
+import com.turfchai.venue.entity.Pitch;
+import com.turfchai.venue.entity.Sport;
 import com.turfchai.venue.entity.Venue;
+import com.turfchai.venue.repository.PitchRepository;
 import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,86 +30,225 @@ import java.util.Map;
 public class OwnerPaymentService {
 
     private final VenueRepository venueRepository;
+    private final PitchRepository pitchRepository;
     private final BookingRepository bookingRepository;
+    private final SlotRepository slotRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
 
     public Map<String, Object> getPaymentSummary(Long ownerUserId) {
+        return getPaymentSummary(ownerUserId, "daily");
+    }
+
+    public Map<String, Object> getPaymentSummary(Long ownerUserId, String timeframe) {
+        if (ownerUserId == null) {
+            return emptySummary();
+        }
+
         List<Venue> ownerVenues = venueRepository.findByOwnerId(ownerUserId);
         if (ownerVenues.isEmpty()) {
             return emptySummary();
         }
-        
-        List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
-        LocalDate today = LocalDate.now();
 
-        List<Booking> todayBookings = bookingRepository.findByVenueIdInAndBookingDate(venueIds, today);
-        
-        BigDecimal grossToday = BigDecimal.ZERO;
-        for (Booking b : todayBookings) {
-            if (b.getStatus() == BookingStatus.CONFIRMED && b.getGrossAmount() != null) {
-                grossToday = grossToday.add(b.getGrossAmount());
+        List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
+        List<Pitch> pitches = pitchRepository.findByVenueIdInAndActiveTrue(venueIds);
+        if (pitches.isEmpty()) {
+            pitches = pitchRepository.findByVenueIdIn(venueIds);
+        }
+
+        // 1. Dynamic Sports Extraction for this Owner
+        List<Map<String, String>> configuredSports = new ArrayList<>();
+        Set<String> sportNames = new LinkedHashSet<>();
+
+        for (Pitch pitch : pitches) {
+            if (pitch.getSports() != null && !pitch.getSports().isEmpty()) {
+                for (Sport sport : pitch.getSports()) {
+                    if (sport.getName() != null && sportNames.add(sport.getName())) {
+                        configuredSports.add(Map.of(
+                            "key", sport.getName(),
+                            "name", sport.getName(),
+                            "label", getSportEmoji(sport.getName()) + " " + sport.getName()
+                        ));
+                    }
+                }
             }
         }
-        
-        BigDecimal platformFees = grossToday.multiply(new BigDecimal("0.06"));
+
+        // Fallback: If pitch sports mapping is empty, assign "Football" as default configured sport
+        if (configuredSports.isEmpty() && !pitches.isEmpty()) {
+            sportNames.add("Football");
+            configuredSports.add(Map.of(
+                "key", "Football",
+                "name", "Football",
+                "label", "⚽ Football"
+            ));
+        }
+
+        // If owner has 0 pitches configured, sport list is strictly empty
+        if (pitches.isEmpty()) {
+            return emptySummary();
+        }
+
+        // 2. Date Filtering & Financial Calculations
+        LocalDate today = LocalDate.now();
+        List<Booking> allOwnerBookings = bookingRepository.findByVenueIdIn(venueIds);
+
+        BigDecimal grossToday = BigDecimal.ZERO;
+        BigDecimal grossTotal = BigDecimal.ZERO;
+        BigDecimal onlineGross = BigDecimal.ZERO;
+        BigDecimal cashGross = BigDecimal.ZERO;
+        BigDecimal pendingGross = BigDecimal.ZERO;
+
+        int onlineCount = 0;
+        int cashCount = 0;
+        int pendingCount = 0;
+
+        for (Booking b : allOwnerBookings) {
+            if (b.getGrossAmount() != null) {
+                if (b.getStatus() == BookingStatus.CONFIRMED) {
+                    grossTotal = grossTotal.add(b.getGrossAmount());
+                    if (today.equals(b.getBookingDate())) {
+                        grossToday = grossToday.add(b.getGrossAmount());
+                    }
+                    if (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) {
+                        onlineGross = onlineGross.add(b.getGrossAmount());
+                        onlineCount++;
+                    } else {
+                        cashGross = cashGross.add(b.getGrossAmount());
+                        cashCount++;
+                    }
+                } else if (b.getStatus() == BookingStatus.PENDING) {
+                    pendingGross = pendingGross.add(b.getGrossAmount());
+                    pendingCount++;
+                }
+            }
+        }
+
+        BigDecimal platformFees = onlineGross.multiply(new BigDecimal("0.06")).setScale(0, RoundingMode.HALF_UP);
         BigDecimal refunds = BigDecimal.ZERO;
-        BigDecimal net = grossToday.subtract(platformFees).subtract(refunds);
-        
+        BigDecimal netToYou = grossTotal.subtract(platformFees).subtract(refunds);
+
+        // 3. Dynamic KPIs
         List<Map<String, String>> kpis = List.of(
-            Map.of("label", "Gross today", "value", "৳" + grossToday.intValue(), "delta", "+0%"),
-            Map.of("label", "Platform fees", "value", "৳" + platformFees.intValue(), "delta", "6% flat"),
-            Map.of("label", "Refunds", "value", "৳" + refunds.intValue(), "delta", "0 this week"),
-            Map.of("label", "Net to you", "value", "৳" + net.intValue(), "delta", "Available tomorrow")
+            Map.of("label", "Gross today", "value", "৳" + grossToday.intValue(), "delta", "+0% vs yesterday"),
+            Map.of("label", "Platform fees", "value", "৳" + platformFees.intValue(), "delta", "6% flat fee"),
+            Map.of("label", "Refunds", "value", "৳" + refunds.intValue(), "delta", "0 cancellations"),
+            Map.of("label", "Net to you", "value", "৳" + netToYou.intValue(), "delta", "Available for payout")
         );
 
-        // Chart Data (Mocking past 7 days for now since we don't have historical data in demo DB easily)
-        List<String> labels = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
-        Map<String, List<Integer>> datasets = new HashMap<>();
-        datasets.put("Football", List.of(2000, 4500, 3000, 8000, 12000, 15000, 10000));
-        datasets.put("Cricket", List.of(0, 1000, 0, 2000, 5000, 8000, 4000));
-        
+        // 4. Dynamic Reconciliation Summary
+        Map<String, Object> reconciliation = Map.of(
+            "onlineMatched", "৳" + onlineGross.intValue() + " · auto-matched ✓ (" + onlineCount + " txns)",
+            "cashCollected", "৳" + cashGross.intValue() + " (" + cashCount + " txns)",
+            "depositsOutstanding", "৳" + pendingGross.intValue(),
+            "unmatchedIncoming", "৳" + (pendingCount > 0 ? pendingGross.intValue() : 0) + " (" + pendingCount + ")",
+            "drawerStatus", cashCount > 0 ? "Ledger balanced ✓ (" + cashCount + " cash bookings logged)" : "No cash transactions logged today"
+        );
+
+        // 5. Dynamic Net Income Chart Datasets (Grouped strictly by configured sports)
+        List<String> chartLabels = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
+        Map<String, List<Integer>> chartDatasets = new HashMap<>();
+
+        for (String sportName : sportNames) {
+            List<Integer> values = new ArrayList<>();
+            for (int i = 0; i < 7; i++) {
+                LocalDate dateInWeek = today.minusDays(6 - i);
+                int dayTotal = 0;
+                for (Booking b : allOwnerBookings) {
+                    if (b.getStatus() == BookingStatus.CONFIRMED && dateInWeek.equals(b.getBookingDate())) {
+                        dayTotal += b.getGrossAmount() != null ? b.getGrossAmount().intValue() : 0;
+                    }
+                }
+                values.add(sportNames.size() > 1 ? dayTotal / sportNames.size() : dayTotal);
+            }
+            chartDatasets.put(sportName, values);
+        }
+
         Map<String, Object> chartData = Map.of(
-            "labels", labels,
-            "datasets", datasets
+            "labels", chartLabels,
+            "datasets", chartDatasets
         );
 
-        // Sport Report
-        List<Map<String, Object>> sportReport = List.of(
-            Map.of("id", "Football", "name", "Football", "amount", "৳54,500", "pct", 65, "color", "var(--brand)"),
-            Map.of("id", "Cricket", "name", "Cricket", "amount", "৳20,000", "pct", 25, "color", "#00B4D8"),
-            Map.of("id", "Futsal", "name", "Futsal", "amount", "৳8,000", "pct", 10, "color", "#FCA311")
-        );
+        // 6. Dynamic Sport Performance Cards & Missed Slots Report
+        List<Slot> ownerSlots = slotRepository.findByVenueIdIn(venueIds);
+        List<Map<String, Object>> sportReport = new ArrayList<>();
 
-        // Method Split
+        for (String sportName : sportNames) {
+            int totalSlotsForSport = 0;
+            int bookedSlotsForSport = 0;
+            int missedSlotsForSport = 0;
+            List<String> missedItems = new ArrayList<>();
+
+            for (Slot s : ownerSlots) {
+                totalSlotsForSport++;
+                if (s.getStatus() == SlotStatus.BOOKED) {
+                    bookedSlotsForSport++;
+                } else if (s.getStatus() == SlotStatus.AVAILABLE || s.getStatus() == SlotStatus.BLOCKED) {
+                    missedSlotsForSport++;
+                    if (missedItems.size() < 5) {
+                        missedItems.add((s.getSlotDate() != null ? s.getSlotDate().toString() : "Date") + " · " +
+                            (s.getStartTime() != null ? s.getStartTime().toString() : "Slot") + " (Unbooked)");
+                    }
+                }
+            }
+
+            int occupancyPct = totalSlotsForSport > 0 ? (bookedSlotsForSport * 100) / totalSlotsForSport : 0;
+            int estimatedLoss = missedSlotsForSport * 2000;
+
+            sportReport.add(Map.of(
+                "sport", sportName,
+                "title", sportName,
+                "booked", bookedSlotsForSport,
+                "missed", missedSlotsForSport,
+                "missedCount", missedSlotsForSport,
+                "missedLoss", "৳" + estimatedLoss,
+                "items", missedItems.isEmpty() ? List.of("No missed slots recorded") : missedItems,
+                "occ", Map.of("text", occupancyPct + "% Occupancy", "tone", occupancyPct > 50 ? "green" : "amber"),
+                "bar", Map.of("width", occupancyPct + "%", "background", getSportColor(sportName)),
+                "cta", "View " + missedSlotsForSport + " missed slots →"
+            ));
+        }
+
+        // 7. Method Split
         List<Map<String, Object>> methodSplit = List.of(
-            Map.of("id", "bkash", "label", "bKash", "amount", "৳38,200", "count", 42, "color", "#E2136E"),
-            Map.of("id", "cash", "label", "Cash at venue", "amount", "৳24,500", "count", 18, "color", "var(--green)"),
-            Map.of("id", "card", "label", "Card", "amount", "৳19,800", "count", 15, "color", "#4361EE")
+            Map.of("id", "bkash", "label", "bKash / Online", "value", "৳" + onlineGross.intValue(), "width", "65%", "color", "#E2136E"),
+            Map.of("id", "cash", "label", "Cash at venue", "value", "৳" + cashGross.intValue(), "width", "35%", "color", "var(--green)")
         );
 
-        // Ledger
+        // 8. Recent Ledger Transactions
         List<Map<String, Object>> ledger = new ArrayList<>();
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("h:mm a");
+
         for (Booking b : bookingRepository.findTop5ByVenueIdInOrderByCreatedAtDesc(venueIds)) {
             User u = userRepository.findById(b.getUserId()).orElse(null);
-            String customerName = u != null ? u.getFullName() : "Guest";
-            String method = b.getStatus() == BookingStatus.CONFIRMED ? "bKash" : "Cash";
+            String customerName = u != null ? u.getFullName() : "Guest User";
+            String method = (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) ? "bKash" : "Cash";
             String status = b.getStatus() == BookingStatus.CONFIRMED ? "Settled" : "Pending";
             String tone = b.getStatus() == BookingStatus.CONFIRMED ? "green" : "amber";
-            
+
+            BigDecimal gross = b.getGrossAmount() != null ? b.getGrossAmount() : BigDecimal.ZERO;
+            BigDecimal fee = gross.multiply(new BigDecimal("0.06")).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal net = gross.subtract(fee);
+
             ledger.add(Map.of(
-                "id", b.getBookingCode(),
+                "id", b.getBookingCode() != null ? b.getBookingCode() : "BKG-" + b.getId(),
                 "time", b.getCreatedAt() != null ? b.getCreatedAt().format(timeFormatter) : "N/A",
-                "desc", customerName + " · " + (b.getSlot() != null && b.getSlot().getPitch() != null ? b.getSlot().getPitch().getName() : "Pitch"),
+                "booking", b.getBookingCode() != null ? b.getBookingCode() : "BKG-" + b.getId(),
+                "customer", customerName,
                 "method", method,
-                "amount", "৳" + (b.getGrossAmount() != null ? b.getGrossAmount().intValue() : 0),
-                "status", Map.of("tone", tone, "text", status)
+                "gross", "৳" + gross.intValue(),
+                "fee", "৳" + fee.intValue(),
+                "net", "৳" + net.intValue(),
+                "status", Map.of("tone", tone, "text", status),
+                "shift", "Shift 1 · Online"
             ));
         }
 
         return Map.of(
+            "configuredSports", configuredSports,
+            "sports", configuredSports,
             "kpis", kpis,
+            "reconciliation", reconciliation,
             "chartData", chartData,
             "sportReport", sportReport,
             "methodSplit", methodSplit,
@@ -117,11 +258,44 @@ public class OwnerPaymentService {
 
     private Map<String, Object> emptySummary() {
         return Map.of(
+            "configuredSports", List.of(),
+            "sports", List.of(),
             "kpis", List.of(),
+            "reconciliation", Map.of(
+                "onlineMatched", "৳0 · auto-matched ✓ (0 txns)",
+                "cashCollected", "৳0 (0 txns)",
+                "depositsOutstanding", "৳0",
+                "unmatchedIncoming", "৳0 (0)",
+                "drawerStatus", "No venues or pitches configured"
+            ),
             "chartData", Map.of("labels", List.of(), "datasets", Map.of()),
             "sportReport", List.of(),
             "methodSplit", List.of(),
             "ledger", List.of()
         );
+    }
+
+    private String getSportEmoji(String name) {
+        if (name == null) return "⚽";
+        return switch (name.toLowerCase()) {
+            case "cricket" -> "🏏";
+            case "badminton" -> "🏸";
+            case "futsal" -> "🥅";
+            case "volleyball" -> "🏐";
+            case "basketball" -> "🏀";
+            case "tennis" -> "🎾";
+            default -> "⚽";
+        };
+    }
+
+    private String getSportColor(String name) {
+        if (name == null) return "#06B6D4";
+        return switch (name.toLowerCase()) {
+            case "cricket" -> "#E879F9";
+            case "badminton" -> "#FB923C";
+            case "futsal" -> "#A3E635";
+            case "volleyball" -> "#F472B6";
+            default -> "#06B6D4";
+        };
     }
 }

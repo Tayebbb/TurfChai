@@ -25,8 +25,9 @@ public class OwnerPaymentRestController {
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getPaymentSummary(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(ownerPaymentService.getPaymentSummary(principal.getId()));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "daily") String timeframe) {
+        return ResponseEntity.ok(ownerPaymentService.getPaymentSummary(principal.getId(), timeframe));
     }
 
     @PostMapping("/close-shift")

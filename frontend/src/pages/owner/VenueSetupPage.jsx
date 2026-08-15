@@ -171,11 +171,15 @@ function CustomTimePicker({ value, onChange, id }) {
 
 
 import {
+  createVenue,
   listMyVenues,
   getOwnerVenue,
   updateVenue,
+  updateVenueStatus,
+  uploadVenuePhotoApi,
   addPitch,
   updatePitch,
+  upsertPricingRule,
 } from '@/api/ownerVenues';
 import { useApi } from '@/hooks/useApi';
 
@@ -346,25 +350,6 @@ export default function VenueSetupPage() {
     }
   }
 
-  function handlePhotoUpload(event) {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-
-    const newPhotos = files.map((file) => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name: file.name,
-      url: URL.createObjectURL(file),
-    }));
-
-    setPhotos((prev) => [...prev, ...newPhotos]);
-    showToast(`${files.length} venue photo(s) added ✓`);
-
-    if (selectedVenueId) {
-      const allPhotoNames = [...photos, ...newPhotos].map((p) => p.name || p.url);
-      updateVenue(selectedVenueId, { photos: allPhotoNames }).catch(() => {});
-    }
-  }
-
   const refreshVenueDetails = useCallback((vId) => {
     if (!vId) return;
     setLoading(true);
@@ -378,6 +363,8 @@ export default function VenueSetupPage() {
 
           if (Array.isArray(res.photos) && res.photos.length > 0) {
             setPhotos(res.photos.map((url, idx) => ({ id: String(idx), url, name: `Photo ${idx + 1}` })));
+          } else {
+            setPhotos([]);
           }
 
           if (Array.isArray(res.pitches)) {
@@ -389,6 +376,19 @@ export default function VenueSetupPage() {
                 ? p.sportSlugs.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
                 : ['Football'],
             })));
+          } else {
+            setPitches([]);
+          }
+
+          if (Array.isArray(res.pricingRules) && res.pricingRules.length > 0) {
+            setSportPricing(res.pricingRules.map((rule) => ({
+              id: rule.sportSlug || 'football',
+              title: `${rule.sportSlug ? rule.sportSlug.charAt(0).toUpperCase() + rule.sportSlug.slice(1) : 'Football'}`,
+              tone: rule.sportSlug === 'cricket' ? 'amber' : rule.sportSlug === 'futsal' ? 'green' : 'blue',
+              duration: String(rule.slotDurationMin || 60),
+              buffer: '10',
+              basePrice: Number(rule.rate || 2000),
+            })));
           }
         }
       })
@@ -397,6 +397,78 @@ export default function VenueSetupPage() {
         setLoading(false);
       });
   }, []);
+
+  const getActiveVenueId = useCallback(async () => {
+    if (selectedVenueId) return selectedVenueId;
+    if (venues.length > 0 && venues[0].id) {
+      setSelectedVenueId(venues[0].id);
+      return venues[0].id;
+    }
+    try {
+      const res = await listMyVenues();
+      const venueList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      if (venueList.length > 0 && venueList[0].id) {
+        setVenues(venueList);
+        const vId = venueList[0].id;
+        setSelectedVenueId(vId);
+        refreshVenueDetails(vId);
+        return vId;
+      } else {
+        const created = await createVenue({
+          name: 'My Venue',
+          area: 'Dhanmondi',
+          address: 'Dhanmondi',
+          lat: 23.8103,
+          lng: 90.4125,
+          basePrice: 2000,
+          openTime: '06:00',
+          closeTime: '23:00',
+        });
+        const newV = created?.data || created;
+        if (newV && newV.id) {
+          setVenues([newV]);
+          setSelectedVenueId(newV.id);
+          refreshVenueDetails(newV.id);
+          return newV.id;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to resolve active venue', err);
+    }
+    return null;
+  }, [selectedVenueId, venues, refreshVenueDetails]);
+
+  async function handlePhotoUpload(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const vId = await getActiveVenueId();
+    if (!vId) {
+      showToast('Initializing venue details, please try again');
+      return;
+    }
+
+    let uploaded = 0;
+    for (const file of files) {
+      try {
+        const res = await uploadVenuePhotoApi(vId, file);
+        if (res?.url) {
+          uploaded++;
+          setPhotos((prev) => [
+            ...prev,
+            { id: String(Date.now() + Math.random()), url: res.url, name: file.name },
+          ]);
+        }
+      } catch {
+        showToast(`Failed to upload ${file.name}`);
+      }
+    }
+
+    if (uploaded > 0) {
+      showToast(`${uploaded} venue photo(s) uploaded successfully ✓`);
+      refreshVenueDetails(vId);
+    }
+  }
 
   useEffect(() => {
     let unmounted = false;
@@ -409,34 +481,27 @@ export default function VenueSetupPage() {
           setSelectedVenueId(initialId);
           refreshVenueDetails(initialId);
         } else if (!unmounted) {
-          // If no approved venue in database yet, fall back to owner's submitted turf request
+          // If no venue in database yet, fall back to owner's submitted turf request info
           getMyTurfRequests()
             .then((reqRes) => {
               const reqList = Array.isArray(reqRes?.data) ? reqRes.data : (Array.isArray(reqRes) ? reqRes : []);
               if (!unmounted && reqList.length > 0) {
                 const req = reqList[0];
                 const fallbackVenue = {
-                  id: req.id || 1,
+                  id: req.venueId || null,
                   name: req.venueName || 'My Venue',
-                  status: req.status === 'APPROVED' ? 'PUBLISHED' : 'PENDING',
+                  status: req.status === 'APPROVED' ? 'LIVE' : 'PENDING',
                   area: req.area || 'Dhanmondi',
                   openTime: '06:00 AM',
                   closeTime: '11:00 PM',
                 };
                 setVenues([fallbackVenue]);
-                setSelectedVenueId(fallbackVenue.id);
+                if (fallbackVenue.id) {
+                  setSelectedVenueId(fallbackVenue.id);
+                  refreshVenueDetails(fallbackVenue.id);
+                }
                 setVenueData(fallbackVenue);
-
-                // Populate pitches from request pitch count
-                const count = req.pitchCount || 1;
-                const reqSports = (req.sportsCsv || 'Football').split(',').map((s) => s.trim());
-                const generatedPitches = Array.from({ length: count }, (_, i) => ({
-                  id: i + 1,
-                  name: `Pitch ${String.fromCharCode(65 + i)}`,
-                  desc: 'Artificial grass · 30×50 m',
-                  sports: reqSports,
-                }));
-                setPitches(generatedPitches);
+                setPitches([]);
 
                 if (req.photosJson) {
                   try {
@@ -446,22 +511,6 @@ export default function VenueSetupPage() {
                     }
                   } catch {}
                 }
-              } else if (!unmounted) {
-                // Ensure a default preview venue is shown so page is never empty
-                const defaultVenue = {
-                  id: 1,
-                  name: 'Kick Off Arena',
-                  status: 'PENDING',
-                  area: 'Dhanmondi',
-                  openTime: '06:00 AM',
-                  closeTime: '11:00 PM',
-                };
-                setVenues([defaultVenue]);
-                setSelectedVenueId(defaultVenue.id);
-                setVenueData(defaultVenue);
-                setPitches([
-                  { id: 1, name: 'Pitch A (Main)', desc: 'Artificial grass · 30×50 m', sports: ['Football'] },
-                ]);
               }
             })
             .catch(() => {});
@@ -536,70 +585,67 @@ export default function VenueSetupPage() {
     const name = pitchDraft.name.trim() || 'New Pitch';
     const desc = pitchDraft.desc.trim() || 'Standard turf court';
 
-    if (selectedVenueId) {
-      try {
-        const sportSlugs = pitchDraft.sports.map((s) => s.toLowerCase());
-        if (editingId) {
-          await updatePitch(selectedVenueId, editingId, {
-            name,
-            surfaceDetail: desc,
-            sportSlugs,
-          });
-          showToast('Pitch details updated ✓');
-        } else {
-          await addPitch(selectedVenueId, {
-            name,
-            format: '7-a-side',
-            surfaceType: 'ARTIFICIAL_TURF',
-            surfaceDetail: desc,
-            dimensions: '30×50 m',
-            lighting: 'FLOODLIT',
-            maxPlayers: 14,
-            indoor: false,
-            sportSlugs,
-          });
-          showToast('New pitch added to venue ✓');
-        }
-        refreshVenueDetails(selectedVenueId);
-        pitchModal.close();
-        return;
-      } catch {
-        // Fallback local update
-      }
+    const vId = await getActiveVenueId();
+    if (!vId) {
+      showToast('Initializing venue details, please try again');
+      return;
     }
 
-    if (editingId) {
-      setPitches((current) =>
-        current.map((pitch) =>
-          pitch.id === editingId ? { ...pitch, name, desc, sports: pitchDraft.sports } : pitch,
-        ),
-      );
-      showToast('Pitch details updated ✓');
-    } else {
-      setPitches((current) => [
-        ...current,
-        {
-          id: Date.now(),
+    try {
+      const sportSlugs = pitchDraft.sports.map((s) => s.toLowerCase());
+      if (editingId) {
+        await updatePitch(vId, editingId, {
           name,
-          desc,
-          sports: pitchDraft.sports,
-        },
-      ]);
-      showToast('New pitch added ✓');
+          surfaceDetail: desc,
+          sportSlugs,
+        });
+        setPitches((prev) =>
+          prev.map((p) => (p.id === editingId ? { ...p, name, desc, sports: pitchDraft.sports } : p))
+        );
+        showToast('Pitch details updated ✓');
+      } else {
+        const created = await addPitch(vId, {
+          name,
+          format: '7-a-side',
+          surfaceType: 'ARTIFICIAL_TURF',
+          surfaceDetail: desc,
+          dimensions: '30×50 m',
+          lighting: 'FLOODLIT',
+          maxPlayers: 14,
+          indoor: false,
+          sportSlugs,
+        });
+        const createdPitch = created?.data || created;
+        const newPitchObj = {
+          id: createdPitch?.id || Date.now(),
+          name: createdPitch?.name || name,
+          desc: `${createdPitch?.surfaceType || 'Artificial grass'} · ${createdPitch?.dimensions || '30×50 m'}`,
+          sports: (createdPitch?.sportSlugs && createdPitch.sportSlugs.length > 0)
+            ? createdPitch.sportSlugs.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+            : pitchDraft.sports,
+        };
+        setPitches((prev) => [...prev.filter((p) => p.id !== newPitchObj.id), newPitchObj]);
+        showToast('New pitch added to venue ✓');
+      }
+      refreshVenueDetails(vId);
+      pitchModal.close();
+      return;
+    } catch (err) {
+      showToast(err?.data?.message || err?.message || 'Failed to save pitch details');
     }
-    pitchModal.close();
   }
 
   async function saveDepositSection() {
-    if (selectedVenueId) {
+    const vId = await getActiveVenueId();
+    if (vId) {
       try {
-        await updateVenue(selectedVenueId, {
+        await updateVenue(vId, {
           depositPolicy: deposit,
           cancelPolicy: policy,
           allowSplitPayment: allowSplit,
         });
         showToast('Deposit & cancellation section saved ✓');
-        refreshVenueDetails(selectedVenueId);
+        refreshVenueDetails(vId);
         return;
       } catch {
         // Fallback toast
@@ -608,33 +654,63 @@ export default function VenueSetupPage() {
     showToast('Deposit & cancellation section saved ✓');
   }
 
-  function saveSlotSettings() {
+  async function saveSlotSettings() {
     const basePrice = Math.max(0, Math.round(Number(String(slotDraft.basePrice).replace(/[^\d.]/g, '')) || 0));
     if (!basePrice) {
       showToast('Enter a base price for this sport');
       return;
     }
-    setSportPricing((current) =>
-      current.map((sport) =>
-        sport.id === slotDraft.sport
-          ? { ...sport, duration: slotDraft.duration, buffer: slotDraft.buffer, basePrice }
-          : sport,
-      ),
-    );
-    showToast(`Base price saved — TurfChai will price each slot around ${bdt(basePrice)} ✓`);
+    const vId = await getActiveVenueId();
+    if (vId) {
+      try {
+        await upsertPricingRule(vId, {
+          sportSlug: (slotDraft.sport || 'football').toLowerCase(),
+          windowType: 'full_day',
+          rate: basePrice,
+          slotDurationMin: Number(slotDraft.duration) || 60,
+          bufferMin: Number(slotDraft.buffer) || 10,
+          windowStart: '06:00',
+          windowEnd: '23:00',
+          active: true,
+        });
+        showToast(`Pricing rule saved for ${slotDraft.sport} ✓`);
+        refreshVenueDetails(vId);
+        slotModal.close();
+        return;
+      } catch {
+        showToast('Failed to save pricing rule');
+      }
+    }
     slotModal.close();
   }
 
   async function handleGoLive() {
-    if (selectedVenueId) {
-      try {
-        await updateVenue(selectedVenueId, { status: 'PUBLISHED' });
-        refreshVenueDetails(selectedVenueId);
-      } catch {
-        // Continue modal launch
-      }
+    const vId = await getActiveVenueId();
+    if (!vId) return;
+
+    if (venueData?.status === 'PENDING' || venueData?.status === 'DRAFT') {
+      showToast('Verification Pending — Please wait for admin approval before going live');
+      return;
     }
-    live.open();
+
+    const isCurrentlyLive = venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED';
+    const nextStatus = isCurrentlyLive ? 'OFFLINE' : 'LIVE';
+
+    try {
+      const updated = await updateVenueStatus(vId, nextStatus);
+      if (updated && updated.status) {
+        setVenueData((prev) => (prev ? { ...prev, status: updated.status } : updated));
+      } else {
+        setVenueData((prev) => (prev ? { ...prev, status: nextStatus } : null));
+      }
+      showToast(`Turf is now ${nextStatus === 'LIVE' ? 'LIVE' : 'OFFLINE'} ✓`);
+      refreshVenueDetails(vId);
+      if (nextStatus === 'LIVE') {
+        live.open();
+      }
+    } catch {
+      showToast('Failed to update venue live status');
+    }
   }
 
   const hoursList = [
@@ -654,14 +730,26 @@ export default function VenueSetupPage() {
           </div>
         ) : (
           <>
-            <Alert
-              tone="ok"
-              icon="✓"
-              title={`${venueData?.name || 'Venue'} is ${venueData?.status === 'PUBLISHED' ? 'LIVE' : 'Pending'}`}
-              style={{ marginBottom: 16 }}
-            >
-              Complete the profile below, then press <b>Go Live</b> to start taking bookings.
-            </Alert>
+            {venueData?.status === 'PUBLISHED' || venueData?.status === 'LIVE' ? (
+              <Alert
+                tone="ok"
+                icon="✓"
+                title={`${venueData?.name || 'Venue'} is LIVE`}
+                style={{ marginBottom: 16 }}
+              >
+                Your venue is verified and live! You are currently taking player bookings.
+              </Alert>
+            ) : (
+              <Alert
+                tone="warn"
+                icon="⏳"
+                title="Verification Pending — Admin Review in Progress"
+                style={{ marginBottom: 16 }}
+              >
+                Your venue application and submitted details are currently under review by our admin team.
+                You can configure your pitches, photos, and pricing rules below. Once verified and approved by admin, your venue will go <b>LIVE</b> for player bookings.
+              </Alert>
+            )}
 
             <div className="between" style={{ flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
               <div>
@@ -712,24 +800,26 @@ export default function VenueSetupPage() {
                   </div>
 
                   <div className="row" style={{ marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
-                    {photos.length > 0
-                      ? photos.map((p) => (
-                          <img
-                            key={p.id || p.name}
-                            src={p.url || p}
-                            alt={p.name || 'Venue Photo'}
-                            style={{
-                              width: 72,
-                              height: 72,
-                              objectFit: 'cover',
-                              borderRadius: 8,
-                              border: '1px solid var(--border-soft)',
-                            }}
-                          />
-                        ))
-                      : DEFAULT_PHOTOS.map((photo) => (
-                          <Photo key={photo.id} variant={photo.variant} glyph={photo.glyph} style={PHOTO_TILE} />
-                        ))}
+                    {photos.length > 0 ? (
+                      photos.map((p) => (
+                        <img
+                          key={p.id || p.name || p.url}
+                          src={p.url || p}
+                          alt={p.name || 'Venue Photo'}
+                          style={{
+                            width: 72,
+                            height: 72,
+                            objectFit: 'cover',
+                            borderRadius: 8,
+                            border: '1px solid var(--border-soft)',
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <div className="subtle small" style={{ display: 'inline-flex', alignItems: 'center', padding: '0 8px' }}>
+                        No photos uploaded yet. Upload venue photos to showcase your turf.
+                      </div>
+                    )}
 
                     <label
                       style={{
@@ -762,23 +852,29 @@ export default function VenueSetupPage() {
                     Assign specific pitches to one or multiple sports
                   </p>
 
-                  <div className="stack-sm" style={{ marginTop: 10 }}>
-                    {pitches.map((pitch) => (
-                      <div className="panel between" key={pitch.id}>
-                        <div>
-                          <b className="small">{pitch.name}</b>
-                          <div className="tiny subtle">{pitch.desc}</div>
-                          <div className="row-wrap sports-tags" style={{ gap: 4, marginTop: 6 }}>
-                            <SportTags sports={pitch.sports} />
+                  {pitches.length > 0 ? (
+                    <div className="stack-sm" style={{ marginTop: 10 }}>
+                      {pitches.map((pitch) => (
+                        <div className="panel between" key={pitch.id}>
+                          <div>
+                            <b className="small">{pitch.name}</b>
+                            <div className="tiny subtle">{pitch.desc}</div>
+                            <div className="row-wrap sports-tags" style={{ gap: 4, marginTop: 6 }}>
+                              <SportTags sports={pitch.sports} />
+                            </div>
                           </div>
-                        </div>
 
-                        <Button size="sm" variant="tertiary" onClick={() => openEditPitch(pitch)}>
-                          Edit
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                          <Button size="sm" variant="tertiary" onClick={() => openEditPitch(pitch)}>
+                            Edit
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ padding: '16px 0', color: 'var(--text-3)', fontSize: 14 }}>
+                      No pitches added yet. Add a pitch to get started.
+                    </div>
+                  )}
 
                   <Button size="sm" style={{ marginTop: 10 }} onClick={openAddPitch}>
                     + Add pitch

@@ -222,3 +222,16 @@ export async function apiSend(method, path, body) {
   if (!response.ok) await throwApiError(response);
   return response.status === 204 ? null : response.json();
 }
+
+/** Multipart FormData upload request against backend origin */
+export async function apiUpload(path, formData) {
+  const url = resolveUrl(path);
+  const headers = authHeaders(); // omit Content-Type so browser sets boundary
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  if (!response.ok) await throwApiError(response);
+  return response.json();
+}
