@@ -18,6 +18,7 @@ import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useSlotStream } from '@/hooks/useSlotStream';
 import { useToast } from '@/hooks/useToast';
+import { Alert } from '@/components/ui/Alert';
 import { paths } from '@/routes/paths';
 import './VenuePage.css';
 
@@ -437,10 +438,17 @@ export default function VenuePage() {
     );
   }
 
+  const isOffline = venue != null && venue.status != null && !['LIVE', 'PUBLISHED'].includes(venue.status.toUpperCase());
+
   return (
     <>
       <PageTitle title={name} />
       <main className="wrap" style={{ paddingTop: 20 }} id="main">
+        {isOffline && (
+          <Alert tone="warn" icon="⚠️" title="Turf is currently unavailable" style={{ marginBottom: 16 }}>
+            This turf is currently offline or suspended. New bookings are temporarily disabled.
+          </Alert>
+        )}
         {detail.error && detail.error.status !== 404 ? (
           <p className="subtle" role="status" style={{ marginBottom: 10 }}>
             Live venue data unavailable — showing sample content.{' '}
@@ -714,13 +722,13 @@ export default function VenuePage() {
             </div>
 
             <Button
-              variant="primary"
+              variant={isOffline ? 'tertiary' : 'primary'}
               block
-              to={checkoutHref}
-              onClick={handleBookClick}
-              style={{ minHeight: 44, fontSize: 14 }}
+              to={isOffline ? null : checkoutHref}
+              onClick={isOffline ? (e) => { e.preventDefault(); showToast('Turf is currently offline / unavailable.'); } : handleBookClick}
+              style={{ minHeight: 44, fontSize: 14, opacity: isOffline ? 0.6 : 1 }}
             >
-              Book this slot
+              {isOffline ? 'Turf Currently Offline' : 'Book this slot'}
             </Button>
             {slotWarn && (
               <p

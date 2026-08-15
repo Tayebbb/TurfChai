@@ -1,4 +1,4 @@
-import { apiGet, apiSend } from './client';
+import { apiGet, apiSend, apiUpload } from './client';
 
 /** Owner venue management — /api/v1/owner/venues/**, requires an OWNER session. */
 
@@ -15,6 +15,18 @@ export function listMyVenues() {
 /** PUT /api/v1/owner/venues/{id} — partial update; omitted fields stay unchanged. */
 export function updateVenue(id, changes) {
   return apiSend('PUT', `/api/v1/owner/venues/${encodeURIComponent(id)}`, changes);
+}
+
+/** PUT /api/v1/owner/venues/{id}/status — update live status (LIVE / OFFLINE). */
+export function updateVenueStatus(id, status) {
+  return apiSend('PUT', `/api/v1/owner/venues/${encodeURIComponent(id)}/status`, { status });
+}
+
+/** POST /api/v1/media/venues/{id}/photo — upload photo file to Cloudinary & save to DB. */
+export function uploadVenuePhotoApi(id, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiUpload(`/api/v1/media/venues/${encodeURIComponent(id)}/photo`, formData);
 }
 
 /** GET /api/v1/owner/venues/{id} */
@@ -51,6 +63,11 @@ export function getOwnerCalendar(venueId, dateStr) {
 /** POST /api/v1/owner/venues/{id}/slots/{slotId}/block */
 export function blockOwnerSlot(venueId, slotId) {
   return apiSend('POST', `/api/v1/owner/venues/${encodeURIComponent(venueId)}/slots/${encodeURIComponent(slotId)}/block`);
+}
+
+/** POST /api/v1/owner/venues/{id}/slots/{slotId}/unblock */
+export function unblockOwnerSlot(venueId, slotId) {
+  return apiSend('POST', `/api/v1/owner/venues/${encodeURIComponent(venueId)}/slots/${encodeURIComponent(slotId)}/unblock`);
 }
 
 /** POST /api/v1/owner/venues/{id}/manual-booking */
