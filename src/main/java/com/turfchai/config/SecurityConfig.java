@@ -80,10 +80,12 @@ public class SecurityConfig {
                                 "/api/v1/host/tournaments/**",
                                 // Public promo code validation (used by checkout UI)
                                 "/api/v1/promotions/validate-code",
-                                "/api/v1/pricing/**",
-                                "/api/v1/admin/holidays/**",
-                                "/api/v1/admin/**"
+                                "/api/v1/pricing/**"
                         ).permitAll()
+                        // Defense in depth: the whole admin namespace is restricted
+                        // to authenticated admins at the filter level, on top of the
+                        // method-level @PreAuthorize on each controller.
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         // Media upload & owner management require authentication
                         .requestMatchers("/api/v1/media/**").authenticated()
                         .requestMatchers("/api/v1/owner/**").authenticated()
