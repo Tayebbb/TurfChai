@@ -229,7 +229,11 @@ export default function PaymentsPage() {
         <div className="income-chart-header">
           <div className="income-chart-title-row">
             <h3 style={{ margin: 0, fontSize: 18 }}>Net Income Over Time</h3>
-            <div className={`sport-picker${pickerOpen ? ' open' : ''}`} ref={pickerRef}>
+            <div
+              className={`sport-picker${pickerOpen ? ' open' : ''}`}
+              ref={pickerRef}
+              style={{ position: 'relative', display: 'inline-block' }}
+            >
               <div
                 className="sport-picker-trigger"
                 role="button"
@@ -244,65 +248,96 @@ export default function PaymentsPage() {
                     setPickerOpen((open) => !open);
                   }
                 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 14px',
+                  borderRadius: 10,
+                  background: dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                  border: dark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.12)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  minHeight: 38,
+                  userSelect: 'none',
+                }}
               >
-                {selectedSports.length === 0 ? (
-                  <span className="sport-picker-placeholder">Select sports…</span>
-                ) : (
-                  [...selectedSports].reverse().map((key) => {
-                    const sport = SPORTS.find((item) => item.key === key);
-                    return (
-                      <span
-                        className="sport-tag"
-                        key={key}
-                        style={{ background: sport.tagBg }}
-                      >
-                        <span className="sport-tag-dot" style={{ background: sport.color }} />
-                        {sport.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {selectedSports.length === 0 ? (
+                    <span className="subtle small">Select sports…</span>
+                  ) : (
+                    [...selectedSports].reverse().map((key) => {
+                      const sport = SPORTS.find((item) => item.key === key);
+                      return (
                         <span
-                          className="sport-tag-x"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Remove ${sport.name}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            toggleSport(key);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              toggleSport(key);
-                            }
+                          className="sport-tag"
+                          key={key}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: sport.tagBg,
+                            color: 'var(--text-1)',
                           }}
                         >
-                          ×
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              background: sport.color,
+                            }}
+                          />
+                          {sport.name}
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Remove ${sport.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleSport(key);
+                            }}
+                            style={{
+                              marginLeft: 2,
+                              cursor: 'pointer',
+                              opacity: 0.7,
+                              fontWeight: 700,
+                            }}
+                          >
+                            ×
+                          </span>
                         </span>
-                      </span>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
+                <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 4 }}>▾</span>
               </div>
               <div
                 className="sport-picker-dropdown"
                 role="listbox"
                 style={{
                   position: 'absolute',
-                  top: '100%',
+                  top: 'calc(100% + 6px)',
                   right: 0,
-                  marginTop: 6,
-                  zIndex: 50,
-                  minWidth: 210,
+                  zIndex: 99,
+                  minWidth: 220,
                   padding: 8,
                   borderRadius: 14,
-                  background: dark ? 'rgba(22, 34, 26, 0.95)' : 'rgba(255, 255, 255, 0.96)',
+                  background: dark ? 'rgba(22, 34, 26, 0.96)' : 'rgba(255, 255, 255, 0.98)',
                   backdropFilter: 'blur(16px)',
                   WebkitBackdropFilter: 'blur(16px)',
-                  border: dark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
-                  boxShadow: dark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 12px 32px rgba(0,0,0,0.15)',
+                  border: dark ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
+                  boxShadow: dark ? '0 12px 32px rgba(0,0,0,0.5)' : '0 12px 32px rgba(0,0,0,0.18)',
                   display: pickerOpen ? 'flex' : 'none',
                   flexDirection: 'column',
                   gap: 4,
                 }}
+              >
               >
                 <div
                   onClick={() => toggleAllSports(!allSelected)}

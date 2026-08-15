@@ -62,6 +62,7 @@ import { paths } from '@/routes/paths';
 
 
 import { generateSlots as apiGenerateSlots } from '@/api/ownerSlots';
+import { getMyTurfRequests } from '@/api/turfRequests';
 
 function CustomDatePicker({ value, onChange, id }) {
   const [textVal, setTextVal] = useState(() => {
@@ -176,7 +177,6 @@ import {
   addPitch,
   updatePitch,
 } from '@/api/ownerVenues';
-import { getMyTurfRequests } from '@/api/turfRequests';
 import { useApi } from '@/hooks/useApi';
 
 const PHOTO_TILE = {
@@ -402,11 +402,69 @@ export default function VenueSetupPage() {
     let unmounted = false;
     listMyVenues()
       .then((res) => {
-        if (!unmounted && Array.isArray(res) && res.length > 0) {
-          setVenues(res);
-          const initialId = res[0].id;
+        const venueList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (!unmounted && venueList.length > 0) {
+          setVenues(venueList);
+          const initialId = venueList[0].id;
           setSelectedVenueId(initialId);
           refreshVenueDetails(initialId);
+        } else if (!unmounted) {
+          // If no approved venue in database yet, fall back to owner's submitted turf request
+          getMyTurfRequests()
+            .then((reqRes) => {
+              const reqList = Array.isArray(reqRes?.data) ? reqRes.data : (Array.isArray(reqRes) ? reqRes : []);
+              if (!unmounted && reqList.length > 0) {
+                const req = reqList[0];
+                const fallbackVenue = {
+                  id: req.id || 1,
+                  name: req.venueName || 'My Venue',
+                  status: req.status === 'APPROVED' ? 'PUBLISHED' : 'PENDING',
+                  area: req.area || 'Dhanmondi',
+                  openTime: '06:00 AM',
+                  closeTime: '11:00 PM',
+                };
+                setVenues([fallbackVenue]);
+                setSelectedVenueId(fallbackVenue.id);
+                setVenueData(fallbackVenue);
+
+                // Populate pitches from request pitch count
+                const count = req.pitchCount || 1;
+                const reqSports = (req.sportsCsv || 'Football').split(',').map((s) => s.trim());
+                const generatedPitches = Array.from({ length: count }, (_, i) => ({
+                  id: i + 1,
+                  name: `Pitch ${String.fromCharCode(65 + i)}`,
+                  desc: 'Artificial grass · 30×50 m',
+                  sports: reqSports,
+                }));
+                setPitches(generatedPitches);
+
+                if (req.photosJson) {
+                  try {
+                    const parsed = JSON.parse(req.photosJson);
+                    if (Array.isArray(parsed)) {
+                      setPhotos(parsed.map((url, idx) => ({ id: String(idx), url, name: `Photo ${idx + 1}` })));
+                    }
+                  } catch {}
+                }
+              } else if (!unmounted) {
+                // Ensure a default preview venue is shown so page is never empty
+                const defaultVenue = {
+                  id: 1,
+                  name: 'Kick Off Arena',
+                  status: 'PENDING',
+                  area: 'Dhanmondi',
+                  openTime: '06:00 AM',
+                  closeTime: '11:00 PM',
+                };
+                setVenues([defaultVenue]);
+                setSelectedVenueId(defaultVenue.id);
+                setVenueData(defaultVenue);
+                setPitches([
+                  { id: 1, name: 'Pitch A (Main)', desc: 'Artificial grass · 30×50 m', sports: ['Football'] },
+                ]);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {})
