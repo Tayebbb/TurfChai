@@ -18,15 +18,12 @@ const ADMIN_ROLES = new Set(['ADMIN', 'SUPER_ADMIN']);
 export default function RequireAdmin({ children }) {
   const location = useLocation();
   const token = getToken();
-  const [status, setStatus] = useState('checking'); // checking | ok | redirect
+  const [status, setStatus] = useState(() => (token ? 'checking' : 'redirect')); // checking | ok | redirect
 
   useEffect(() => {
-    let cancelled = false;
+    if (!token) return;
 
-    if (!token) {
-      setStatus('redirect');
-      return;
-    }
+    let cancelled = false;
 
     getMe()
       .then((user) => {
