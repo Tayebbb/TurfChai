@@ -158,20 +158,27 @@ export default function OwnerOnboardingPage() {
 
     for (const file of files) {
       const previewUrl = URL.createObjectURL(file);
-      const newPhoto = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        name: file.name,
-        url: previewUrl,
-      };
+      let persistentUrl = previewUrl;
 
       try {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', 'photo');
-        await uploadTurfDoc(formData);
+        const res = await uploadTurfDoc(formData);
+        if (res && (res.url || res.data?.url)) {
+          persistentUrl = res.url || res.data.url;
+        }
       } catch {
-        /* local preview fallback */
+        /* fallback to persistent placeholder */
+        persistentUrl = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800';
       }
+
+      const newPhoto = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: file.name,
+        url: persistentUrl,
+        preview: previewUrl,
+      };
 
       setPhotos((prev) => [...prev, newPhoto]);
     }
@@ -250,7 +257,9 @@ export default function OwnerOnboardingPage() {
         }
       }
 
-      const photoUrls = photos.length > 0 ? photos.map((p) => p.url) : [];
+      const photoUrls = photos.length > 0 
+        ? photos.map((p) => (p.url && p.url.startsWith('blob:') ? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800' : p.url)) 
+        : [];
 
       await createTurfRequest({
         venueName: venueName.trim(),

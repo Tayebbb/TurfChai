@@ -127,6 +127,10 @@ public class VenueManagementService {
     /** List all venues owned by the given user (auto-creates a draft venue if owner has none). */
     @Transactional
     public List<VenueManagementDto> listOwnerVenues(Long ownerUserId) {
+        if (ownerUserId == null) {
+            return List.of();
+        }
+        User owner = userRepository.findById(ownerUserId).orElse(null);
         List<Venue> venues = venueRepository.findByOwnerId(ownerUserId);
         var requests = (turfRequestRepository != null) ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId) : List.<com.turfchai.model.TurfRequest>of();
         if (requests.isEmpty() && owner != null && owner.getEmail() != null) {
@@ -135,8 +139,7 @@ public class VenueManagementService {
         boolean isApproved = !requests.isEmpty() && "APPROVED".equalsIgnoreCase(requests.get(0).getStatus());
         boolean isRejected = !requests.isEmpty() && "REJECTED".equalsIgnoreCase(requests.get(0).getStatus());
 
-        if (venues.isEmpty()) {
-            User owner = userRepository.findById(ownerUserId).orElse(null);
+        if (venues.isEmpty() && owner != null) {
             if (owner != null) {
                 String venueName = (!requests.isEmpty() && requests.get(0).getVenueName() != null && !requests.get(0).getVenueName().isBlank())
                         ? requests.get(0).getVenueName() : "Kick Off Arena";

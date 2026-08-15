@@ -75,18 +75,21 @@ public class OwnerPaymentService {
             }
         }
 
-        // Fallback: If pitch sports mapping is empty, assign "Football" as default configured sport
-        if (configuredSports.isEmpty()) {
-            sportNames.add("Football");
-            configuredSports.add(Map.of(
-                "key", "Football",
-                "name", "Football",
-                "label", "⚽ Football"
-            ));
+
+
+        LocalDate today = LocalDate.now();
+        LocalDate startDateFilter;
+        if ("weekly".equalsIgnoreCase(timeframe)) {
+            startDateFilter = today.minusDays(7);
+        } else if ("monthly".equalsIgnoreCase(timeframe)) {
+            startDateFilter = today.minusDays(30);
+        } else if ("yearly".equalsIgnoreCase(timeframe)) {
+            startDateFilter = today.minusDays(365);
+        } else {
+            // "daily"
+            startDateFilter = today;
         }
 
-        // 2. Date Filtering & Financial Calculations
-        LocalDate today = LocalDate.now();
         List<Booking> allOwnerBookings = new ArrayList<>(bookingRepository.findByVenueIdIn(venueIds));
 
         // Reconcile any slots marked BOOKED that are missing a corresponding Booking entity
@@ -131,23 +134,25 @@ public class OwnerPaymentService {
 
         for (Booking b : allOwnerBookings) {
             if (b.getGrossAmount() != null) {
-                if (b.getStatus() == BookingStatus.CONFIRMED) {
-                    grossTotal = grossTotal.add(b.getGrossAmount());
-                    boolean isToday = (b.getBookingDate() != null && today.equals(b.getBookingDate())) ||
-                                      (b.getCreatedAt() != null && today.equals(b.getCreatedAt().toLocalDate()));
-                    if (isToday) {
-                        grossToday = grossToday.add(b.getGrossAmount());
+                LocalDate bDate = b.getBookingDate() != null ? b.getBookingDate() : (b.getCreatedAt() != null ? b.getCreatedAt().toLocalDate() : null);
+                if (bDate != null && (bDate.isEqual(startDateFilter) || bDate.isAfter(startDateFilter))) {
+                    if (b.getStatus() == BookingStatus.CONFIRMED) {
+                        grossTotal = grossTotal.add(b.getGrossAmount());
+                        boolean isToday = today.equals(bDate);
+                        if (isToday) {
+                            grossToday = grossToday.add(b.getGrossAmount());
+                        }
+                        if (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) {
+                            onlineGross = onlineGross.add(b.getGrossAmount());
+                            onlineCount++;
+                        } else {
+                            cashGross = cashGross.add(b.getGrossAmount());
+                            cashCount++;
+                        }
+                    } else if (b.getStatus() == BookingStatus.PENDING) {
+                        pendingGross = pendingGross.add(b.getGrossAmount());
+                        pendingCount++;
                     }
-                    if (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) {
-                        onlineGross = onlineGross.add(b.getGrossAmount());
-                        onlineCount++;
-                    } else {
-                        cashGross = cashGross.add(b.getGrossAmount());
-                        cashCount++;
-                    }
-                } else if (b.getStatus() == BookingStatus.PENDING) {
-                    pendingGross = pendingGross.add(b.getGrossAmount());
-                    pendingCount++;
                 }
             }
         }
@@ -273,16 +278,16 @@ public class OwnerPaymentService {
             ));
         }
 
-        return Map.of(
-            "configuredSports", configuredSports,
-            "sports", configuredSports,
-            "kpis", kpis,
-            "reconciliation", reconciliation,
-            "chartData", chartData,
-            "sportReport", sportReport,
-            "methodSplit", methodSplit,
-            "ledger", ledger
-        );
+        Map<String, Object> result = new HashMap<>();
+        result.put("configuredSports", configuredSports);
+        result.put("sports", configuredSports);
+        result.put("kpis", kpis);
+        result.put("reconciliation", reconciliation);
+        result.put("chartData", chartData);
+        result.put("sportReport", sportReport);
+        result.put("methodSplit", methodSplit);
+        result.put("ledger", ledger);
+        return result;
     }
 
     private Map<String, Object> emptySummary() {
