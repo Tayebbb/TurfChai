@@ -10,7 +10,9 @@ import { Overlay } from '@/components/modals/Overlay';
 import { Badge } from '@/components/ui/Badge';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { OWNER_NAV_LINKS } from '@/constants/navigation';
-import { currentOwner } from '@/data/users';
+import { getMe } from '@/api/auth';
+import { listMyVenues } from '@/api/ownerVenues';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useToast } from '@/hooks/useToast';
@@ -20,7 +22,19 @@ function OwnerChrome() {
   const { toggle } = useSidebar();
   const account = useDisclosure(false);
   const { showToast } = useToast();
-  const owner = currentOwner ?? { initials: '??', name: 'Owner', venue: '—', area: '—' };
+  
+  const { data: userRes } = useApi(getMe);
+  const user = userRes?.data || userRes;
+  
+  const { data: venuesRes } = useApi(listMyVenues);
+  const venues = venuesRes?.data || venuesRes || [];
+  
+  const owner = {
+    initials: user?.avatarInitials || user?.fullName?.substring(0, 2)?.toUpperCase() || '??',
+    name: user?.fullName || 'Owner',
+    venue: venues[0]?.name || '—',
+    area: venues[0]?.area || user?.area || '—'
+  };
 
   return (
     <>

@@ -88,7 +88,7 @@ export default function DashboardPage() {
           <GlassCard style={{ padding: 24, marginBottom: 20 }}>
             <div className="between" style={{ marginBottom: 16 }}>
               <div>
-                <h2 style={{ margin: 0 }}>{latestRequest?.venueName || 'Kick Off Arena'}</h2>
+                <h2 style={{ margin: 0 }}>{latestRequest?.venueName || 'My Venue'}</h2>
                 <span className="subtle small">
                   Request Code: <b className="num">{latestRequest?.requestCode || 'TRF-1042'}</b> · Area: {latestRequest?.area || 'Dhanmondi'}
                 </span>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
         <div>
           <h1>Good evening, {owner?.name ?? 'Owner'} 🏟️</h1>
           <span className="subtle small">
-            {activeVenue ? `${activeVenue.name} · ${activeVenue.area} · ` : (latestRequest ? `${latestRequest.venueName} · ` : 'Kick Off Arena · ')}
+            {activeVenue ? `${activeVenue.name} · ${activeVenue.area} · ` : (latestRequest ? `${latestRequest.venueName} · ` : 'My Venue · ')}
             <Badge tone={isPendingVerification ? 'amber' : 'green'}>{isPendingVerification ? 'Pending Approval' : 'Live'}</Badge>
           </span>
         </div>
@@ -328,7 +328,7 @@ export default function DashboardPage() {
         <div role="status" style={{ marginTop: 12 }}>
           {scanResult === 'ok' ? (
             <Alert tone="ok" icon="✅" title="Access granted — TC-48291" style={{ margin: 0 }}>
-              Rafiul Karim · 10 players · Pitch 2 · 7:30–9:00 PM
+              Player · 10 players · Pitch 2 · 7:30–9:00 PM
               <br />
               <span className="tiny">
                 Ticket matches this slot &amp; time · checked in 7:21 PM · attendance auto-registered

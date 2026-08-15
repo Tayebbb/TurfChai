@@ -108,7 +108,7 @@ export default function OwnerOnboardingPage() {
   const [photos, setPhotos] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
 
-  const [venueName, setVenueName] = useState('Kick Off Arena');
+  const [venueName, setVenueName] = useState('');
   const [location, setLocation] = useState({ address: '', area: '', lat: null, lng: null });
   const [saving, setSaving] = useState(false);
 
