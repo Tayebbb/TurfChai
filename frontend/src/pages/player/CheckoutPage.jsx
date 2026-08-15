@@ -45,6 +45,36 @@ const METHOD_HINTS = {
   CARD: 'Card payments are processed securely — TurfChai never stores your card number.',
 };
 
+// Brand colours for the dummy gateway screens. Kept separate from the method
+// selector colours above so each screen uses the provider's real brand tone.
+const BRAND_COLORS = {
+  BKASH: '#E2136E',
+  NAGAD: '#F26522',
+  CARD: '#2660D8',
+};
+
+/** How long the "Processing your payment…" screen is shown — a timed UI delay. */
+const PAYMENT_DELAY_MS = 2000;
+
+/** 01712345678 -> 017******78; a card number -> **** **** **** 3456. */
+function maskAccount(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 11) return `${digits.slice(0, 3)}******${digits.slice(-2)}`;
+  if (digits.length >= 12) return `**** **** **** ${digits.slice(-4)}`;
+  return digits;
+}
+
+/** 1234567890123456 -> 1234 5678 9012 3456 (max 16 digits). */
+function formatCardNumber(value) {
+  return value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
+}
+
+/** 1228 -> 12/28; keeps the MM/YY shape while typing. */
+function formatExpiry(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+}
+
 const POLICY = [
   {
     id: 'free',
@@ -137,7 +167,17 @@ export default function CheckoutPage() {
   const [slotInfo, setSlotInfo] = useState(null);
   const [lockSeconds, setLockSeconds] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [payError, setPayError] = useState(null);
+
+  // Dummy payment gateway — purely frontend state, no page reloads between steps.
+  const [gatewayStep, setGatewayStep] = useState(null); // null | 'account' | 'pin' | 'processing' | 'success'
+  const [account, setAccount] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [pin, setPin] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [gatewayError, setGatewayError] = useState(null);
+  const [paymentResult, setPaymentResult] = useState(null);
 
   const wallet = useApi(() => getMyPoints(), []);
   const walletBalance = wallet.data?.walletBalance ?? 0;
@@ -198,29 +238,82 @@ export default function CheckoutPage() {
         : undefined,
   });
 
-  const attemptPayment = async (simulateFailure) => {
+  const validateAccountFields = () => {
+    const errs = {};
+    if (method === 'CARD') {
+      if (cardNumber.replace(/\D/g, '').length !== 16) {
+        errs.card = 'Enter a valid 16-digit card number';
+      }
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) {
+        errs.expiry = 'Enter a valid expiry (MM/YY)';
+      }
+      if (!/^\d{3,4}$/.test(cvv)) {
+        errs.cvv = 'Enter a valid CVV';
+      }
+    } else if (!/^01\d{9}$/.test(account.replace(/\D/g, ''))) {
+      errs.account = 'Enter a valid 11-digit phone number starting with 01';
+    }
+    return errs;
+  };
+
+  const onPay = () => {
     if (!signedIn) {
       navigate(signInHref);
       return;
     }
     if (!slotId || busy || hold.state !== 'held') return;
+    // Open the dummy gateway on the account/number screen.
+    setAccount('');
+    setCardNumber('');
+    setExpiry('');
+    setCvv('');
+    setPin('');
+    setFieldErrors({});
+    setGatewayError(null);
+    setPaymentResult(null);
+    setGatewayStep('account');
+  };
+
+  const closeGateway = () => {
+    setGatewayStep(null);
+  };
+
+  const nextFromAccount = () => {
+    const errs = validateAccountFields();
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    setPin('');
+    setFieldErrors({});
+    setGatewayError(null);
+    setGatewayStep('pin');
+  };
+
+  const confirmPayment = async () => {
+    if (pin.replace(/\D/g, '').length < 4) {
+      setFieldErrors({ pin: 'PIN must be at least 4 digits' });
+      return;
+    }
+    setFieldErrors({});
+    setGatewayStep('processing');
     setBusy(true);
-    setPayError(null);
     try {
+      // Step 3 is a timed UI delay — nothing is charged during it. The existing
+      // checkout call then confirms the booking and records the payment.
+      await new Promise((resolve) => setTimeout(resolve, PAYMENT_DELAY_MS));
       const result = await checkout({
         slotId,
         method,
-        applyWalletAmount: !simulateFailure && walletApplied > 0 ? walletApplied : undefined,
-        simulateFailure,
+        applyWalletAmount: walletApplied > 0 ? walletApplied : undefined,
       });
       if (result.status === 'SUCCESS') {
-        navigate(`${paths.player.bookingSuccess}?bookingId=${result.bookingId}`, {
-          state: { pointsEarned: result.pointsEarned, method },
-        });
+        setPaymentResult(result);
+        setGatewayStep('success');
       } else {
-        setPayError(result.payment?.failureReason || result.message || 'Payment declined — please try again.');
+        setGatewayStep('account');
+        setGatewayError(result.message || 'Payment could not be completed — try again');
       }
     } catch (error) {
+      setGatewayStep(null);
       if (error.status === 409) {
         showToast('Slot was taken while you were paying — locking it again');
         const reheld = await rehold();
@@ -233,8 +326,220 @@ export default function CheckoutPage() {
     }
   };
 
-  const onPay = () => attemptPayment(false);
-  const onSimulateFailure = () => attemptPayment(true);
+  const backToAccount = () => {
+    setPin('');
+    setFieldErrors({});
+    setGatewayError(null);
+    setGatewayStep('account');
+  };
+
+  // The four dummy gateway screens — pure UI, driven entirely by `gatewayStep`.
+  const renderGateway = () => {
+    const brand = BRAND_COLORS[method] ?? BRAND_COLORS.CARD;
+    const meta = METHODS.find((item) => item.id === method);
+    const masked = maskAccount(method === 'CARD' ? cardNumber : account);
+
+    return (
+      <section className="gw" aria-live="polite">
+        <div className="gw-head" style={{ background: brand }}>
+          <span className="gw-logo" aria-hidden="true">
+            {meta.logo}
+          </span>
+          <div className="gw-head-mid">
+            <b>{methodLabel}</b>
+            <span>Secure payment</span>
+          </div>
+          <div className="gw-amount">
+            <span>AMOUNT</span>
+            <b className="num">{bdt(dueNow)}</b>
+          </div>
+        </div>
+
+        {gatewayStep === 'account' ? (
+          <div className="gw-body">
+            <button type="button" className="gw-cancel" onClick={closeGateway}>
+              ← Cancel payment
+            </button>
+            <h2 className="gw-title">
+              {method === 'CARD'
+                ? 'Enter your card details'
+                : `Enter your ${methodLabel} account number`}
+            </h2>
+
+            {method === 'CARD' ? (
+              <>
+                <div className="field">
+                  <label htmlFor="gw-card">Card number</label>
+                  <input
+                    id="gw-card"
+                    className={fieldErrors.card ? 'input invalid' : 'input'}
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    placeholder="1234 5678 9012 3456"
+                    value={cardNumber}
+                    onChange={(event) => setCardNumber(formatCardNumber(event.target.value))}
+                  />
+                  {fieldErrors.card ? <span className="err">{fieldErrors.card}</span> : null}
+                </div>
+                <div className="input-row">
+                  <div className="field">
+                    <label htmlFor="gw-expiry">Expiry</label>
+                    <input
+                      id="gw-expiry"
+                      className={fieldErrors.expiry ? 'input invalid' : 'input'}
+                      inputMode="numeric"
+                      autoComplete="cc-exp"
+                      placeholder="MM/YY"
+                      value={expiry}
+                      onChange={(event) => setExpiry(formatExpiry(event.target.value))}
+                    />
+                    {fieldErrors.expiry ? <span className="err">{fieldErrors.expiry}</span> : null}
+                  </div>
+                  <div className="field">
+                    <label htmlFor="gw-cvv">CVV</label>
+                    <input
+                      id="gw-cvv"
+                      className={fieldErrors.cvv ? 'input invalid' : 'input'}
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
+                      placeholder="•••"
+                      value={cvv}
+                      onChange={(event) => setCvv(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                    />
+                    {fieldErrors.cvv ? <span className="err">{fieldErrors.cvv}</span> : null}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="field">
+                <label htmlFor="gw-account">Enter your {methodLabel} account number</label>
+                <input
+                  id="gw-account"
+                  className={fieldErrors.account ? 'input invalid' : 'input'}
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="01XXXXXXXXX"
+                  value={account}
+                  onChange={(event) => setAccount(event.target.value.replace(/\D/g, '').slice(0, 11))}
+                />
+                {fieldErrors.account ? <span className="err">{fieldErrors.account}</span> : null}
+              </div>
+            )}
+
+            {gatewayError ? (
+              <div className="alert warn" role="status" style={{ marginTop: 4 }}>
+                <span className="ico">⚠️</span>
+                <div>{gatewayError}</div>
+              </div>
+            ) : null}
+
+            <div className="gw-foot">
+              <Button variant="primary" size="lg" block onClick={nextFromAccount}>
+                Next
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {gatewayStep === 'pin' ? (
+          <div className="gw-body">
+            <button type="button" className="gw-cancel" onClick={closeGateway}>
+              ← Cancel payment
+            </button>
+            <h2 className="gw-title">Enter your PIN</h2>
+
+            <div className="gw-id">
+              <span className="gw-logo sm" style={{ background: brand }} aria-hidden="true">
+                {meta.logo}
+              </span>
+              <div>
+                <b>{methodLabel}</b>
+                <span className="gw-masked num">{masked}</span>
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="gw-pin">Enter your {methodLabel} PIN</label>
+              <input
+                id="gw-pin"
+                className={fieldErrors.pin ? 'input invalid' : 'input'}
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                autoComplete="off"
+                placeholder="••••••"
+                value={pin}
+                onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              />
+              {fieldErrors.pin ? <span className="err">{fieldErrors.pin}</span> : null}
+            </div>
+
+            <div className="gw-foot">
+              <div className="row" style={{ gap: 10 }}>
+                <Button variant="secondary" onClick={backToAccount} style={{ flex: 1 }}>
+                  Back
+                </Button>
+                <Button variant="primary" onClick={confirmPayment} style={{ flex: 1 }}>
+                  Confirm Payment
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {gatewayStep === 'processing' ? (
+          <div className="gw-body gw-center">
+            <div className="gw-spinner" role="status" aria-label="Processing payment" />
+            <h2 className="gw-title">Processing your payment…</h2>
+            <p className="subtle" style={{ margin: 0 }}>
+              Please don&apos;t close this window.
+            </p>
+          </div>
+        ) : null}
+
+        {gatewayStep === 'success' ? (
+          <div className="gw-body gw-center">
+            <div className="check-anim" aria-hidden="true">
+              ✓
+            </div>
+            <h2 className="gw-title">Payment Successful</h2>
+            <p className="subtle" style={{ margin: 0 }}>
+              Your booking is confirmed.
+            </p>
+
+            <div className="gw-receipt">
+              <div className="co-detail-row">
+                <span className="co-detail-label">Method</span>
+                <span className="co-detail-value">{methodLabel}</span>
+              </div>
+              <div className="co-detail-row">
+                <span className="co-detail-label">Account</span>
+                <span className="co-detail-value num">{masked}</span>
+              </div>
+              <div className="co-detail-row">
+                <span className="co-detail-label">Amount paid</span>
+                <span className="co-detail-value num">
+                  {bdt(paymentResult?.payment?.amount ?? dueNow)}
+                </span>
+              </div>
+              <div className="co-detail-row">
+                <span className="co-detail-label">Booking ref</span>
+                <span className="co-detail-value num">{paymentResult?.bookingCode ?? '—'}</span>
+              </div>
+            </div>
+
+            <div className="gw-foot">
+              <Button variant="primary" size="lg" block to={paths.player.dashboard.root}>
+                Go to Dashboard
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+    );
+  };
 
   const lockText = !signedIn
     ? 'Sign in to hold this slot'
@@ -328,22 +633,16 @@ export default function CheckoutPage() {
           </div>
         ) : null}
 
-        {payError ? (
-          <div className="alert warn" role="status" style={{ marginBottom: 20 }}>
-            <span className="ico">⚠️</span>
-            <div>
-              <b>Payment declined</b>
-              {payError}
-            </div>
-          </div>
-        ) : null}
+        {gatewayStep ? (
+          renderGateway()
+        ) : (
+          <>
+            <h1 style={{ fontSize: 26, margin: '10px 0 4px' }}>Confirm and pay</h1>
+            <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28 }}>
+              Your slot is held for 5 minutes — no one else can take it while you pay.
+            </p>
 
-        <h1 style={{ fontSize: 26, margin: '10px 0 4px' }}>Confirm and pay</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28 }}>
-          Your slot is held for 5 minutes — no one else can take it while you pay.
-        </p>
-
-        <div className="co-grid">
+            <div className="co-grid">
           <div>
             {/* Step 1: Payment method */}
             <div className="co-step">
@@ -502,17 +801,10 @@ export default function CheckoutPage() {
                 Browsing is open to everyone — we only need an account to hold the slot in your name.
               </p>
             ) : null}
-            <Button
-              variant="tertiary"
-              block
-              onClick={onSimulateFailure}
-              disabled={!signedIn || hold.state !== 'held' || busy}
-              style={{ marginTop: 6, fontSize: 13 }}
-            >
-              Simulate failed payment
-            </Button>
           </aside>
-        </div>
+          </div>
+          </>
+        )}
       </main>
     </>
   );
