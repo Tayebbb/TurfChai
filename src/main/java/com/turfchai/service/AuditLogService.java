@@ -4,6 +4,7 @@ import com.turfchai.model.AuditLog;
 import com.turfchai.repository.AuditLogRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,9 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
+
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
 
     private final AuditLogRepository auditLogRepository;
 
@@ -43,6 +47,9 @@ public class AuditLogService {
     @PostConstruct
     @Transactional
     public void seedInitialLogsIfEmpty() {
+        if (!activeProfiles.contains("dev") && !activeProfiles.contains("test")) {
+            return;
+        }
         if (auditLogRepository.count() == 0) {
             List<AuditLog> seeds = List.of(
                 AuditLog.builder().adminName("Farid Hasan").action("Approved Request").actionTone("green").target("TR-1039").details("GreenTurf Annex -> Listing published as pending venue setup").createdAt(OffsetDateTime.now().minusHours(2)).build(),

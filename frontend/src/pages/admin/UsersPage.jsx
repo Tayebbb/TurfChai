@@ -15,57 +15,6 @@ const ROLE_CHIPS = ['Player', 'Turf Owner', 'Game Host'];
 
 const ACCOUNT_STANDINGS = ['Active', 'Restricted (No Matchmaking)', 'Suspended'];
 
-const STATIC_USERS = [
-  {
-    id: '#40221',
-    name: 'Rafiul Karim',
-    initials: 'RK',
-    avatarClass: 'avatar sm',
-    phone: '+880 1712 ••• 890',
-    roles: [{ label: 'Player', tone: 'green' }],
-    bookings: 12,
-    reliability: '98%',
-    joined: 'Mar 2025',
-    status: 'Active',
-    statusTone: 'green',
-    flagged: false,
-  },
-  {
-    id: '#28810',
-    name: 'Mahmudul Hasan',
-    initials: 'MH',
-    avatarClass: 'avatar sm',
-    avatarStyle: { background: 'var(--info-soft)', color: 'var(--info)' },
-    phone: '+880 1811 ••• 344',
-    roles: [
-      { label: 'Turf Owner', tone: 'blue' },
-      { label: 'Player', tone: 'green' },
-    ],
-    bookings: 31,
-    reliability: '100%',
-    joined: 'Jan 2024',
-    status: 'Active',
-    statusTone: 'green',
-    flagged: false,
-  },
-  {
-    id: '#38112',
-    name: 'M. Babul',
-    initials: 'MB',
-    avatarClass: 'avatar sm d',
-    phone: '+880 1999 ••• 402',
-    roles: [{ label: 'Player', tone: 'green' }],
-    bookings: 9,
-    reliability: '61%',
-    reliabilityStyle: { color: 'var(--danger)', fontWeight: 700 },
-    joined: 'Nov 2025',
-    status: 'Suspended',
-    statusTone: 'red',
-    rowStyle: { background: 'rgba(201,59,59,0.08)' },
-    flagged: true,
-  },
-];
-
 function initialsOf(name) {
   if (!name) return '??';
   return name
@@ -117,7 +66,7 @@ export default function UsersPage() {
         };
       });
     }
-    return STATIC_USERS;
+    return [];
   }, [apiUsersData]);
 
   
@@ -236,6 +185,12 @@ export default function UsersPage() {
             {loading ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>Loading users...</td>
+              </tr>
+            ) : userRows.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>
+                  No users found{search ? ` for “${search}”` : ''}.
+                </td>
               </tr>
             ) : userRows.map((user) => (
               <tr key={user.id} style={user.rowStyle}>
