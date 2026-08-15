@@ -77,6 +77,10 @@ public class User {
     @Column(name = "area", length = 100)
     private String area;
 
+    /** Acquisition channel / registration source, e.g. "Organic Search". */
+    @Column(name = "signup_channel", length = 40)
+    private String signupChannel;
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 
