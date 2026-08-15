@@ -22,7 +22,4 @@ public class CheckoutRequest {
     /** Wallet balance to apply toward this booking; capped server-side at the balance and the price. */
     @DecimalMin(value = "0", message = "applyWalletAmount must not be negative")
     private BigDecimal applyWalletAmount;
-
-    /** Dev/demo only — deliberately forces a declined payment (wires the "Simulate failed payment" UI). */
-    private boolean simulateFailure;
 }

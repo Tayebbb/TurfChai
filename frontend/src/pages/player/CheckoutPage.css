@@ -378,3 +378,173 @@
     font-weight: 800;
     color: var(--text)
 }
+
+/* ── Dummy payment gateway ── */
+.gw {
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.gw-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    padding: 18px 20px;
+}
+
+.gw-head-mid {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+}
+
+.gw-head-mid b {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.gw-head-mid span {
+    font-size: 11px;
+    opacity: .85;
+}
+
+.gw-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    flex: none;
+}
+
+.gw-logo svg {
+    width: 20px;
+    height: 20px;
+}
+
+.gw-logo.sm {
+    width: 34px;
+    height: 34px;
+    font-size: 11px;
+    border-radius: 9px;
+}
+
+.gw-amount {
+    text-align: right;
+    flex: none;
+}
+
+.gw-amount span {
+    display: block;
+    font-size: 10px;
+    letter-spacing: .06em;
+    opacity: .85;
+}
+
+.gw-amount b {
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.gw-body {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+}
+
+.gw-title {
+    font-size: 20px;
+    font-weight: 800;
+    font-family: var(--font-display);
+    margin: 0 0 18px;
+    letter-spacing: -.015em;
+    line-height: 1.3;
+}
+
+.gw-cancel {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 0 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.gw-cancel:hover {
+    color: var(--text);
+}
+
+.gw-id {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border-radius: var(--r-md);
+}
+
+.gw-id b {
+    display: block;
+    font-size: 14px;
+}
+
+.gw-masked {
+    font-size: 12.5px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.gw-foot {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.gw-foot .row {
+    gap: 10px;
+}
+
+.gw-center {
+    text-align: center;
+    padding: 40px 24px;
+}
+
+.gw-spinner {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    border: 4px solid var(--border);
+    border-top-color: var(--brand);
+    animation: spin .8s linear infinite;
+}
+
+.gw-receipt {
+    background: var(--surface-2);
+    border-radius: var(--r-md);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-top: 18px;
+    text-align: left;
+}

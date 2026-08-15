@@ -31,16 +31,11 @@ import java.util.UUID;
 /**
  * Mock bKash/Nagad payment gateway + refund orchestration. There is no real
  * payment provider to call in this environment, so "the gateway" is
- * simulated here: it always succeeds, except when the caller explicitly
- * asks for a decline (wires the "Simulate failed payment" button already
- * in the checkout UI) — see {@code the-reward-page-is-eager-frog.md} plan
- * for why a randomized failure rate wasn't used instead.
+ * simulated here and always succeeds.
  * <p>
  * Payment gates booking confirmation: {@link BookingService#createPendingBooking}
  * creates a {@code PENDING} booking ahead of the charge, and only a
  * successful payment calls {@link BookingService#finalizeConfirmedBooking}.
- * A declined payment leaves the booking {@code PENDING} and the slot hold
- * untouched, so the caller can simply retry.
  * </p>
  */
 @Service
@@ -57,12 +52,10 @@ public class PaymentService {
 
     /**
      * Charges the caller for their currently held slot, applying wallet
-     * balance first. Always returns normally (HTTP 200 either way) — a
-     * declined payment is a business outcome, not an error.
+     * balance first.
      */
     @Transactional
-    public CheckoutResponse pay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount,
-            boolean simulateFailure) {
+    public CheckoutResponse pay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount) {
         Booking booking = bookingService.createPendingBooking(userId, slotId);
 
         BigDecimal netAmount = booking.getNetAmount();
@@ -70,10 +63,6 @@ public class PaymentService {
         BigDecimal walletBalance = rewardService.getWalletBalance(userId);
         BigDecimal walletApplied = requestedWallet.min(walletBalance).min(netAmount);
         BigDecimal gatewayAmount = netAmount.subtract(walletApplied);
-
-        // A $0 gateway charge (wallet fully covers the price) can't be "declined" —
-        // there's nothing left to charge, and `payments.amount` must be > 0.
-        boolean declined = simulateFailure && gatewayAmount.signum() > 0;
 
         Payment gatewayPayment = null;
         if (gatewayAmount.signum() > 0) {
@@ -85,21 +74,10 @@ public class PaymentService {
                     .amount(gatewayAmount)
                     .method(method)
                     .provider("mock-" + method.name().toLowerCase())
-                    .status(declined ? PaymentStatus.FAILED : PaymentStatus.SUCCESS)
-                    .failureReason(declined ? "Simulated payment failure" : null)
-                    .paidAt(declined ? null : OffsetDateTime.now())
+                    .status(PaymentStatus.SUCCESS)
+                    .paidAt(OffsetDateTime.now())
                     .build();
             gatewayPayment = paymentRepository.save(gatewayPayment);
-        }
-
-        if (declined) {
-            return CheckoutResponse.builder()
-                    .status("FAILED")
-                    .payment(toResponse(gatewayPayment))
-                    .bookingId(booking.getId())
-                    .bookingCode(booking.getBookingCode())
-                    .message("Payment declined — your slot is still held, you can try again.")
-                    .build();
         }
 
         if (walletApplied.signum() > 0) {
