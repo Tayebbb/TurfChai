@@ -17,9 +17,10 @@ import com.turfchai.venue.entity.Pitch;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.PitchRepository;
 import com.turfchai.venue.repository.VenueRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +36,8 @@ import java.util.Random;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AdminPartBDataSeeder {
+@Order(2)
+public class AdminPartBDataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final VenueRepository venueRepository;
@@ -45,7 +47,12 @@ public class AdminPartBDataSeeder {
     private final PayoutRepository payoutRepository;
     private final AuditLogRepository auditLogRepository;
 
-    @PostConstruct
+    @Override
+    @Transactional
+    public void run(String... args) {
+        seed();
+    }
+
     @Transactional
     public void seed() {
         if (bookingRepository.count() > 0) {
