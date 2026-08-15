@@ -173,6 +173,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+
+
     /**
      * A path/query value that cannot be coerced to the declared type is a client
      * error, not a 500.

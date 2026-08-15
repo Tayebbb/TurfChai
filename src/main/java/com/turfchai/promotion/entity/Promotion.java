@@ -77,6 +77,7 @@ public class Promotion {
     private BigDecimal maxDiscountAmount;
 
     /** JSONB conditions stored as JSON string. */
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Column(name = "conditions", columnDefinition = "jsonb")
     private String conditions = "{}";
 

@@ -51,8 +51,8 @@ function formatDateDisplay(dateObj) {
 const BLANK_FORM = {
   pitchId: '',
   slotId: '',
-  name: 'Hasan Uddin',
-  phone: '+880 1912 556 677',
+  name: '',
+  phone: '',
   source: 'Phone',
   payment: 'Paid in full (cash)',
   note: '',
