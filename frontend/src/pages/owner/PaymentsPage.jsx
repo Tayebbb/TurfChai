@@ -76,15 +76,17 @@ export default function PaymentsPage() {
 
   // Dynamic configured sports list derived from backend API for this owner
   const configuredSports = useMemo(() => {
-    return apiSummary?.configuredSports || apiSummary?.sports || [];
+    if (Array.isArray(apiSummary?.configuredSports)) return apiSummary.configuredSports;
+    if (Array.isArray(apiSummary?.sports)) return apiSummary.sports;
+    return [];
   }, [apiSummary]);
 
-  const chartDataApi = useMemo(() => apiSummary?.chartData || { labels: [], datasets: {} }, [apiSummary]);
-  const sportReport = apiSummary?.sportReport || [];
-  const methodSplit = apiSummary?.methodSplit || [];
-  const KPIS = useMemo(() => apiSummary?.kpis || [], [apiSummary]);
-  const LEDGER = useMemo(() => apiSummary?.ledger || [], [apiSummary]);
-  const reconciliation = apiSummary?.reconciliation || {};
+  const chartDataApi = useMemo(() => (apiSummary?.chartData && typeof apiSummary.chartData === 'object') ? apiSummary.chartData : { labels: [], datasets: {} }, [apiSummary]);
+  const sportReport = Array.isArray(apiSummary?.sportReport) ? apiSummary.sportReport : [];
+  const methodSplit = Array.isArray(apiSummary?.methodSplit) ? apiSummary.methodSplit : [];
+  const KPIS = useMemo(() => Array.isArray(apiSummary?.kpis) ? apiSummary.kpis : [], [apiSummary]);
+  const LEDGER = useMemo(() => Array.isArray(apiSummary?.ledger) ? apiSummary.ledger : [], [apiSummary]);
+  const reconciliation = (apiSummary?.reconciliation && typeof apiSummary.reconciliation === 'object') ? apiSummary.reconciliation : {};
   
   const dark = theme === 'dark';
 

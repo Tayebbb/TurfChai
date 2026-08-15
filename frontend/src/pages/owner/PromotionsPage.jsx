@@ -27,8 +27,8 @@ export default function PromotionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: venuesRes } = useApi(listMyVenues, []);
-  const venues = venuesRes?.data || venuesRes || [];
-  const activeVenueId = venues[0]?.id;
+  const venues = Array.isArray(venuesRes) ? venuesRes : (Array.isArray(venuesRes?.data) ? venuesRes.data : []);
+  const activeVenueId = Array.isArray(venues) && venues.length > 0 ? venues[0]?.id : null;
 
   const getPromosCb = useCallback(() => {
     if (!activeVenueId) return Promise.resolve([]);
@@ -36,7 +36,7 @@ export default function PromotionsPage() {
   }, [activeVenueId]);
 
   const { data: res, loading, reload } = useApi(getPromosCb, [activeVenueId]);
-  const promotions = res?.data || res || [];
+  const promotions = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
 
   const handleLaunch = async () => {
     if (!activeVenueId) return;

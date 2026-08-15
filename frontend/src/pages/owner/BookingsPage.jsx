@@ -17,11 +17,11 @@ export default function BookingsPage() {
   const [query, setQuery] = useState('');
 
   const { data: res, loading } = useApi(getOwnerBookings, []);
-  const bookings = res?.data || res || [];
+  const bookings = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
 
   const { data: venuesRes } = useApi(listMyVenues, []);
-  const venues = venuesRes?.data || venuesRes || [];
-  const activeVenue = venues[0];
+  const venues = Array.isArray(venuesRes) ? venuesRes : (Array.isArray(venuesRes?.data) ? venuesRes.data : []);
+  const activeVenue = Array.isArray(venues) && venues.length > 0 ? venues[0] : null;
 
   const { data: requestsRes } = useApi(getMyTurfRequests, []);
   const latestRequest = Array.isArray(requestsRes) ? requestsRes[0] : null;

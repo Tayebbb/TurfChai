@@ -17,10 +17,10 @@ export default function ReviewsPage() {
   const [reply, setReply] = useState('');
 
   const { data: res, loading } = useApi(getOwnerReviews, []);
-  const reviewsData = res?.data || res || {};
-  const reviews = useMemo(() => reviewsData.items || [], [reviewsData.items]);
-  const ratingBreakdown = reviewsData.ratingBreakdown || [];
-  const categoryAverages = reviewsData.categoryAverages || [];
+  const reviewsData = (res && typeof res === 'object' && !Array.isArray(res)) ? (res.data || res) : {};
+  const reviews = useMemo(() => Array.isArray(reviewsData.items) ? reviewsData.items : [], [reviewsData.items]);
+  const ratingBreakdown = Array.isArray(reviewsData.ratingBreakdown) ? reviewsData.ratingBreakdown : [];
+  const categoryAverages = Array.isArray(reviewsData.categoryAverages) ? reviewsData.categoryAverages : [];
   const averageRating = reviewsData.averageRating || '0.0';
   const totalReviews = reviewsData.totalReviews || 0;
   const venueSlug = reviewsData.venueSlug;

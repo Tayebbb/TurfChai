@@ -22,7 +22,7 @@ export default function CustomersPage() {
   const [query, setQuery] = useState('');
 
   const { data: res, loading } = useApi(getOwnerCustomers, []);
-  const customers = res?.data || res || [];
+  const customers = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
 
   const term = query.trim().toLowerCase();
   const visible = term
