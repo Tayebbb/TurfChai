@@ -40,20 +40,26 @@ public class OwnerAnalyticsService {
         List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
         LocalDate today = LocalDate.now();
 
-        List<Booking> todayBookings = bookingRepository.findByVenueIdInAndBookingDate(venueIds, today);
+        List<Booking> allOwnerBookings = bookingRepository.findByVenueIdIn(venueIds);
+        List<Booking> todayBookings = new ArrayList<>();
 
         int bookedCount = 0;
         BigDecimal grossRevenue = BigDecimal.ZERO;
         int pendingPayments = 0;
 
-        for (Booking b : todayBookings) {
-            if (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING) {
-                bookedCount++;
-                if (b.getGrossAmount() != null) {
-                    grossRevenue = grossRevenue.add(b.getGrossAmount());
-                }
-                if (b.getStatus() == BookingStatus.PENDING) {
-                    pendingPayments++;
+        for (Booking b : allOwnerBookings) {
+            boolean isToday = (b.getBookingDate() != null && today.equals(b.getBookingDate())) ||
+                              (b.getCreatedAt() != null && today.equals(b.getCreatedAt().toLocalDate()));
+            if (isToday) {
+                todayBookings.add(b);
+                if (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING) {
+                    bookedCount++;
+                    if (b.getGrossAmount() != null) {
+                        grossRevenue = grossRevenue.add(b.getGrossAmount());
+                    }
+                    if (b.getStatus() == BookingStatus.PENDING) {
+                        pendingPayments++;
+                    }
                 }
             }
         }
@@ -72,7 +78,8 @@ public class OwnerAnalyticsService {
         for (Booking b : todayBookings) {
             if (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING) {
                 User u = userRepository.findById(b.getUserId()).orElse(null);
-                String customerName = u != null ? u.getFullName() : "Guest";
+                boolean isManual = b.getBookingCode() != null && b.getBookingCode().startsWith("MB-");
+                String customerName = isManual ? "Manual Walk-in" : (u != null ? u.getFullName() : "Guest");
                 String pitchName = b.getSlot() != null && b.getSlot().getPitch() != null ? b.getSlot().getPitch().getName() : "Pitch";
                 String timeStr = b.getStartTime() != null ? b.getStartTime().format(timeFormatter) : "N/A";
                 
@@ -81,7 +88,7 @@ public class OwnerAnalyticsService {
                 nu.put("slot", timeStr + " · " + pitchName);
                 
                 String tone = b.getStatus() == BookingStatus.CONFIRMED ? "green" : "amber";
-                String text = b.getStatus() == BookingStatus.CONFIRMED ? "Paid" : "Unpaid";
+                String text = b.getStatus() == BookingStatus.CONFIRMED ? (isManual ? "Paid (Cash)" : "Paid") : "Unpaid";
                 nu.put("badge", Map.of("tone", tone, "text", text));
                 
                 nu.put("detail", customerName + " · " + b.getBookingCode());
@@ -96,7 +103,8 @@ public class OwnerAnalyticsService {
         List<Map<String, Object>> activity = new ArrayList<>();
         for (Booking b : recentBookings) {
             User u = userRepository.findById(b.getUserId()).orElse(null);
-            String customerName = u != null ? u.getFullName() : "Guest";
+            boolean isManual = b.getBookingCode() != null && b.getBookingCode().startsWith("MB-");
+            String customerName = isManual ? "Manual Booking (Walk-in)" : (u != null ? u.getFullName() : "Guest");
             String pitchName = b.getSlot() != null && b.getSlot().getPitch() != null ? b.getSlot().getPitch().getName() : "Pitch";
             
             Map<String, Object> act = new HashMap<>();

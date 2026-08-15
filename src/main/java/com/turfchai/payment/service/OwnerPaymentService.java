@@ -75,7 +75,7 @@ public class OwnerPaymentService {
         }
 
         // Fallback: If pitch sports mapping is empty, assign "Football" as default configured sport
-        if (configuredSports.isEmpty() && !pitches.isEmpty()) {
+        if (configuredSports.isEmpty()) {
             sportNames.add("Football");
             configuredSports.add(Map.of(
                 "key", "Football",
@@ -84,14 +84,39 @@ public class OwnerPaymentService {
             ));
         }
 
-        // If owner has 0 pitches configured, sport list is strictly empty
-        if (pitches.isEmpty()) {
-            return emptySummary();
-        }
-
         // 2. Date Filtering & Financial Calculations
         LocalDate today = LocalDate.now();
-        List<Booking> allOwnerBookings = bookingRepository.findByVenueIdIn(venueIds);
+        List<Booking> allOwnerBookings = new ArrayList<>(bookingRepository.findByVenueIdIn(venueIds));
+
+        // Reconcile any slots marked BOOKED that are missing a corresponding Booking entity
+        Set<Long> existingBookedSlotIds = new HashSet<>();
+        for (Booking b : allOwnerBookings) {
+            if (b.getSlot() != null && b.getSlot().getId() != null) {
+                existingBookedSlotIds.add(b.getSlot().getId());
+            }
+        }
+
+        List<Slot> allOwnerSlots = slotRepository.findByVenueIdIn(venueIds);
+        for (Slot s : allOwnerSlots) {
+            if (s.getStatus() == SlotStatus.BOOKED && !existingBookedSlotIds.contains(s.getId())) {
+                BigDecimal amount = (s.getPrice() != null) ? s.getPrice() : BigDecimal.valueOf(2000);
+                Booking synthetic = Booking.builder()
+                        .bookingCode("MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                        .slot(s)
+                        .userId(ownerUserId)
+                        .venueId(s.getVenueId() != null ? s.getVenueId() : venueIds.get(0))
+                        .pitchId(s.getPitch() != null ? s.getPitch().getId() : 0L)
+                        .bookingDate(s.getSlotDate() != null ? s.getSlotDate() : today)
+                        .startTime(s.getStartTime() != null ? s.getStartTime() : LocalTime.of(16, 0))
+                        .endTime(s.getEndTime() != null ? s.getEndTime() : LocalTime.of(17, 30))
+                        .grossAmount(amount)
+                        .netAmount(amount)
+                        .status(BookingStatus.CONFIRMED)
+                        .build();
+                bookingRepository.save(synthetic);
+                allOwnerBookings.add(synthetic);
+            }
+        }
 
         BigDecimal grossToday = BigDecimal.ZERO;
         BigDecimal grossTotal = BigDecimal.ZERO;
@@ -107,7 +132,9 @@ public class OwnerPaymentService {
             if (b.getGrossAmount() != null) {
                 if (b.getStatus() == BookingStatus.CONFIRMED) {
                     grossTotal = grossTotal.add(b.getGrossAmount());
-                    if (today.equals(b.getBookingDate())) {
+                    boolean isToday = (b.getBookingDate() != null && today.equals(b.getBookingDate())) ||
+                                      (b.getCreatedAt() != null && today.equals(b.getCreatedAt().toLocalDate()));
+                    if (isToday) {
                         grossToday = grossToday.add(b.getGrossAmount());
                     }
                     if (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) {
@@ -221,13 +248,14 @@ public class OwnerPaymentService {
 
         for (Booking b : bookingRepository.findTop5ByVenueIdInOrderByCreatedAtDesc(venueIds)) {
             User u = userRepository.findById(b.getUserId()).orElse(null);
-            String customerName = u != null ? u.getFullName() : "Guest User";
-            String method = (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) ? "bKash" : "Cash";
+            boolean isManual = b.getBookingCode() != null && b.getBookingCode().startsWith("MB-");
+            String customerName = isManual ? "Manual Booking (Walk-in)" : (u != null ? u.getFullName() : "Guest User");
+            String method = isManual ? "Cash (Venue)" : ((b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) ? "bKash" : "Cash");
             String status = b.getStatus() == BookingStatus.CONFIRMED ? "Settled" : "Pending";
             String tone = b.getStatus() == BookingStatus.CONFIRMED ? "green" : "amber";
 
             BigDecimal gross = b.getGrossAmount() != null ? b.getGrossAmount() : BigDecimal.ZERO;
-            BigDecimal fee = gross.multiply(new BigDecimal("0.06")).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal fee = isManual ? BigDecimal.ZERO : gross.multiply(new BigDecimal("0.06")).setScale(0, RoundingMode.HALF_UP);
             BigDecimal net = gross.subtract(fee);
 
             ledger.add(Map.of(
@@ -240,7 +268,7 @@ public class OwnerPaymentService {
                 "fee", "৳" + fee.intValue(),
                 "net", "৳" + net.intValue(),
                 "status", Map.of("tone", tone, "text", status),
-                "shift", "Shift 1 · Online"
+                "shift", isManual ? "Shift 1 · Walk-in" : "Shift 1 · Online"
             ));
         }
 

@@ -606,12 +606,13 @@ public class VenueManagementService {
                 // Create confirmed Booking record so manual calendar bookings appear in Reports, Revenue & Customer logs
                 BigDecimal amount = (s.getPrice() != null) ? s.getPrice() : BigDecimal.valueOf(2000);
                 String bookingCode = "MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                Long targetVenueId = (s.getVenueId() != null && s.getVenueId() > 0) ? s.getVenueId() : venueId;
 
                 Booking booking = Booking.builder()
                         .bookingCode(bookingCode)
                         .slot(s)
                         .userId(ownerUserId)
-                        .venueId(venueId)
+                        .venueId(targetVenueId)
                         .pitchId(s.getPitch() != null ? s.getPitch().getId() : 0L)
                         .bookingDate(s.getSlotDate() != null ? s.getSlotDate() : LocalDate.now())
                         .startTime(s.getStartTime() != null ? s.getStartTime() : LocalTime.of(16, 0))
@@ -687,17 +688,23 @@ public class VenueManagementService {
                     if (pitchSlot.getStatus() == SlotStatus.BOOKED) {
                         variant = "online";
                         label = "Booked · ৳" + (pitchSlot.getPrice() != null ? pitchSlot.getPrice().intValue() : 2000);
+                        kind = "event";
+                        openable = true;
                     } else if (pitchSlot.getStatus() == SlotStatus.HELD) {
                         variant = "held";
                         label = "Held · checkout";
+                        kind = "event";
+                        openable = true;
                     } else if (pitchSlot.getStatus() == SlotStatus.BLOCKED) {
                         variant = "blocked";
                         label = "Maintenance";
+                        kind = "event";
                         openable = false;
                     } else {
                         kind = "add";
-                        label = "";
-                        openable = false;
+                        variant = "available";
+                        label = "Available";
+                        openable = true;
                     }
 
                     cells.add(OwnerCalendarDto.CellDto.builder()
@@ -715,9 +722,9 @@ public class VenueManagementService {
                             .slotId(null)
                             .pitchId(header.getId())
                             .kind("add")
-                            .variant(null)
-                            .label("")
-                            .openable(false)
+                            .variant("available")
+                            .label("Available")
+                            .openable(true)
                             .status("AVAILABLE")
                             .price(2000.0)
                             .build());

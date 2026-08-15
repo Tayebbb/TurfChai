@@ -112,10 +112,15 @@ public class VenueSearchService {
                         rule.getSlotDurationMin(), rule.getWindowStart(), rule.getWindowEnd()))
                 .toList();
 
+        List<String> photosList = amenityList(venue.getPhotos());
+        List<String> rulesList = amenityList(venue.getRules());
+
         return new VenueDetailDto(
                 venue.getId(), venue.getSlug(), venue.getName(), venue.getArea(), venue.getAddress(),
                 venue.getLat(), venue.getLng(), venue.getRatingAvg(), venue.getReviewCount(),
                 venue.isVerified(), venue.getPromotionLabel(), amenityList(venue.getAmenities()),
+                photosList, rulesList, venue.getStatus(), venue.getBasePrice(),
+                venue.getContactPhone(), venue.getContactEmail(),
                 venue.getOpenTime(), venue.getCloseTime(), pitches, pricing);
     }
 
