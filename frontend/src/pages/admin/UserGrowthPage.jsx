@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { PageTitle } from '@/components/common/PageTitle';
 import { apiGet } from '@/api/client';
+import { listAdminUsers } from '@/api/adminUsers';
+import { useApi } from '@/hooks/useApi';
 import { paths } from '@/routes/paths';
 import './UserGrowthPage.css';
 
@@ -32,22 +34,6 @@ const FALLBACK_SIGNUP_DATA = {
   ],
 };
 
-const CHANNELS = [
-  { id: 'organic',  channel: 'Organic Search',       users: '12,450', conversion: '4.8%', cac: '৳0' },
-  { id: 'appstore', channel: 'App Store Referral',    users: '10,820', conversion: '6.2%', cac: '৳12' },
-  { id: 'meta',     channel: 'Meta/Facebook Ads',     users: '9,240',  conversion: '2.9%', cac: '৳85' },
-  { id: 'tiktok',   channel: 'TikTok campaigns',      users: '5,410',  conversion: '3.4%', cac: '৳60' },
-  { id: 'invites',  channel: 'Direct Invites',         users: '3,350',  conversion: '8.5%', cac: '৳5' },
-];
-
-const SIGNUP_STREAM = [
-  { id: 'U-88902', name: 'Riazul Islam',      role: 'Player', roleTone: 'green', area: 'Dhanmondi',    referral: 'Meta Ads',        joined: '2 mins ago' },
-  { id: 'U-88901', name: 'Asif Abdullah',     role: 'Player', roleTone: 'green', area: 'Mohammadpur',  referral: 'Organic Search',  joined: '14 mins ago' },
-  { id: 'U-88898', name: 'Sheikh Turf Arena', role: 'Host',   roleTone: 'blue',  area: 'Mirpur 11',    referral: 'Direct Referral', joined: '38 mins ago' },
-  { id: 'U-88897', name: 'Zamil Rahman',      role: 'Player', roleTone: 'green', area: 'Uttara',       referral: 'Direct Invite',   joined: '1 hour ago' },
-  { id: 'U-88894', name: 'Tamim Anwar',       role: 'Player', roleTone: 'green', area: 'Khilgaon',     referral: 'TikTok Campaign', joined: '2 hours ago' },
-];
-
 const SIGNUP_OPTIONS = {
   plugins: { legend: { display: false } },
   scales: {
@@ -65,11 +51,57 @@ function fmt(n) {
   return Number(n).toLocaleString('en-IN');
 }
 
+function relativeTime(iso) {
+  if (!iso) return '—';
+  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (secs < 0) return 'just now';
+  if (secs < 60) return `${secs}s ago`;
+  if (secs < 3600) return `${Math.floor(secs / 60)} min ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
+}
+
+function roleLabel(role) {
+  if (role === 'HOST' || role === 'OWNER') return 'Host';
+  if (role === 'SOLO_PLAYER') return 'Solo';
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return 'Admin';
+  return 'Player';
+}
+
+function roleTone(role) {
+  if (role === 'HOST' || role === 'OWNER') return 'blue';
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return 'purple';
+  return 'green';
+}
+
 export default function UserGrowthPage() {
   const [kpis, setKpis] = useState(FALLBACK_KPIS);
   const [signupData, setSignupData] = useState(FALLBACK_SIGNUP_DATA);
+  const [channels, setChannels] = useState([]);
   const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const { data: usersRes } = useApi(() => listAdminUsers(), []);
+  const stream = useMemo(() => {
+    const arr = Array.isArray(usersRes?.data)
+      ? usersRes.data
+      : Array.isArray(usersRes)
+        ? usersRes
+        : [];
+    return [...arr]
+      .filter((u) => u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN')
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 5)
+      .map((u) => ({
+        id: `#${u.id}`,
+        name: u.fullName || '—',
+        role: roleLabel(u.role),
+        roleTone: roleTone(u.role),
+        area: u.area || '—',
+        email: u.email || '—',
+        joined: relativeTime(u.createdAt),
+      }));
+  }, [usersRes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,6 +165,7 @@ export default function UserGrowthPage() {
         });
 
         setIsLive(true);
+        setChannels(d.channels || []);
       } catch {
         // Network error — fallback data remains in place
       } finally {
@@ -242,11 +275,11 @@ export default function UserGrowthPage() {
                 </tr>
               </thead>
               <tbody>
-                {CHANNELS.map((row) => (
+                {channels.map((row) => (
                   <tr key={row.id}>
                     <td><b>{row.channel}</b></td>
-                    <td className="num font-semibold">{row.users}</td>
-                    <td className="num font-semibold">{row.conversion}</td>
+                    <td className="num font-semibold">{fmt(row.newUsers)}</td>
+                    <td className="num font-semibold">{row.conversionRate.toFixed(1)}%</td>
                     <td className="num font-semibold">{row.cac}</td>
                   </tr>
                 ))}
@@ -269,12 +302,12 @@ export default function UserGrowthPage() {
                 <th>Name</th>
                 <th>Role</th>
                 <th>Area</th>
-                <th>Referral Method</th>
+                <th>Email</th>
                 <th style={{ textAlign: 'right' }}>Time Joined</th>
               </tr>
             </thead>
             <tbody>
-              {SIGNUP_STREAM.map((row) => (
+              {stream.map((row) => (
                 <tr key={row.id}>
                   <td className="num"><b>{row.id}</b></td>
                   <td>{row.name}</td>
@@ -282,7 +315,7 @@ export default function UserGrowthPage() {
                     <span className={`badge ${row.roleTone} nodot`}>{row.role}</span>
                   </td>
                   <td>{row.area}</td>
-                  <td>{row.referral}</td>
+                  <td>{row.email}</td>
                   <td style={{ textAlign: 'right' }} className="num">{row.joined}</td>
                 </tr>
               ))}

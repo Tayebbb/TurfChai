@@ -92,7 +92,7 @@ const EARNINGS_OPTIONS = {
 const USER_GROWTH_OPTIONS = {
   plugins: { legend: { display: false } },
   scales: {
-    y: { display: false, beginAtZero: true, max: 5500 },
+    y: { display: false, beginAtZero: true },
     x: { grid: { display: false } },
   },
 };
