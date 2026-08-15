@@ -48,10 +48,21 @@ export default function DashboardPage() {
   const { data: analyticsRes, loading } = useApi(getOwnerAnalytics, []);
   const analyticsData = analyticsRes?.data || analyticsRes || {};
 
-  const KPIS = analyticsData.kpis || [];
-  const NEXT_UP = analyticsData.nextUp || [];
-  const ACTIVITY = analyticsData.activity || [];
-  const ATTENTION = analyticsData.attention || [];
+  const rawKpis = analyticsData.kpis;
+  const KPIS = Array.isArray(rawKpis)
+    ? rawKpis
+    : (rawKpis && typeof rawKpis === 'object'
+        ? [
+            { label: "Today's revenue", value: rawKpis.revenue || '৳0' },
+            { label: 'Bookings today', value: rawKpis.booked || '0' },
+            { label: 'Occupancy', value: rawKpis.occupancy || '0%' },
+            { label: 'Pending payments', value: rawKpis.pending || '0' },
+          ]
+        : []);
+
+  const NEXT_UP = Array.isArray(analyticsData.nextUp) ? analyticsData.nextUp : [];
+  const ACTIVITY = Array.isArray(analyticsData.activity) ? analyticsData.activity : [];
+  const ATTENTION = Array.isArray(analyticsData.attention) ? analyticsData.attention : [];
 
   let requestPhotos = [];
   if (latestRequest?.photosJson) {
