@@ -119,13 +119,12 @@ export default function CalendarPage() {
 
   useEffect(() => {
     let unmounted = false;
-    if (!selectedVenueId) {
-      setPitches([]);
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (!selectedVenueId) return;
+
+    Promise.resolve().then(() => {
+      if (!unmounted) setLoading(true);
+    });
+
     getOwnerCalendar(selectedVenueId, dateStr)
       .then((data) => {
         if (!unmounted && data) {

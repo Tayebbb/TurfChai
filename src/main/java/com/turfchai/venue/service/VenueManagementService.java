@@ -119,7 +119,7 @@ public class VenueManagementService {
                         venueName, area, area,
                         new java.math.BigDecimal("23.8103"), new java.math.BigDecimal("90.4125"),
                         new java.math.BigDecimal("2000"), "06:00", "23:00",
-                        "floodlights,parking", owner.getPhoneNumber(), owner.getEmail(),
+                        "floodlights,parking", owner.getPhone(), owner.getEmail(),
                         "FULL_ONLY", "FREE_24H_50_6H", true,
                         "Standard rules", null, false
                 );
