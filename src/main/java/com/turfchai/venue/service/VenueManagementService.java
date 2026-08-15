@@ -129,6 +129,9 @@ public class VenueManagementService {
     public List<VenueManagementDto> listOwnerVenues(Long ownerUserId) {
         List<Venue> venues = venueRepository.findByOwnerId(ownerUserId);
         var requests = (turfRequestRepository != null) ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId) : List.<com.turfchai.model.TurfRequest>of();
+        if (requests.isEmpty() && owner != null && owner.getEmail() != null) {
+            requests = turfRequestRepository.findByOwnerEmailOrderByCreatedAtDesc(owner.getEmail());
+        }
         boolean isApproved = !requests.isEmpty() && "APPROVED".equalsIgnoreCase(requests.get(0).getStatus());
         boolean isRejected = !requests.isEmpty() && "REJECTED".equalsIgnoreCase(requests.get(0).getStatus());
 
@@ -188,7 +191,11 @@ public class VenueManagementService {
     @Transactional
     public VenueManagementDto getOwnerVenue(Long ownerUserId, Long venueId) {
         Venue venue = requireOwnership(ownerUserId, venueId);
+        User owner = userRepository.findById(ownerUserId).orElse(null);
         var requests = turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId);
+        if (requests.isEmpty() && owner != null && owner.getEmail() != null) {
+            requests = turfRequestRepository.findByOwnerEmailOrderByCreatedAtDesc(owner.getEmail());
+        }
         if (!requests.isEmpty()) {
             String reqStatus = requests.get(0).getStatus();
             if ("APPROVED".equalsIgnoreCase(reqStatus)) {
