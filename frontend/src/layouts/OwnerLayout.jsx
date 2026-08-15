@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
@@ -10,17 +11,36 @@ import { Overlay } from '@/components/modals/Overlay';
 import { Badge } from '@/components/ui/Badge';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { OWNER_NAV_LINKS } from '@/constants/navigation';
-import { currentOwner } from '@/data/users';
+import { getUser } from '@/api/client';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 
+const fallbackInitials = (name) => {
+  if (!name) return '??';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 function OwnerChrome() {
   const { toggle } = useSidebar();
   const account = useDisclosure(false);
   const { showToast } = useToast();
-  const owner = currentOwner ?? { initials: '??', name: 'Owner', venue: '—', area: '—' };
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    const handler = () => forceRender((x) => x + 1);
+    window.addEventListener('turfchai:session-change', handler);
+    return () => window.removeEventListener('turfchai:session-change', handler);
+  }, []);
+  const session = getUser();
+  const owner = {
+    initials: session?.avatarInitials || fallbackInitials(session?.fullName),
+    name: session?.fullName || 'Owner',
+    area: session?.area || '—',
+    email: session?.email || '—',
+  };
 
   return (
     <>
@@ -77,7 +97,7 @@ function OwnerChrome() {
           <div>
             <b>{owner.name}</b>
             <div className="subtle">
-              {owner.venue} · {owner.area}
+              {owner.area} · {owner.email}
             </div>
           </div>
         </div>
