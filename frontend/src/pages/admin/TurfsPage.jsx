@@ -33,12 +33,11 @@ export default function TurfsPage() {
         name: v.name,
         owner: v.owner?.fullName || 'Owner',
         phone: v.contactPhone || v.owner?.phone || '—',
-        area: v.area || 'Dhaka',
-        rating: v.ratingAvg ? `${v.ratingAvg} ★` : '4.5 ★',
-        revenue30d: '৳1,50,000',
+        area: v.area || '—',
+        rating: v.ratingAvg ? `${v.ratingAvg} ★` : '—',
         status: v.status || 'Live',
         badgeClass: v.status === 'LIVE' ? 'green' : v.status === 'SUSPENDED' ? 'red' : 'amber',
-        pitches: v.pitches?.length || 2,
+        pitches: v.pitches?.length || 0,
       }));
     }
     return [];
@@ -115,7 +114,6 @@ export default function TurfsPage() {
               <th>Owner / Contact</th>
               <th>Area</th>
               <th>Rating</th>
-              <th>30d Revenue</th>
               <th>Status</th>
               <th style={{ textAlign: 'right' }}>Action</th>
             </tr>
@@ -123,7 +121,7 @@ export default function TurfsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>Loading venues...</td>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 24 }}>Loading venues...</td>
               </tr>
             ) : filteredVenues.map((venue) => (
               <tr key={venue.id} style={venue.rowTone ? { background: venue.rowTone } : undefined}>
@@ -142,7 +140,6 @@ export default function TurfsPage() {
                 </td>
                 <td>{venue.area}</td>
                 <td className="num font-semibold">{venue.rating}</td>
-                <td className="num font-semibold">{venue.revenue30d}</td>
                 <td>
                   <span className={`badge ${venue.badgeClass}`}>{venue.status}</span>
                 </td>

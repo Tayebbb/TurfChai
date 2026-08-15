@@ -29,6 +29,7 @@ const SUSPEND_REASONS = [
 
 /** Mirrors the prototype's `setDocStatus` badge-tone mapping. */
 function docTone(value) {
+  if (!value || value === '—') return 'gray';
   if (value.includes('Verified')) return 'green';
   if (value.includes('Pending') || value.includes('Anomaly')) return 'amber';
   return 'red';
@@ -61,19 +62,16 @@ export default function TurfDetailsPage() {
         owner: apiVenueData.owner?.fullName || 'Owner',
         phone: apiVenueData.contactPhone || apiVenueData.owner?.phone || '—',
         email: apiVenueData.contactEmail || apiVenueData.owner?.email || '—',
-        area: apiVenueData.area || 'Dhaka',
-        pitches: apiVenueData.pitches?.length || 2,
-        rating: apiVenueData.ratingAvg ? `${apiVenueData.ratingAvg} ★` : '4.5 ★',
-        revenue30d: '৳1,50,000',
-        bookings30d: 142,
-        occupancy: '72%',
+        area: apiVenueData.area || '—',
+        pitches: apiVenueData.pitches?.length || 0,
+        rating: apiVenueData.ratingAvg ? `${apiVenueData.ratingAvg} ★` : '—',
         status: overrideStatus || apiVenueData.status || 'Live',
         badgeClass: (overrideStatus || apiVenueData.status) === 'LIVE' ? 'green' : (overrideStatus || apiVenueData.status) === 'SUSPENDED' ? 'red' : 'amber',
-        dateAdded: apiVenueData.createdAt ? new Date(apiVenueData.createdAt).toLocaleDateString() : 'Mar 12, 2026',
+        dateAdded: apiVenueData.createdAt ? new Date(apiVenueData.createdAt).toLocaleDateString() : '—',
         documents: {
-          tradeLicense: 'Pending Verification',
-          ownerNid: 'Pending Verification',
-          utilityBill: 'Pending Verification',
+          tradeLicense: '—',
+          ownerNid: '—',
+          utilityBill: '—',
         },
         pitchesList: apiVenueData.pitches?.length
           ? apiVenueData.pitches.map((p) => ({ name: p.name, rate: `৳${p.hourlyRate}/hr`, type: p.surfaceType || 'Synthetic' }))
@@ -120,6 +118,7 @@ export default function TurfDetailsPage() {
 
   const isSuspended = (venue.status || '').toUpperCase().includes('SUSPENDED');
   const isPending = (venue.status || '').toUpperCase().includes('PENDING');
+  const hasDemandData = (venue.chartData || []).some((n) => n > 0);
 
   const deleteVenue = async () => {
     if (venue.dbId) {
@@ -242,105 +241,6 @@ export default function TurfDetailsPage() {
                 marginBottom: 2,
               }}
             >
-              30-DAY REVENUE
-            </span>
-            <b
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                fontFamily: 'var(--font-display)',
-                color: 'var(--brand-600)',
-                lineHeight: 1.2,
-                display: 'block',
-              }}
-            >
-              {venue.revenue30d}
-            </b>
-            <span
-              className="tiny subtle"
-              style={{ display: 'inline-block', marginTop: 4, color: 'var(--text-3)' }}
-            >
-              Gross booking fees
-            </span>
-          </div>
-
-          <div className="stat-card-simple">
-            <span
-              className="subtle tiny"
-              style={{
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                color: 'var(--text-3)',
-                display: 'block',
-                marginBottom: 2,
-              }}
-            >
-              PITCH OCCUPANCY
-            </span>
-            <b
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                fontFamily: 'var(--font-display)',
-                color: 'var(--mint)',
-                lineHeight: 1.2,
-                display: 'block',
-              }}
-            >
-              {venue.occupancy}
-            </b>
-            <span
-              className="tiny subtle"
-              style={{ display: 'inline-block', marginTop: 4, color: 'var(--text-3)' }}
-            >
-              Slot utilization ratio
-            </span>
-          </div>
-
-          <div className="stat-card-simple">
-            <span
-              className="subtle tiny"
-              style={{
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                color: 'var(--text-3)',
-                display: 'block',
-                marginBottom: 2,
-              }}
-            >
-              30-DAY BOOKINGS
-            </span>
-            <b
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                fontFamily: 'var(--font-display)',
-                color: 'var(--info)',
-                lineHeight: 1.2,
-                display: 'block',
-              }}
-            >
-              {venue.bookings30d.toLocaleString()}
-            </b>
-            <span
-              className="tiny subtle"
-              style={{ display: 'inline-block', marginTop: 4, color: 'var(--text-3)' }}
-            >
-              Completed games
-            </span>
-          </div>
-
-          <div className="stat-card-simple">
-            <span
-              className="subtle tiny"
-              style={{
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                color: 'var(--text-3)',
-                display: 'block',
-                marginBottom: 2,
-              }}
-            >
               AVERAGE RATING
             </span>
             <b
@@ -370,7 +270,9 @@ export default function TurfDetailsPage() {
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Booking Demand Trend</h3>
               <span className="subtle small">Daily slot booking counts over the past week</span>
             </div>
-            <span className="badge blue nodot">Active Analytics</span>
+            <span className={`badge ${hasDemandData ? 'blue' : 'gray'} nodot`}>
+                {hasDemandData ? 'Active Analytics' : 'No Data Yet'}
+              </span>
           </div>
           <ChartCanvas
             type="line"

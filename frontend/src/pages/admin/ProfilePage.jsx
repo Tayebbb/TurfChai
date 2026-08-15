@@ -3,19 +3,14 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Overlay } from '@/components/modals/Overlay';
 import { getMe, updateMe } from '@/api/auth';
-import { getUser, setSession } from '@/api/client';
+import { getUser, setSession, api } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './ProfilePage.css';
 
 const TIMEZONES = ['Dhaka (GMT+6)', 'London (GMT+0)', 'New York (GMT-5)'];
-
-const RECENT_ACTIVITY = [
-  { id: 'act-1', title: 'Suspended user #38112', when: 'Today 4:02 PM' },
-  { id: 'act-2', title: 'Updated turf venue V-0044', when: 'Yesterday' },
-  { id: 'act-3', title: 'Approved TR-1033 · Mirpur Annex', when: '2 days ago' },
-];
 
 const fallbackInitials = (fullName) => {
   if (!fullName) return '??';
@@ -70,6 +65,20 @@ export default function ProfilePage() {
   const initials = user.avatarInitials || fallbackInitials(user.fullName);
   const role = user.role || 'ADMIN';
 
+  const { data: auditRes } = useApi(() => api('/admin/audit-log?page=0&size=5'), []);
+  const auditEntries = auditRes?.data?.content || auditRes?.content || [];
+
+  const recentActivity = auditEntries.map((entry) => {
+    const when = entry.createdAt
+      ? new Date(entry.createdAt).toLocaleString('en-BD', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })
+      : '';
+    return {
+      id: String(entry.id),
+      title: `${entry.target ? entry.target + ' · ' : ''}${entry.action}`,
+      when,
+    };
+  });
+
   const profileStats = [
     {
       id: 'since',
@@ -77,7 +86,7 @@ export default function ProfilePage() {
       value: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
       style: undefined,
     },
-    { id: 'actions', label: 'LOGGED ACTIONS', value: '1,204 Actions', style: undefined },
+    { id: 'actions', label: 'RECENT ACTIONS', value: `${auditEntries.length} in log`, style: undefined },
     { id: 'security', label: 'SECURITY LEVEL', value: 'High (2FA)', style: { color: 'var(--mint)' } },
   ];
 
@@ -221,7 +230,7 @@ export default function ProfilePage() {
                     Password
                   </b>
                   <div className="tiny subtle" style={{ marginTop: 2 }}>
-                    Last changed 42 days ago
+                    Secured with hashed credentials
                   </div>
                 </div>
                 <button
@@ -267,7 +276,7 @@ export default function ProfilePage() {
                     Active Admin Sessions
                   </b>
                   <div className="tiny subtle" style={{ marginTop: 2 }}>
-                    2 Devices (Chrome Windows, Mobile App)
+                    Sessions managed centrally
                   </div>
                 </div>
                 <button
@@ -284,7 +293,7 @@ export default function ProfilePage() {
           {/* Recent Log Activity */}
           <section className="card" style={{ padding: 24, borderRadius: 20 }}>
             <div className="between" style={{ marginBottom: 16, alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>My Recent Activity</h3>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Recent Platform Activity</h3>
               <Link
                 className="btn btn-sm btn-tertiary"
                 to={paths.admin.activity}
@@ -294,11 +303,15 @@ export default function ProfilePage() {
               </Link>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {RECENT_ACTIVITY.map((item, index) => (
+              {recentActivity.length === 0 ? (
+                <div className="tiny subtle" style={{ padding: '10px 0', display: 'block' }}>
+                  No recent activity logged yet.
+                </div>
+              ) : recentActivity.map((item, index) => (
                 <div
                   className="tline-item"
                   key={item.id}
-                  style={index === RECENT_ACTIVITY.length - 1 ? { marginBottom: 0 } : undefined}
+                  style={index === recentActivity.length - 1 ? { marginBottom: 0 } : undefined}
                 >
                   <b className="small" style={{ color: 'var(--text)' }}>
                     {item.title}

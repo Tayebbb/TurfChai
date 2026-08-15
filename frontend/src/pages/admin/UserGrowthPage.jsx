@@ -8,31 +8,14 @@ import { useApi } from '@/hooks/useApi';
 import { paths } from '@/routes/paths';
 import './UserGrowthPage.css';
 
-// ── Static fallback (shown while loading or on network error) ──────────────
-const FALLBACK_KPIS = [
-  { id: 'total',     label: 'TOTAL REGISTERED',   value: '41,270',    valueColor: undefined,                note: 'Cumulative users' },
-  { id: 'new',       label: 'NEW REGISTRATIONS',   value: '+248 Today', valueColor: 'var(--brand-600)',       note: 'Daily growth velocity' },
-  { id: 'active',    label: 'ACTIVE RATIO',        value: '89.4%',     valueColor: 'var(--mint)',            note: '36,890 active MAU' },
-  { id: 'retention', label: 'RETENTION RATE',      value: '84.2%',     valueColor: 'var(--info)',            note: '30-day user return' },
+// ── Placeholder cards (shown while loading or when analytics are unavailable) ─
+// Values are deliberately '—' so no fabricated numbers are ever displayed.
+const PLACEHOLDER_KPIS = [
+  { id: 'total',     label: 'TOTAL REGISTERED',   value: '—', valueColor: undefined,         note: 'Cumulative users' },
+  { id: 'new',       label: 'NEW REGISTRATIONS',   value: '—', valueColor: 'var(--brand-600)', note: 'Daily growth velocity' },
+  { id: 'active',    label: 'ACTIVE RATIO',        value: '—', valueColor: 'var(--mint)',    note: 'Active monthly users' },
+  { id: 'retention', label: 'RETENTION RATE',      value: '—', valueColor: 'var(--info)',    note: '30-day user return' },
 ];
-
-const FALLBACK_SIGNUP_DATA = {
-  labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-  datasets: [
-    {
-      data: [142, 178, 165, 192, 214, 258, 248],
-      borderColor: '#3b82f6',
-      backgroundColor: 'rgba(59,130,246,0.35)',
-      borderWidth: 3.5,
-      tension: 0.4,
-      fill: true,
-      pointRadius: 4.5,
-      pointBackgroundColor: '#ffffff',
-      pointBorderColor: '#3b82f6',
-      pointBorderWidth: 2.5,
-    },
-  ],
-};
 
 const SIGNUP_OPTIONS = {
   plugins: { legend: { display: false } },
@@ -75,11 +58,11 @@ function roleTone(role) {
 }
 
 export default function UserGrowthPage() {
-  const [kpis, setKpis] = useState(FALLBACK_KPIS);
-  const [signupData, setSignupData] = useState(FALLBACK_SIGNUP_DATA);
+  const [kpis, setKpis] = useState([]);
+  const [signupData, setSignupData] = useState({ labels: [], datasets: [] });
   const [channels, setChannels] = useState([]);
   const [isLive, setIsLive] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const { data: usersRes } = useApi(() => listAdminUsers(), []);
   const stream = useMemo(() => {
@@ -167,9 +150,7 @@ export default function UserGrowthPage() {
         setIsLive(true);
         setChannels(d.channels || []);
       } catch {
-        // Network error — fallback data remains in place
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setError(true);
       }
     }
 
@@ -201,7 +182,7 @@ export default function UserGrowthPage() {
 
       {/* KPI Grid */}
       <div className="kpi-grid">
-        {kpis.map((kpi) => (
+        {(isLive ? kpis : PLACEHOLDER_KPIS).map((kpi) => (
           <div className="stat-card-simple" key={kpi.id}>
             <span
               className="subtle tiny"
@@ -219,7 +200,7 @@ export default function UserGrowthPage() {
                 color: kpi.valueColor,
               }}
             >
-              {loading ? '—' : kpi.value}
+              {kpi.value}
             </b>
             <span className="tiny subtle" style={{ color: 'var(--text-3)' }}>
               {kpi.note}
@@ -246,8 +227,8 @@ export default function UserGrowthPage() {
                 Daily registration registrations over past week
               </span>
             </div>
-            <span className={`badge nodot ${isLive ? 'blue' : 'yellow'}`}>
-              {isLive ? 'Live Analytics' : 'Demo Data'}
+            <span className={`badge nodot ${isLive ? 'blue' : error ? 'yellow' : 'gray'}`}>
+              {isLive ? 'Live Analytics' : error ? 'Unavailable' : 'Loading…'}
             </span>
           </div>
           <ChartCanvas
