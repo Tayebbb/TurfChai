@@ -140,13 +140,22 @@ public class VenueManagementService {
                 String area = (!requests.isEmpty() && requests.get(0).getArea() != null && !requests.get(0).getArea().isBlank())
                         ? requests.get(0).getArea() : "Dhanmondi";
 
+                List<String> parsedPhotos = null;
+                if (!requests.isEmpty() && requests.get(0).getPhotosJson() != null && !requests.get(0).getPhotosJson().isBlank()) {
+                    try {
+                        parsedPhotos = new com.fasterxml.jackson.databind.ObjectMapper()
+                                .readValue(requests.get(0).getPhotosJson(), new com.fasterxml.jackson.core.type.TypeReference<List<String>>(){});
+                    } catch (Exception ignored) {
+                    }
+                }
+
                 CreateVenueRequest autoReq = new CreateVenueRequest(
                         venueName, area, area,
                         new java.math.BigDecimal("23.8103"), new java.math.BigDecimal("90.4125"),
                         new java.math.BigDecimal("2000"), "06:00", "23:00",
                         "floodlights,parking", owner.getPhone(), owner.getEmail(),
                         "FULL_ONLY", "FREE_24H_50_6H", true,
-                        "Standard rules", null, false
+                        "Standard rules", parsedPhotos, false
                 );
                 createVenue(ownerUserId, autoReq);
                 venues = venueRepository.findByOwnerId(ownerUserId);
@@ -449,9 +458,11 @@ public class VenueManagementService {
                 ? List.of()
                 : v.getPricingRules().stream().filter(Objects::nonNull).map(this::toPricingRuleDto).toList();
 
-        List<String> photos = (v.getPhotos() == null || v.getPhotos().isBlank())
+        List<String> photos = (v.getPhotos() == null || v.getPhotos().isBlank() || "[]".equals(v.getPhotos().trim()))
                 ? List.of()
-                : List.of(v.getPhotos().split(","));
+                : java.util.Arrays.stream(v.getPhotos().split(","))
+                        .filter(p -> !p.trim().isEmpty() && !"[]".equals(p.trim()))
+                        .toList();
 
         return new VenueManagementDto(
                 v.getId(), v.getVenueCode(), v.getSlug(), v.getName(), status,
