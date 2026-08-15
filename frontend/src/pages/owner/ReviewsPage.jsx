@@ -18,7 +18,7 @@ export default function ReviewsPage() {
 
   const { data: res, loading } = useApi(getOwnerReviews, []);
   const reviewsData = res?.data || res || {};
-  const reviews = reviewsData.items || [];
+  const reviews = useMemo(() => reviewsData.items || [], [reviewsData.items]);
   const ratingBreakdown = reviewsData.ratingBreakdown || [];
   const categoryAverages = reviewsData.categoryAverages || [];
   const averageRating = reviewsData.averageRating || '0.0';

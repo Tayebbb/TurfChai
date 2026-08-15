@@ -441,7 +441,7 @@ export default function CalendarPage() {
             {rows.map((row, rowIndex) => (
               <Fragment key={row.time}>
                 <div className="cal-time num">{row.time}</div>
-                {weekDays.map((dayObj, dayIdx) => {
+                {weekDays.map((dayObj) => {
                   const dayIso = formatDateIso(dayObj);
                   const isToday = dayIso === formatDateIso(new Date());
                   const pitchIndex = visiblePitchesWithIndices.length > 0 ? visiblePitchesWithIndices[0].originalIndex : 0;
