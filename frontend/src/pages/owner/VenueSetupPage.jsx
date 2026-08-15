@@ -1,7 +1,7 @@
-import {
   useCallback,
   useEffect,
   useState,
+  useRef,
 } from 'react';
 
 import {
@@ -326,6 +326,8 @@ export default function VenueSetupPage() {
   });
 
   const [previewFile, setPreviewFile] = useState(null);
+  const editFileInputRef = useRef(null);
+  const [editingPhotoId, setEditingPhotoId] = useState(null);
 
   async function handleGenerateSlots() {
     try {
@@ -454,6 +456,47 @@ export default function VenueSetupPage() {
     if (uploaded > 0) {
       showToast(`${uploaded} venue photo(s) uploaded successfully ✓`);
       refreshVenueDetails(vId);
+    }
+  }
+
+  async function handleEditPhotoUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file || !editingPhotoId) return;
+
+    const vId = await getActiveVenueId();
+    if (!vId) return;
+
+    try {
+      const res = await uploadVenuePhotoApi(vId, file);
+      if (res?.url) {
+        const newPhotos = photos.map(p => (p.id === editingPhotoId || p.url === editingPhotoId) ? { ...p, url: res.url, name: file.name } : p);
+        await updateVenue(vId, { photos: newPhotos.map(p => p.url || p) });
+        setPhotos(newPhotos);
+        showToast('Photo replaced successfully ✓');
+        // Clear input so same file can be selected again
+        event.target.value = null;
+      }
+    } catch {
+      showToast(`Failed to replace photo`);
+    }
+  }
+
+  async function handleDeletePhoto(photoId) {
+    if (photos.length <= 3) {
+      showToast('A minimum of 3 venue photos are required');
+      return;
+    }
+
+    const vId = await getActiveVenueId();
+    if (!vId) return;
+
+    const newPhotos = photos.filter(p => p.id !== photoId && p.url !== photoId);
+    try {
+      await updateVenue(vId, { photos: newPhotos.map(p => p.url || p) });
+      setPhotos(newPhotos);
+      showToast('Photo deleted ✓');
+    } catch {
+      showToast('Failed to delete photo');
     }
   }
 
@@ -795,18 +838,34 @@ export default function VenueSetupPage() {
                   <div className="row" style={{ marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
                     {photos.length > 0 ? (
                       photos.map((p) => (
-                        <div key={p.id || p.name || p.url} style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setPreviewFile(p)} title="Click to view full image">
-                          <img
-                            src={p.url || p}
-                            alt={p.name || 'Venue Photo'}
-                            style={{
-                              width: 72,
-                              height: 72,
-                              objectFit: 'cover',
-                              borderRadius: 8,
-                              border: '1px solid var(--border-soft)',
-                            }}
-                          />
+                        <div key={p.id || p.name || p.url} style={{ position: 'relative' }}>
+                          <div style={{ cursor: 'pointer' }} onClick={() => setPreviewFile(p)} title="Click to view full image">
+                            <img
+                              src={p.url || p}
+                              alt={p.name || 'Venue Photo'}
+                              style={{
+                                width: 72,
+                                height: 72,
+                                objectFit: 'cover',
+                                borderRadius: 8,
+                                border: '1px solid var(--border-soft)',
+                              }}
+                            />
+                          </div>
+                          <div style={{ position: 'absolute', top: -6, right: -6, display: 'flex', gap: 2, background: 'rgba(0,0,0,0.7)', padding: 2, borderRadius: 12, boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                            <button
+                              type="button"
+                              title="Replace photo"
+                              onClick={(e) => { e.stopPropagation(); setEditingPhotoId(p.id || p.url); editFileInputRef.current?.click(); }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, padding: '2px 4px' }}
+                            >✏️</button>
+                            <button
+                              type="button"
+                              title="Delete photo"
+                              onClick={(e) => { e.stopPropagation(); handleDeletePhoto(p.id || p.url); }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5555', fontSize: 11, padding: '2px 4px' }}
+                            >✖</button>
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -831,6 +890,8 @@ export default function VenueSetupPage() {
                       +
                       <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePhotoUpload} />
                     </label>
+
+                    <input type="file" accept="image/*" ref={editFileInputRef} style={{ display: 'none' }} onChange={handleEditPhotoUpload} />
                   </div>
                 </section>
 
