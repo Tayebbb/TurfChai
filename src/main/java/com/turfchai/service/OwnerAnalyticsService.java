@@ -40,20 +40,26 @@ public class OwnerAnalyticsService {
         List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
         LocalDate today = LocalDate.now();
 
-        List<Booking> todayBookings = bookingRepository.findByVenueIdInAndBookingDate(venueIds, today);
+        List<Booking> allOwnerBookings = bookingRepository.findByVenueIdIn(venueIds);
+        List<Booking> todayBookings = new ArrayList<>();
 
         int bookedCount = 0;
         BigDecimal grossRevenue = BigDecimal.ZERO;
         int pendingPayments = 0;
 
-        for (Booking b : todayBookings) {
-            if (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING) {
-                bookedCount++;
-                if (b.getGrossAmount() != null) {
-                    grossRevenue = grossRevenue.add(b.getGrossAmount());
-                }
-                if (b.getStatus() == BookingStatus.PENDING) {
-                    pendingPayments++;
+        for (Booking b : allOwnerBookings) {
+            boolean isToday = (b.getBookingDate() != null && today.equals(b.getBookingDate())) ||
+                              (b.getCreatedAt() != null && today.equals(b.getCreatedAt().toLocalDate()));
+            if (isToday) {
+                todayBookings.add(b);
+                if (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING) {
+                    bookedCount++;
+                    if (b.getGrossAmount() != null) {
+                        grossRevenue = grossRevenue.add(b.getGrossAmount());
+                    }
+                    if (b.getStatus() == BookingStatus.PENDING) {
+                        pendingPayments++;
+                    }
                 }
             }
         }

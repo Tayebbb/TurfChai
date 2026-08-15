@@ -677,17 +677,23 @@ public class VenueManagementService {
                     if (pitchSlot.getStatus() == SlotStatus.BOOKED) {
                         variant = "online";
                         label = "Booked · ৳" + (pitchSlot.getPrice() != null ? pitchSlot.getPrice().intValue() : 2000);
+                        kind = "event";
+                        openable = true;
                     } else if (pitchSlot.getStatus() == SlotStatus.HELD) {
                         variant = "held";
                         label = "Held · checkout";
+                        kind = "event";
+                        openable = true;
                     } else if (pitchSlot.getStatus() == SlotStatus.BLOCKED) {
                         variant = "blocked";
                         label = "Maintenance";
+                        kind = "event";
                         openable = false;
                     } else {
                         kind = "add";
-                        label = "";
-                        openable = false;
+                        variant = "available";
+                        label = "Available";
+                        openable = true;
                     }
 
                     cells.add(OwnerCalendarDto.CellDto.builder()
@@ -705,9 +711,9 @@ public class VenueManagementService {
                             .slotId(null)
                             .pitchId(header.getId())
                             .kind("add")
-                            .variant(null)
-                            .label("")
-                            .openable(false)
+                            .variant("available")
+                            .label("Available")
+                            .openable(true)
                             .status("AVAILABLE")
                             .price(2000.0)
                             .build());

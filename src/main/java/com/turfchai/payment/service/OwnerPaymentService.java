@@ -75,18 +75,13 @@ public class OwnerPaymentService {
         }
 
         // Fallback: If pitch sports mapping is empty, assign "Football" as default configured sport
-        if (configuredSports.isEmpty() && !pitches.isEmpty()) {
+        if (configuredSports.isEmpty()) {
             sportNames.add("Football");
             configuredSports.add(Map.of(
                 "key", "Football",
                 "name", "Football",
                 "label", "⚽ Football"
             ));
-        }
-
-        // If owner has 0 pitches configured, sport list is strictly empty
-        if (pitches.isEmpty()) {
-            return emptySummary();
         }
 
         // 2. Date Filtering & Financial Calculations
@@ -137,7 +132,9 @@ public class OwnerPaymentService {
             if (b.getGrossAmount() != null) {
                 if (b.getStatus() == BookingStatus.CONFIRMED) {
                     grossTotal = grossTotal.add(b.getGrossAmount());
-                    if (today.equals(b.getBookingDate())) {
+                    boolean isToday = (b.getBookingDate() != null && today.equals(b.getBookingDate())) ||
+                                      (b.getCreatedAt() != null && today.equals(b.getCreatedAt().toLocalDate()));
+                    if (isToday) {
                         grossToday = grossToday.add(b.getGrossAmount());
                     }
                     if (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) {

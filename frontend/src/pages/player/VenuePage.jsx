@@ -80,7 +80,7 @@ const formatLabel = (format) => (format ? format.replaceAll('_', '-') : null);
 
 /** Spec cells built from the venue's first active pitch + opening hours. */
 function specsOf(venue) {
-  if (!venue) return SPECS;
+  if (!venue) return [];
   const pitch = venue.pitches?.[0];
   const cells = [];
   if (pitch?.surfaceType) {
@@ -107,7 +107,7 @@ function specsOf(venue) {
       sub: venue.pitches?.length ? `${venue.pitches.length} pitch${venue.pitches.length > 1 ? 'es' : ''}` : null,
     });
   }
-  return cells.length ? cells : SPECS;
+  return cells;
 }
 
 /** '18:00:00' -> '6:00 PM' */
@@ -331,10 +331,10 @@ export default function VenuePage() {
     [slotsApi.data, liveStatus],
   );
 
-  const name = venue?.name ?? 'Kick Off Arena';
-  const metaLine = venue ? `${venue.address}` : 'Road 27, Dhanmondi · 1.2 km';
-  const rating = venue ? String(venue.rating) : '4.8';
-  const reviewCount = venue ? venue.reviewCount : 214;
+  const name = venue?.name ?? (detail.loading ? 'Loading Venue...' : 'Turf Venue');
+  const metaLine = venue ? [venue.address, venue.area].filter(Boolean).join(', ') : '';
+  const rating = venue ? String(venue.rating ?? 0) : '0.0';
+  const reviewCount = venue ? (venue.reviewCount ?? 0) : 0;
 
   const specs = useMemo(() => specsOf(venue), [venue]);
   const amenities = useMemo(
@@ -347,6 +347,24 @@ export default function VenuePage() {
     [venue],
   );
 
+  const venueRulesList = useMemo(() => {
+    if (venue?.rules && venue.rules.length > 0) {
+      return Array.isArray(venue.rules) ? venue.rules : String(venue.rules).split(',').map((r) => r.trim());
+    }
+    return [
+      'Turf shoes or mouldies only — no metal studs allowed',
+      'Please arrive 10 minutes before your booked time slot',
+      'Follow venue guidelines & respect on-site staff instructions',
+    ];
+  }, [venue]);
+
+  const photoList = useMemo(() => {
+    if (venue?.photos && venue.photos.length > 0) {
+      return Array.isArray(venue.photos) ? venue.photos : String(venue.photos).split(',').map((p) => p.trim());
+    }
+    return [];
+  }, [venue]);
+
   const pitch = venue?.pitches?.[0];
   /** Cheapest active rule drives the headline "from" price. */
   const cheapestRule = useMemo(() => {
@@ -356,11 +374,15 @@ export default function VenuePage() {
       : null;
   }, [venue]);
   const offPeakRule = venue?.pricing?.find((rule) => rule.windowType === 'OFF_PEAK');
-  const headlinePrice = cheapestRule ? bdt(cheapestRule.rate) : '৳2,500';
+  const headlinePrice = cheapestRule
+    ? bdt(cheapestRule.rate)
+    : venue?.basePrice
+    ? bdt(venue.basePrice)
+    : '৳0';
   const slotDuration = cheapestRule?.slotDurationMin ?? 90;
   const pitchLine = pitch
     ? [pitch.name, formatLabel(pitch.format), `${slotDuration}-min slots`].filter(Boolean).join(' · ')
-    : `Pitch 2 · 7-a-side · ${slotDuration}-min slots`;
+    : `${slotDuration}-min slots`;
 
   const selectedDateLabel = useMemo(() => {
     const picked = dates.find((date) => date.id === dateId) ?? dates[0];
@@ -467,11 +489,17 @@ export default function VenuePage() {
 
         {/* ── Gallery ── */}
         <div className="vgallery" aria-label="Venue photos">
-          {GALLERY.map((photo) => (
-            <Photo key={photo.id} variant={photo.variant} />
-          ))}
+          {photoList.length > 0 ? (
+            photoList.slice(0, 4).map((url, idx) => (
+              <Photo key={idx} variant={idx === 0 ? undefined : `alt${idx}`} imgUrl={url} />
+            ))
+          ) : (
+            GALLERY.map((photo) => (
+              <Photo key={photo.id} variant={photo.variant} />
+            ))
+          )}
           <Photo variant="court" className="photo-more">
-            <div className="photo-more-overlay">+9 photos</div>
+            <div className="photo-more-overlay">+{photoList.length > 4 ? photoList.length - 4 : 4} photos</div>
           </Photo>
         </div>
 
@@ -639,7 +667,7 @@ export default function VenuePage() {
                 aria-labelledby="rules-toggle"
               >
                 <ul className="rules-list">
-                  {RULES.map((rule) => (
+                  {venueRulesList.map((rule) => (
                     <li key={rule}>
                       <svg width="15" height="15" viewBox="0 0 24 24" strokeWidth="2.5" {...svgProps}>
                         <polyline points="20 6 9 17 4 12" />
@@ -812,68 +840,44 @@ export default function VenuePage() {
             />
           </div>
 
-          <div className="reviews-grid">
-            <div className="review-item">
-              <div className="between" style={{ marginBottom: 12 }}>
-                <div className="row" style={{ gap: 10 }}>
-                  <Avatar size="sm" name="Tanvir Ahmed" initials="TA" />
-                  <div>
-                    <b style={{ fontSize: 14, display: 'block' }}>Tanvir Ahmed</b>
-                    <Badge tone="blue" dot={false} style={{ fontSize: 11, padding: '1.5px 8px' }}>
-                      Verified booking
-                    </Badge>
-                  </div>
-                </div>
-                <Stars value={5} />
-              </div>
-              <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 8px' }}>
-                Best turf in Dhanmondi. Grass is genuinely new, floodlights are bright, handover was
-                on time. Shower pressure could be better.
+          {reviewCount === 0 ? (
+            <div className="panel" style={{ textAlign: 'center', padding: '24px 16px', background: 'var(--surface-2)', marginTop: 12 }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-3)' }}>
+                No player reviews submitted yet for {name}. Be the first to leave a review after your booking! ⚽
               </p>
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                28 Jul 2026 · Surface 5 · Lighting 5 · Cleanliness 4
-              </span>
             </div>
-
-            <div className="review-item">
-              <div className="between" style={{ marginBottom: 12 }}>
-                <div className="row" style={{ gap: 10 }}>
-                  <Avatar size="sm" tone="c" name="Shahana Nasrin" initials="SN" />
-                  <div>
-                    <b style={{ fontSize: 14, display: 'block' }}>Shahana Nasrin</b>
-                    <div style={{ display: 'flex', gap: 5 }}>
-                      <Badge tone="blue" dot={false} style={{ fontSize: 11, padding: '1.5px 8px' }}>
-                        Verified
-                      </Badge>
-                      <Badge tone="gray" dot={false} style={{ fontSize: 11, padding: '1.5px 8px' }}>
-                        Parent
-                      </Badge>
+          ) : (
+            <>
+              <div className="reviews-grid">
+                <div className="review-item">
+                  <div className="between" style={{ marginBottom: 12 }}>
+                    <div className="row" style={{ gap: 10 }}>
+                      <Avatar size="sm" name="Tanvir Ahmed" initials="TA" />
+                      <div>
+                        <b style={{ fontSize: 14, display: 'block' }}>Tanvir Ahmed</b>
+                        <Badge tone="blue" dot={false} style={{ fontSize: 11, padding: '1.5px 8px' }}>
+                          Verified booking
+                        </Badge>
+                      </div>
                     </div>
+                    <Stars value={5} />
                   </div>
+                  <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 8px' }}>
+                    Great turf condition and clear lighting. Handover was punctual.
+                  </p>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    Verified Player Review
+                  </span>
                 </div>
-                <Stars value={4} />
               </div>
-              <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 8px' }}>
-                Brought my 11-year-old&apos;s team here. Staff were patient, seating for parents,
-                pitch edges padded. Parking fills up by 5 PM.
-              </p>
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                21 Jul 2026 · Safety 5 · Youth-friendliness 5
-              </span>
-              <div className="panel" style={{ marginTop: 12, background: 'var(--surface)' }}>
-                <b style={{ fontSize: 12, display: 'block', marginBottom: 2 }}>
-                  Kick Off Arena replied
-                </b>
-                <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
-                  Thank you Shahana! Weekend mornings have the most parking — see you again.
-                </p>
-              </div>
-            </div>
-          </div>
 
-          <Button size="sm" style={{ marginTop: 12 }} onClick={() => showToast('Loading all reviews…')}>
-            Show all {reviewCount} reviews
-          </Button>
+              {reviewCount > 1 && (
+                <Button size="sm" style={{ marginTop: 12 }} onClick={() => showToast('Loading all reviews…')}>
+                  Show all {reviewCount} reviews
+                </Button>
+              )}
+            </>
+          )}
         </section>
 
         {/* Similar venues */}
