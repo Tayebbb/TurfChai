@@ -1,5 +1,6 @@
 package com.turfchai.dto.analytics;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -45,6 +46,9 @@ public class GrowthDto {
     /** Monthly new host counts for the 6-month growth chart. */
     private List<Long> growthHosts;
 
+    /** Acquisition-channel breakdown (new users, conversion, CAC). */
+    private List<AcquisitionChannelDto> channels = new ArrayList<>();
+
     // ── Constructors ──────────────────────────────────────────────────────
 
     public GrowthDto() {}
@@ -88,4 +92,7 @@ public class GrowthDto {
 
     public List<Long> getGrowthHosts() { return growthHosts; }
     public void setGrowthHosts(List<Long> growthHosts) { this.growthHosts = growthHosts; }
+
+    public List<AcquisitionChannelDto> getChannels() { return channels; }
+    public void setChannels(List<AcquisitionChannelDto> channels) { this.channels = channels; }
 }

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
@@ -5,200 +6,20 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
 import { api } from '@/api/client';
+import { listAdminUsers } from '@/api/adminUsers';
 import { useApi } from '@/hooks/useApi';
-
-const KPIS = [
-  {
-    id: 'players',
-    label: 'Active Players',
-    icon: 'users',
-    color: 'var(--brand)',
-    value: '34,200',
-    deltaClass: 'delta up',
-    deltaStyle: { fontSize: 12 },
-    deltaText: 'Regular turf bookers',
-  },
-  {
-    id: 'hosts',
-    label: 'Verified Hosts',
-    icon: 'pin',
-    color: 'var(--info)',
-    value: '1,280',
-    deltaClass: 'delta nodot',
-    deltaStyle: { color: 'var(--info)', fontSize: 12 },
-    deltaText: 'Registered venue partners',
-  },
-  {
-    id: 'inactive',
-    label: 'Inactive Accounts',
-    icon: 'alert',
-    color: 'var(--warn)',
-    value: '5,790',
-    deltaClass: 'delta down',
-    deltaStyle: { fontSize: 12 },
-    deltaText: 'No activity in 30 days',
-  },
-  {
-    id: 'ltv',
-    label: 'Avg Lifetime Value',
-    icon: 'money',
-    color: 'var(--brand-600)',
-    value: '৳4,250',
-    deltaClass: 'delta nodot',
-    deltaStyle: { color: 'var(--text-3)', fontSize: 12 },
-    deltaText: 'Per registered cohort',
-  },
-];
-
-const DONUT_DATA = {
-  labels: ['Players', 'Hosts', 'Inactive'],
-  datasets: [
-    {
-      data: [83, 3, 14],
-      backgroundColor: ['#22C55E', '#60A5FA', '#FBBF24'],
-      borderWidth: 0,
-      spacing: 4,
-    },
-  ],
-};
 
 const DONUT_OPTIONS = {
   cutout: '71%',
   plugins: { legend: { display: false } },
 };
 
-const SHARE_LEGEND = [
-  {
-    id: 'players',
-    dot: 'var(--brand)',
-    name: 'Players',
-    note: 'Regular turf bookers',
-    count: '34,200',
-    share: '83%',
-    shareTone: 'green',
-  },
-  {
-    id: 'hosts',
-    dot: 'var(--info)',
-    name: 'Hosts',
-    note: 'Venue & pitch managers',
-    count: '1,280',
-    share: '3%',
-    shareTone: 'blue',
-  },
-  {
-    id: 'inactive',
-    dot: 'var(--warn)',
-    name: 'Inactive',
-    note: 'No activity in 30 days',
-    count: '5,790',
-    share: '14%',
-    shareTone: 'amber',
-  },
-];
-
-const PLAYER_TIERS = [
-  {
-    id: 'power',
-    title: 'Power Players',
-    note: '3+ bookings per week · League & tournament regulars',
-    count: '6,840',
-    share: '20% of players',
-  },
-  {
-    id: 'regular',
-    title: 'Regular Players',
-    note: '1–2 bookings per month · Weekend casual matches',
-    count: '18,810',
-    share: '55% of players',
-  },
-  {
-    id: 'new',
-    title: 'New Signups',
-    note: 'Registered within the last 14 days, no bookings yet',
-    count: '8,550',
-    share: '25% of players',
-  },
-];
-
-const HOST_STATUS = [
-  { id: 'active', status: 'Active', tone: 'green', count: '1,140', revenue: '৳38,400', share: '89%' },
-  { id: 'pending', status: 'Pending', tone: 'amber', count: '92', revenue: '—', share: '7%' },
-  { id: 'suspended', status: 'Suspended', tone: 'red', count: '48', revenue: '৳0', share: '4%' },
-];
-
-const REGIONS = [
-  { id: 'dhanmondi', name: 'Dhanmondi', width: '30%', color: 'var(--brand)', value: '12,450 · 30%' },
-  { id: 'uttara', name: 'Uttara', width: '24%', color: 'var(--info)', value: '9,890 · 24%' },
-  { id: 'mirpur', name: 'Mirpur', width: '20%', color: 'var(--info)', value: '8,240 · 20%' },
-  { id: 'khilgaon', name: 'Khilgaon', width: '14%', color: 'var(--warn)', value: '5,780 · 14%' },
-  {
-    id: 'mohammadpur',
-    name: 'Mohammadpur',
-    width: '12%',
-    color: 'var(--warn)',
-    value: '4,910 · 12%',
-  },
-];
-
-const COHORTS = [
-  {
-    id: 'power',
-    cohort: 'Power Players',
-    users: '6,840',
-    bookings: '12.4',
-    retention: '96%',
-    retentionStyle: {
-      color: 'var(--brand)',
-      fontFamily: 'var(--font-display)',
-      fontWeight: 700,
-    },
-    spend: '৳2,880',
-    ltv: '৳18,200',
-    ltvStyle: { fontWeight: 700 },
-  },
-  {
-    id: 'regular',
-    cohort: 'Regular Players',
-    users: '18,810',
-    bookings: '2.1',
-    retention: '82%',
-    retentionStyle: {
-      color: 'var(--brand-600)',
-      fontFamily: 'var(--font-display)',
-      fontWeight: 700,
-    },
-    spend: '৳540',
-    ltv: '৳3,800',
-    ltvStyle: { fontWeight: 700 },
-  },
-  {
-    id: 'new',
-    cohort: 'New Signups',
-    users: '8,550',
-    bookings: '0.0',
-    retention: '—',
-    retentionStyle: { color: 'var(--text-3)', fontFamily: 'var(--font-display)' },
-    spend: '৳0',
-    ltv: '৳0',
-    ltvStyle: { color: 'var(--text-3)' },
-  },
-  {
-    id: 'hosts',
-    cohort: 'Active Hosts',
-    users: '1,140',
-    bookings: '—',
-    retention: '94%',
-    retentionStyle: {
-      color: 'var(--brand)',
-      fontFamily: 'var(--font-display)',
-      fontWeight: 700,
-    },
-    spend: '৳38,400',
-    ltv: '৳92,000',
-    ltvStyle: { fontWeight: 700 },
-  },
-];
+const SEGMENT_COLORS = {
+  players: '#22C55E',
+  hosts: '#60A5FA',
+  inactive: '#FBBF24',
+  other: '#A855F7',
+};
 
 const HISTORY_ITEM_STYLE = {
   padding: '14px 18px',
@@ -225,13 +46,113 @@ export default function UserSegmentsPage() {
   const { data: res } = useApi(() => api('/admin/analytics/segments'));
   const segments = res?.data || res;
 
+  const totalUsers = segments?.totalUsers || 0;
+  const playerCount = segments?.playerCount || 0;
+  const hostCount = segments?.hostCount || 0;
+  const inactiveCount = segments?.inactiveCount || 0;
+  const avgLtv = segments?.avgLifetimeValueBdt || 0;
+  const otherCount = Math.max(0, totalUsers - playerCount - hostCount - inactiveCount);
+
+  const donutData = useMemo(() => {
+    const slices = [playerCount, hostCount, inactiveCount];
+    const colors = [SEGMENT_COLORS.players, SEGMENT_COLORS.hosts, SEGMENT_COLORS.inactive];
+    const names = ['Players', 'Hosts', 'Inactive'];
+    if (otherCount > 0) {
+      slices.push(otherCount);
+      colors.push(SEGMENT_COLORS.other);
+      names.push('Other');
+    }
+    return {
+      labels: names,
+      datasets: [{ data: slices, backgroundColor: colors, borderWidth: 0, spacing: 4 }],
+    };
+  }, [playerCount, hostCount, inactiveCount, otherCount]);
+
+  const shareLegend = useMemo(() => {
+    const total = totalUsers || 1;
+    const items = [
+      {
+        id: 'players',
+        dot: SEGMENT_COLORS.players,
+        name: 'Players',
+        note: 'Regular turf bookers',
+        count: playerCount,
+        share: (playerCount / total) * 100,
+        shareTone: 'green',
+      },
+      {
+        id: 'hosts',
+        dot: SEGMENT_COLORS.hosts,
+        name: 'Hosts',
+        note: 'Venue & pitch managers',
+        count: hostCount,
+        share: (hostCount / total) * 100,
+        shareTone: 'blue',
+      },
+      {
+        id: 'inactive',
+        dot: SEGMENT_COLORS.inactive,
+        name: 'Inactive',
+        note: 'No activity in 30 days',
+        count: inactiveCount,
+        share: (inactiveCount / total) * 100,
+        shareTone: 'amber',
+      },
+    ];
+    if (otherCount > 0) {
+      items.push({
+        id: 'other',
+        dot: SEGMENT_COLORS.other,
+        name: 'Other',
+        note: 'Admins & remaining accounts',
+        count: otherCount,
+        share: (otherCount / total) * 100,
+        shareTone: 'purple',
+      });
+    }
+    return items.map((item) => ({
+      ...item,
+      count: item.count.toLocaleString('en-IN'),
+      share: item.share.toFixed(1) + '%',
+    }));
+  }, [totalUsers, playerCount, hostCount, inactiveCount, otherCount]);
+
+  const centerTotal = totalUsers >= 1000 ? `${(totalUsers / 1000).toFixed(1)}K` : String(totalUsers || '—');
+
+  const { data: usersRes } = useApi(() => listAdminUsers(), []);
+  const regions = useMemo(() => {
+    const all = Array.isArray(usersRes?.data)
+      ? usersRes.data
+      : Array.isArray(usersRes)
+        ? usersRes
+        : [];
+    const arr = all.filter((u) => u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN');
+    const counts = {};
+    arr.forEach((u) => {
+      const area = u.area || 'Unknown';
+      counts[area] = (counts[area] || 0) + 1;
+    });
+    const total = arr.length || 1;
+    const colors = ['var(--brand)', 'var(--info)', 'var(--info)', 'var(--warn)', 'var(--warn)'];
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count], index) => ({
+        id: name,
+        name,
+        width: `${(count / total) * 100}%`,
+        color: colors[index % colors.length],
+        value: `${count.toLocaleString('en-IN')} · ${((count / total) * 100).toFixed(1)}%`,
+      }));
+  }, [usersRes]);
+
   const kpiData = [
     {
       id: 'players',
       label: 'Active Players',
       icon: 'users',
       color: 'var(--brand)',
-      value: segments?.activePlayers ? Number(segments.activePlayers) : 34200,
+      value: playerCount,
       deltaClass: 'delta up',
       deltaStyle: { fontSize: 12 },
       deltaText: 'Regular turf bookers',
@@ -241,7 +162,7 @@ export default function UserSegmentsPage() {
       label: 'Verified Hosts',
       icon: 'pin',
       color: 'var(--info)',
-      value: segments?.activeHosts ? Number(segments.activeHosts) : 1280,
+      value: hostCount,
       deltaClass: 'delta nodot',
       deltaStyle: { color: 'var(--info)', fontSize: 12 },
       deltaText: 'Registered venue partners',
@@ -251,7 +172,7 @@ export default function UserSegmentsPage() {
       label: 'Inactive Accounts',
       icon: 'alert',
       color: 'var(--warn)',
-      value: segments?.inactiveUsers ? Number(segments.inactiveUsers) : 5790,
+      value: inactiveCount,
       deltaClass: 'delta down',
       deltaStyle: { fontSize: 12 },
       deltaText: 'No activity in 30 days',
@@ -261,11 +182,11 @@ export default function UserSegmentsPage() {
       label: 'Avg Lifetime Value',
       icon: 'money',
       color: 'var(--brand-600)',
-      value: segments?.avgLtv ? Number(segments.avgLtv) : 4250,
+      value: avgLtv,
       prefix: '৳',
       deltaClass: 'delta nodot',
       deltaStyle: { color: 'var(--text-3)', fontSize: 12 },
-      deltaText: 'Per registered cohort',
+      deltaText: 'Per registered user',
     },
   ];
 
@@ -341,10 +262,10 @@ export default function UserSegmentsPage() {
             <div style={{ position: 'relative', width: 170, height: 170, margin: '0 auto' }}>
               <ChartCanvas
                 type="doughnut"
-                data={DONUT_DATA}
+                data={donutData}
                 options={DONUT_OPTIONS}
                 height={170}
-                label="User distribution: 83% Players, 3% Hosts, 14% Inactive"
+                label="Live user distribution across players, hosts, inactive and other accounts"
               />
               <div
                 style={{
@@ -365,7 +286,7 @@ export default function UserSegmentsPage() {
                     fontFamily: 'var(--font-display)',
                   }}
                 >
-                  41.2K
+                  {centerTotal}
                 </span>
                 <span
                   style={{
@@ -381,7 +302,7 @@ export default function UserSegmentsPage() {
             </div>
 
             <div className="user-breakdown-legend">
-              {SHARE_LEGEND.map((item) => (
+              {shareLegend.map((item) => (
                 <div className="legend-item" key={item.id}>
                   <div>
                     <span className="legend-dot" style={{ background: item.dot }}></span>
@@ -410,7 +331,7 @@ export default function UserSegmentsPage() {
           </div>
 
           <div className="stack-sm" style={{ gap: 6 }}>
-            {PLAYER_TIERS.map((tier) => (
+            {((segments && segments.playerTiers) || []).map((tier) => (
               <div className="history-item between" key={tier.id} style={HISTORY_ITEM_STYLE}>
                 <div>
                   <b className="small" style={{ display: 'block', fontWeight: 700 }}>
@@ -419,8 +340,8 @@ export default function UserSegmentsPage() {
                   <span className="tiny subtle">{tier.note}</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <b style={{ fontSize: 15, display: 'block' }}>{tier.count}</b>
-                  <span className="tiny subtle">{tier.share}</span>
+                  <b style={{ fontSize: 15, display: 'block' }}>{tier.count.toLocaleString('en-IN')}</b>
+                  <span className="tiny subtle">{tier.share.toFixed(1)}% of players</span>
                 </div>
               </div>
             ))}
@@ -444,16 +365,18 @@ export default function UserSegmentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {HOST_STATUS.map((row) => (
+                  {((segments && segments.hostStatus) || []).map((row) => (
                     <tr key={row.id}>
                       <td>
                         <span className={`badge ${row.tone} nodot`} style={{ fontSize: 11 }}>
                           {row.status}
                         </span>
                       </td>
-                      <td className="num">{row.count}</td>
-                      <td className="num">{row.revenue}</td>
-                      <td className="num">{row.share}</td>
+                      <td className="num">{row.count.toLocaleString('en-IN')}</td>
+                      <td className="num">
+                        {row.avgRevenuePerMonth > 0 ? `৳${row.avgRevenuePerMonth.toLocaleString('en-IN')}` : '—'}
+                      </td>
+                      <td className="num">{row.share.toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -470,7 +393,7 @@ export default function UserSegmentsPage() {
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Regional Distribution</h3>
         </div>
         <div className="stack-sm">
-          {REGIONS.map((region) => (
+          {regions.map((region) => (
             <div className="history-item between" key={region.id} style={REGION_ITEM_STYLE}>
               <span style={{ fontSize: 13, fontWeight: 600, minWidth: 120 }}>{region.name}</span>
               <div
@@ -528,19 +451,26 @@ export default function UserSegmentsPage() {
               </tr>
             </thead>
             <tbody>
-              {COHORTS.map((row) => (
+              {((segments && segments.cohorts) || []).map((row) => (
                 <tr key={row.id}>
                   <td>
                     <b>{row.cohort}</b>
                   </td>
-                  <td className="num">{row.users}</td>
-                  <td className="num">{row.bookings}</td>
-                  <td className="num" style={row.retentionStyle}>
-                    {row.retention}
+                  <td className="num">{row.users.toLocaleString('en-IN')}</td>
+                  <td className="num">{row.avgBookingsPerMonth.toFixed(1)}</td>
+                  <td
+                    className="num"
+                    style={{
+                      color: row.retentionRate == null ? 'var(--text-3)' : row.retentionRate >= 50 ? 'var(--brand)' : 'var(--warn)',
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {row.retentionRate == null ? '—' : `${row.retentionRate.toFixed(1)}%`}
                   </td>
-                  <td className="num">{row.spend}</td>
-                  <td className="num" style={row.ltvStyle}>
-                    {row.ltv}
+                  <td className="num">৳{row.avgSpend.toLocaleString('en-IN')}</td>
+                  <td className="num" style={{ fontWeight: 700 }}>
+                    ৳{row.ltv.toLocaleString('en-IN')}
                   </td>
                 </tr>
               ))}
