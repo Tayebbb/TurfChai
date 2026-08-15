@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
+import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
 import { Field, Input, Select } from '@/components/forms/Field';
@@ -64,6 +65,7 @@ export default function CalendarPage() {
   const [venues, setVenues] = useState([]);
   const [selectedVenueId, setSelectedVenueId] = useState(1);
   const [pitches, setPitches] = useState([]);
+  const [selectedPitchId, setSelectedPitchId] = useState('ALL');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(BLANK_FORM);
@@ -135,10 +137,10 @@ export default function CalendarPage() {
     });
   }
 
-
   function setField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
+
   function openForCell(rowIndex, cellIndex, cell, pitch, rowTime) {
     setTargetCell({ rowIndex, cellIndex, slotId: cell?.slotId, pitchName: pitch?.name, time: rowTime });
     setForm((prev) => ({
@@ -201,8 +203,9 @@ export default function CalendarPage() {
     refreshCalendar();
   }
 
-
-
+  const visiblePitchesWithIndices = pitches
+    .map((p, index) => ({ pitch: p, originalIndex: index }))
+    .filter(({ pitch }) => selectedPitchId === 'ALL' || String(pitch.id) === String(selectedPitchId));
 
   return (
     <>
@@ -213,12 +216,11 @@ export default function CalendarPage() {
           <h1>Calendar</h1>
           <span className="subtle small">View and manage your slots</span>
         </div>
-        <div className="row">
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
           {venues.length > 1 && (
             <Select
               value={selectedVenueId}
               onChange={(e) => setSelectedVenueId(Number(e.target.value))}
-              style={{ marginRight: 8 }}
             >
               {venues.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -227,6 +229,44 @@ export default function CalendarPage() {
               ))}
             </Select>
           )}
+
+          {/* Pitch Filter: Dropdown if >4 pitches, Chips if <=4 pitches */}
+          {pitches.length > 4 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="tiny subtle" style={{ fontWeight: 700 }}>PITCH:</span>
+              <Select
+                value={selectedPitchId}
+                onChange={(e) => setSelectedPitchId(e.target.value)}
+                style={{ minWidth: 160 }}
+              >
+                <option value="ALL">All Pitches ({pitches.length})</option>
+                {pitches.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : pitches.length > 1 ? (
+            <div className="row-wrap" style={{ gap: 4 }}>
+              <Chip
+                active={selectedPitchId === 'ALL'}
+                onToggle={() => setSelectedPitchId('ALL')}
+              >
+                All ({pitches.length})
+              </Chip>
+              {pitches.map((p) => (
+                <Chip
+                  key={p.id}
+                  active={String(selectedPitchId) === String(p.id)}
+                  onToggle={() => setSelectedPitchId(String(p.id))}
+                >
+                  {p.name}
+                </Chip>
+              ))}
+            </div>
+          ) : null}
+
           <div className="seg" role="group" aria-label="View">
             <button type="button" className="on">Day</button>
             <button type="button" onClick={() => showToast('Week view (concept)')}>Week</button>
@@ -269,17 +309,17 @@ export default function CalendarPage() {
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
             Loading live slot availability...
           </div>
-        ) : pitches.length === 0 ? (
+        ) : visiblePitchesWithIndices.length === 0 ? (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
-            No active pitches found for this venue.
+            No active pitches found for this selection.
           </div>
         ) : (
           <div
             className="cal-grid"
-            style={{ minWidth: 720, gridTemplateColumns: `80px repeat(${pitches.length}, 1fr)` }}
+            style={{ minWidth: 720, gridTemplateColumns: `80px repeat(${visiblePitchesWithIndices.length}, 1fr)` }}
           >
             <div className="cal-head">Time</div>
-            {pitches.map((p) => (
+            {visiblePitchesWithIndices.map(({ pitch: p }) => (
               <div className="cal-head" key={p.id}>
                 {p.name}
                 <br />
@@ -297,36 +337,25 @@ export default function CalendarPage() {
             {rows.map((row, rowIndex) => (
               <Fragment key={row.time}>
                 <div className="cal-time num">{row.time}</div>
-                {row.cells.map((cell, cellIndex) => {
-                  const pitch = pitches[cellIndex] || pitches[0];
+                {visiblePitchesWithIndices.map(({ pitch, originalIndex }) => {
+                  const cell = row.cells[originalIndex];
+                  if (!cell) return <div key={pitch.id} className="cal-cell" />;
                   return (
-                    <div className="cal-cell" key={`${row.time}-${cellIndex}`}>
-                      {cell.kind === 'add' ? (
-                        <button
-                          type="button"
-                          className="addcell"
-                          onClick={() => openForCell(rowIndex, cellIndex, cell, pitch, row.time)}
-                        >
-                          +
-                        </button>
-                      ) : (
-                        <div
-                          className={`cal-ev ${cell.variant}`}
-                          role={cell.openable ? 'button' : undefined}
-                          tabIndex={cell.openable ? 0 : undefined}
-                          onClick={cell.openable ? () => openDetailDrawer(cell, pitch, row.time) : undefined}
-                          onKeyDown={
-                            cell.openable
-                              ? (event) => {
-                                  if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault();
-                                    openDetailDrawer(cell, pitch, row.time);
-                                  }
-                                }
-                              : undefined
-                          }
-                        >
-                          {cell.label}
+                    <div
+                      key={cell.slotId || originalIndex}
+                      className={`cal-cell ${cell.status.toLowerCase()}`}
+                      onClick={() => {
+                        if (cell.status === 'AVAILABLE') {
+                          openForCell(rowIndex, originalIndex, cell, pitch, row.time);
+                        } else if (cell.status === 'BOOKED' || cell.status === 'HELD') {
+                          openDetailDrawer(cell, pitch, row.time);
+                        }
+                      }}
+                    >
+                      {cell.label && (
+                        <div className="cal-booking">
+                          <b>{cell.label}</b>
+                          <span className="tiny">{cell.variant}</span>
                         </div>
                       )}
                     </div>

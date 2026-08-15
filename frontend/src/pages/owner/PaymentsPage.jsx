@@ -282,32 +282,120 @@ export default function PaymentsPage() {
                   })
                 )}
               </div>
-              <div className="sport-picker-dropdown" role="listbox">
-                <label>
-                  <input
-                    type="checkbox"
-                    value="__all__"
-                    checked={allSelected}
-                    ref={(node) => {
-                      if (node) node.indeterminate = selectedSports.length > 0 && !allSelected;
+              <div
+                className="sport-picker-dropdown"
+                role="listbox"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: 6,
+                  zIndex: 50,
+                  minWidth: 210,
+                  padding: 8,
+                  borderRadius: 14,
+                  background: dark ? 'rgba(22, 34, 26, 0.95)' : 'rgba(255, 255, 255, 0.96)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: dark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
+                  boxShadow: dark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 12px 32px rgba(0,0,0,0.15)',
+                  display: pickerOpen ? 'flex' : 'none',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+              >
+                <div
+                  onClick={() => toggleAllSports(!allSelected)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    background: allSelected ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                    color: allSelected ? 'var(--brand-500, #10B981)' : 'var(--text-1)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 5,
+                      border: '2px solid',
+                      borderColor: allSelected ? 'var(--brand-500)' : 'var(--text-3)',
+                      background: allSelected ? 'var(--brand-500)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 900,
                     }}
-                    onChange={(event) => toggleAllSports(event.target.checked)}
-                  />{' '}
-                  Select All
-                </label>
-                <div className="sp-divider" />
-                {SPORTS.map((sport) => (
-                  <label key={sport.key}>
-                    <input
-                      type="checkbox"
-                      value={sport.key}
-                      checked={selectedSports.includes(sport.key)}
-                      onChange={() => toggleSport(sport.key)}
-                    />
-                    <span className="sp-color-dot" style={{ background: sport.color }} />
-                    {sport.label}
-                  </label>
-                ))}
+                  >
+                    {allSelected ? '✓' : ''}
+                  </span>
+                  Select All Sports
+                </div>
+
+                <div style={{ height: 1, background: 'var(--border-soft)', margin: '4px 0' }} />
+
+                {SPORTS.map((sport) => {
+                  const isSelected = selectedSports.includes(sport.key);
+                  return (
+                    <div
+                      key={sport.key}
+                      onClick={() => toggleSport(sport.key)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        background: isSelected ? (dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)') : 'transparent',
+                        color: 'var(--text-1)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: 4,
+                            border: '2px solid',
+                            borderColor: isSelected ? sport.color : 'var(--text-3)',
+                            background: isSelected ? sport.color : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: 10,
+                            fontWeight: 900,
+                          }}
+                        >
+                          {isSelected ? '✓' : ''}
+                        </span>
+                        <span>{sport.label}</span>
+                      </div>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: sport.color,
+                          boxShadow: `0 0 6px ${sport.color}`,
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
