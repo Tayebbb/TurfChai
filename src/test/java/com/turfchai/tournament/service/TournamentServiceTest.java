@@ -171,7 +171,7 @@ class TournamentServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("overlapping");
 
-        Long foreignPitch = pitchIdOf("baridhara-sports-hub");
+        Long foreignPitch = pitchIdOf("mirpur-sports-city");
         assertThatThrownBy(() -> service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
                 new SlotRequest(foreignPitch, LocalTime.of(8, 0), LocalTime.of(10, 0))))))
                 .isInstanceOf(IllegalArgumentException.class)

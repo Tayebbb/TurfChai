@@ -10,12 +10,15 @@ import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import { DashCard, DashEmpty, DashError, DashSkeleton } from './dashboard/DashboardKit';
 import { profileCompletion } from './dashboard/sections';
+import {
+  PLAYER_AREAS,
+  PLAYER_SPORTS,
+  PLAYER_TIMES,
+  PLAYER_SKILLS,
+  PLAYER_POSITIONS,
+} from '@/constants/playerProfile';
 import './ProfileSettingsPage.css';
 
-const AREAS = ['Dhanmondi', 'Mohammadpur', 'Mirpur', 'Uttara', 'Banani', 'Baridhara', 'Lalmatia'];
-const SPORTS = ['football', 'cricket', 'badminton', 'basketball', 'futsal'];
-const TIMES = ['morning', 'afternoon', 'evening', 'late night', 'weekends'];
-const SKILLS = ['beginner', 'intermediate', 'advanced'];
 const BIO_MAX = 500;
 
 /** Account settings backed by GET/PATCH /api/v1/players/me. */
@@ -57,9 +60,10 @@ export default function ProfileSettingsPage() {
 
 function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reloadSaved, showToast }) {
   const [fullName, setFullName] = useState(initial.fullName ?? '');
-  const [area, setArea] = useState(initial.area ?? 'Dhanmondi');
+  const [area, setArea] = useState(initial.area ?? '');
   const [bio, setBio] = useState(initial.bio ?? '');
-  const [playStyle, setPlayStyle] = useState(initial.playStyle ?? 'intermediate');
+  const [playStyle, setPlayStyle] = useState(initial.playStyle ?? '');
+  const [position, setPosition] = useState(initial.position ?? '');
   const [sports, setSports] = useState(() => new Set(initial.preferredSports ?? []));
   const [times, setTimes] = useState(() => new Set(initial.preferredTimes ?? []));
   const [saving, setSaving] = useState(false);
@@ -81,13 +85,14 @@ function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reload
       set.size === (list?.length ?? 0) && [...set].every((value) => list.includes(value));
     return (
       fullName !== (initial.fullName ?? '') ||
-      area !== (initial.area ?? 'Dhanmondi') ||
+      area !== (initial.area ?? '') ||
       bio !== (initial.bio ?? '') ||
-      playStyle !== (initial.playStyle ?? 'intermediate') ||
+      playStyle !== (initial.playStyle ?? '') ||
+      position !== (initial.position ?? '') ||
       !sameSet(sports, initial.preferredSports ?? []) ||
       !sameSet(times, initial.preferredTimes ?? [])
     );
-  }, [fullName, area, bio, playStyle, sports, times, initial]);
+  }, [fullName, area, bio, playStyle, position, sports, times, initial]);
 
   const toggleIn = (setter) => (value) =>
     setter((current) => {
@@ -99,9 +104,10 @@ function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reload
 
   const reset = () => {
     setFullName(initial.fullName ?? '');
-    setArea(initial.area ?? 'Dhanmondi');
+    setArea(initial.area ?? '');
     setBio(initial.bio ?? '');
-    setPlayStyle(initial.playStyle ?? 'intermediate');
+    setPlayStyle(initial.playStyle ?? '');
+    setPosition(initial.position ?? '');
     setSports(new Set(initial.preferredSports ?? []));
     setTimes(new Set(initial.preferredTimes ?? []));
   };
@@ -118,6 +124,7 @@ function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reload
         area,
         bio,
         playStyle,
+        position,
         preferredSports: [...sports],
         preferredTimes: [...times],
       });
@@ -198,17 +205,30 @@ function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reload
           <div className="field">
             <label htmlFor="ps-area">Home area</label>
             <Select id="ps-area" value={area} onChange={(event) => setArea(event.target.value)}>
-              {AREAS.map((option) => (
-                <option key={option}>{option}</option>
+              <option value="" disabled>Select your area</option>
+              {PLAYER_AREAS.map((option) => (
+                <option key={option} value={option}>{option}</option>
               ))}
             </Select>
           </div>
           <div className="field">
             <label htmlFor="ps-skill">Skill level</label>
             <Select id="ps-skill" value={playStyle} onChange={(event) => setPlayStyle(event.target.value)}>
-              {SKILLS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
+              <option value="" disabled>Select your skill level</option>
+              {PLAYER_SKILLS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="field">
+            <label htmlFor="ps-position">Preferred position</label>
+            <Select id="ps-position" value={position} onChange={(event) => setPosition(event.target.value)}>
+              <option value="" disabled>Select your position</option>
+              {PLAYER_POSITIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </Select>
@@ -237,9 +257,13 @@ function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reload
         <div className="field">
           <label>Sports you play</label>
           <div className="row-wrap">
-            {SPORTS.map((sport) => (
-              <Chip key={sport} active={sports.has(sport)} onToggle={() => toggleIn(setSports)(sport)}>
-                {sport}
+            {PLAYER_SPORTS.map((sport) => (
+              <Chip
+                key={sport.value}
+                active={sports.has(sport.value)}
+                onToggle={() => toggleIn(setSports)(sport.value)}
+              >
+                {sport.icon} {sport.label}
               </Chip>
             ))}
           </div>
@@ -248,9 +272,13 @@ function ProfileForm({ initial, reloadProfile, savedVenues, savedLoading, reload
         <div className="field">
           <label>When you usually play</label>
           <div className="row-wrap">
-            {TIMES.map((time) => (
-              <Chip key={time} active={times.has(time)} onToggle={() => toggleIn(setTimes)(time)}>
-                {time}
+            {PLAYER_TIMES.map((time) => (
+              <Chip
+                key={time.value}
+                active={times.has(time.value)}
+                onToggle={() => toggleIn(setTimes)(time.value)}
+              >
+                {time.label}
               </Chip>
             ))}
           </div>

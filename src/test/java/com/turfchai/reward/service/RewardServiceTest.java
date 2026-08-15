@@ -76,17 +76,17 @@ class RewardServiceTest {
     // ── Earning ──────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("awardBookingPoints writes a +50 ledger entry with a correct running balance")
+    @DisplayName("awardBookingPoints writes 1 pt per ৳1 of net amount with a correct running balance")
     void awardBookingPoints_writesLedgerEntryWithRunningBalance() {
         when(pointLedgerRepository.sumDeltaByUserId(USER_ID)).thenReturn(200);
         when(pointLedgerRepository.save(any(PointLedgerEntry.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        PointLedgerEntry entry = rewardService.awardBookingPoints(USER_ID, 99L);
+        PointLedgerEntry entry = rewardService.awardBookingPoints(USER_ID, 99L, BigDecimal.valueOf(2500));
 
-        assertEquals(50, entry.getDelta());
+        assertEquals(2500, entry.getDelta());
         assertEquals(PointReason.BOOKING, entry.getReason());
         assertEquals(99L, entry.getReferenceBookingId());
-        assertEquals(250, entry.getBalanceAfter());
+        assertEquals(2700, entry.getBalanceAfter());
     }
 
     @Test

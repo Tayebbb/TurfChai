@@ -271,7 +271,7 @@ export default function VenuePage() {
       page.items.filter((item) => item.slug !== venueId).slice(0, 3).map(toSimilarCard)),
     [venueId],
   );
-  const similarVenues = similarApi.data ? similarApi.data.items.map(toSimilarCard) : [];
+  const similarVenues = similarApi.data ?? [];
 
   // Live slot availability for the selected day; refetches when the venue
   // resolves (numeric id, not the slug in the URL) or the date changes.

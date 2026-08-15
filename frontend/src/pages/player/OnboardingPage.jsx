@@ -11,27 +11,18 @@ import { getUser } from '@/api/client';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import {
+  PLAYER_AREAS,
+  PLAYER_SPORTS,
+  PLAYER_TIMES,
+  PLAYER_SKILLS,
+  PLAYER_POSITIONS,
+} from '@/constants/playerProfile';
 
 const STEPS = [
   { id: 'about', label: '1. About you' },
   { id: 'style', label: '2. Play style' },
 ];
-
-const AREAS = [
-  'Dhanmondi',
-  'Mohammadpur',
-  'Mirpur DOHS',
-  'Uttara',
-  'Banani',
-  'Baridhara',
-  'Bashundhara R/A',
-  'Gulshan',
-];
-
-const SPORTS = ['⚽ Football', '🏏 Cricket', '🏸 Badminton', '🏀 Basketball', '🎾 Futsal'];
-const TIMES = ['Morning', 'Afternoon', 'Evening', 'Late night', 'Weekends'];
-const SKILLS = ['Beginner', 'Intermediate', 'Advanced'];
-const POSITIONS = ['Striker / Forward', 'Winger', 'Midfielder', 'Defender', 'Goalkeeper'];
 
 const ROLES = [
   { id: 'captain', title: 'Team Captain / Host', description: 'I book pitches for my team and split payments' },
@@ -43,18 +34,21 @@ export default function OnboardingPage() {
   const { showToast } = useToast();
 
   const [step, setStep] = useState('about');
-  
+
   // Step 1: About you
   const localUser = getUser();
   const [name, setName] = useState(localUser?.fullName || '');
-  const [area, setArea] = useState('Dhanmondi');
-  const sports = useFilterChips(['⚽ Football', '🏏 Cricket']);
-  const times = useFilterChips(['Evening', 'Late night', 'Weekends']);
+  const [area, setArea] = useState('');
+  const sports = useFilterChips([]);
+  const times = useFilterChips([]);
+  const { toggle: toggleSport } = sports;
+  const { toggle: toggleTime } = times;
 
   // Step 2: Play style
-  const [role, setRole] = useState('captain');
-  const [position, setPosition] = useState('Midfielder');
-  const skill = useFilterChips(['Intermediate']);
+  const [role, setRole] = useState('');
+  const [position, setPosition] = useState('');
+  const skill = useFilterChips([]);
+  const { toggle: toggleSkillChip } = skill;
   const [bio, setBio] = useState('');
 
   const [saving, setSaving] = useState(false);
@@ -65,17 +59,28 @@ export default function OnboardingPage() {
     getMyProfile()
       .then((profile) => {
         if (cancelled || !profile) return;
-        if (profile.fullName && profile.fullName !== 'Rafi A.') setName(profile.fullName);
+        if (profile.fullName) setName(profile.fullName);
         if (profile.area) setArea(profile.area.split(',')[0].trim());
         if (profile.playerRole) setRole(profile.playerRole);
+        if (profile.position) setPosition(profile.position);
+        (profile.preferredSports ?? []).forEach((value) => toggleSport(value));
+        (profile.preferredTimes ?? []).forEach((value) => toggleTime(value));
+        if (profile.playStyle) toggleSkillChip(profile.playStyle);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [toggleSport, toggleTime, toggleSkillChip]);
 
-  const stripEmoji = (label) => label.replace(/^[^\p{L}]+/u, '').trim();
+  const toggleSkill = (value) => {
+    if (skill.isActive(value)) {
+      skill.clear();
+    } else {
+      skill.clear();
+      skill.toggle(value);
+    }
+  };
 
   const submitFinalProfile = async () => {
     if (!name.trim()) {
@@ -84,14 +89,18 @@ export default function OnboardingPage() {
     }
     setSaving(true);
     try {
-      await updateMyProfile({
+      const payload = {
         fullName: name.trim(),
-        area,
-        playerRole: role,
-        playStyle: [...skill.active][0]?.toLowerCase(),
-        preferredSports: [...sports.active].map(stripEmoji),
+        preferredSports: [...sports.active],
         preferredTimes: [...times.active],
-      });
+      };
+      if (area) payload.area = area;
+      if (role) payload.playerRole = role;
+      if (position) payload.position = position;
+      const firstSkill = [...skill.active][0];
+      if (firstSkill) payload.playStyle = firstSkill;
+
+      await updateMyProfile(payload);
       showToast('Profile saved — Welcome to TurfChai!');
       navigate(paths.player.home);
     } catch (error) {
@@ -135,7 +144,8 @@ export default function OnboardingPage() {
               <div className="field">
                 <label htmlFor="on-loc">Home Area</label>
                 <Select id="on-loc" value={area} onChange={(e) => setArea(e.target.value)}>
-                  {AREAS.map((option) => (
+                  <option value="" disabled>Select your area</option>
+                  {PLAYER_AREAS.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </Select>
@@ -145,13 +155,13 @@ export default function OnboardingPage() {
               <div className="field">
                 <label>Sports You Play</label>
                 <div className="row-wrap" style={{ marginTop: 6 }}>
-                  {SPORTS.map((sport) => (
+                  {PLAYER_SPORTS.map((sport) => (
                     <Chip
-                      key={sport}
-                      active={sports.isActive(sport)}
-                      onToggle={() => sports.toggle(sport)}
+                      key={sport.value}
+                      active={sports.isActive(sport.value)}
+                      onToggle={() => sports.toggle(sport.value)}
                     >
-                      {sport}
+                      {sport.icon} {sport.label}
                     </Chip>
                   ))}
                 </div>
@@ -160,13 +170,13 @@ export default function OnboardingPage() {
               <div className="field">
                 <label>Preferred Play Schedule</label>
                 <div className="row-wrap" style={{ marginTop: 6 }}>
-                  {TIMES.map((time) => (
+                  {PLAYER_TIMES.map((time) => (
                     <Chip
-                      key={time}
-                      active={times.isActive(time)}
-                      onToggle={() => times.toggle(time)}
+                      key={time.value}
+                      active={times.isActive(time.value)}
+                      onToggle={() => times.toggle(time.value)}
                     >
-                      {time}
+                      {time.label}
                     </Chip>
                   ))}
                 </div>
@@ -242,8 +252,9 @@ export default function OnboardingPage() {
               <div className="field">
                 <label htmlFor="on-pos">Preferred Position</label>
                 <Select id="on-pos" value={position} onChange={(e) => setPosition(e.target.value)}>
-                  {POSITIONS.map((pos) => (
-                    <option key={pos} value={pos}>{pos}</option>
+                  <option value="" disabled>Select your position</option>
+                  {PLAYER_POSITIONS.map((pos) => (
+                    <option key={pos.value} value={pos.value}>{pos.label}</option>
                   ))}
                 </Select>
               </div>
@@ -251,13 +262,13 @@ export default function OnboardingPage() {
               <div className="field">
                 <label>Skill Level</label>
                 <div className="row-wrap" style={{ marginTop: 6 }}>
-                  {SKILLS.map((level) => (
+                  {PLAYER_SKILLS.map((level) => (
                     <Chip
-                      key={level}
-                      active={skill.isActive(level)}
-                      onToggle={() => skill.toggle(level)}
+                      key={level.value}
+                      active={skill.isActive(level.value)}
+                      onToggle={() => toggleSkill(level.value)}
                     >
-                      {level}
+                      {level.label}
                     </Chip>
                   ))}
                 </div>
