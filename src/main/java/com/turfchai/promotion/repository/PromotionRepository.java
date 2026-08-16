@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,4 +37,16 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Promotion p where p.venue.id = :venueId and upper(p.code) = upper(:code)")
     Optional<Promotion> findByVenueAndCodeForUpdate(@Param("venueId") Long venueId, @Param("code") String code);
+
+    /**
+     * Promotions a player could actually redeem right now: active, inside
+     * their validity window, and — where a usage limit exists — not yet
+     * exhausted. Backs the checkout page's "browse codes" list, so it must
+     * not surface a code {@code validate-code} would immediately refuse.
+     */
+    @Query("select p from Promotion p where p.venue.id = :venueId and p.active = true "
+            + "and p.validFrom <= :now and (p.validUntil is null or p.validUntil >= :now) "
+            + "and (p.usageLimit is null or p.usageCount < p.usageLimit) "
+            + "order by p.createdAt desc")
+    List<Promotion> findAvailableForVenue(@Param("venueId") Long venueId, @Param("now") Instant now);
 }

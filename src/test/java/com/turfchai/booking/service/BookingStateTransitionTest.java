@@ -14,6 +14,7 @@ import com.turfchai.venue.entity.Pitch;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.PitchRepository;
 import com.turfchai.venue.repository.VenueRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -83,6 +84,29 @@ class BookingStateTransitionTest {
         pitch.setMaxPlayers(10);
         pitch.setActive(true);
         pitches.save(pitch);
+    }
+
+    // playerA/playerB are reused across every test in this class (TestAuth
+    // finds-or-creates by email against a DB shared for the whole class run).
+    // BookingService.holdSlot now rejects a second hold for a user who
+    // already has one active, so any test that leaves a hold dangling (never
+    // confirmed or cancelled) would otherwise break every later test that
+    // tries to hold a fresh slot for the same player.
+    @AfterEach
+    void releaseAnyDanglingHolds() {
+        releaseHold(playerA.getId());
+        releaseHold(playerB.getId());
+    }
+
+    private void releaseHold(Long userId) {
+        slots.findAll().stream()
+                .filter(slot -> userId.equals(slot.getHeldByUserId()))
+                .forEach(slot -> {
+                    slot.setStatus(SlotStatus.AVAILABLE);
+                    slot.setHeldByUserId(null);
+                    slot.setHoldExpiresAt(null);
+                    slots.save(slot);
+                });
     }
 
     private Slot futureSlot() {
@@ -168,6 +192,12 @@ class BookingStateTransitionTest {
 
         assertEquals(first.getId(), retry.getId());
         assertEquals(1, bookings.findBySlotIdAndStatusNot(slot.getId(), BookingStatus.CANCELLED).size());
+
+        // createPendingBooking deliberately leaves the slot HELD (payment gates
+        // confirmation) — released here so playerA, reused by TestAuth across
+        // every test in this class, doesn't carry a leftover hold into later
+        // tests and trip the one-hold-per-player rule in BookingService.holdSlot.
+        bookingService.cancelBooking(playerA.getId(), first.getId());
     }
 
     @Test

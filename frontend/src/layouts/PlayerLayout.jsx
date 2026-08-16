@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/buttons/ThemeToggle';
 import { BottomNav } from '@/components/navigation/BottomNav';
 import { Topbar } from '@/components/navigation/Topbar';
 import { Overlay } from '@/components/modals/Overlay';
+import { HeldSlotBanner } from '@/components/booking/HeldSlotBanner';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Panel';
@@ -103,6 +104,7 @@ export function PlayerLayout({ withFooter = false }) {
 
   return (
     <>
+      <HeldSlotBanner />
       <Topbar brand={<Brand to={paths.player.home} />} links={PLAYER_NAV_LINKS}>
         <ThemeToggle />
         <IconButton

@@ -84,6 +84,24 @@ public class BookingService {
                 && userId.equals(slot.getHeldByUserId())
                 && !expiredHold;
 
+        // One active hold per player at a time. Without this, a player could
+        // hold a second slot while still sitting on the first, tying up two
+        // venues' inventory for the same 5-minute window with no way to tell
+        // which one they actually meant to book — this is also what keeps
+        // the "resume your booking" prompt on the frontend pointing at a
+        // single, unambiguous slot.
+        if (!ownActiveHold) {
+            slotRepository.findActiveHoldsByUser(userId, SlotStatus.HELD, now)
+                    .stream()
+                    .filter(other -> !other.getId().equals(slotId))
+                    .findFirst()
+                    .ifPresent(other -> {
+                        throw new SlotUnavailableException(
+                                "You already have a slot on hold (slot " + other.getId()
+                                        + "). Finish or let that hold expire before holding another.");
+                    });
+        }
+
         if (slot.getStatus() == SlotStatus.AVAILABLE || expiredHold || ownActiveHold) {
             OffsetDateTime heldUntil = now.plusMinutes(HOLD_DURATION_MINUTES);
             slot.setStatus(SlotStatus.HELD);
@@ -95,6 +113,21 @@ public class BookingService {
             return heldUntil;
         }
         throw new SlotUnavailableException("Slot is not available for booking");
+    }
+
+    /**
+     * The caller's currently active hold, if any — powers the "you have a
+     * booking in progress" prompt shown across the player app so a player
+     * who navigated away mid-checkout can find their way back to it.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<Slot> getActiveHold(Long userId) {
+        if (userId == null) {
+            return java.util.Optional.empty();
+        }
+        return slotRepository.findActiveHoldsByUser(userId, SlotStatus.HELD, OffsetDateTime.now())
+                .stream()
+                .findFirst();
     }
 
     /**

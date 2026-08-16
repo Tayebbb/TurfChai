@@ -24,6 +24,19 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
     List<Slot> findByStatusAndHoldExpiresAtBefore(SlotStatus status, OffsetDateTime before);
 
     /**
+     * The caller's own currently-active hold, if any — used both to block a
+     * second concurrent hold on a different slot and to let the UI point the
+     * player back at whichever slot they already have on hold. Fetches the
+     * pitch eagerly so callers outside a transaction (e.g. a REST controller
+     * reading the result after the service's read-only transaction closes)
+     * can read the pitch name safely.
+     */
+    @Query("SELECT s FROM Slot s LEFT JOIN FETCH s.pitch WHERE s.heldByUserId = :heldByUserId "
+            + "AND s.status = :status AND s.holdExpiresAt > :after ORDER BY s.holdExpiresAt DESC")
+    List<Slot> findActiveHoldsByUser(
+            @Param("heldByUserId") Long heldByUserId, @Param("status") SlotStatus status, @Param("after") OffsetDateTime after);
+
+    /**
      * A venue's bookable slots on a given day, earliest first — the venue page's
      * availability grid. Fetches the pitch eagerly so callers outside a
      * transaction (e.g. a REST controller) can read pitch name/id safely.
