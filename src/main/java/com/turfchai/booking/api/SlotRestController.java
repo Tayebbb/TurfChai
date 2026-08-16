@@ -4,15 +4,18 @@ import com.turfchai.booking.dto.response.SlotResponse;
 import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.service.SlotAvailabilityService;
+import com.turfchai.booking.service.SlotDisplayStatus;
 import com.turfchai.booking.service.SlotEventBroadcaster;
 import com.turfchai.booking.service.SlotTimePolicy;
 import com.turfchai.exception.VenueNotFoundException;
+import com.turfchai.security.UserPrincipal;
 import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -62,13 +64,15 @@ public class SlotRestController {
     @GetMapping("/{venueId}/slots")
     public ResponseEntity<List<SlotResponse>> listSlots(
             @PathVariable Long venueId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @AuthenticationPrincipal UserPrincipal principal) {
         if (!venueRepository.existsById(venueId)) {
             throw new VenueNotFoundException("Venue not found: " + venueId);
         }
+        Long callerId = principal != null ? principal.getId() : null;
         List<SlotResponse> slots = slotAvailabilityService.ensureSlots(venueId, date)
                 .stream()
-                .map(this::toResponse)
+                .map(slot -> toResponse(slot, callerId))
                 .toList();
         return ResponseEntity.ok(slots);
     }
@@ -117,8 +121,11 @@ public class SlotRestController {
                 .body(emitter);
     }
 
-    private SlotResponse toResponse(Slot slot) {
-        String status = displayStatus(slot);
+    private SlotResponse toResponse(Slot slot, Long callerId) {
+        String status = SlotDisplayStatus.of(slot);
+        boolean heldByMe = callerId != null
+                && SlotStatus.HELD.name().equals(status)
+                && callerId.equals(slot.getHeldByUserId());
         return SlotResponse.builder()
                 .id(slot.getId())
                 .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
@@ -129,20 +136,7 @@ public class SlotRestController {
                 .price(slot.getPrice())
                 .status(status)
                 .bookable(SlotStatus.AVAILABLE.name().equals(status) && !slotTimePolicy.hasStarted(slot))
+                .heldByMe(heldByMe)
                 .build();
-    }
-
-    /**
-     * A HELD slot whose hold has already lapsed reads as AVAILABLE — the
-     * async cleanup job (30s cadence) will catch up and persist that; this
-     * just avoids showing a stale "held" state in the meantime.
-     */
-    private String displayStatus(Slot slot) {
-        if (slot.getStatus() == SlotStatus.HELD
-                && slot.getHoldExpiresAt() != null
-                && slot.getHoldExpiresAt().isBefore(OffsetDateTime.now())) {
-            return SlotStatus.AVAILABLE.name();
-        }
-        return slot.getStatus().name();
     }
 }

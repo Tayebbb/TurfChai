@@ -33,4 +33,13 @@ public class SlotResponse {
      * rather than on {@code status} alone.
      */
     private boolean bookable;
+
+    /**
+     * True only when {@code status} is HELD and the hold belongs to the
+     * caller. Lets a player who navigated away mid-checkout (back button,
+     * closed tab) click back into their own held slot instead of hitting a
+     * disabled "Held" cell with no way back to checkout. Never true for an
+     * anonymous caller or a hold owned by someone else.
+     */
+    private boolean heldByMe;
 }
