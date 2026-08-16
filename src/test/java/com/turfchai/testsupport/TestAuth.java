@@ -12,7 +12,8 @@ import java.util.UUID;
  * Test helper for authenticating requests the way a real client does: a signed
  * JWT in the {@code Authorization} header, verified by the real filter chain.
  *
- * <p>Deliberately not a mocked principal — these are security tests, so the
+ * <p>
+ * Deliberately not a mocked principal — these are security tests, so the
  * token has to travel through {@code JwtAuthenticationFilter} and
  * {@code SecurityConfig} exactly as it would in production.
  */
@@ -30,7 +31,7 @@ public final class TestAuth {
 
     /** Creates (or reuses) a user with the given email and role. */
     public static User user(UserRepository users, PasswordEncoder encoder,
-                            String email, RoleType role) {
+            String email, RoleType role) {
         return users.findByEmail(email).orElseGet(() -> users.save(User.builder()
                 .publicId(UUID.randomUUID().toString())
                 .fullName("Test " + role.name())
@@ -44,7 +45,7 @@ public final class TestAuth {
 
     /** Convenience: create a user and return its bearer header in one call. */
     public static String bearerFor(UserRepository users, PasswordEncoder encoder, JwtService jwtService,
-                                   String email, RoleType role) {
+            String email, RoleType role) {
         return bearer(jwtService, user(users, encoder, email, role));
     }
 }

@@ -41,7 +41,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * Handles all owner-side venue management: create, update, pitches, pricing rules.
+ * Handles all owner-side venue management: create, update, pitches, pricing
+ * rules.
  * The player-facing read path lives in {@link VenueSearchService}.
  */
 @Service
@@ -51,10 +52,10 @@ public class VenueManagementService {
     private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^a-z0-9]+");
 
     /** Mirrors ck_venues_cancel / ck_venues_deposit in V1__baseline.sql. */
-    private static final java.util.Set<String> ALLOWED_CANCEL_POLICIES =
-            java.util.Set.of("FREE_24H_50_6H", "FLEXIBLE_6H", "STRICT_NO_REFUND");
-    private static final java.util.Set<String> ALLOWED_DEPOSIT_POLICIES =
-            java.util.Set.of("FULL_ONLY", "THIRTY_PERCENT", "FIFTY_PERCENT");
+    private static final java.util.Set<String> ALLOWED_CANCEL_POLICIES = java.util.Set.of("FREE_24H_50_6H",
+            "FLEXIBLE_6H", "STRICT_NO_REFUND");
+    private static final java.util.Set<String> ALLOWED_DEPOSIT_POLICIES = java.util.Set.of("FULL_ONLY",
+            "THIRTY_PERCENT", "FIFTY_PERCENT");
 
     private final VenueRepository venueRepository;
     private final PitchRepository pitchRepository;
@@ -67,14 +68,14 @@ public class VenueManagementService {
     private final com.turfchai.booking.service.SlotTimePolicy slotTimePolicy;
 
     public VenueManagementService(VenueRepository venueRepository,
-                                   PitchRepository pitchRepository,
-                                   SportRepository sportRepository,
-                                   SportPricingRuleRepository pricingRuleRepository,
-                                   UserRepository userRepository,
-                                   SlotRepository slotRepository,
-                                   com.turfchai.repository.TurfRequestRepository turfRequestRepository,
-                                   BookingRepository bookingRepository,
-                                   com.turfchai.booking.service.SlotTimePolicy slotTimePolicy) {
+            PitchRepository pitchRepository,
+            SportRepository sportRepository,
+            SportPricingRuleRepository pricingRuleRepository,
+            UserRepository userRepository,
+            SlotRepository slotRepository,
+            com.turfchai.repository.TurfRequestRepository turfRequestRepository,
+            BookingRepository bookingRepository,
+            com.turfchai.booking.service.SlotTimePolicy slotTimePolicy) {
         this.venueRepository = venueRepository;
         this.pitchRepository = pitchRepository;
         this.sportRepository = sportRepository;
@@ -102,24 +103,42 @@ public class VenueManagementService {
             venue.setVenueCode(generateVenueCode());
         }
         venue.setName(req.name());
-        if (req.address() != null && !req.address().isBlank()) venue.setAddress(req.address());
-        if (req.area() != null && !req.area().isBlank()) venue.setArea(req.area());
-        if (req.lat() != null) venue.setLat(req.lat());
-        if (req.lng() != null) venue.setLng(req.lng());
-        if (req.basePrice() != null) venue.setBasePrice(req.basePrice());
-        if (req.openTime() != null) venue.setOpenTime(parseTime(req.openTime()));
-        if (req.closeTime() != null) venue.setCloseTime(parseTime(req.closeTime()));
-        if (req.amenities() != null) venue.setAmenities(req.amenities());
-        if (req.contactPhone() != null) venue.setContactPhone(req.contactPhone());
-        if (req.contactEmail() != null) venue.setContactEmail(req.contactEmail());
-        if (req.depositPolicy() != null) venue.setDepositPolicy(validDepositPolicy(req.depositPolicy()));
-        if (req.cancelPolicy() != null) venue.setCancelPolicy(validCancelPolicy(req.cancelPolicy()));
-        if (req.allowSplitPayment() != null) venue.setAllowSplitPayment(req.allowSplitPayment());
-        if (req.rules() != null) venue.setRules(req.rules());
-        if (req.photos() != null && !req.photos().isEmpty()) venue.setPhotos(String.join(",", req.photos()));
-        if (req.mlPricingEnabled() != null) venue.setMlPricingEnabled(req.mlPricingEnabled());
+        if (req.address() != null && !req.address().isBlank())
+            venue.setAddress(req.address());
+        if (req.area() != null && !req.area().isBlank())
+            venue.setArea(req.area());
+        if (req.lat() != null)
+            venue.setLat(req.lat());
+        if (req.lng() != null)
+            venue.setLng(req.lng());
+        if (req.basePrice() != null)
+            venue.setBasePrice(req.basePrice());
+        if (req.openTime() != null)
+            venue.setOpenTime(parseTime(req.openTime()));
+        if (req.closeTime() != null)
+            venue.setCloseTime(parseTime(req.closeTime()));
+        if (req.amenities() != null)
+            venue.setAmenities(req.amenities());
+        if (req.contactPhone() != null)
+            venue.setContactPhone(req.contactPhone());
+        if (req.contactEmail() != null)
+            venue.setContactEmail(req.contactEmail());
+        if (req.depositPolicy() != null)
+            venue.setDepositPolicy(validDepositPolicy(req.depositPolicy()));
+        if (req.cancelPolicy() != null)
+            venue.setCancelPolicy(validCancelPolicy(req.cancelPolicy()));
+        if (req.allowSplitPayment() != null)
+            venue.setAllowSplitPayment(req.allowSplitPayment());
+        if (req.rules() != null)
+            venue.setRules(req.rules());
+        if (req.photos() != null && !req.photos().isEmpty())
+            venue.setPhotos(String.join(",", req.photos()));
+        if (req.mlPricingEnabled() != null)
+            venue.setMlPricingEnabled(req.mlPricingEnabled());
 
-        var requests = (turfRequestRepository != null) ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId) : List.<com.turfchai.model.TurfRequest>of();
+        var requests = (turfRequestRepository != null)
+                ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId)
+                : List.<com.turfchai.model.TurfRequest>of();
         if (!requests.isEmpty() && "APPROVED".equalsIgnoreCase(requests.get(0).getStatus())) {
             venue.setVerified(true);
             if ("DRAFT".equalsIgnoreCase(venue.getStatus()) || "PENDING".equalsIgnoreCase(venue.getStatus())) {
@@ -136,7 +155,8 @@ public class VenueManagementService {
     /**
      * List all venues owned by the given user.
      *
-     * <p>This used to invent a venue when the owner had none: "Kick Off Arena"
+     * <p>
+     * This used to invent a venue when the owner had none: "Kick Off Arena"
      * in Dhanmondi at 23.8103/90.4125, ৳2000, "floodlights,parking". A brand-new
      * owner who had created nothing was shown a turf they did not own, at an
      * address that was not theirs. A venue is created in exactly one place -
@@ -150,7 +170,9 @@ public class VenueManagementService {
         }
         User owner = userRepository.findById(ownerUserId).orElse(null);
         List<Venue> venues = venueRepository.findByOwnerId(ownerUserId);
-        var requests = (turfRequestRepository != null) ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId) : List.<com.turfchai.model.TurfRequest>of();
+        var requests = (turfRequestRepository != null)
+                ? turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(ownerUserId)
+                : List.<com.turfchai.model.TurfRequest>of();
         if (requests.isEmpty() && owner != null && owner.getEmail() != null) {
             requests = turfRequestRepository.findByOwnerEmailOrderByCreatedAtDesc(owner.getEmail());
         }
@@ -215,26 +237,46 @@ public class VenueManagementService {
     public VenueManagementDto updateVenue(Long ownerUserId, Long venueId, UpdateVenueRequest req) {
         Venue venue = requireOwnership(ownerUserId, venueId);
 
-        if (req.name() != null) venue.setName(req.name());
-        if (req.address() != null) venue.setAddress(req.address());
-        if (req.area() != null) venue.setArea(req.area());
-        if (req.lat() != null) venue.setLat(req.lat());
-        if (req.lng() != null) venue.setLng(req.lng());
-        if (req.openTime() != null) venue.setOpenTime(parseTime(req.openTime()));
-        if (req.closeTime() != null) venue.setCloseTime(parseTime(req.closeTime()));
-        if (req.amenities() != null) venue.setAmenities(req.amenities());
-        if (req.contactPhone() != null) venue.setContactPhone(req.contactPhone());
-        if (req.contactEmail() != null) venue.setContactEmail(req.contactEmail());
-        if (req.depositPolicy() != null) venue.setDepositPolicy(validDepositPolicy(req.depositPolicy()));
-        if (req.cancelPolicy() != null) venue.setCancelPolicy(validCancelPolicy(req.cancelPolicy()));
-        if (req.allowSplitPayment() != null) venue.setAllowSplitPayment(req.allowSplitPayment());
-        if (req.rules() != null) venue.setRules(req.rules());
-        if (req.status() != null) venue.setStatus(req.status());
-        if (req.hasPromotion() != null) venue.setHasPromotion(req.hasPromotion());
-        if (req.promotionLabel() != null) venue.setPromotionLabel(req.promotionLabel());
-        if (req.photos() != null) venue.setPhotos(String.join(",", req.photos()));
-        if (req.mlPricingEnabled() != null) venue.setMlPricingEnabled(req.mlPricingEnabled());
-        if (req.basePrice() != null) venue.setBasePrice(req.basePrice());
+        if (req.name() != null)
+            venue.setName(req.name());
+        if (req.address() != null)
+            venue.setAddress(req.address());
+        if (req.area() != null)
+            venue.setArea(req.area());
+        if (req.lat() != null)
+            venue.setLat(req.lat());
+        if (req.lng() != null)
+            venue.setLng(req.lng());
+        if (req.openTime() != null)
+            venue.setOpenTime(parseTime(req.openTime()));
+        if (req.closeTime() != null)
+            venue.setCloseTime(parseTime(req.closeTime()));
+        if (req.amenities() != null)
+            venue.setAmenities(req.amenities());
+        if (req.contactPhone() != null)
+            venue.setContactPhone(req.contactPhone());
+        if (req.contactEmail() != null)
+            venue.setContactEmail(req.contactEmail());
+        if (req.depositPolicy() != null)
+            venue.setDepositPolicy(validDepositPolicy(req.depositPolicy()));
+        if (req.cancelPolicy() != null)
+            venue.setCancelPolicy(validCancelPolicy(req.cancelPolicy()));
+        if (req.allowSplitPayment() != null)
+            venue.setAllowSplitPayment(req.allowSplitPayment());
+        if (req.rules() != null)
+            venue.setRules(req.rules());
+        if (req.status() != null)
+            venue.setStatus(req.status());
+        if (req.hasPromotion() != null)
+            venue.setHasPromotion(req.hasPromotion());
+        if (req.promotionLabel() != null)
+            venue.setPromotionLabel(req.promotionLabel());
+        if (req.photos() != null)
+            venue.setPhotos(String.join(",", req.photos()));
+        if (req.mlPricingEnabled() != null)
+            venue.setMlPricingEnabled(req.mlPricingEnabled());
+        if (req.basePrice() != null)
+            venue.setBasePrice(req.basePrice());
 
         return toDto(venueRepository.save(venue));
     }
@@ -264,8 +306,8 @@ public class VenueManagementService {
         pitch.setActive(true);
 
         if (req.sportSlugs() != null && !req.sportSlugs().isEmpty()) {
-            req.sportSlugs().forEach(slug ->
-                    sportRepository.findBySlug(slug.toLowerCase(Locale.ROOT)).ifPresent(pitch.getSports()::add));
+            req.sportSlugs().forEach(slug -> sportRepository.findBySlug(slug.toLowerCase(Locale.ROOT))
+                    .ifPresent(pitch.getSports()::add));
         }
         if (pitch.getSports().isEmpty()) {
             sportRepository.findBySlug("football").ifPresent(pitch.getSports()::add);
@@ -278,25 +320,33 @@ public class VenueManagementService {
 
     /** Update an existing pitch. */
     public VenueManagementDto.PitchDto updatePitch(Long ownerUserId, Long venueId,
-                                                    Long pitchId, UpdatePitchRequest req) {
+            Long pitchId, UpdatePitchRequest req) {
         requireOwnership(ownerUserId, venueId);
         Pitch pitch = pitchRepository.findById(pitchId)
                 .filter(p -> p.getVenue().getId().equals(venueId))
                 .orElseThrow(() -> new IllegalArgumentException("Pitch not found: " + pitchId));
 
-        if (req.name() != null) pitch.setName(req.name());
-        if (req.format() != null) pitch.setFormat(req.format());
-        if (req.surfaceType() != null) pitch.setSurfaceType(req.surfaceType());
-        if (req.surfaceDetail() != null) pitch.setSurfaceDetail(req.surfaceDetail());
-        if (req.dimensions() != null) pitch.setDimensions(req.dimensions());
-        if (req.lighting() != null) pitch.setLighting(req.lighting());
-        if (req.maxPlayers() != null) pitch.setMaxPlayers(req.maxPlayers());
-        if (req.indoor() != null) pitch.setIndoor(req.indoor());
-        if (req.active() != null) pitch.setActive(req.active());
+        if (req.name() != null)
+            pitch.setName(req.name());
+        if (req.format() != null)
+            pitch.setFormat(req.format());
+        if (req.surfaceType() != null)
+            pitch.setSurfaceType(req.surfaceType());
+        if (req.surfaceDetail() != null)
+            pitch.setSurfaceDetail(req.surfaceDetail());
+        if (req.dimensions() != null)
+            pitch.setDimensions(req.dimensions());
+        if (req.lighting() != null)
+            pitch.setLighting(req.lighting());
+        if (req.maxPlayers() != null)
+            pitch.setMaxPlayers(req.maxPlayers());
+        if (req.indoor() != null)
+            pitch.setIndoor(req.indoor());
+        if (req.active() != null)
+            pitch.setActive(req.active());
         if (req.sportSlugs() != null) {
             pitch.getSports().clear();
-            req.sportSlugs().forEach(slug ->
-                    sportRepository.findBySlug(slug).ifPresent(pitch.getSports()::add));
+            req.sportSlugs().forEach(slug -> sportRepository.findBySlug(slug).ifPresent(pitch.getSports()::add));
         }
 
         return toPitchDto(pitchRepository.save(pitch));
@@ -312,14 +362,16 @@ public class VenueManagementService {
         pitchRepository.save(pitch);
     }
 
-    // ── Pricing Rules ────────────────────────────────────────────────────────────────
+    // ── Pricing Rules
+    // ────────────────────────────────────────────────────────────────
 
     /**
      * Upsert a pricing rule for a (venue, sport, windowType) combination.
-     * If a rule already exists for that combination, it is updated; otherwise created.
+     * If a rule already exists for that combination, it is updated; otherwise
+     * created.
      */
     public VenueManagementDto.PricingRuleDto upsertPricingRule(Long ownerUserId, Long venueId,
-                                                                UpsertPricingRuleRequest req) {
+            UpsertPricingRuleRequest req) {
         if (!req.windowEnd().isAfter(req.windowStart())) {
             throw new IllegalArgumentException("windowEnd must be after windowStart");
         }
@@ -344,7 +396,7 @@ public class VenueManagementService {
         rule.setBufferMin(req.bufferMin() != null ? req.bufferMin() : 10);
         rule.setWindowStart(req.windowStart());
         rule.setWindowEnd(req.windowEnd());
-        rule.setDaysOfWeek(req.daysOfWeek() != null ? req.daysOfWeek() : List.of(1,2,3,4,5,6,7));
+        rule.setDaysOfWeek(req.daysOfWeek() != null ? req.daysOfWeek() : List.of(1, 2, 3, 4, 5, 6, 7));
         rule.setActive(true);
 
         return toPricingRuleDto(pricingRuleRepository.save(rule));
@@ -360,13 +412,6 @@ public class VenueManagementService {
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
-
-    /** Dedicated method to just toggle ML Pricing */
-    public VenueManagementDto updateMlSettings(Long ownerUserId, Long venueId, boolean mlPricingEnabled) {
-        Venue venue = requireOwnership(ownerUserId, venueId);
-        venue.setMlPricingEnabled(mlPricingEnabled);
-        return toDto(venueRepository.save(venue));
-    }
 
     /** Add a photo URL to the venue photos list */
     public VenueManagementDto addVenuePhoto(Long ownerUserId, Long venueId, String photoUrl) {
@@ -420,7 +465,8 @@ public class VenueManagementService {
     }
 
     private static LocalTime parseTime(String hhmm) {
-        if (hhmm == null) return null;
+        if (hhmm == null)
+            return null;
         String[] parts = hhmm.split(":");
         return LocalTime.of(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
     }
@@ -493,8 +539,7 @@ public class VenueManagementService {
                 v.getContactPhone(), v.getContactEmail(),
                 v.getDepositPolicy(), v.getCancelPolicy(), v.getBasePrice(), v.isAllowSplitPayment(),
                 isVerified, v.isTournamentReady(), v.isHasPromotion(), v.getPromotionLabel(),
-                v.isMlPricingEnabled(), photos, pitches, rules
-        );
+                v.isMlPricingEnabled(), photos, pitches, rules);
     }
 
     private VenueManagementDto.PitchDto toPitchDto(Pitch p) {
@@ -504,8 +549,7 @@ public class VenueManagementService {
         return new VenueManagementDto.PitchDto(
                 p.getId(), p.getName(), p.getFormat(), p.getSurfaceType(),
                 p.getSurfaceDetail(), p.getDimensions(), p.getLighting(),
-                p.getMaxPlayers(), p.isIndoor(), p.isActive(), sportSlugs
-        );
+                p.getMaxPlayers(), p.isIndoor(), p.isActive(), sportSlugs);
     }
 
     private VenueManagementDto.PricingRuleDto toPricingRuleDto(SportPricingRule r) {
@@ -513,8 +557,7 @@ public class VenueManagementService {
         return new VenueManagementDto.PricingRuleDto(
                 r.getId(), sportSlug, r.getWindowType(),
                 r.getRate(), r.getSlotDurationMin(), r.getBufferMin(),
-                r.getWindowStart(), r.getWindowEnd(), r.getDaysOfWeek(), r.isActive()
-        );
+                r.getWindowStart(), r.getWindowEnd(), r.getDaysOfWeek(), r.isActive());
     }
 
     // ── Calendar Grid ──────────────────────────────────────────────────────
@@ -556,12 +599,13 @@ public class VenueManagementService {
             dbSlots = seedSlotsForDate(venue.getId(), pitches, date);
         }
 
-        List<OwnerCalendarDto.PitchHeaderDto> pitchHeaders = pitches.stream().map(p -> new OwnerCalendarDto.PitchHeaderDto(
-                p.getId(),
-                p.getName(),
-                p.getFormat() != null ? p.getFormat() : "Standard",
-                p.getSports().stream().map(Sport::getSlug).toList()
-        )).toList();
+        List<OwnerCalendarDto.PitchHeaderDto> pitchHeaders = pitches.stream()
+                .map(p -> new OwnerCalendarDto.PitchHeaderDto(
+                        p.getId(),
+                        p.getName(),
+                        p.getFormat() != null ? p.getFormat() : "Standard",
+                        p.getSports().stream().map(Sport::getSlug).toList()))
+                .toList();
 
         List<OwnerCalendarDto.TimeRowDto> rows = buildCalendarRowsFromDbSlots(pitchHeaders, dbSlots,
                 liveBookingsBySlot(venue.getId(), date));
@@ -622,7 +666,8 @@ public class VenueManagementService {
     /**
      * Records a walk-in or phone booking the owner took directly.
      *
-     * <p>Locks the slot and refuses one that is already taken or has already
+     * <p>
+     * Locks the slot and refuses one that is already taken or has already
      * started. It previously overwrote any slot unconditionally, so a manual
      * booking could silently take a slot a player had already paid for, and could
      * be entered against a match that had already been played.
@@ -699,7 +744,8 @@ public class VenueManagementService {
     }
 
     /**
-     * Indexes the venue's live (non-cancelled) bookings for a date by slot id, so the
+     * Indexes the venue's live (non-cancelled) bookings for a date by slot id, so
+     * the
      * calendar can expose the real booking behind each occupied cell.
      */
     private java.util.Map<Long, Booking> liveBookingsBySlot(Long venueId, LocalDate date) {
@@ -724,8 +770,7 @@ public class VenueManagementService {
                 .collect(java.util.stream.Collectors.groupingBy(
                         s -> s.getStartTime().format(timeFormatter),
                         java.util.LinkedHashMap::new,
-                        java.util.stream.Collectors.toList()
-                ));
+                        java.util.stream.Collectors.toList()));
 
         List<OwnerCalendarDto.TimeRowDto> timeRows = new ArrayList<>();
 

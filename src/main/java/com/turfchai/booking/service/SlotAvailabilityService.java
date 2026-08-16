@@ -30,7 +30,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SlotAvailabilityService {
 
-    /** Fallback times when the venue has no pricing rules to derive windows from. */
+    /**
+     * Fallback times when the venue has no pricing rules to derive windows from.
+     */
     private static final LocalTime[] DEFAULT_START_TIMES = {
             LocalTime.of(7, 0), LocalTime.of(9, 30), LocalTime.of(16, 0),
             LocalTime.of(17, 30), LocalTime.of(19, 0), LocalTime.of(20, 30)
@@ -50,7 +52,8 @@ public class SlotAvailabilityService {
      * that date. Existing rows always win — a refetch or a later visitor sees
      * exactly what is already persisted, so availability stays consistent.
      *
-     * <p>Generation is bounded to {@link SlotTimePolicy#mayGenerateFor}: a past
+     * <p>
+     * Generation is bounded to {@link SlotTimePolicy#mayGenerateFor}: a past
      * date returns only what history already holds (never new rows), and dates
      * beyond the horizon are not materialised at all. Both limits exist because
      * this endpoint is public and unauthenticated, so anything it creates on

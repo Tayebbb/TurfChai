@@ -38,6 +38,8 @@ public class BookingService {
     private final VenueRepository venueRepository;
     private final PitchRepository pitchRepository;
     private final SlotTimePolicy slotTimePolicy;
+    private final com.turfchai.promotion.service.PromotionService promotionService;
+    private final com.turfchai.service.NotificationService notificationService;
     /**
      * Slot changes are announced here but delivered only after this
      * transaction commits — see {@link SlotEventBroadcaster}.
@@ -66,7 +68,8 @@ public class BookingService {
 
         if (slot.getVenueId() != null) {
             venueRepository.findById(slot.getVenueId()).ifPresent(v -> {
-                if (v.getStatus() != null && ("OFFLINE".equalsIgnoreCase(v.getStatus().trim()) || "SUSPENDED".equalsIgnoreCase(v.getStatus().trim()))) {
+                if (v.getStatus() != null && ("OFFLINE".equalsIgnoreCase(v.getStatus().trim())
+                        || "SUSPENDED".equalsIgnoreCase(v.getStatus().trim()))) {
                     throw new SlotUnavailableException("Turf is currently unavailable / offline.");
                 }
             });
@@ -177,7 +180,8 @@ public class BookingService {
      * {@code CONFIRMED} and its slot to {@code BOOKED}, once payment has
      * actually succeeded.
      *
-     * <p>It re-verifies the booking and the hold under the slot lock. It used to
+     * <p>
+     * It re-verifies the booking and the hold under the slot lock. It used to
      * force both rows regardless of what had happened in between, so a payment
      * arriving after the hold expired — and after somebody else had taken the
      * slot — silently overwrote their booking.
@@ -185,7 +189,8 @@ public class BookingService {
     @Transactional
     public void finalizeConfirmedBooking(Booking booking) {
         Slot slot = slotRepository.findByIdForUpdate(booking.getSlot().getId())
-                .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + booking.getSlot().getId()));
+                .orElseThrow(
+                        () -> new SlotUnavailableException("Slot not found with id: " + booking.getSlot().getId()));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new IllegalStateException(
@@ -212,6 +217,42 @@ public class BookingService {
                     .ifPresent(booking::setCancelPolicySnapshot);
         }
         bookingRepository.save(booking);
+        announceConfirmed(booking);
+    }
+
+    /** The player's copy of the confirmation, written where the status flips. */
+    private void announceConfirmed(Booking booking) {
+        notificationService.sendOnce(booking.getUserId(), "BOOKING_CONFIRMED",
+                "Booking confirmed · " + venueName(booking.getVenueId()),
+                whenText(booking) + ". Your booking code is " + booking.getBookingCode() + ".",
+                bookingLink(booking));
+    }
+
+    private String venueName(Long venueId) {
+        if (venueId == null) {
+            return "your turf";
+        }
+        return venueRepository.findById(venueId)
+                .map(com.turfchai.venue.entity.Venue::getName)
+                .orElse("your turf");
+    }
+
+    private String whenText(Booking booking) {
+        String date = booking.getBookingDate() != null
+                ? booking.getBookingDate().format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM",
+                        java.util.Locale.ENGLISH))
+                : "Your slot";
+        if (booking.getStartTime() == null) {
+            return date;
+        }
+        java.time.format.DateTimeFormatter time = java.time.format.DateTimeFormatter.ofPattern("h:mm a",
+                java.util.Locale.ENGLISH);
+        String end = booking.getEndTime() != null ? "–" + booking.getEndTime().format(time) : "";
+        return date + ", " + booking.getStartTime().format(time) + end;
+    }
+
+    private String bookingLink(Booking booking) {
+        return booking.getId() == null ? null : "/player/bookings/" + booking.getId();
     }
 
     private boolean isOwnedActiveHold(Slot slot, Long userId) {
@@ -247,13 +288,15 @@ public class BookingService {
         }
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
+        announceConfirmed(booking);
     }
 
     /**
      * Cancels a booking and releases its slot back to AVAILABLE. The caller
      * must be the booking owner or an admin/owner role.
      *
-     * <p>Cancelling is not idempotent by design: a second cancel used to run
+     * <p>
+     * Cancelling is not idempotent by design: a second cancel used to run
      * the slot-release again, so re-cancelling an old booking could hand an
      * AVAILABLE status to a slot a *different* booking had since taken.
      */
@@ -270,8 +313,23 @@ public class BookingService {
             throw new IllegalStateException("This booking is already cancelled");
         }
 
+        // Hand the promo redemption back: a cancelled booking must not keep
+        // consuming one of a limited run.
+        if (booking.getPromoCode() != null && !booking.getPromoCode().isBlank()) {
+            promotionService.releaseUsage(booking.getVenueId(), booking.getPromoCode());
+        }
+
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+
+        // The booking's owner is told either way, but only a cancellation they
+        // did not make themselves needs to say where it came from.
+        boolean cancelledByVenue = !java.util.Objects.equals(userId, booking.getUserId());
+        notificationService.sendOnce(booking.getUserId(), "BOOKING_CANCELLED",
+                "Booking cancelled · " + venueName(booking.getVenueId()),
+                whenText(booking) + " (" + booking.getBookingCode() + ") "
+                        + (cancelledByVenue ? "was cancelled by the venue." : "is cancelled."),
+                bookingLink(booking));
 
         if (booking.getSlot() == null) {
             return;
@@ -352,6 +410,8 @@ public class BookingService {
                 .endTime(booking.getEndTime())
                 .amount(booking.getGrossAmount())
                 .netAmount(booking.getNetAmount())
+                .promoCode(booking.getPromoCode())
+                .discountAmount(booking.getDiscountAmount())
                 .checkedInAt(booking.getCheckedInAt())
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())
@@ -361,7 +421,8 @@ public class BookingService {
     /**
      * True when the caller may read or act on this booking.
      *
-     * <p>Players see only their own. Admins see everything. An owner sees only
+     * <p>
+     * Players see only their own. Admins see everything. An owner sees only
      * bookings made at a venue they actually own — granting every owner access to
      * every booking would have let one venue read, cancel and refund another
      * venue's takings.

@@ -19,17 +19,12 @@ export function profileCompletion(profile) {
   };
 }
 
-/**
- * Sidebar model. `pending: true` marks a section whose backing service does
- * not exist yet — those screens explain what is missing instead of faking data.
- */
+/** Sidebar model for the player dashboard. */
 export const DASHBOARD_SECTIONS = [
   { path: paths.player.dashboard.root, label: 'Overview', icon: '◎', end: true },
   { path: paths.player.dashboard.tournaments, label: 'Tournaments', icon: '🏆' },
   { path: paths.player.dashboard.venues, label: 'Saved venues', icon: '❤' },
   { path: paths.player.dashboard.bookings, label: 'My bookings', icon: '📅' },
-  { path: paths.player.dashboard.teams, label: 'My teams', icon: '👥', pending: true },
-  { path: paths.player.dashboard.network, label: 'Player network', icon: '🤝', pending: true },
   { path: paths.player.dashboard.stats, label: 'Statistics', icon: '📈' },
   { path: paths.player.dashboard.wallet, label: 'Wallet', icon: '৳' },
   { path: paths.player.dashboard.notifications, label: 'Notifications', icon: '🔔' },

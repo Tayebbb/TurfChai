@@ -32,7 +32,7 @@ import java.util.List;
  * Seeds test tournament data (test profile only).
  */
 @Configuration
-@Profile({"dev", "test"})
+@Profile({ "dev", "test" })
 public class TournamentDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(TournamentDataSeeder.class);
@@ -40,21 +40,20 @@ public class TournamentDataSeeder {
     public static final String DEMO_CODE = "TR-CUP-0091";
 
     @Bean
-    @Order(3)   // after venue (1) and player (2) seeders
+    @Order(3) // after venue (1) and player (2) seeders
     CommandLineRunner seedDemoTournament(TournamentRepository tournaments,
-                                          TournamentTeamRepository teams,
-                                          TournamentPitchReservationRepository reservations,
-                                          VenueRepository venues,
-                                          PitchRepository pitches,
-                                          UserRepository users,
-                                          TournamentService tournamentService,
-                                          org.springframework.transaction.support.TransactionTemplate tx) {
+            TournamentTeamRepository teams,
+            TournamentPitchReservationRepository reservations,
+            VenueRepository venues,
+            PitchRepository pitches,
+            UserRepository users,
+            TournamentService tournamentService,
+            org.springframework.transaction.support.TransactionTemplate tx) {
         return args -> {
             if (tournaments.existsByCode(DEMO_CODE)) {
                 return;
             }
-            tx.executeWithoutResult(status ->
-                    seed(tournaments, teams, reservations, venues, pitches, users));
+            tx.executeWithoutResult(status -> seed(tournaments, teams, reservations, venues, pitches, users));
             if (tournaments.existsByCode(DEMO_CODE)) {
                 tournamentService.generateFixtures(DEMO_CODE);
                 log.info("Seeded demo tournament {}", DEMO_CODE);
@@ -63,11 +62,11 @@ public class TournamentDataSeeder {
     }
 
     void seed(TournamentRepository tournaments,
-              TournamentTeamRepository teams,
-              TournamentPitchReservationRepository reservations,
-              VenueRepository venues,
-              PitchRepository pitches,
-              UserRepository users) {
+            TournamentTeamRepository teams,
+            TournamentPitchReservationRepository reservations,
+            VenueRepository venues,
+            PitchRepository pitches,
+            UserRepository users) {
         Venue venue = venues.findBySlug("mirpur-sports-city").orElse(null);
         User host = users.findByPublicId(
                 com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()).orElse(null);
@@ -77,8 +76,8 @@ public class TournamentDataSeeder {
         }
 
         List<Pitch> tournamentPitches = new ArrayList<>();
-        String[][] specs = {{"Pitch A", "7_a_side"}, {"Pitch B", "7_a_side"},
-                {"Pitch C", "7_a_side"}, {"Pitch D", "9_a_side"}};
+        String[][] specs = { { "Pitch A", "7_a_side" }, { "Pitch B", "7_a_side" },
+                { "Pitch C", "7_a_side" }, { "Pitch D", "9_a_side" } };
         for (String[] spec : specs) {
             Pitch p = new Pitch();
             p.setVenue(venue);
@@ -108,10 +107,10 @@ public class TournamentDataSeeder {
         t.setBalanceDueDate(LocalDate.of(2027, 8, 18));
         t = tournaments.save(t);
 
-        String[] teamNames = {"Dhanmondi Strikers", "Mirpur Kings", "Uttara FC", "Banani Blues",
+        String[] teamNames = { "Dhanmondi Strikers", "Mirpur Kings", "Uttara FC", "Banani Blues",
                 "Gulshan Gladiators", "Bashundhara Boys", "Mohammadpur Mavericks", "Lalmatia Lions",
                 "Badda Blasters", "Khilgaon Knights", "Motijheel Marauders", "Tejgaon Titans",
-                "Wari Warriors"};
+                "Wari Warriors" };
         for (String name : teamNames) {
             TournamentTeam team = new TournamentTeam();
             team.setTournament(t);
@@ -123,14 +122,14 @@ public class TournamentDataSeeder {
         }
 
         int[][] slotMatrix = {
-                {8, 1, 1, 0, 1},
-                {10, 1, 1, 0, 1},
-                {12, 1, 1, 0, 1},
-                {14, 1, 0, 0, 1},
-                {16, 1, 0, 0, 1},
+                { 8, 1, 1, 0, 1 },
+                { 10, 1, 1, 0, 1 },
+                { 12, 1, 1, 0, 1 },
+                { 14, 1, 0, 0, 1 },
+                { 16, 1, 0, 0, 1 },
         };
-        BigDecimal[] pitchRate = {new BigDecimal("3000"), new BigDecimal("3000"),
-                new BigDecimal("3000"), new BigDecimal("3600")};
+        BigDecimal[] pitchRate = { new BigDecimal("3000"), new BigDecimal("3000"),
+                new BigDecimal("3000"), new BigDecimal("3600") };
         for (int[] row : slotMatrix) {
             for (int p = 0; p < 4; p++) {
                 if (row[p + 1] == 0) {

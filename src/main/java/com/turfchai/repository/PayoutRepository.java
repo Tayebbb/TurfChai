@@ -22,5 +22,8 @@ public interface PayoutRepository extends JpaRepository<Payout, Long> {
     @Query("select sum(p.netAmount) from Payout p where p.status = :status")
     BigDecimal sumNetAmountByStatus(@Param("status") String status);
 
+    @Query("select sum(p.platformFee) from Payout p where p.status = :status")
+    BigDecimal sumPlatformFeeByStatus(@Param("status") String status);
+
     long countByStatus(String status);
 }

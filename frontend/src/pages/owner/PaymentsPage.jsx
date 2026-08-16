@@ -584,7 +584,7 @@ export default function PaymentsPage() {
             </div>
           </div>
           <Alert tone="ok" icon="🧾" title="Cash drawer vs ledger" style={{ marginTop: 12 }}>
-            {reconciliation.drawerStatus || 'Ledger balanced ✓'}
+            {reconciliation.drawerStatus || '—'}
           </Alert>
         </section>
 

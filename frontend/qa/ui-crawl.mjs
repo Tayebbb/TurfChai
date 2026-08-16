@@ -204,12 +204,12 @@ const PLAYER_PUBLIC = [
 const PLAYER_AUTHED = [
   '/player/onboarding', '/player/booking-success', '/player/bookings',
   ...(bookingId ? [`/player/bookings/${bookingId}`] : []),
-  '/player/split-payment', '/player/matchday', '/player/review', '/player/cancel',
+  '/player/matchday', '/player/review', '/player/cancel',
   '/player/rewards', '/player/settings',
   '/player/tournaments/TR-CUP-0091',
   '/player/tournaments/TR-CUP-0091/register',
   '/player/dashboard', '/player/dashboard/tournaments', '/player/dashboard/venues',
-  '/player/dashboard/bookings', '/player/dashboard/teams', '/player/dashboard/network',
+  '/player/dashboard/bookings',
   '/player/dashboard/stats', '/player/dashboard/wallet', '/player/dashboard/notifications',
   '/player/dashboard/settings',
   '/solo/alerts', '/solo/ticket',
@@ -217,7 +217,7 @@ const PLAYER_AUTHED = [
 ];
 
 const OWNER = ['/owner', '/owner/calendar', '/owner/bookings', '/owner/payments',
-  '/owner/venue-setup', '/owner/customers', '/owner/promotions', '/owner/reviews', '/owner/staff'];
+  '/owner/venue-setup', '/owner/customers', '/owner/promotions', '/owner/reviews'];
 
 const ADMIN = ['/admin', '/admin/turf-requests',
   ...(requestCode ? [`/admin/turf-requests/${requestCode}`] : []),

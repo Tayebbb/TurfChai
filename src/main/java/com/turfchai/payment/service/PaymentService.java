@@ -12,6 +12,9 @@ import com.turfchai.payment.entity.PaymentMethod;
 import com.turfchai.payment.entity.PaymentStatus;
 import com.turfchai.payment.entity.PaymentType;
 import com.turfchai.payment.repository.PaymentRepository;
+import com.turfchai.exception.PromotionRejectedException;
+import com.turfchai.promotion.dto.AppliedDiscountResponse;
+import com.turfchai.promotion.dto.ValidatePromoCodeRequest;
 import com.turfchai.reward.entity.PointLedgerEntry;
 import com.turfchai.reward.service.RewardService;
 import com.turfchai.venue.entity.Venue;
@@ -32,13 +35,18 @@ import java.util.UUID;
 /**
  * Simulated payment gateway + refund orchestration.
  *
- * <p><b>No real payment provider is contacted anywhere in this class.</b> There
- * is no bKash/Nagad/card integration behind it: a charge writes a ledger row and
- * is treated as taken. The product records what is owed and by which method, and
+ * <p>
+ * <b>No real payment provider is contacted anywhere in this class.</b> There
+ * is no bKash/Nagad/card integration behind it: a charge writes a ledger row
+ * and
+ * is treated as taken. The product records what is owed and by which method,
+ * and
  * the venue settles with the player directly — so no card data, PIN or token is
  * ever accepted, transmitted or stored.
  *
- * <p>Payment gates booking confirmation: {@link BookingService#createPendingBooking}
+ * <p>
+ * Payment gates booking confirmation:
+ * {@link BookingService#createPendingBooking}
  * creates a {@code PENDING} booking ahead of the charge, and only a
  * successful payment calls {@link BookingService#finalizeConfirmedBooking}.
  */
@@ -50,30 +58,38 @@ public class PaymentService {
     private final VenueRepository venueRepository;
     private final RewardService rewardService;
     private final RefundCalculatorService refundCalculatorService;
+    private final com.turfchai.promotion.service.PromotionService promotionService;
+    private final com.turfchai.service.NotificationService notificationService;
     /** Refund tiers are time-based, so the clock is injectable for tests. */
     private final Clock clock;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentService(PaymentRepository paymentRepository,
-                          BookingService bookingService,
-                          VenueRepository venueRepository,
-                          RewardService rewardService,
-                          RefundCalculatorService refundCalculatorService) {
+            BookingService bookingService,
+            VenueRepository venueRepository,
+            RewardService rewardService,
+            RefundCalculatorService refundCalculatorService,
+            com.turfchai.promotion.service.PromotionService promotionService,
+            com.turfchai.service.NotificationService notificationService) {
         this(paymentRepository, bookingService, venueRepository, rewardService,
-                refundCalculatorService, Clock.systemDefaultZone());
+                refundCalculatorService, promotionService, notificationService, Clock.systemDefaultZone());
     }
 
     PaymentService(PaymentRepository paymentRepository,
-                   BookingService bookingService,
-                   VenueRepository venueRepository,
-                   RewardService rewardService,
-                   RefundCalculatorService refundCalculatorService,
-                   Clock clock) {
+            BookingService bookingService,
+            VenueRepository venueRepository,
+            RewardService rewardService,
+            RefundCalculatorService refundCalculatorService,
+            com.turfchai.promotion.service.PromotionService promotionService,
+            com.turfchai.service.NotificationService notificationService,
+            Clock clock) {
         this.paymentRepository = paymentRepository;
         this.bookingService = bookingService;
         this.venueRepository = venueRepository;
         this.rewardService = rewardService;
         this.refundCalculatorService = refundCalculatorService;
+        this.promotionService = promotionService;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
@@ -81,20 +97,65 @@ public class PaymentService {
      * Charges the caller for their currently held slot, applying wallet
      * balance first.
      *
-     * <p>Every tender that funds the booking gets its own {@code payments} row,
+     * <p>
+     * Every tender that funds the booking gets its own {@code payments} row,
      * including wallet credit — otherwise a booking paid entirely from the wallet
      * was CONFIRMED with no payment record at all, and the ledger disagreed with
      * reality.
      */
     @Transactional
     public CheckoutResponse pay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount) {
+        return pay(userId, slotId, method, applyWalletAmount, null);
+    }
+
+    @Transactional
+    public CheckoutResponse pay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount,
+            String promoCode) {
+        try {
+            return doPay(userId, slotId, method, applyWalletAmount, promoCode);
+        } catch (com.turfchai.booking.exception.SlotUnavailableException e) {
+            // The player had committed to paying and the slot went away. Nothing
+            // was taken — this whole transaction rolls back — but they deserve a
+            // durable record saying so, not just a screen they may have left.
+            notificationService.sendDetached(userId, "PAYMENT_FAILED",
+                    "Payment could not be completed",
+                    "That slot was no longer yours to book when the payment went through, so nothing was charged.",
+                    "/player/bookings");
+            throw e;
+        }
+    }
+
+    private CheckoutResponse doPay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount,
+            String promoCode) {
         Booking booking = bookingService.createPendingBooking(userId, slotId);
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new IllegalStateException("This booking has already been paid for");
         }
 
-        BigDecimal netAmount = booking.getNetAmount();
+        // The discount is priced here, from the slot price the server holds, and
+        // the redemption is taken under a row lock in the same transaction as the
+        // booking. The client sends a code, never an amount.
+        BigDecimal discount = BigDecimal.ZERO;
+        String appliedCode = null;
+        if (promoCode != null && !promoCode.isBlank()) {
+            AppliedDiscountResponse quote = promotionService.validateAndApply(new ValidatePromoCodeRequest(
+                    promoCode.strip(), booking.getGrossAmount(), booking.getVenueId()));
+            if (!quote.valid()) {
+                throw new PromotionRejectedException(quote.message());
+            }
+            if (!promotionService.recordUsage(booking.getVenueId(), promoCode.strip())) {
+                throw new PromotionRejectedException("This promo code has just been fully redeemed");
+            }
+            discount = quote.discountAmount();
+            appliedCode = quote.code();
+        }
+
+        BigDecimal netAmount = booking.getGrossAmount().subtract(discount).max(BigDecimal.ZERO);
+        booking.setDiscountAmount(discount);
+        booking.setPromoCode(appliedCode);
+        booking.setNetAmount(netAmount);
+
         BigDecimal requestedWallet = applyWalletAmount != null ? applyWalletAmount : BigDecimal.ZERO;
         BigDecimal walletBalance = rewardService.getWalletBalance(userId);
         BigDecimal walletApplied = requestedWallet.min(walletBalance).min(netAmount).max(BigDecimal.ZERO);
@@ -150,13 +211,17 @@ public class PaymentService {
                 .bookingId(booking.getId())
                 .bookingCode(booking.getBookingCode())
                 .walletApplied(walletApplied)
+                .promoCode(appliedCode)
+                .discountApplied(discount)
                 .newWalletBalance(rewardService.getWalletBalance(userId))
                 .pointsEarned(pointsEarned)
                 .message("Booking confirmed.")
                 .build();
     }
 
-    /** A booking's payment history, most recent first — for the booking detail page. */
+    /**
+     * A booking's payment history, most recent first — for the booking detail page.
+     */
     @Transactional(readOnly = true)
     public List<PaymentResponse> getPaymentsForBooking(Long userId, Long bookingId) {
         bookingService.getBooking(userId, bookingId); // ownership check; throws if not accessible
@@ -175,12 +240,14 @@ public class PaymentService {
     /**
      * Cancels a booking and refunds what was actually taken for it.
      *
-     * <p>The refund is split by tender. The gateway can only be given back what
+     * <p>
+     * The refund is split by tender. The gateway can only be given back what
      * the gateway received, and wallet credit goes back to the wallet — refunding
      * the whole booking price as cash paid out money that was never collected and
      * left the player's credit gone as well.
      *
-     * <p>A booking with no successful payment (a PENDING checkout that never
+     * <p>
+     * A booking with no successful payment (a PENDING checkout that never
      * completed) refunds nothing, because nothing was taken.
      */
     @Transactional
@@ -265,11 +332,26 @@ public class PaymentService {
             }
         }
 
+        BigDecimal refundTotal = walletRefund.add(gatewayRefund);
+        if (refundTotal.signum() > 0) {
+            // Only when money actually moved. A 0% tier cancels the booking and
+            // returns nothing, and saying "refund issued" there would be a lie.
+            notificationService.sendOnce(booking.getUserId(), "REFUND_ISSUED",
+                    "Refund issued · ৳" + refundTotal.stripTrailingZeros().toPlainString(),
+                    "We refunded " + percent + "% for booking " + booking.getBookingCode()
+                            + (walletRefund.signum() > 0 && gatewayRefund.signum() > 0
+                                    ? " — ৳" + gatewayRefund.stripTrailingZeros().toPlainString()
+                                            + " to your payment method and ৳"
+                                            + walletRefund.stripTrailingZeros().toPlainString() + " to your wallet."
+                                    : walletRefund.signum() > 0 ? " back to your wallet." : " to your payment method."),
+                    "/player/bookings/" + bookingId);
+        }
+
         return CancelRefundResponse.builder()
                 .bookingId(bookingId)
                 .bookingStatus("CANCELLED")
                 .refundPercent(percent)
-                .refundAmount(walletRefund.add(gatewayRefund))
+                .refundAmount(refundTotal)
                 .refundPayment(refundResponse)
                 .build();
     }
@@ -277,7 +359,8 @@ public class PaymentService {
     /**
      * Money the gateway actually took for this booking.
      *
-     * <p>The wallet leg of a split payment is also stored as a BOOKING row so the
+     * <p>
+     * The wallet leg of a split payment is also stored as a BOOKING row so the
      * ledger reconciles against the booking total, but it is not gateway money and
      * must never be refunded as cash — it is returned to the wallet instead.
      */
@@ -337,7 +420,8 @@ public class PaymentService {
     /**
      * Hours between now and kick-off.
      *
-     * <p>Uses the injected clock's zone rather than {@code LocalDateTime.now()}:
+     * <p>
+     * Uses the injected clock's zone rather than {@code LocalDateTime.now()}:
      * slot times are local wall-clock, timestamps are stored in UTC, and taking
      * the JVM default silently shifted every refund tier by the zone offset.
      */
@@ -370,7 +454,8 @@ public class PaymentService {
     /**
      * A unique reference for a payment row.
      *
-     * <p>This used to be 8 hex characters — 32 bits — checked for existence before
+     * <p>
+     * This used to be 8 hex characters — 32 bits — checked for existence before
      * insert. That is both small enough to collide in a busy ledger and racy, since
      * two concurrent checkouts could pass the check and then fight over the unique
      * constraint, failing a legitimate payment. A full UUID makes collision a

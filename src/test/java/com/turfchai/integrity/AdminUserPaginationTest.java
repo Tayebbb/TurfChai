@@ -30,89 +30,95 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles({"test", "dev"})
+@ActiveProfiles({ "test", "dev" })
 class AdminUserPaginationTest {
 
-    @Autowired WebApplicationContext context;
-    @Autowired FilterChainProxy securityFilterChain;
-    @Autowired UserRepository userRepository;
-    @Autowired JwtService jwtService;
+        @Autowired
+        WebApplicationContext context;
+        @Autowired
+        FilterChainProxy securityFilterChain;
+        @Autowired
+        UserRepository userRepository;
+        @Autowired
+        JwtService jwtService;
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @BeforeEach
-    void setUp() {
-        User admin = userRepository.save(User.builder()
-                .fullName("Roster Admin")
-                .email("roster.admin." + System.nanoTime() + "@turfchai.test")
-                .phone("+88017" + ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999))
-                .passwordHash("x")
-                .role(RoleType.ADMIN)
-                .build());
+        @BeforeEach
+        void setUp() {
+                User admin = userRepository.save(User.builder()
+                                .fullName("Roster Admin")
+                                .email("roster.admin." + System.nanoTime() + "@turfchai.test")
+                                .phone("+88017" + ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999))
+                                .passwordHash("x")
+                                .role(RoleType.ADMIN)
+                                .build());
 
-        mockMvc = MockMvcBuilders.webAppContextSetup(context)
-                .addFilters(securityFilterChain)
-                .defaultRequest(get("/").header(AUTHORIZATION, TestAuth.bearer(jwtService, admin)))
-                .build();
-    }
+                mockMvc = MockMvcBuilders.webAppContextSetup(context)
+                                .addFilters(securityFilterChain)
+                                .defaultRequest(get("/").header(AUTHORIZATION, TestAuth.bearer(jwtService, admin)))
+                                .build();
+        }
 
-    @Test
-    void returnsOnePageAndTheRealTotal() throws Exception {
-        mockMvc.perform(get("/api/v1/admin/users?page=0&size=10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items.length()").value(10))
-                .andExpect(jsonPath("$.data.page").value(0))
-                .andExpect(jsonPath("$.data.size").value(10))
-                .andExpect(jsonPath("$.data.total").value(org.hamcrest.Matchers.greaterThan(10)));
-    }
+        @Test
+        void returnsOnePageAndTheRealTotal() throws Exception {
+                mockMvc.perform(get("/api/v1/admin/users?page=0&size=10"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.items.length()").value(10))
+                                .andExpect(jsonPath("$.data.page").value(0))
+                                .andExpect(jsonPath("$.data.size").value(10))
+                                .andExpect(jsonPath("$.data.total").value(org.hamcrest.Matchers.greaterThan(10)));
+        }
 
-    @Test
-    void defaultsToABoundedPageWhenNoSizeIsAskedFor() throws Exception {
-        mockMvc.perform(get("/api/v1/admin/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items.length()").value(org.hamcrest.Matchers.lessThanOrEqualTo(25)));
-    }
+        @Test
+        void defaultsToABoundedPageWhenNoSizeIsAskedFor() throws Exception {
+                mockMvc.perform(get("/api/v1/admin/users"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.items.length()")
+                                                .value(org.hamcrest.Matchers.lessThanOrEqualTo(25)));
+        }
 
-    @Test
-    void refusesToReturnTheWholeRosterEvenWhenAsked() throws Exception {
-        mockMvc.perform(get("/api/v1/admin/users?size=100000"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items.length()").value(org.hamcrest.Matchers.lessThanOrEqualTo(100)));
-    }
+        @Test
+        void refusesToReturnTheWholeRosterEvenWhenAsked() throws Exception {
+                mockMvc.perform(get("/api/v1/admin/users?size=100000"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.items.length()")
+                                                .value(org.hamcrest.Matchers.lessThanOrEqualTo(100)));
+        }
 
-    @Test
-    void laterPagesReturnDifferentAccounts() throws Exception {
-        String first = mockMvc.perform(get("/api/v1/admin/users?page=0&size=5"))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        String second = mockMvc.perform(get("/api/v1/admin/users?page=1&size=5"))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+        @Test
+        void laterPagesReturnDifferentAccounts() throws Exception {
+                String first = mockMvc.perform(get("/api/v1/admin/users?page=0&size=5"))
+                                .andExpect(status().isOk())
+                                .andReturn().getResponse().getContentAsString();
+                String second = mockMvc.perform(get("/api/v1/admin/users?page=1&size=5"))
+                                .andExpect(status().isOk())
+                                .andReturn().getResponse().getContentAsString();
 
-        org.assertj.core.api.Assertions.assertThat(first).isNotEqualTo(second);
-    }
+                org.assertj.core.api.Assertions.assertThat(first).isNotEqualTo(second);
+        }
 
-    @Test
-    void searchIsAppliedByTheDatabaseNotTheCaller() throws Exception {
-        User needle = userRepository.save(User.builder()
-                .fullName("Zzyzx Unmistakable")
-                .email("zzyzx." + System.nanoTime() + "@turfchai.test")
-                .phone("+88017" + ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999))
-                .passwordHash("x")
-                .role(RoleType.PLAYER)
-                .build());
+        @Test
+        void searchIsAppliedByTheDatabaseNotTheCaller() throws Exception {
+                User needle = userRepository.save(User.builder()
+                                .fullName("Zzyzx Unmistakable")
+                                .email("zzyzx." + System.nanoTime() + "@turfchai.test")
+                                .phone("+88017" + ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999))
+                                .passwordHash("x")
+                                .role(RoleType.PLAYER)
+                                .build());
 
-        mockMvc.perform(get("/api/v1/admin/users?q=Zzyzx&page=0&size=25"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.total").value(1))
-                .andExpect(jsonPath("$.data.items[0].fullName").value(needle.getFullName()));
-    }
+                mockMvc.perform(get("/api/v1/admin/users?q=Zzyzx&page=0&size=25"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.total").value(1))
+                                .andExpect(jsonPath("$.data.items[0].fullName").value(needle.getFullName()));
+        }
 
-    @Test
-    void payoutSummaryReplacesDownloadingEveryPayout() throws Exception {
-        mockMvc.perform(get("/api/v1/admin/payouts/summary"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.settledAmount").exists())
-                .andExpect(jsonPath("$.settledCount").exists());
-    }
+        @Test
+        void payoutSummaryReplacesDownloadingEveryPayout() throws Exception {
+                mockMvc.perform(get("/api/v1/admin/payouts/summary"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.settledAmount").exists())
+                                .andExpect(jsonPath("$.settledCount").exists());
+        }
 }

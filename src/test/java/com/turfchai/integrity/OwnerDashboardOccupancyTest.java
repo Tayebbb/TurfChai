@@ -34,16 +34,22 @@ import static org.assertj.core.api.Assertions.assertThat;
  * literal cannot come back unnoticed.
  */
 @SpringBootTest
-@ActiveProfiles({"test", "dev"})
+@ActiveProfiles({ "test", "dev" })
 @Transactional
 class OwnerDashboardOccupancyTest {
 
-    @Autowired OwnerAnalyticsService ownerAnalyticsService;
-    @Autowired VenueRepository venueRepository;
-    @Autowired PitchRepository pitchRepository;
-    @Autowired SlotRepository slotRepository;
-    @Autowired BookingRepository bookingRepository;
-    @Autowired UserRepository userRepository;
+    @Autowired
+    OwnerAnalyticsService ownerAnalyticsService;
+    @Autowired
+    VenueRepository venueRepository;
+    @Autowired
+    PitchRepository pitchRepository;
+    @Autowired
+    SlotRepository slotRepository;
+    @Autowired
+    BookingRepository bookingRepository;
+    @Autowired
+    UserRepository userRepository;
 
     private Venue venue;
     private Pitch pitch;

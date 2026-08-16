@@ -12,12 +12,14 @@ import java.time.LocalTime;
 /**
  * The single authority on whether a slot is still in the future.
  *
- * <p>Both booking paths ({@code POST /api/v1/bookings} and
+ * <p>
+ * Both booking paths ({@code POST /api/v1/bookings} and
  * {@code POST /api/v1/payments/checkout}) and the read-side availability grid
  * ask this class, so they cannot drift apart and let the UI offer a time the
  * booking engine would refuse — or worse, accept.
  *
- * <p>Slot times are stored as a {@link LocalDate} plus a {@link LocalTime} with
+ * <p>
+ * Slot times are stored as a {@link LocalDate} plus a {@link LocalTime} with
  * no zone, so they are interpreted in the server's zone. That is correct for a
  * single-region product: a 19:00 slot means 19:00 at the venue.
  */
@@ -45,7 +47,10 @@ public class SlotTimePolicy {
         return LocalDate.now(clock);
     }
 
-    /** True once the slot's start time is reached — booking closes at kick-off, not at the end. */
+    /**
+     * True once the slot's start time is reached — booking closes at kick-off, not
+     * at the end.
+     */
     public boolean hasStarted(LocalDate slotDate, LocalTime startTime) {
         if (slotDate == null || startTime == null) {
             return false;

@@ -26,7 +26,8 @@ import java.util.List;
  * Player Loyalty & Rewards Program REST API. Endpoints resolve the caller from
  * the JWT security principal; all of them require authentication except the
  * catalog, which visitors may browse before signing up.
- * Error handling is delegated to {@link com.turfchai.exception.GlobalExceptionHandler}.
+ * Error handling is delegated to
+ * {@link com.turfchai.exception.GlobalExceptionHandler}.
  */
 @RestController
 @RequestMapping("/api/v1/rewards")
@@ -35,7 +36,10 @@ public class RewardRestController {
 
     private final RewardService rewardService;
 
-    /** GET /api/v1/rewards/products — active reward catalog, annotated with the caller's unlock state. */
+    /**
+     * GET /api/v1/rewards/products — active reward catalog, annotated with the
+     * caller's unlock state.
+     */
     @GetMapping("/products")
     public ResponseEntity<ApiResponse<List<RewardProductResponse>>> listProducts(Authentication authentication) {
         List<RewardProductResponse> products = rewardService.listRewardProducts(optionalUserId(authentication));
@@ -61,13 +65,19 @@ public class RewardRestController {
         return ResponseEntity.ok(ApiResponse.ok(redemption, "Reward redeemed successfully"));
     }
 
-    /** GET /api/v1/rewards/my-points — current balance, wallet balance, and tier progress. */
+    /**
+     * GET /api/v1/rewards/my-points — current balance, wallet balance, and tier
+     * progress.
+     */
     @GetMapping("/my-points")
     public ResponseEntity<ApiResponse<PointsSummaryResponse>> myPoints(Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.ok(rewardService.getMyPoints(currentUserId(authentication))));
     }
 
-    /** GET /api/v1/rewards/activity — recent points ledger entries, most recent first. */
+    /**
+     * GET /api/v1/rewards/activity — recent points ledger entries, most recent
+     * first.
+     */
     @GetMapping("/activity")
     public ResponseEntity<ApiResponse<List<PointActivityResponse>>> activity(
             Authentication authentication,

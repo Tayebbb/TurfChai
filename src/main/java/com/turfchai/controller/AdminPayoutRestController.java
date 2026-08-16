@@ -42,16 +42,16 @@ public class AdminPayoutRestController {
 
     @PostMapping("/{code}/settle")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public void settlePayout(@PathVariable String code, 
-                             @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
+    public void settlePayout(@PathVariable String code,
+            @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
         payoutSettlementService.settle(code, userDetails.getId());
     }
 
     @PostMapping("/{code}/flag")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public void flagPayout(@PathVariable String code, 
-                           @RequestBody Map<String, String> payload, 
-                           @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
+    public void flagPayout(@PathVariable String code,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
         String reason = payload.get("reason");
         payoutSettlementService.flag(code, reason, userDetails.getId());
     }

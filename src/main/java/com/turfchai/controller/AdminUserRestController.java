@@ -97,15 +97,16 @@ public class AdminUserRestController {
 
         User saved = userRepository.save(user);
 
-        boolean suspended = Boolean.TRUE.equals(saved.getIsSuspended()) || "SUSPENDED".equalsIgnoreCase(saved.getStatus());
+        boolean suspended = Boolean.TRUE.equals(saved.getIsSuspended())
+                || "SUSPENDED".equalsIgnoreCase(saved.getStatus());
         auditLogService.logAction(
                 principal.getUsername(),
                 principal.getId(),
                 suspended ? "Suspended User" : "Updated User Status",
                 suspended ? "red" : "green",
                 "#" + id,
-                "User " + user.getFullName() + " status set to " + user.getStatus() + " (suspended=" + user.getIsSuspended() + ")"
-        );
+                "User " + user.getFullName() + " status set to " + user.getStatus() + " (suspended="
+                        + user.getIsSuspended() + ")");
 
         return ResponseEntity.ok(ApiResponse.ok(AdminUserResponse.from(saved)));
     }
@@ -131,8 +132,7 @@ public class AdminUserRestController {
                 "Reinstated User",
                 "green",
                 "#" + id,
-                "User " + user.getFullName() + " reinstated to ACTIVE status"
-        );
+                "User " + user.getFullName() + " reinstated to ACTIVE status");
 
         return ResponseEntity.ok(ApiResponse.ok(AdminUserResponse.from(saved)));
     }

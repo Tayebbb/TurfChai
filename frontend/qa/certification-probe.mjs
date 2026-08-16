@@ -102,7 +102,7 @@ const player = await register('player', 'PLAYER');
     '/player/matchday', '/player/dashboard', '/player/dashboard/bookings',
     '/player/dashboard/venues', '/player/dashboard/tournaments',
     '/player/dashboard/notifications', '/player/dashboard/wallet',
-    '/player/dashboard/stats', '/player/dashboard/teams', '/player/dashboard/network',
+    '/player/dashboard/stats',
     '/player/dashboard/settings', '/solo/open-games',
   ];
   const results = await visitAll(player, routes);
@@ -160,7 +160,7 @@ const owner = await register('owner', 'OWNER');
   const routes = [
     '/owner', '/owner/calendar', '/owner/bookings', '/owner/customers',
     '/owner/payments', '/owner/venue-setup', '/owner/promotions',
-    '/owner/reviews', '/owner/staff',
+    '/owner/reviews',
   ];
   const results = await visitAll(owner, routes);
 

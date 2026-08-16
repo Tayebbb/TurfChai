@@ -65,7 +65,7 @@ public class AdminAnalyticsService {
 
     // ── Public API ─────────────────────────────────────────────────────────
 
-/**
+    /**
      * Returns user growth KPIs plus a 7-day daily signup chart series.
      */
     public GrowthDto getGrowth() {
@@ -98,7 +98,8 @@ public class AdminAnalyticsService {
 
         List<User> allUsers = analyticsRepository.findAll();
         for (int i = 5; i >= 0; i--) {
-            OffsetDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).toLocalDate().atStartOfDay().atOffset(now.getOffset());
+            OffsetDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).toLocalDate().atStartOfDay()
+                    .atOffset(now.getOffset());
             OffsetDateTime monthEnd = monthStart.plusMonths(1);
             growthMonths.add(monthStart.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
 
@@ -116,9 +117,11 @@ public class AdminAnalyticsService {
             growthHosts.add(hCount);
         }
 
-        // Retention rate: users who booked in both the last 30 days and the 30 days before that.
+        // Retention rate: users who booked in both the last 30 days and the 30 days
+        // before that.
         // Null, not zero, when there is no prior cohort: "0% retention" and "nothing
-        // to measure yet" are different statements and the screen renders them differently.
+        // to measure yet" are different statements and the screen renders them
+        // differently.
         Double retentionRate = null;
         List<Booking> confirmedBookings = bookingRepository.findAll()
                 .stream()
@@ -161,7 +164,7 @@ public class AdminAnalyticsService {
      * (untracked — rendered as "—").
      */
     private List<AcquisitionChannelDto> computeChannels(List<User> allUsers,
-                                                        List<Booking> confirmedBookings) {
+            List<Booking> confirmedBookings) {
         Set<Long> bookers = new HashSet<>();
         for (Booking b : confirmedBookings) {
             bookers.add(b.getUserId());
@@ -203,7 +206,8 @@ public class AdminAnalyticsService {
     /**
      * Returns GMV + booking-count time-series for the earnings chart.
      * Weekly: last 7 days vs prior 7 days.
-     * Monthly: selected year (capped at current month for current year), vs same-period prior year.
+     * Monthly: selected year (capped at current month for current year), vs
+     * same-period prior year.
      * Trailing/leading empty months are trimmed.
      */
     public RevenueDto getRevenue(int year, String timeframe) {
@@ -256,16 +260,16 @@ public class AdminAnalyticsService {
         } else {
             // Monthly: for the selected year
             int maxMonth = (year == currentYear) ? currentMonth : 12;
-            
+
             // First pass: collect all 12 (or maxMonth) months
             String[] allLabels = new String[maxMonth];
             long[] allGmv = new long[maxMonth];
             long[] allBookingCounts = new long[maxMonth];
-            
+
             for (int month = 1; month <= maxMonth; month++) {
                 allLabels[month - 1] = OffsetDateTime.of(year, month, 1, 0, 0, 0, 0, now.getOffset())
                         .getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
-                
+
                 long monthlyGmv = 0;
                 long monthlyBookings = 0;
                 for (Booking b : allBookings) {
@@ -282,10 +286,12 @@ public class AdminAnalyticsService {
 
             // Trim leading/trailing empty months (both gmv and bookings zero)
             int first = 0;
-            while (first < maxMonth && allGmv[first] == 0 && allBookingCounts[first] == 0) first++;
+            while (first < maxMonth && allGmv[first] == 0 && allBookingCounts[first] == 0)
+                first++;
             int last = maxMonth - 1;
-            while (last >= 0 && allGmv[last] == 0 && allBookingCounts[last] == 0) last--;
-            
+            while (last >= 0 && allGmv[last] == 0 && allBookingCounts[last] == 0)
+                last--;
+
             if (first <= last) {
                 for (int i = first; i <= last; i++) {
                     labels.add(allLabels[i]);
@@ -452,7 +458,7 @@ public class AdminAnalyticsService {
             String venueStatus = v.getStatus() == null ? "" : v.getStatus().toUpperCase();
             String derived = "SUSPENDED".equals(venueStatus) ? "SUSPENDED"
                     : "DRAFT".equals(venueStatus) ? "PENDING"
-                    : "ACTIVE";
+                            : "ACTIVE";
             // Precedence: SUSPENDED > PENDING > ACTIVE
             String existing = hostStatusByOwner.get(v.getOwner().getId());
             if (existing == null || statusRank(derived) > statusRank(existing)) {
@@ -524,23 +530,25 @@ public class AdminAnalyticsService {
     }
 
     private int statusRank(String status) {
-        if ("SUSPENDED".equals(status)) return 2;
-        if ("PENDING".equals(status)) return 1;
+        if ("SUSPENDED".equals(status))
+            return 2;
+        if ("PENDING".equals(status))
+            return 1;
         return 0;
     }
 
     private HostStatusRowDto hostRow(String id, String label, String tone,
-                                     long count, long revenue30, double base) {
+            long count, long revenue30, double base) {
         long avg = count == 0 ? 0 : revenue30 / count;
         return new HostStatusRowDto(id, label, tone, count, avg,
                 round1(count * 100.0 / base));
     }
 
     private CohortDto buildPlayerCohort(String id, String name, List<User> members,
-                                        Map<Long, Long> recentCounts,
-                                        Map<Long, BigDecimal> recentSpend,
-                                        Map<Long, BigDecimal> lifetimeSpend,
-                                        Set<Long> activePrior30) {
+            Map<Long, Long> recentCounts,
+            Map<Long, BigDecimal> recentSpend,
+            Map<Long, BigDecimal> lifetimeSpend,
+            Set<Long> activePrior30) {
         int n = members.size();
         if (n == 0) {
             return new CohortDto(id, name, 0, 0.0, 0.0, 0, 0);
@@ -561,11 +569,11 @@ public class AdminAnalyticsService {
     }
 
     private CohortDto buildHostCohort(String id, String name, List<Long> ownerIds,
-                                      Map<Long, BigDecimal> ownerRevenue30,
-                                      Map<Long, BigDecimal> ownerLifetimeRevenue,
-                                      Map<Long, Long> ownerBookings30,
-                                      Set<Long> ownerActiveLast30,
-                                      Set<Long> ownerActivePrior30) {
+            Map<Long, BigDecimal> ownerRevenue30,
+            Map<Long, BigDecimal> ownerLifetimeRevenue,
+            Map<Long, Long> ownerBookings30,
+            Set<Long> ownerActiveLast30,
+            Set<Long> ownerActivePrior30) {
         int n = ownerIds.size();
         if (n == 0) {
             return new CohortDto(id, name, 0, 0.0, 0.0, 0, 0);

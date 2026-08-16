@@ -33,7 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * State-transition and idempotency guards on the booking lifecycle.
  *
- * <p>The double-cancel case is the important one: cancelling releases the slot,
+ * <p>
+ * The double-cancel case is the important one: cancelling releases the slot,
  * so running it twice used to hand an AVAILABLE status to a slot that a
  * different booking had taken in between — a silent double-sell.
  */

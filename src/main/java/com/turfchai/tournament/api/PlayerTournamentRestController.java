@@ -32,7 +32,8 @@ import java.util.List;
 /**
  * Player-facing tournament browse + registration.
  *
- * <p>The player is always the authenticated principal; a caller can neither
+ * <p>
+ * The player is always the authenticated principal; a caller can neither
  * browse nor register as somebody else.
  */
 @RestController
@@ -52,7 +53,8 @@ public class PlayerTournamentRestController {
     private User currentUser(UserPrincipal principal) {
         Long id = AuthenticatedUser.requireId(principal);
         return users.findById(id)
-                .orElseThrow(() -> new com.turfchai.exception.UnauthenticatedException("Authenticated user no longer exists"));
+                .orElseThrow(() -> new com.turfchai.exception.UnauthenticatedException(
+                        "Authenticated user no longer exists"));
     }
 
     /** Browse tournaments open for registration. */
@@ -82,15 +84,15 @@ public class PlayerTournamentRestController {
     @PostMapping("/{code}/register")
     @ResponseStatus(HttpStatus.CREATED)
     public TeamView register(@PathVariable String code,
-                             @AuthenticationPrincipal UserPrincipal principal,
-                             @Valid @RequestBody RegisterPlayerRequest request) {
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody RegisterPlayerRequest request) {
         return tournamentService.register(code, currentUser(principal), request);
     }
 
     @DeleteMapping("/{code}/register")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void withdraw(@PathVariable String code,
-                         @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserPrincipal principal) {
         tournamentService.withdraw(code, currentUser(principal));
     }
 }

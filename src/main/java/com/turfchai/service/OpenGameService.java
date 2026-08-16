@@ -12,9 +12,14 @@ import java.util.List;
 
 public interface OpenGameService {
     OpenGameResponse createOpenGame(CreateOpenGameRequest request, Long organizerUserId);
+
     OpenGameResponse getOpenGameById(Long id);
+
     List<OpenGameResponse> searchOpenGames(SkillLevel skillLevel, LocalDate gameDate, String query);
+
     JoinOpenGameResponse joinOpenGame(Long openGameId, JoinOpenGameRequest request, Long joiningUserId);
+
     List<OpenGameMemberResponse> getGameMembers(Long openGameId);
+
     void updateMemberAttendance(Long openGameId, Long userId, boolean showUp);
 }

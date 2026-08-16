@@ -1,4 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { BookingsSection, NotificationsSection } from '@/pages/player/dashboard/PendingSections';
 import { mockApi, renderApp, signIn } from '@/test/testUtils';
@@ -121,5 +122,56 @@ describe('NotificationsSection', () => {
       expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
     });
     expect(screen.queryByText('All caught up!')).not.toBeInTheDocument();
+  });
+
+  it('opening a notification marks it read on the server, not just on screen', async () => {
+    signIn();
+    const fetchMock = mockApi([
+      ['/notifications/1/read', { body: {} }],
+      ['/players/me', { body: {} }],
+      [
+        '/notifications',
+        {
+          body: [
+            {
+              id: 1,
+              title: 'Booking confirmed',
+              body: 'See you there',
+              isRead: false,
+              link: '/player/bookings/7',
+            },
+          ],
+        },
+      ],
+    ]);
+
+    renderApp(<NotificationsSection />);
+    await userEvent.click(await screen.findByRole('button', { name: /booking confirmed, unread/i }));
+
+    await waitFor(() => {
+      const marked = fetchMock.mock.calls.some(
+        ([url, init]) => String(url).includes('/notifications/1/read') && init?.method === 'POST',
+      );
+      expect(marked).toBe(true);
+    });
+  });
+
+  it('does not re-mark a notification that is already read', async () => {
+    signIn();
+    const fetchMock = mockApi([
+      ['/notifications/2/read', { body: {} }],
+      ['/players/me', { body: {} }],
+      [
+        '/notifications',
+        { body: [{ id: 2, title: 'Refund issued', body: '৳2000 back', isRead: true, link: '/player/bookings/7' }] },
+      ],
+    ]);
+
+    renderApp(<NotificationsSection />);
+    await userEvent.click(await screen.findByRole('button', { name: /refund issued/i }));
+
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes('/notifications/2/read')),
+    ).toBe(false);
   });
 });

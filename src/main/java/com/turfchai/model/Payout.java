@@ -29,9 +29,6 @@ public class Payout {
     @Column(name = "venue_id")
     private Long venueId;
 
-    @Column(name = "bank_account_id")
-    private Long bankAccountId;
-
     @Column(name = "gross_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal grossAmount;
 

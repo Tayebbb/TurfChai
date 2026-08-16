@@ -22,13 +22,17 @@ import java.time.Instant;
 /**
  * A promotional discount code attached to a venue.
  *
- * <p>discount_type:
+ * <p>
+ * discount_type:
  * <ul>
- *   <li>PERCENT — discount_value is a percentage (0..100), optionally capped by max_discount_amount</li>
- *   <li>FLAT    — discount_value is a flat BDT amount off the order total</li>
+ * <li>PERCENT — discount_value is a percentage (0..100), optionally capped by
+ * max_discount_amount</li>
+ * <li>FLAT — discount_value is a flat BDT amount off the order total</li>
  * </ul>
  *
- * <p>conditions (stored as JSON string, validated in service layer):
+ * <p>
+ * conditions (stored as JSON string, validated in service layer):
+ * 
  * <pre>
  * {
  *   "sports": ["football"],   // optional: only for these sport slugs
@@ -68,7 +72,9 @@ public class Promotion {
     @Column(name = "discount_value", nullable = false, precision = 10, scale = 2)
     private BigDecimal discountValue;
 
-    /** Minimum order total (BDT) before the promo applies. Default 0 = no minimum. */
+    /**
+     * Minimum order total (BDT) before the promo applies. Default 0 = no minimum.
+     */
     @Column(name = "min_order_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal minOrderAmount = BigDecimal.ZERO;
 
@@ -81,8 +87,14 @@ public class Promotion {
     @Column(name = "conditions", columnDefinition = "jsonb")
     private String conditions = "{}";
 
+    /**
+     * When the code starts working. Truncated to the second: the column stores
+     * a rounded timestamp, and an un-truncated "now" could be rounded forward
+     * past the clock, leaving a freshly published code refused as "not yet
+     * active" on the very next request.
+     */
     @Column(name = "valid_from", nullable = false)
-    private Instant validFrom = Instant.now();
+    private Instant validFrom = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
 
     @Column(name = "valid_until")
     private Instant validUntil;
@@ -104,7 +116,8 @@ public class Promotion {
 
     @PrePersist
     void prePersist() {
-        if (createdAt == null) createdAt = Instant.now();
+        if (createdAt == null)
+            createdAt = Instant.now();
         updatedAt = Instant.now();
     }
 

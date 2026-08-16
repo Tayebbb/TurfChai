@@ -8,4 +8,6 @@
 -- ============================================================================
 
 ALTER TABLE payments
-    ALTER COLUMN txn_reference TYPE VARCHAR(64);
+    ALTER COLUMN txn_reference TYPE
+VARCHAR
+(64);

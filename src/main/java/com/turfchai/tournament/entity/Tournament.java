@@ -64,7 +64,9 @@ public class Tournament {
     @Column(name = "time_window_end", nullable = false)
     private LocalTime windowEnd;
 
-    /** '5_A_SIDE' | '6_A_SIDE' | '7_A_SIDE' | 'KNOCKOUT' (baseline CHECK values). */
+    /**
+     * '5_A_SIDE' | '6_A_SIDE' | '7_A_SIDE' | 'KNOCKOUT' (baseline CHECK values).
+     */
     @Column(nullable = false, length = 20)
     private String format;
 
@@ -105,7 +107,9 @@ public class Tournament {
     @Column(name = "deposit_reference", length = 60)
     private String depositReference;
 
-    /** Weeks the reserved slot pattern repeats, counting the tournament date itself. */
+    /**
+     * Weeks the reserved slot pattern repeats, counting the tournament date itself.
+     */
     @Column(name = "repeat_weeks", nullable = false)
     private int repeatWeeks = 1;
 

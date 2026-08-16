@@ -203,7 +203,8 @@ class VenueManagementServiceTest {
         when(venueRepository.findById(100L)).thenReturn(Optional.of(venue1));
         when(venueRepository.save(any(Venue.class))).thenAnswer(i -> i.getArgument(0));
 
-        var result = venueManagementService.addVenuePhoto(10L, 100L, "https://res.cloudinary.com/demo/image/upload/v1/venue1.jpg");
+        var result = venueManagementService.addVenuePhoto(10L, 100L,
+                "https://res.cloudinary.com/demo/image/upload/v1/venue1.jpg");
 
         assertNotNull(result);
         assertEquals("https://res.cloudinary.com/demo/image/upload/v1/venue1.jpg", venue1.getPhotos());
@@ -228,8 +229,8 @@ class VenueManagementServiceTest {
     void testRequireOwnership_VenueNotFoundThrowsVenueNotFoundException() {
         when(venueRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(com.turfchai.exception.VenueNotFoundException.class, () ->
-                venueManagementService.requireOwnership(10L, 999L));
+        assertThrows(com.turfchai.exception.VenueNotFoundException.class,
+                () -> venueManagementService.requireOwnership(10L, 999L));
     }
 
     @Test
@@ -237,8 +238,7 @@ class VenueManagementServiceTest {
     void testRequireOwnership_OtherOwnerThrowsSecurityException() {
         when(venueRepository.findById(100L)).thenReturn(Optional.of(venue1));
 
-        assertThrows(SecurityException.class, () ->
-                venueManagementService.requireOwnership(999L, 100L));
+        assertThrows(SecurityException.class, () -> venueManagementService.requireOwnership(999L, 100L));
     }
 
     /** Builds an UpdateVenueRequest that only carries the two policy fields. */

@@ -3,10 +3,8 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { RouteFallback } from '@/components/common/RouteFallback';
 import {
   BookingsSection,
-  NetworkSection,
   NotificationsSection,
   StatsSection,
-  TeamsSection,
   WalletSection,
 } from '@/pages/player/dashboard/PendingSections';
 import { AdminLayout } from '@/layouts/AdminLayout';
@@ -35,7 +33,6 @@ const Checkout = lazy(() => import('@/pages/player/CheckoutPage'));
 const BookingSuccess = lazy(() => import('@/pages/player/BookingSuccessPage'));
 const Bookings = lazy(() => import('@/pages/player/BookingsPage'));
 const BookingDetail = lazy(() => import('@/pages/player/BookingDetailPage'));
-const SplitPayment = lazy(() => import('@/pages/player/SplitPaymentPage'));
 const Matchday = lazy(() => import('@/pages/player/MatchdayPage'));
 const Review = lazy(() => import('@/pages/player/ReviewPage'));
 const Cancel = lazy(() => import('@/pages/player/CancelPage'));
@@ -65,7 +62,6 @@ const OwnerVenueSetup = lazy(() => import('@/pages/owner/VenueSetupPage'));
 const OwnerCustomers = lazy(() => import('@/pages/owner/CustomersPage'));
 const OwnerPromotions = lazy(() => import('@/pages/owner/PromotionsPage'));
 const OwnerReviews = lazy(() => import('@/pages/owner/ReviewsPage'));
-const OwnerStaff = lazy(() => import('@/pages/owner/StaffPage'));
 
 const AdminDashboard = lazy(() => import('@/pages/admin/DashboardPage'));
 const AdminTurfRequests = lazy(() => import('@/pages/admin/TurfRequestsPage'));
@@ -122,7 +118,6 @@ export function AppRoutes() {
               <Route path="booking-success" element={<BookingSuccess />} />
               <Route path="bookings" element={<Bookings />} />
               <Route path="bookings/:bookingId" element={<BookingDetail />} />
-              <Route path="split-payment" element={<SplitPayment />} />
               <Route path="matchday" element={<Matchday />} />
               <Route path="review" element={<Review />} />
               <Route path="cancel" element={<Cancel />} />
@@ -135,8 +130,6 @@ export function AppRoutes() {
                 <Route path="tournaments" element={<DashboardTournaments />} />
                 <Route path="venues" element={<DashboardVenues />} />
                 <Route path="bookings" element={<BookingsSection />} />
-                <Route path="teams" element={<TeamsSection />} />
-                <Route path="network" element={<NetworkSection />} />
                 <Route path="stats" element={<StatsSection />} />
                 <Route path="wallet" element={<WalletSection />} />
                 <Route path="notifications" element={<NotificationsSection />} />
@@ -174,7 +167,6 @@ export function AppRoutes() {
           <Route path="customers" element={<OwnerCustomers />} />
           <Route path="promotions" element={<OwnerPromotions />} />
           <Route path="reviews" element={<OwnerReviews />} />
-          <Route path="staff" element={<OwnerStaff />} />
         </Route>
 
         <Route path="admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>

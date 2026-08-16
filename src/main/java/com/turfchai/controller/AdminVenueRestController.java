@@ -31,9 +31,11 @@ import java.util.Map;
 @CrossOrigin(originPatterns = "*")
 public class AdminVenueRestController {
 
-    /** The venue lifecycle the platform recognises; anything else is a client bug. */
-    private static final java.util.Set<String> ALLOWED_VENUE_STATUSES =
-            java.util.Set.of("DRAFT", "LIVE", "SUSPENDED", "ARCHIVED");
+    /**
+     * The venue lifecycle the platform recognises; anything else is a client bug.
+     */
+    private static final java.util.Set<String> ALLOWED_VENUE_STATUSES = java.util.Set.of("DRAFT", "LIVE", "SUSPENDED",
+            "ARCHIVED");
 
     private final VenueRepository venueRepository;
     private final AuditLogService auditLogService;
@@ -46,7 +48,8 @@ public class AdminVenueRestController {
     // association; projecting it after the session closed is exactly the
     // failure TC-005 described.
     @Transactional(readOnly = true)
-    public ResponseEntity<ApiResponse<List<AdminVenueResponse>>> listVenues(@RequestParam(required = false) String status) {
+    public ResponseEntity<ApiResponse<List<AdminVenueResponse>>> listVenues(
+            @RequestParam(required = false) String status) {
         List<Venue> list;
         if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
             list = venueRepository.findAll().stream()
@@ -149,15 +152,15 @@ public class AdminVenueRestController {
         venue.setStatus(newStatus.toUpperCase());
         Venue saved = venueRepository.save(venue);
 
-        String tone = "ARCHIVED".equalsIgnoreCase(newStatus) || "SUSPENDED".equalsIgnoreCase(newStatus) ? "red" : "green";
+        String tone = "ARCHIVED".equalsIgnoreCase(newStatus) || "SUSPENDED".equalsIgnoreCase(newStatus) ? "red"
+                : "green";
         auditLogService.logAction(
                 principal.getUsername(),
                 principal.getId(),
                 "Venue Status Updated",
                 tone,
                 "V-" + id,
-                "Venue " + venue.getName() + " status changed to " + newStatus.toUpperCase()
-        );
+                "Venue " + venue.getName() + " status changed to " + newStatus.toUpperCase());
 
         return ResponseEntity.ok(ApiResponse.ok(AdminVenueResponse.from(saved)));
     }

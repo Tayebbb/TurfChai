@@ -1,7 +1,11 @@
 package com.turfchai.promotion.repository;
 
 import com.turfchai.promotion.entity.Promotion;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -19,4 +23,17 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     Optional<Promotion> findByVenueIdAndCode(Long venueId, String code);
 
     boolean existsByVenueIdAndCode(Long venueId, String code);
+
+    /**
+     * Locks the promotion row so a usage limit cannot be overshot by two
+     * checkouts redeeming the last remaining use at once. Matches on code alone:
+     * a redemption must still be releasable after the limit deactivated it.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Promotion p where upper(p.code) = upper(:code)")
+    Optional<Promotion> findByCodeForUpdate(@Param("code") String code);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Promotion p where p.venue.id = :venueId and upper(p.code) = upper(:code)")
+    Optional<Promotion> findByVenueAndCodeForUpdate(@Param("venueId") Long venueId, @Param("code") String code);
 }

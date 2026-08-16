@@ -86,16 +86,6 @@
 .dash-link.is-active { background: var(--brand-soft); color: var(--brand-600); }
 .dash-ico { width: 18px; text-align: center; font-size: 13px; flex: none; }
 .dash-label { margin-right: auto; }
-.dash-soon {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 999px;
-  color: var(--text-3);
-  background: var(--surface-3);
-}
 
 /* ── Content ── */
 .dash-main { min-width: 0; display: flex; flex-direction: column; gap: 18px; }
@@ -200,7 +190,6 @@ a.dash-row:hover { transform: translateY(-1px); border-color: var(--brand); }
   }
   .dash-nav::-webkit-scrollbar { display: none; }
   .dash-link { flex: none; white-space: nowrap; }
-  .dash-soon { display: none; }
 }
 @media (max-width: 560px) {
   .dash-card { padding: 16px 16px; border-radius: 18px; }

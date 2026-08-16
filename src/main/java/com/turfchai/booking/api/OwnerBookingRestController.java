@@ -81,22 +81,27 @@ public class OwnerBookingRestController {
                 phone = user.getPhone();
             }
         }
-        if (isManual && (customerName.equalsIgnoreCase("Guest") || customerName.toLowerCase().contains("owner") || customerName.toLowerCase().contains("admin"))) {
+        if (isManual && (customerName.equalsIgnoreCase("Guest") || customerName.toLowerCase().contains("owner")
+                || customerName.toLowerCase().contains("admin"))) {
             customerName = "Manual Booking (Walk-in / Phone)";
             phone = "Venue direct";
         }
-        
-        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.ENGLISH);
+
+        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a",
+                java.util.Locale.ENGLISH);
         String timeStr = booking.getStartTime() != null ? booking.getStartTime().format(timeFormatter) : "N/A";
 
         String statusTone = "neutral";
         String statusText = "Unknown";
         if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CONFIRMED) {
-            statusTone = "green"; statusText = isManual ? "Paid (Cash)" : "Paid";
+            statusTone = "green";
+            statusText = isManual ? "Paid (Cash)" : "Paid";
         } else if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.PENDING) {
-            statusTone = "amber"; statusText = "Pending";
+            statusTone = "amber";
+            statusText = "Pending";
         } else if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CANCELLED) {
-            statusTone = "red"; statusText = "Cancelled";
+            statusTone = "red";
+            statusText = "Cancelled";
         }
 
         java.util.List<java.util.Map<String, String>> actions = new java.util.ArrayList<>();
@@ -122,7 +127,9 @@ public class OwnerBookingRestController {
                 .customer(customerName)
                 .sub(phone)
                 .subNum(true)
-                .pitch(booking.getSlot() != null && booking.getSlot().getPitch() != null ? booking.getSlot().getPitch().getName() : "Pitch")
+                .pitch(booking.getSlot() != null && booking.getSlot().getPitch() != null
+                        ? booking.getSlot().getPitch().getName()
+                        : "Pitch")
                 .time(timeStr)
                 .source(sourceMap)
                 .amountFormatted("৳" + (booking.getGrossAmount() != null ? booking.getGrossAmount().intValue() : 0))

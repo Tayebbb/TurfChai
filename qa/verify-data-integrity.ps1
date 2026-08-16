@@ -41,11 +41,12 @@ else { Fail 'every activity row still says Just now' }
 
 if ($null -ne $dash.weekly) {
     Pass ("weekly block is real: revenue=" + $dash.weekly.revenue +
-          " prev=" + $dash.weekly.previousRevenue +
-          " occ=" + $dash.weekly.occupancyPercent +
-          " online=" + $dash.weekly.onlineBookings +
-          " manual=" + $dash.weekly.manualBookings)
-} else { Fail 'owner analytics has no weekly block' }
+        " prev=" + $dash.weekly.previousRevenue +
+        " occ=" + $dash.weekly.occupancyPercent +
+        " online=" + $dash.weekly.onlineBookings +
+        " manual=" + $dash.weekly.manualBookings)
+}
+else { Fail 'owner analytics has no weekly block' }
 
 # --- Owner customers: no more placeholder columns ---------------------------
 $customers = Invoke-RestMethod -Uri "$api/owner/customers" -Headers $oh
@@ -87,7 +88,8 @@ foreach ($email in @('admin0@turfchai.com', 'admin1@turfchai.com', 'admin2@turfc
             -Body (@{ challenge = $chal.challenge; code = $chal.devCode } | ConvertTo-Json)
         Pass "signed in as $email"
         break
-    } catch {
+    }
+    catch {
         Write-Output "SKIP  $email is throttled or unavailable"
     }
 }
@@ -104,15 +106,16 @@ $adminVenues = Invoke-RestMethod -Uri "$api/admin/venues" -Headers $ah
 $venue = $adminVenues.data | Select-Object -First 1
 $stats = (Invoke-RestMethod -Uri "$api/admin/venues/$($venue.id)/analytics" -Headers $ah).data
 Pass ("admin venue analytics: bookings30d=" + $stats.bookings30d +
-      " revenue30d=" + $stats.revenue30d +
-      " occupancy=" + $stats.occupancyPercent +
-      " trend=" + (($stats.trendCounts) -join ','))
+    " revenue30d=" + $stats.revenue30d +
+    " occupancy=" + $stats.occupancyPercent +
+    " trend=" + (($stats.trendCounts) -join ','))
 if ($stats.trendLabels.Count -eq 7) { Pass 'demand trend has 7 real days' } else { Fail 'demand trend is not 7 days' }
 
 $growth = (Invoke-RestMethod -Uri "$api/admin/analytics/growth" -Headers $ah).data
 if ($growth.totalUsers -gt 0 -and $growth.totalUsers -lt 41270) {
     Pass "growth totalUsers = $($growth.totalUsers) (the page used to show 41,270)"
-} else { Fail "growth totalUsers = $($growth.totalUsers)" }
+}
+else { Fail "growth totalUsers = $($growth.totalUsers)" }
 
 Write-Output ''
 if ($script:bad -gt 0) { Write-Output "$($script:bad) CHECK(S) FAILED"; exit 1 }

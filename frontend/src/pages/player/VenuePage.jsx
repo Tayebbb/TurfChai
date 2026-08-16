@@ -260,7 +260,6 @@ export default function VenuePage() {
   });
 
 
-  // Live venue details by slug; static prototype copy remains as fallback.
   const detail = useApi(() => getVenue(venueId), [venueId]);
   const venue = detail.data;
 
@@ -500,7 +499,7 @@ export default function VenuePage() {
         <nav className="breadcrumbs" aria-label="Breadcrumb">
           <Link to={paths.player.explore}>Explore</Link>
           <span className="sep">/</span>
-          <Link to={paths.player.explore}>{venue?.area ?? 'Dhanmondi'}</Link>
+          <Link to={paths.player.explore}>{venue?.area ?? '—'}</Link>
           <span className="sep">/</span>
           <span>{name}</span>
         </nav>

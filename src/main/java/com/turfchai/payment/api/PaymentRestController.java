@@ -35,17 +35,22 @@ public class PaymentRestController {
 
     private final PaymentService paymentService;
 
-    /** POST /api/v1/payments/checkout — pay for the caller's currently held slot. */
+    /**
+     * POST /api/v1/payments/checkout — pay for the caller's currently held slot.
+     */
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<CheckoutResponse>> checkout(
             Authentication authentication,
             @Valid @RequestBody CheckoutRequest request) {
         CheckoutResponse result = paymentService.pay(currentUserId(authentication), request.getSlotId(),
-                request.getMethod(), request.getApplyWalletAmount());
+                request.getMethod(), request.getApplyWalletAmount(), request.getPromoCode());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
-    /** GET /api/v1/payments/booking/{bookingId} — a booking's payment history, most recent first. */
+    /**
+     * GET /api/v1/payments/booking/{bookingId} — a booking's payment history, most
+     * recent first.
+     */
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<ApiResponse<List<PaymentResponse>>> paymentsForBooking(
             Authentication authentication, @PathVariable Long bookingId) {
@@ -53,7 +58,10 @@ public class PaymentRestController {
                 paymentService.getPaymentsForBooking(currentUserId(authentication), bookingId)));
     }
 
-    /** GET /api/v1/payments/refund-preview/{bookingId} — refund %/amount before the caller confirms cancellation. */
+    /**
+     * GET /api/v1/payments/refund-preview/{bookingId} — refund %/amount before the
+     * caller confirms cancellation.
+     */
     @GetMapping("/refund-preview/{bookingId}")
     public ResponseEntity<ApiResponse<RefundPreviewResponse>> refundPreview(
             Authentication authentication, @PathVariable Long bookingId) {
@@ -61,7 +69,10 @@ public class PaymentRestController {
                 paymentService.previewRefund(currentUserId(authentication), bookingId)));
     }
 
-    /** POST /api/v1/payments/cancel/{bookingId} — cancels the booking and records the refund, if any. */
+    /**
+     * POST /api/v1/payments/cancel/{bookingId} — cancels the booking and records
+     * the refund, if any.
+     */
     @PostMapping("/cancel/{bookingId}")
     public ResponseEntity<ApiResponse<CancelRefundResponse>> cancel(
             Authentication authentication, @PathVariable Long bookingId) {

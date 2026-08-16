@@ -24,6 +24,15 @@ export async function getMyTurfRequests() {
   return apiGet('/api/v1/turf-requests');
 }
 
-export async function uploadTurfDoc(formData) {
+/**
+ * Records the name of a verification document. TurfChai has no document store,
+ * so the file itself is not kept — only the name travels with the request.
+ */
+export async function recordTurfDocName(formData) {
   return apiSend('POST', '/api/v1/turf-requests/upload', formData);
+}
+
+/** POST /api/v1/media/upload — a real upload; the returned URL resolves. */
+export async function uploadTurfPhoto(formData) {
+  return apiSend('POST', '/api/v1/media/upload', formData);
 }

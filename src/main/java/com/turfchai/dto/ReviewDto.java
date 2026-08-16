@@ -9,7 +9,8 @@ import java.util.Map;
 /**
  * Request payload for submitting a post-booking venue review.
  * <p>
- * Bean Validation constraints are enforced by the controller via {@code @Valid}.
+ * Bean Validation constraints are enforced by the controller via
+ * {@code @Valid}.
  * </p>
  */
 public class ReviewDto {

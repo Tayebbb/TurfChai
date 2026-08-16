@@ -39,7 +39,8 @@ public class ReviewService {
     /**
      * Saves a review authored by {@code authorId}.
      *
-     * <p>The author is the authenticated caller, never {@code dto.userId} — a
+     * <p>
+     * The author is the authenticated caller, never {@code dto.userId} — a
      * client must not be able to attribute a review to somebody else. The
      * booking must belong to that author, must not be cancelled, and must
      * already have started, so a review always describes a match the reviewer
@@ -113,7 +114,8 @@ public class ReviewService {
     /**
      * Records a physical check-in.
      *
-     * <p>Allowed for the player who owns the booking, or for staff of the venue
+     * <p>
+     * Allowed for the player who owns the booking, or for staff of the venue
      * (owner/admin) operating the gate. Anyone else — including another signed-in
      * player — is refused.
      */

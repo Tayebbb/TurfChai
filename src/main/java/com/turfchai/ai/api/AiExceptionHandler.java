@@ -22,38 +22,38 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "com.turfchai.ai.api")
 public class AiExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(AiExceptionHandler.class);
+        private static final Logger log = LoggerFactory.getLogger(AiExceptionHandler.class);
 
-    @ExceptionHandler(LlmException.class)
-    public ResponseEntity<Map<String, Object>> handleLlm(LlmException e) {
-        log.error("LLM failure", e);
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(ApiErrorBody.of(HttpStatus.SERVICE_UNAVAILABLE,
-                        "The AI assistant is temporarily unavailable. Please try again."));
-    }
+        @ExceptionHandler(LlmException.class)
+        public ResponseEntity<Map<String, Object>> handleLlm(LlmException e) {
+                log.error("LLM failure", e);
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                                .body(ApiErrorBody.of(HttpStatus.SERVICE_UNAVAILABLE,
+                                                "The AI assistant is temporarily unavailable. Please try again."));
+        }
 
-    @ExceptionHandler(AgentException.class)
-    public ResponseEntity<Map<String, Object>> handleAgent(AgentException e) {
-        log.error("Agent failure", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiErrorBody.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "The AI assistant could not complete that request."));
-    }
+        @ExceptionHandler(AgentException.class)
+        public ResponseEntity<Map<String, Object>> handleAgent(AgentException e) {
+                log.error("Agent failure", e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiErrorBody.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                                "The AI assistant could not complete that request."));
+        }
 
-    @ExceptionHandler({ RagException.class, PromptException.class })
-    public ResponseEntity<Map<String, Object>> handleInternal(RuntimeException e) {
-        log.error("AI internal failure", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiErrorBody.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "The AI assistant could not complete that request."));
-    }
+        @ExceptionHandler({ RagException.class, PromptException.class })
+        public ResponseEntity<Map<String, Object>> handleInternal(RuntimeException e) {
+                log.error("AI internal failure", e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiErrorBody.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                                "The AI assistant could not complete that request."));
+        }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
-        String detail = e.getBindingResult().getFieldErrors().stream()
-                .map(f -> f.getField() + " " + f.getDefaultMessage())
-                .findFirst()
-                .orElse("invalid request");
-        return ResponseEntity.badRequest().body(ApiErrorBody.of(HttpStatus.BAD_REQUEST, detail));
-    }
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
+                String detail = e.getBindingResult().getFieldErrors().stream()
+                                .map(f -> f.getField() + " " + f.getDefaultMessage())
+                                .findFirst()
+                                .orElse("invalid request");
+                return ResponseEntity.badRequest().body(ApiErrorBody.of(HttpStatus.BAD_REQUEST, detail));
+        }
 }

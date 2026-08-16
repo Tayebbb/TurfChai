@@ -12,6 +12,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -46,6 +47,35 @@ public class NotificationService {
         dispatchEmail(userId, title, body);
     }
 
+    /**
+     * Records a notification unless the recipient already has one of the same
+     * kind about the same thing. State transitions get retried and the reminder
+     * job runs repeatedly; neither may stack duplicates in the player's feed.
+     *
+     * @return whether a notification was actually written
+     */
+    @Transactional
+    public boolean sendOnce(Long userId, String type, String title, String body, String link) {
+        if (userId == null || link == null || link.isBlank()) {
+            return false;
+        }
+        if (notificationRepository.existsByUserIdAndTypeAndLink(userId, type, link)) {
+            return false;
+        }
+        send(userId, type, title, body, link);
+        return true;
+    }
+
+    /**
+     * Records a notification in its own transaction, so it survives the
+     * rollback of the operation that failed. Only for telling somebody that
+     * something did <em>not</em> happen.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void sendDetached(Long userId, String type, String title, String body, String link) {
+        send(userId, type, title, body, link);
+    }
+
     @Transactional(readOnly = true)
     public List<Notification> listForUser(Long userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -60,11 +90,11 @@ public class NotificationService {
     public void markRead(Long notificationId, Long userId) {
         Notification notif = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
-        
+
         if (!notif.getUserId().equals(userId)) {
             throw new IllegalArgumentException("Cannot modify another user's notification");
         }
-        
+
         notif.setIsRead(true);
         notificationRepository.save(notif);
     }
@@ -74,7 +104,8 @@ public class NotificationService {
         notificationRepository.markAllReadByUserId(userId);
     }
 
-    // ponytail: @Async on a thread pool. ceiling: switch to message queue (SQS/RabbitMQ) for >1000 notifs/min
+    // ponytail: @Async on a thread pool. ceiling: switch to message queue
+    // (SQS/RabbitMQ) for >1000 notifs/min
     @Async
     protected void dispatchEmail(Long userId, String subject, String text) {
         if (!StringUtils.hasText(mailHost)) {

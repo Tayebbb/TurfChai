@@ -30,6 +30,12 @@ function greeting(now = new Date()) {
   return 'Good evening';
 }
 
+/** Every document row used to read "Attached ✓" whether one was or not. */
+function DocumentState({ value }) {
+  if (!value || value === 'PENDING') return <b className="subtle">Not provided</b>;
+  return <b style={{ color: 'var(--brand-500)' }}>Attached ✓</b>;
+}
+
 export default function DashboardPage() {
   const { showToast } = useToast();
   const scanner = useDisclosure(false);
@@ -110,10 +116,11 @@ export default function DashboardPage() {
     ? rawKpis
     : (rawKpis && typeof rawKpis === 'object'
         ? [
-            { label: "Today's revenue", value: rawKpis.revenue || '৳0' },
-            { label: 'Bookings today', value: rawKpis.booked || '0' },
-            { label: 'Occupancy', value: rawKpis.occupancy || '0%' },
-            { label: 'Pending payments', value: rawKpis.pending || '0' },
+            // A missing figure is not a measured zero.
+            { label: "Today's revenue", value: rawKpis.revenue || '—' },
+            { label: 'Bookings today', value: rawKpis.booked || '—' },
+            { label: 'Occupancy', value: rawKpis.occupancy || '—' },
+            { label: 'Pending payments', value: rawKpis.pending || '—' },
           ]
         : []);
 
@@ -157,7 +164,7 @@ export default function DashboardPage() {
               <div>
                 <h2 style={{ margin: 0 }}>{latestRequest?.venueName || 'My Venue'}</h2>
                 <span className="subtle small">
-                  Request Code: <b className="num">{latestRequest?.requestCode || 'TRF-1042'}</b> · Area: {latestRequest?.area || 'Dhanmondi'}
+                  Request Code: <b className="num">{latestRequest?.requestCode || '—'}</b> · Area: {latestRequest?.area || '—'}
                 </span>
               </div>
               <Badge tone="amber">Status: PENDING ADMIN APPROVAL</Badge>
@@ -168,11 +175,11 @@ export default function DashboardPage() {
                 <span className="tiny subtle">PITCH & SPORTS DETAILS</span>
                 <div className="between small">
                   <span className="muted">Pitch Count</span>
-                  <b>{latestRequest?.pitchCount || 1} pitch(es)</b>
+                  <b>{latestRequest?.pitchCount ? `${latestRequest.pitchCount} pitch(es)` : '—'}</b>
                 </div>
                 <div className="between small">
                   <span className="muted">Sports Supported</span>
-                  <b>{latestRequest?.sportsCsv || 'Football'}</b>
+                  <b>{latestRequest?.sportsCsv || '—'}</b>
                 </div>
                 <div className="between small">
                   <span className="muted">Owner Phone</span>
@@ -184,15 +191,15 @@ export default function DashboardPage() {
                 <span className="tiny subtle">VERIFICATION DOCUMENTS</span>
                 <div className="between small">
                   <span className="muted">Trade License</span>
-                  <b style={{ color: 'var(--brand-500)' }}>{latestRequest?.docTradeLicense || 'Attached ✓'}</b>
+                  <DocumentState value={latestRequest?.docTradeLicense} />
                 </div>
                 <div className="between small">
                   <span className="muted">Owner NID</span>
-                  <b style={{ color: 'var(--brand-500)' }}>{latestRequest?.docOwnerNid || 'Attached ✓'}</b>
+                  <DocumentState value={latestRequest?.docOwnerNid} />
                 </div>
                 <div className="between small">
                   <span className="muted">Utility / Lease Proof</span>
-                  <b style={{ color: 'var(--brand-500)' }}>{latestRequest?.docUtilityBill || 'Attached ✓'}</b>
+                  <DocumentState value={latestRequest?.docUtilityBill} />
                 </div>
               </div>
             </div>

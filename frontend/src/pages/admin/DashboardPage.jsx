@@ -114,12 +114,14 @@ export default function DashboardPage() {
     return {
       gmv,
       bookings,
-      fee: Math.round(gmv * 0.1),
+      // Commission actually taken on settled payouts. This used to be a tenth
+      // of GMV — neither the platform's real rate nor money anyone had received.
+      fee: Number(payoutSummary?.platformFeeCollected) || 0,
       payouts: settledPayouts,
       aov: bookings > 0 ? Math.round(gmv / bookings) : 0,
       growth: series.growthPercent || '+0.0%'
     };
-  }, [series, payoutSummary?.settledAmount]);
+  }, [series, payoutSummary?.settledAmount, payoutSummary?.platformFeeCollected]);
 
   const { data: growthRes } = useApi(() => api('/admin/analytics/growth'), []);
   const growthDto = growthRes?.data || growthRes;

@@ -13,7 +13,8 @@ $failures = @()
 function Check($label, $condition, $detail) {
     if ($condition) {
         Write-Host "  PASS  $label" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  FAIL  $label -- $detail" -ForegroundColor Red
         $script:failures += "$label -- $detail"
     }
@@ -63,7 +64,8 @@ $pastSlot = if ($pastFound.ok) { $pastFound.data | Select-Object -First 1 } else
 if ($pastSlot) {
     $r = TryApi POST '/bookings/hold-slot' $token @{ slotId = $pastSlot.id }
     Check 'holding a slot in the past is refused' (-not $r.ok) 'the backend allowed it'
-} else {
+}
+else {
     Write-Host "  SKIP  no past slots seeded" -ForegroundColor Yellow
 }
 
@@ -112,7 +114,7 @@ Check 'gateway + wallet equals the booking price' ($total -eq [decimal]$booking.
 
 $walletAfterPay = [decimal](Api GET '/rewards/my-points' $token $null).data.walletBalance
 Check 'wallet was debited by exactly what was applied' `
-    ($walletAfterPay -eq ([decimal]$walletBefore - $walletCharged)) `
+($walletAfterPay -eq ([decimal]$walletBefore - $walletCharged)) `
     "wallet went $walletBefore -> $walletAfterPay, applied $walletCharged"
 
 Write-Host "`n== Paying again is refused ==" -ForegroundColor Cyan
@@ -138,7 +140,7 @@ Check 'booking is CANCELLED' ($cancelled.status -eq 'CANCELLED') "status was $($
 $expectedWalletBack = [Math]::Round($walletCharged * $refund.refundPercent / 100, 2)
 $walletAfterRefund = [decimal](Api GET '/rewards/my-points' $token $null).data.walletBalance
 Check 'the wallet share came back to the wallet' `
-    ($walletAfterRefund -eq ($walletAfterPay + $expectedWalletBack)) `
+($walletAfterRefund -eq ($walletAfterPay + $expectedWalletBack)) `
     "wallet went $walletAfterPay -> $walletAfterRefund, expected +$expectedWalletBack"
 
 Write-Host "`n== Cancelling twice is refused ==" -ForegroundColor Cyan
@@ -155,7 +157,8 @@ Write-Host ""
 if ($failures.Count -eq 0) {
     Write-Host "ALL CHECKS PASSED" -ForegroundColor Green
     exit 0
-} else {
+}
+else {
     Write-Host "$($failures.Count) CHECK(S) FAILED" -ForegroundColor Red
     $failures | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     exit 1

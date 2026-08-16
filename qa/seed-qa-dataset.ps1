@@ -24,18 +24,18 @@ $script:Steps = @()
 # ── Fixed QA identities (deterministic; the dev DB is in-memory) ─────────────
 $QA_PASSWORD = 'QaPass@12345'
 $ACCOUNTS = @(
-    @{ key = 'playerA';    email = 'qa.player.a@turfchai.test';    name = 'QA PlayerA Alpha';  phone = '+8801900000001'; role = 'PLAYER' }
-    @{ key = 'playerB';    email = 'qa.player.b@turfchai.test';    name = 'QA PlayerB Bravo';  phone = '+8801900000002'; role = 'PLAYER' }
+    @{ key = 'playerA'; email = 'qa.player.a@turfchai.test'; name = 'QA PlayerA Alpha'; phone = '+8801900000001'; role = 'PLAYER' }
+    @{ key = 'playerB'; email = 'qa.player.b@turfchai.test'; name = 'QA PlayerB Bravo'; phone = '+8801900000002'; role = 'PLAYER' }
     @{ key = 'playerZero'; email = 'qa.player.zero@turfchai.test'; name = 'QA PlayerZero Nil'; phone = '+8801900000003'; role = 'PLAYER' }
-    @{ key = 'ownerA';     email = 'qa.owner.a@turfchai.test';     email2 = $null; name = 'QA OwnerA Ltd'; phone = '+8801900000004'; role = 'OWNER' }
-    @{ key = 'ownerB';     email = 'qa.owner.b@turfchai.test';     name = 'QA OwnerB Ltd';     phone = '+8801900000005'; role = 'OWNER' }
-    @{ key = 'soloPlayer'; email = 'qa.solo.a@turfchai.test';      name = 'QA Solo Sierra';    phone = '+8801900000006'; role = 'SOLO_PLAYER' }
+    @{ key = 'ownerA'; email = 'qa.owner.a@turfchai.test'; email2 = $null; name = 'QA OwnerA Ltd'; phone = '+8801900000004'; role = 'OWNER' }
+    @{ key = 'ownerB'; email = 'qa.owner.b@turfchai.test'; name = 'QA OwnerB Ltd'; phone = '+8801900000005'; role = 'OWNER' }
+    @{ key = 'soloPlayer'; email = 'qa.solo.a@turfchai.test'; name = 'QA Solo Sierra'; phone = '+8801900000006'; role = 'SOLO_PLAYER' }
 )
 # Pre-existing seeded identities (see PlayerDataSeeder / AdminDataSeeder / AdminDemoDataSeeder)
 $SEEDED = @{
-    demoPlayer = @{ email = 'rafi@turfchai.dev';                 password = 'demo1234';    role = 'PLAYER (owns the 10 demo venues)' }
-    superAdmin = @{ email = 'fazle.rabbi.mugdho@gmail.com';      password = 'Demo@12345';  role = 'SUPER_ADMIN (2FA login)' }
-    admin      = @{ email = 'admin0@turfchai.com';               password = 'Demo@12345';  role = 'ADMIN' }
+    demoPlayer = @{ email = 'rafi@turfchai.dev'; password = 'demo1234'; role = 'PLAYER (owns the 10 demo venues)' }
+    superAdmin = @{ email = 'fazle.rabbi.mugdho@gmail.com'; password = 'Demo@12345'; role = 'SUPER_ADMIN (2FA login)' }
+    admin      = @{ email = 'admin0@turfchai.com'; password = 'Demo@12345'; role = 'ADMIN' }
 }
 
 function Step($name, $detail) {
@@ -55,7 +55,8 @@ function Invoke-Api {
         $parsed = $null
         if ($content) { try { $parsed = $content | ConvertFrom-Json } catch { $parsed = $content } }
         return [pscustomobject]@{ ok = $true; status = [int]$r.StatusCode; data = $parsed; raw = $content }
-    } catch {
+    }
+    catch {
         $code = 0
         if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode.value__ }
         $msg = $_.ErrorDetails.Message
@@ -133,10 +134,10 @@ function PickSlot($venueId, $date, [switch]$PastOnly, [switch]$FutureOnly) {
     return $null
 }
 
-$vKick   = $venues | Where-Object { $_.slug -eq 'kick-off-arena' } | Select-Object -First 1
-$vGreen  = $venues | Where-Object { $_.slug -eq 'greenturf-mohammadpur' } | Select-Object -First 1
+$vKick = $venues | Where-Object { $_.slug -eq 'kick-off-arena' } | Select-Object -First 1
+$vGreen = $venues | Where-Object { $_.slug -eq 'greenturf-mohammadpur' } | Select-Object -First 1
 $vMirpur = $venues | Where-Object { $_.slug -eq 'mirpur-sports-city' } | Select-Object -First 1
-$vGulshan= $venues | Where-Object { $_.slug -eq 'gulshan-turf-park' } | Select-Object -First 1
+$vGulshan = $venues | Where-Object { $_.slug -eq 'gulshan-turf-park' } | Select-Object -First 1
 if (-not $vKick) { $vKick = $venues[0] }
 if (-not $vGreen) { $vGreen = $venues[1] }
 if (-not $vMirpur) { $vMirpur = $venues[2] }
@@ -169,14 +170,15 @@ function BookViaCheckout($session, $slot, $label, $method) {
 $pastSlot = PickSlot $vKick.id $today -PastOnly
 if ($pastSlot) {
     $b = BookViaHold $S.playerA $pastSlot 'playerA-PAST-today'
-    if ($b) { $bookings += [pscustomobject]@{ label='playerA_past_completed'; owner='playerA'; id=$b.id; code=$b.bookingCode; venueId=$vKick.id; date=$b.bookingDate; start=$b.startTime; status=$b.status } }
-} else { Step 'book-past' 'no past AVAILABLE slot today (run later in the day to exercise TC-009)' }
+    if ($b) { $bookings += [pscustomobject]@{ label = 'playerA_past_completed'; owner = 'playerA'; id = $b.id; code = $b.bookingCode; venueId = $vKick.id; date = $b.bookingDate; start = $b.startTime; status = $b.status } }
+}
+else { Step 'book-past' 'no past AVAILABLE slot today (run later in the day to exercise TC-009)' }
 
 # Future confirmed booking (tomorrow)
 $futSlot = PickSlot $vKick.id $tomorrow -FutureOnly
 if ($futSlot) {
     $b = BookViaHold $S.playerA $futSlot 'playerA-upcoming'
-    if ($b) { $bookings += [pscustomobject]@{ label='playerA_upcoming_confirmed'; owner='playerA'; id=$b.id; code=$b.bookingCode; venueId=$vKick.id; date=$b.bookingDate; start=$b.startTime; status=$b.status } }
+    if ($b) { $bookings += [pscustomobject]@{ label = 'playerA_upcoming_confirmed'; owner = 'playerA'; id = $b.id; code = $b.bookingCode; venueId = $vKick.id; date = $b.bookingDate; start = $b.startTime; status = $b.status } }
 }
 
 # Second future booking then cancel -> CANCELLED state
@@ -186,7 +188,7 @@ if ($cancelSlot) {
     if ($b) {
         $c = Invoke-Api POST "/api/v1/bookings/$($b.id)/cancel" $null (Auth $S.playerA.token)
         Step 'cancel' "booking $($b.id) cancel status=$($c.status)"
-        $bookings += [pscustomobject]@{ label='playerA_cancelled'; owner='playerA'; id=$b.id; code=$b.bookingCode; venueId=$vKick.id; date=$b.bookingDate; start=$b.startTime; status='CANCELLED' }
+        $bookings += [pscustomobject]@{ label = 'playerA_cancelled'; owner = 'playerA'; id = $b.id; code = $b.bookingCode; venueId = $vKick.id; date = $b.bookingDate; start = $b.startTime; status = 'CANCELLED' }
     }
 }
 
@@ -194,14 +196,14 @@ if ($cancelSlot) {
 $paySlot = PickSlot $vGreen.id $tomorrow -FutureOnly
 if ($paySlot) {
     $p = BookViaCheckout $S.playerA $paySlot 'playerA-paid-bkash' 'BKASH'
-    if ($p) { $bookings += [pscustomobject]@{ label='playerA_paid_checkout'; owner='playerA'; id=$p.bookingId; code=$p.bookingCode; venueId=$vGreen.id; date=$paySlot.slotDate; start=$paySlot.startTime; status='CONFIRMED'; paymentId=$p.paymentId } }
+    if ($p) { $bookings += [pscustomobject]@{ label = 'playerA_paid_checkout'; owner = 'playerA'; id = $p.bookingId; code = $p.bookingCode; venueId = $vGreen.id; date = $paySlot.slotDate; start = $paySlot.startTime; status = 'CONFIRMED'; paymentId = $p.paymentId } }
 }
 
 # Player B booking (cross-user authorization target)
 $bSlot = PickSlot $vMirpur.id $tomorrow -FutureOnly
 if ($bSlot) {
     $b = BookViaHold $S.playerB $bSlot 'playerB-upcoming'
-    if ($b) { $bookings += [pscustomobject]@{ label='playerB_upcoming_confirmed'; owner='playerB'; id=$b.id; code=$b.bookingCode; venueId=$vMirpur.id; date=$b.bookingDate; start=$b.startTime; status=$b.status } }
+    if ($b) { $bookings += [pscustomobject]@{ label = 'playerB_upcoming_confirmed'; owner = 'playerB'; id = $b.id; code = $b.bookingCode; venueId = $vMirpur.id; date = $b.bookingDate; start = $b.startTime; status = $b.status } }
 }
 
 # ── 4. Saved venues ─────────────────────────────────────────────────────────
@@ -230,11 +232,11 @@ $ownerVenue = $null
 if ($ovRes.ok -and $ovRes.data.Count -gt 0) { $ownerVenue = $ovRes.data[0] }
 if (-not $ownerVenue) {
     $cv = Invoke-Api POST '/api/v1/owner/venues' @{
-        name='QA Owner A Arena'; address='QA Road 1, Dhanmondi'; area='Dhanmondi'; lat=23.7461; lng=90.3742
-        basePrice=2000; openTime='06:00'; closeTime='23:00'; amenities='floodlights,parking'
-        contactPhone='+8801900000004'; contactEmail='qa.owner.a@turfchai.test'
-        depositPolicy='FULL_ONLY'; cancelPolicy='FREE_24H_50_6H'; allowSplitPayment=$true
-        rules='QA house rules'; mlPricingEnabled=$false
+        name = 'QA Owner A Arena'; address = 'QA Road 1, Dhanmondi'; area = 'Dhanmondi'; lat = 23.7461; lng = 90.3742
+        basePrice = 2000; openTime = '06:00'; closeTime = '23:00'; amenities = 'floodlights,parking'
+        contactPhone = '+8801900000004'; contactEmail = 'qa.owner.a@turfchai.test'
+        depositPolicy = 'FULL_ONLY'; cancelPolicy = 'FREE_24H_50_6H'; allowSplitPayment = $true
+        rules = 'QA house rules'; mlPricingEnabled = $false
     } $ownerAH
     if ($cv.ok) { $ownerVenue = $cv.data }
 }
@@ -243,8 +245,8 @@ Step 'owner-venue' "ownerA venue id=$($ownerVenue.id) name=$($ownerVenue.name) s
 $pitch = $null
 if ($ownerVenue) {
     $cp = Invoke-Api POST "/api/v1/owner/venues/$($ownerVenue.id)/pitches" @{
-        name='QA Pitch 1'; format='7_a_side'; surfaceType='Artificial grass'; lighting='LED floodlights'
-        maxPlayers=14; indoor=$false; sportSlugs=@('football')
+        name = 'QA Pitch 1'; format = '7_a_side'; surfaceType = 'Artificial grass'; lighting = 'LED floodlights'
+        maxPlayers = 14; indoor = $false; sportSlugs = @('football')
     } $ownerAH
     # The create response body is not reliably parsed, so read the id back from the venue.
     $reread = Invoke-Api GET "/api/v1/owner/venues/$($ownerVenue.id)" $null $ownerAH
@@ -253,8 +255,8 @@ if ($ownerVenue) {
     else { Step 'owner-pitch-FAILED' "status=$($cp.status) $($cp.raw)" }
 
     $pr = Invoke-Api POST "/api/v1/owner/venues/$($ownerVenue.id)/pricing-rules" @{
-        sportSlug='football'; windowType='PEAK'; rate=2500; slotDurationMin=90; bufferMin=10
-        windowStart='16:00:00'; windowEnd='23:00:00'; daysOfWeek=@(1,2,3,4,5,6,7)
+        sportSlug = 'football'; windowType = 'PEAK'; rate = 2500; slotDurationMin = 90; bufferMin = 10
+        windowStart = '16:00:00'; windowEnd = '23:00:00'; daysOfWeek = @(1, 2, 3, 4, 5, 6, 7)
     } $ownerAH
     Step 'owner-pricing-rule' "status=$($pr.status)"
 }
@@ -262,8 +264,8 @@ if ($ownerVenue) {
 $ownerSlots = @()
 if ($pitch) {
     $gen = Invoke-Api POST '/api/v1/owner/slots/generate' @{
-        pitchId=$pitch.id; startDate=$today; endDate=$tomorrow
-        startTime='08:00:00'; endTime='20:00:00'; slotDurationMinutes=120; basePrice=1800
+        pitchId = $pitch.id; startDate = $today; endDate = $tomorrow
+        startTime = '08:00:00'; endTime = '20:00:00'; slotDurationMinutes = 120; basePrice = 1800
     } $ownerAH
     if ($gen.ok) { $ownerSlots = $gen.data; Step 'owner-slots' "generated $($ownerSlots.Count) slots on QA pitch" }
     else { Step 'owner-slots-FAILED' "status=$($gen.status) $($gen.raw)" }
@@ -289,7 +291,7 @@ if ($ownerSlots.Count -gt 0) {
         $b = BookViaHold $S.playerA @{ id = $free.id } 'playerA-at-ownerA-venue'
         if ($b) {
             $ownerBooking = $b
-            $bookings += [pscustomobject]@{ label='playerA_at_ownerA_venue'; owner='playerA'; id=$b.id; code=$b.bookingCode; venueId=$ownerVenue.id; date=$b.bookingDate; start=$b.startTime; status=$b.status }
+            $bookings += [pscustomobject]@{ label = 'playerA_at_ownerA_venue'; owner = 'playerA'; id = $b.id; code = $b.bookingCode; venueId = $ownerVenue.id; date = $b.bookingDate; start = $b.startTime; status = $b.status }
         }
     }
 }
@@ -298,10 +300,10 @@ if ($ownerSlots.Count -gt 0) {
 $promo = $null
 if ($ownerVenue) {
     $pm = Invoke-Api POST "/api/v1/owner/venues/$($ownerVenue.id)/promotions" @{
-        code='QA20'; label='QA 20% off'; discountType='PERCENT'; discountValue=20
-        minOrderAmount=0; usageLimit=100
-        validFrom=(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        validUntil=(Get-Date).AddDays(30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        code = 'QA20'; label = 'QA 20% off'; discountType = 'PERCENT'; discountValue = 20
+        minOrderAmount = 0; usageLimit = 100
+        validFrom = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        validUntil = (Get-Date).AddDays(30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     } $ownerAH
     if ($pm.ok) { $promo = $pm.data; Step 'owner-promotion' "promo id=$($promo.id) code=$($promo.code)" }
     else { Step 'owner-promotion-FAILED' "status=$($pm.status) $($pm.raw)" }
@@ -317,9 +319,9 @@ Step 'owner-b-venue' "ownerB venue id=$($ownerBVenue.id) name=$($ownerBVenue.nam
 Write-Host "`n-- open game --" -ForegroundColor Yellow
 $openGame = $null
 $og = Invoke-Api POST '/api/v1/solo/open-games' @{
-    title='QA Friendly Match'; venueId=$vKick.id; gameDate=$tomorrow
-    startTime='19:00:00'; endTime='20:30:00'; skillLevel='INTERMEDIATE'
-    capacity=10; pricePerPlayer=250; organizerUserId=$S.playerA.user.id
+    title = 'QA Friendly Match'; venueId = $vKick.id; gameDate = $tomorrow
+    startTime = '19:00:00'; endTime = '20:30:00'; skillLevel = 'INTERMEDIATE'
+    capacity = 10; pricePerPlayer = 250; organizerUserId = $S.playerA.user.id
 } (Auth $S.playerA.token)
 if ($og.ok) { $openGame = $og.data; Step 'open-game' "id=$($openGame.id) code=$($openGame.gameCode) spots=$($openGame.spotsLeft)" }
 else { Step 'open-game-FAILED' "status=$($og.status) $($og.raw)" }
@@ -336,8 +338,8 @@ if (-not $reviewTarget) { $reviewTarget = $bookings | Where-Object { $_.owner -e
 $reviewResult = $null
 if ($reviewTarget) {
     $rv = Invoke-Api POST '/api/v1/reviews' @{
-        bookingId=$reviewTarget.id; userId=$S.playerA.user.id; venueId=$reviewTarget.venueId
-        overallRating=5; subRatings=@{ surface=5; lighting=4 }; comment='QA baseline review'; parentReview=$false
+        bookingId = $reviewTarget.id; userId = $S.playerA.user.id; venueId = $reviewTarget.venueId
+        overallRating = 5; subRatings = @{ surface = 5; lighting = 4 }; comment = 'QA baseline review'; parentReview = $false
     } (Auth $S.playerA.token)
     $reviewResult = @{ status = $rv.status; body = "$($rv.raw)" }
     Step 'review' "booking $($reviewTarget.id) -> status=$($rv.status)"
@@ -358,31 +360,32 @@ if ($redeemable) {
 
 # ── 10. Manifest ────────────────────────────────────────────────────────────
 $manifest = [ordered]@{
-    generatedAt   = (Get-Date).ToString('o')
-    baseUrl       = $BaseUrl
-    commit        = (git -C "$PSScriptRoot\.." rev-parse HEAD 2>$null)
-    profile       = 'dev (in-memory H2, Flyway disabled, seeders enabled)'
-    qaPassword    = $QA_PASSWORD
+    generatedAt    = (Get-Date).ToString('o')
+    baseUrl        = $BaseUrl
+    commit         = (git -C "$PSScriptRoot\.." rev-parse HEAD 2>$null)
+    profile        = 'dev (in-memory H2, Flyway disabled, seeders enabled)'
+    qaPassword     = $QA_PASSWORD
     seededAccounts = $SEEDED
-    qaAccounts    = @($ACCOUNTS | ForEach-Object {
-        $sess = $S[$_.key]
-        [ordered]@{ key=$_.key; email=$_.email; password=$QA_PASSWORD; role=$_.role
-                    id=$sess.user.id; publicId=$sess.user.publicId }
-    })
-    demoPlayer    = [ordered]@{ email=$SEEDED.demoPlayer.email; id=$S.demoPlayer.user.id; publicId=$S.demoPlayer.user.publicId }
-    superAdmin    = [ordered]@{ email=$SEEDED.superAdmin.email; id=$S.superAdmin.user.id; role=$S.superAdmin.user.role }
-    venues        = @($venues | ForEach-Object { [ordered]@{ id=$_.id; slug=$_.slug; name=$_.name; area=$_.area } })
-    ownerAVenue   = if ($ownerVenue) { [ordered]@{ id=$ownerVenue.id; name=$ownerVenue.name; slug=$ownerVenue.slug; status=$ownerVenue.status; pitchId=$pitch.id } } else { $null }
-    ownerBVenue   = if ($ownerBVenue) { [ordered]@{ id=$ownerBVenue.id; name=$ownerBVenue.name; slug=$ownerBVenue.slug } } else { $null }
-    ownerSlots    = @($ownerSlots | ForEach-Object { [ordered]@{ id=$_.id; date=$_.slotDate; start=$_.startTime; status=$_.status; price=$_.price } })
-    blockedSlotId = $blocked.id
-    promotion     = if ($promo) { [ordered]@{ id=$promo.id; code=$promo.code; venueId=$ownerVenue.id } } else { $null }
-    bookings      = @($bookings)
-    tournament    = [ordered]@{ code=$TOURN; qaTeamId=$teamReg.id; qaRegistrationCode=$teamReg.registrationCode; qaEntryFeeStatus=$teamReg.entryFeeStatus }
-    openGame      = if ($openGame) { [ordered]@{ id=$openGame.id; code=$openGame.gameCode; venueId=$vKick.id } } else { $null }
-    reviewAttempt = $reviewResult
-    rewards       = [ordered]@{ demoPlayerBalance=$pts.data.data.balance; redemption=$redemption }
-    steps         = @($script:Steps)
+    qaAccounts     = @($ACCOUNTS | ForEach-Object {
+            $sess = $S[$_.key]
+            [ordered]@{ key = $_.key; email = $_.email; password = $QA_PASSWORD; role = $_.role
+                id = $sess.user.id; publicId = $sess.user.publicId 
+            }
+        })
+    demoPlayer     = [ordered]@{ email = $SEEDED.demoPlayer.email; id = $S.demoPlayer.user.id; publicId = $S.demoPlayer.user.publicId }
+    superAdmin     = [ordered]@{ email = $SEEDED.superAdmin.email; id = $S.superAdmin.user.id; role = $S.superAdmin.user.role }
+    venues         = @($venues | ForEach-Object { [ordered]@{ id = $_.id; slug = $_.slug; name = $_.name; area = $_.area } })
+    ownerAVenue    = if ($ownerVenue) { [ordered]@{ id = $ownerVenue.id; name = $ownerVenue.name; slug = $ownerVenue.slug; status = $ownerVenue.status; pitchId = $pitch.id } } else { $null }
+    ownerBVenue    = if ($ownerBVenue) { [ordered]@{ id = $ownerBVenue.id; name = $ownerBVenue.name; slug = $ownerBVenue.slug } } else { $null }
+    ownerSlots     = @($ownerSlots | ForEach-Object { [ordered]@{ id = $_.id; date = $_.slotDate; start = $_.startTime; status = $_.status; price = $_.price } })
+    blockedSlotId  = $blocked.id
+    promotion      = if ($promo) { [ordered]@{ id = $promo.id; code = $promo.code; venueId = $ownerVenue.id } } else { $null }
+    bookings       = @($bookings)
+    tournament     = [ordered]@{ code = $TOURN; qaTeamId = $teamReg.id; qaRegistrationCode = $teamReg.registrationCode; qaEntryFeeStatus = $teamReg.entryFeeStatus }
+    openGame       = if ($openGame) { [ordered]@{ id = $openGame.id; code = $openGame.gameCode; venueId = $vKick.id } } else { $null }
+    reviewAttempt  = $reviewResult
+    rewards        = [ordered]@{ demoPlayerBalance = $pts.data.data.balance; redemption = $redemption }
+    steps          = @($script:Steps)
 }
 
 New-Item -ItemType Directory -Force -Path (Split-Path $OutFile) | Out-Null

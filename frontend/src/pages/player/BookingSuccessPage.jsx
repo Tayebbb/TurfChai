@@ -238,9 +238,6 @@ export default function BookingSuccessPage() {
         </div>
 
         <div className="grid2" style={{ marginTop: 16, gap: 10 }}>
-          <Button variant="secondary" to={paths.player.splitPayment}>
-            👥 Splitting with your team?
-          </Button>
           <Button
             variant="secondary"
             disabled={!booking?.bookingDate || !booking?.startTime}

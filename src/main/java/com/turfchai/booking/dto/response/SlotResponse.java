@@ -9,7 +9,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/** A single bookable time slot, as shown on the venue page's availability grid. */
+/**
+ * A single bookable time slot, as shown on the venue page's availability grid.
+ */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor

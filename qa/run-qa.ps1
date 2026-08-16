@@ -32,7 +32,8 @@ function Step($name, [scriptblock]$body) {
     $results[$name] = [bool]$ok
     if ($ok) {
         Write-Host "--- $name OK" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "--- $name FAILED" -ForegroundColor Red
     }
 }
@@ -46,7 +47,8 @@ function WaitForUrl($url, $label, $attempts = 60) {
         try {
             Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3 | Out-Null
             return $true
-        } catch {
+        }
+        catch {
             if ($_.Exception.Response) { return $true }  # answering, just not 2xx
             Start-Sleep -Seconds 2
         }
@@ -64,7 +66,8 @@ Step 'backend unit + integration tests' {
         $line = ($out | Select-String -Pattern 'Tests run: \d+, Failures: \d+, Errors: \d+, Skipped: \d+$' | Select-Object -Last 1)
         if ($line) { Write-Host "    $($line.Line.Trim())" }
         return ($out -join "`n") -match 'BUILD SUCCESS'
-    } finally { Pop-Location }
+    }
+    finally { Pop-Location }
 }
 
 Step 'frontend lint' {
@@ -81,7 +84,8 @@ Step 'frontend honesty (no swallowed failures)' {
         $line = ($out | Select-String -Pattern '^AGENT D:' | Select-Object -Last 1)
         if ($line) { Write-Host "    $($line.Line.Trim())" }
         return $LASTEXITCODE -eq 0
-    } finally { Pop-Location }
+    }
+    finally { Pop-Location }
 }
 
 Step 'frontend component tests' {
@@ -92,7 +96,8 @@ Step 'frontend component tests' {
         $line = ($out | Select-String -Pattern 'Tests\s.*passed' | Select-Object -Last 1)
         if ($line) { Write-Host ('    ' + ($line.Line -replace "$([char]27)\[[0-9;]*m", '').Trim()) }
         return $LASTEXITCODE -eq 0
-    } finally { Pop-Location }
+    }
+    finally { Pop-Location }
 }
 
 Step 'frontend build + route check' {
@@ -102,13 +107,15 @@ Step 'frontend build + route check' {
         if ($LASTEXITCODE -ne 0) { return $false }
         npm run check:paths 2>&1 | Out-Null
         return $LASTEXITCODE -eq 0
-    } finally { Pop-Location }
+    }
+    finally { Pop-Location }
 }
 
 if ($Quick) {
     Write-Host ""
     Write-Host "Quick mode - skipping the live stack." -ForegroundColor DarkYellow
-} else {
+}
+else {
     # -- Live stack ----------------------------------------------------------
 
     Step 'start backend' {
@@ -122,7 +129,8 @@ if ($Quick) {
                 -RedirectStandardOutput $log -RedirectStandardError "$log.err"
             $script:startedByUs += $p
             Write-Host "    starting, log: $log"
-        } finally { Pop-Location }
+        }
+        finally { Pop-Location }
         $probe = $apiUrl + '/api/v1/venues?page=0' + [char]38 + 'size=1'
         return (WaitForUrl $probe 'backend')
     }
@@ -159,7 +167,8 @@ if ($Quick) {
                     Write-Host "    reusing admin$n@turfchai.com for every admin-dependent stage"
                     return $true
                 }
-            } catch { continue }
+            }
+            catch { continue }
         }
         Write-Host '    admin0..3 all refused; restart the backend to clear the 2FA throttle'
         return $false
@@ -239,18 +248,24 @@ if ($Quick) {
             $line = ($out | Select-String -Pattern 'UI CRAWL CLEAN' | Select-Object -Last 1)
             if ($line) { Write-Host "    $($line.Line.Trim())" }
             return ($text -match 'UI CRAWL CLEAN')
-        } finally { Pop-Location }
+        }
+        finally { Pop-Location }
     }
 
     # Complete workflows rather than isolated screens: every transition is
     # checked against the UI, the URL, the API and the database at once, and
     # the state machines are asked to refuse the moves they should refuse.
     $journeys = [ordered]@{
-        'journey: player end-to-end' = @{ script = 'qa/journey-player.mjs';        done = 'PLAYER JOURNEY CLEAN' }
-        'journey: owner/host/admin'  = @{ script = 'qa/journey-roles.mjs';         done = 'ROLE JOURNEYS CLEAN' }
-        'journey: cross-area state'  = @{ script = 'qa/journey-crossarea.mjs';     done = 'CROSS-AREA JOURNEYS CLEAN' }
+        'journey: player end-to-end' = @{ script = 'qa/journey-player.mjs'; done = 'PLAYER JOURNEY CLEAN' }
+        'journey: owner/host/admin'  = @{ script = 'qa/journey-roles.mjs'; done = 'ROLE JOURNEYS CLEAN' }
+        'journey: cross-area state'  = @{ script = 'qa/journey-crossarea.mjs'; done = 'CROSS-AREA JOURNEYS CLEAN' }
         'journey: interruptions'     = @{ script = 'qa/journey-interruptions.mjs'; done = 'INTERRUPTION JOURNEYS CLEAN' }
-        'cross-surface consistency'  = @{ script = 'qa/consistency-audit.mjs';     done = 'DATA CONSISTENCY CLEAN' }
+        'cross-surface consistency'  = @{ script = 'qa/consistency-audit.mjs'; done = 'DATA CONSISTENCY CLEAN' }
+        'promotion redemption flow'  = @{ script = 'qa/promo-flow.mjs'; done = 'PROMO FLOW CLEAN' }
+        'venue amenities flow'       = @{ script = 'qa/amenities-flow.mjs'; done = 'AMENITIES FLOW CLEAN' }
+        'player notification flow'   = @{ script = 'qa/notification-flow.mjs'; done = 'NOTIFICATION FLOW CLEAN' }
+        'solo open games flow'       = @{ script = 'qa/open-games-flow.mjs'; done = 'OPEN GAMES FLOW CLEAN' }
+        'venue review flow'          = @{ script = 'qa/review-flow.mjs'; done = 'REVIEW FLOW CLEAN' }
     }
     foreach ($name in $journeys.Keys) {
         $journey = $journeys[$name]
@@ -262,10 +277,11 @@ if ($Quick) {
                 foreach ($f in ($out | Select-String -Pattern '^FAIL' -Context 0, 1 | Select-Object -First 10)) {
                     Write-Host "    $($f.Line.Trim())"
                 }
-                $line = ($out | Select-String -Pattern 'JOURNEY|DATA CONSISTENCY' | Select-Object -Last 1)
+                $line = ($out | Select-String -Pattern 'JOURNEY|DATA CONSISTENCY|FLOW CLEAN|FLOW:' | Select-Object -Last 1)
                 if ($line) { Write-Host "    $($line.Line.Trim())" }
                 return ($text -match [regex]::Escape($journey.done))
-            } finally { Pop-Location }
+            }
+            finally { Pop-Location }
         }
     }
 
@@ -277,7 +293,8 @@ if ($Quick) {
             $line = ($out | Select-String -Pattern 'rule\(s\) violated|NO ACCESSIBILITY' | Select-Object -Last 1)
             if ($line) { Write-Host "    $($line.Line.Trim())" }
             return ($text -match 'NO ACCESSIBILITY VIOLATIONS') -and ($text -match 'No horizontal overflow')
-        } finally { Pop-Location }
+        }
+        finally { Pop-Location }
     }
 
     if (-not $SkipE2E) {
@@ -289,7 +306,8 @@ if ($Quick) {
                 $line = ($out | Select-String -Pattern '\d+ (passed|failed)' | Select-Object -Last 1)
                 if ($line) { Write-Host "    $($line.Line.Trim())" }
                 return $LASTEXITCODE -eq 0
-            } finally { Pop-Location }
+            }
+            finally { Pop-Location }
         }
     }
 }

@@ -11,4 +11,5 @@
 -- ============================================================================
 
 ALTER TABLE bookings
-    ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+    ADD COLUMN
+IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;

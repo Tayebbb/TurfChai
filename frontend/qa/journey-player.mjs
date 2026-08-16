@@ -208,11 +208,19 @@ if (!target) {
   await page.goto(`${BASE}/player/bookings/${bookingId}`);
   await page.waitForTimeout(2500);
   const detailUi = await page.evaluate(() => document.querySelector('main')?.innerText ?? '');
+  // The summary reports what was collected and what is still owed. It used to
+  // label the settled figure "Total due", so a paid booking read as unpaid.
+  const ledger = unwrap((await api(`/payments/booking/${bookingId}`, { token })).json) ?? [];
+  const collected = ledger
+    .filter((p) => p.type === 'BOOKING' && p.status !== 'FAILED')
+    .reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
+  const onScreen = Math.round(collected).toLocaleString('en-IN');
   check('booking detail agrees with the ledger and never claims money was taken',
     detailUi.includes(booking.bookingCode)
-      && /Total due/i.test(detailUi)
-      && !/Total paid/i.test(detailUi),
-    `shows code, "Total due" present, "Total paid" absent`);
+      && detailUi.includes(onScreen)
+      && /Settled/i.test(detailUi)
+      && !/Still due/i.test(detailUi),
+    `shows code; ledger collected ৳${onScreen} appears on screen=${detailUi.includes(onScreen)}; "Settled" present, "Still due" absent`);
 
   // ------------------------------------- 9. refund preview then cancellation -
   const preview = unwrap((await api(`/payments/refund-preview/${bookingId}`, { token })).json);
@@ -221,9 +229,19 @@ if (!target) {
     previewShown === undefined || Number(previewShown) === preview.refundPercent,
     `screen quotes ${previewShown ?? 'n/a'}%, engine says ${preview.refundPercent}% (৳${preview.refundAmount})`);
 
-  await page.click('button:has-text("Cancel booking")');
+  // Cancelling is one flow now: the detail page hands off to the confirmation
+  // screen, which is the only place the booking is actually cancelled.
+  await page.click('a:has-text("Cancel booking")');
+  await page.waitForTimeout(2000);
+  check('the cancel control leads to the confirmation screen, not straight to a cancellation',
+    page.url().includes('/player/cancel'),
+    `landed on ${page.url().replace(BASE, '')}`);
+
+  await page.click('button:has-text("Cancel booking & refund")');
   await page.waitForTimeout(3500);
   const cancelled = (await api(`/bookings/${bookingId}`, { token })).json;
+  await page.goto(`${BASE}/player/bookings/${bookingId}`);
+  await page.waitForTimeout(2500);
   const afterCancelUi = await page.evaluate(() => document.querySelector('main')?.innerText ?? '');
   const paymentsAfter = unwrap((await api(`/payments/booking/${bookingId}`, { token })).json);
   const refundRows = (paymentsAfter ?? []).filter((p) => p.type === 'REFUND');

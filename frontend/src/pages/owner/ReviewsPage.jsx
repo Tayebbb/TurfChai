@@ -23,7 +23,7 @@ export default function ReviewsPage() {
   const reviews = useMemo(() => Array.isArray(reviewsData.items) ? reviewsData.items : [], [reviewsData.items]);
   const ratingBreakdown = Array.isArray(reviewsData.ratingBreakdown) ? reviewsData.ratingBreakdown : [];
   const categoryAverages = Array.isArray(reviewsData.categoryAverages) ? reviewsData.categoryAverages : [];
-  const averageRating = reviewsData.averageRating || '0.0';
+  const averageRating = reviewsData.averageRating || '—';
   const totalReviews = reviewsData.totalReviews || 0;
   const venueSlug = reviewsData.venueSlug;
 

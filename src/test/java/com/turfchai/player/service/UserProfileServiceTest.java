@@ -23,7 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@org.springframework.test.context.ActiveProfiles({"test", "dev"})
+@org.springframework.test.context.ActiveProfiles({ "test", "dev" })
 @SpringBootTest
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:profile-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
@@ -69,13 +69,13 @@ class UserProfileServiceTest {
                 "Nazia Rahman", null, "Weekend striker", "advanced", null, List.of("Futsal"), null, "Goalkeeper"));
 
         assertThat(after.fullName()).isEqualTo("Nazia Rahman");
-        assertThat(after.avatarInitials()).isEqualTo("NR");   // derived from new name
+        assertThat(after.avatarInitials()).isEqualTo("NR"); // derived from new name
         assertThat(after.bio()).isEqualTo("Weekend striker");
         assertThat(after.playStyle()).isEqualTo("advanced");
-        assertThat(after.preferredSports()).containsExactly("futsal");  // normalized lower-case
-        assertThat(after.area()).isEqualTo(before.area());              // untouched
-        assertThat(after.playerRole()).isEqualTo(before.playerRole());  // untouched
-        assertThat(after.position()).isEqualTo("Goalkeeper");           // new field
+        assertThat(after.preferredSports()).containsExactly("futsal"); // normalized lower-case
+        assertThat(after.area()).isEqualTo(before.area()); // untouched
+        assertThat(after.playerRole()).isEqualTo(before.playerRole()); // untouched
+        assertThat(after.position()).isEqualTo("Goalkeeper"); // new field
     }
 
     @Test

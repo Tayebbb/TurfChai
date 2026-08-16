@@ -77,6 +77,12 @@ public class BookingResponse {
     @Schema(description = "Net amount for this booking", example = "2500.00")
     private BigDecimal netAmount;
 
+    @Schema(description = "Promo code redeemed for this booking, if any", example = "RAMADAN20")
+    private String promoCode;
+
+    @Schema(description = "Discount the promo code was worth", example = "500.00")
+    private BigDecimal discountAmount;
+
     @Schema(description = "When the player checked in at the gate")
     private OffsetDateTime checkedInAt;
 

@@ -132,7 +132,7 @@ class OpenGameServiceTest {
     @Test
     @DisplayName("Should allow player to join open game successfully")
     void testJoinOpenGame_Success() {
-        JoinOpenGameRequest request = JoinOpenGameRequest.builder().userId(2L).build();
+        JoinOpenGameRequest request = JoinOpenGameRequest.builder().build();
 
         when(openGameRepository.findWithLockById(100L)).thenReturn(Optional.of(openGame));
         when(membershipRepository.existsByOpenGameIdAndUserId(100L, 2L)).thenReturn(false);
@@ -157,7 +157,7 @@ class OpenGameServiceTest {
         openGame.setFilledCount(10);
         openGame.setStatus(OpenGameStatus.FULL);
 
-        JoinOpenGameRequest request = JoinOpenGameRequest.builder().userId(2L).build();
+        JoinOpenGameRequest request = JoinOpenGameRequest.builder().build();
 
         when(openGameRepository.findWithLockById(100L)).thenReturn(Optional.of(openGame));
 
@@ -167,7 +167,7 @@ class OpenGameServiceTest {
     @Test
     @DisplayName("Should prevent duplicate joining by same user")
     void testJoinOpenGame_AlreadyJoined() {
-        JoinOpenGameRequest request = JoinOpenGameRequest.builder().userId(2L).build();
+        JoinOpenGameRequest request = JoinOpenGameRequest.builder().build();
 
         when(openGameRepository.findWithLockById(100L)).thenReturn(Optional.of(openGame));
         when(membershipRepository.existsByOpenGameIdAndUserId(100L, 2L)).thenReturn(true);
@@ -180,7 +180,7 @@ class OpenGameServiceTest {
     void testJoinOpenGame_LowReliability() {
         player.setReliabilityScore(80); // minimum required is 90
 
-        JoinOpenGameRequest request = JoinOpenGameRequest.builder().userId(2L).build();
+        JoinOpenGameRequest request = JoinOpenGameRequest.builder().build();
 
         when(openGameRepository.findWithLockById(100L)).thenReturn(Optional.of(openGame));
         when(membershipRepository.existsByOpenGameIdAndUserId(100L, 2L)).thenReturn(false);
@@ -195,7 +195,7 @@ class OpenGameServiceTest {
         openGame.setSkillLevel(SkillLevel.ADVANCED);
         player.setPlayStyle(SkillLevel.BEGINNER);
 
-        JoinOpenGameRequest request = JoinOpenGameRequest.builder().userId(2L).build();
+        JoinOpenGameRequest request = JoinOpenGameRequest.builder().build();
 
         when(openGameRepository.findWithLockById(100L)).thenReturn(Optional.of(openGame));
         when(membershipRepository.existsByOpenGameIdAndUserId(100L, 2L)).thenReturn(false);

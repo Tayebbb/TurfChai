@@ -9,8 +9,10 @@ import java.time.OffsetDateTime;
 /**
  * Admin console view of a user account.
  *
- * <p>Exists so the admin API stops publishing the {@code User} entity directly.
- * Password hash, 2FA secret and lockout counters are {@code @JsonIgnore}d on the
+ * <p>
+ * Exists so the admin API stops publishing the {@code User} entity directly.
+ * Password hash, 2FA secret and lockout counters are {@code @JsonIgnore}d on
+ * the
  * entity today, but that makes the contract depend on an annotation nobody sees
  * when adding a column — an explicit projection cannot leak a field that was
  * never listed here.

@@ -32,9 +32,9 @@ public class AdminTurfRequestRestController {
 
     @PostMapping("/{code}/review")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public void reviewRequest(@PathVariable String code, 
-                              @RequestBody Map<String, String> payload, 
-                              @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
+    public void reviewRequest(@PathVariable String code,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
         String action = payload.get("action");
         String note = payload.get("note");
         turfApprovalService.review(code, action, note, userDetails.getId());

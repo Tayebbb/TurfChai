@@ -17,7 +17,8 @@ public class PayoutSettlementService {
     private final PayoutRepository payoutRepository;
     private final NotificationService notificationService;
 
-    // ponytail: hardcoded 6% platform fee. ceiling: configurable per-venue fee tiers
+    // ponytail: hardcoded 6% platform fee. ceiling: configurable per-venue fee
+    // tiers
     private static final BigDecimal PLATFORM_FEE_RATE = new BigDecimal("0.06");
 
     @Transactional(readOnly = true)
@@ -40,6 +41,10 @@ public class PayoutSettlementService {
         java.util.Map<String, Object> summary = new java.util.LinkedHashMap<>();
         summary.put("settledAmount", nullToZero(payoutRepository.sumNetAmountByStatus("SETTLED")));
         summary.put("settledCount", payoutRepository.countByStatus("SETTLED"));
+        // Fee actually taken on settled payouts. The dashboard used to show a
+        // tenth of GMV, which was neither the 6% the platform charges nor a
+        // figure anybody had collected.
+        summary.put("platformFeeCollected", nullToZero(payoutRepository.sumPlatformFeeByStatus("SETTLED")));
         summary.put("pendingAmount", nullToZero(payoutRepository.sumNetAmountByStatus("PENDING")));
         summary.put("pendingCount", payoutRepository.countByStatus("PENDING"));
         summary.put("flaggedCount", payoutRepository.countByStatus("FLAGGED"));
@@ -55,7 +60,8 @@ public class PayoutSettlementService {
         Payout payout = getByCode(payoutCode);
 
         if (!"PENDING".equals(payout.getStatus())) {
-            throw new IllegalStateException("Only PENDING payouts can be settled. Current status: " + payout.getStatus());
+            throw new IllegalStateException(
+                    "Only PENDING payouts can be settled. Current status: " + payout.getStatus());
         }
 
         if (Boolean.TRUE.equals(payout.getAnomalyFlag())) {
@@ -74,24 +80,24 @@ public class PayoutSettlementService {
         payout.setSettledBy(adminUserId);
         payoutRepository.save(payout);
 
-        notificationService.send(payout.getOwnerUserId(), "PAYMENT", 
-                "Payout Settled", 
-                "Your payout of " + payout.getNetAmount() + " " + payout.getCurrency() + " has been settled.", 
+        notificationService.send(payout.getOwnerUserId(), "PAYMENT",
+                "Payout Settled",
+                "Your payout of " + payout.getNetAmount() + " " + payout.getCurrency() + " has been settled.",
                 "/owner/payments");
     }
 
     @Transactional
     public void flag(String payoutCode, String reason, Long adminUserId) {
         Payout payout = getByCode(payoutCode);
-        
+
         payout.setAnomalyFlag(true);
         payout.setAnomalyReason(reason);
         payout.setStatus("FLAGGED");
         payoutRepository.save(payout);
 
-        notificationService.send(payout.getOwnerUserId(), "SYSTEM", 
-                "Payout Flagged", 
-                "Your payout " + payoutCode + " is under review. Reason: " + reason, 
+        notificationService.send(payout.getOwnerUserId(), "SYSTEM",
+                "Payout Flagged",
+                "Your payout " + payoutCode + " is under review. Reason: " + reason,
                 "/owner/payments");
     }
 }

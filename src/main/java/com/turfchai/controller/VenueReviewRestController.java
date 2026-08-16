@@ -21,7 +21,8 @@ import java.util.Map;
 /**
  * Published reviews for a venue.
  *
- * <p>The venue page already showed a rating and a review count but had no way
+ * <p>
+ * The venue page already showed a rating and a review count but had no way
  * to read the reviews themselves, so the UI rendered one hardcoded review for
  * every venue. This serves the real ones.
  */
@@ -30,38 +31,38 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VenueReviewRestController {
 
-    private static final int MAX_PAGE_SIZE = 50;
+        private static final int MAX_PAGE_SIZE = 50;
 
-    private final VenueRepository venueRepository;
-    private final ReviewRepository reviewRepository;
+        private final VenueRepository venueRepository;
+        private final ReviewRepository reviewRepository;
 
-    @GetMapping("/{slug}/reviews")
-    @Transactional(readOnly = true)
-    public ResponseEntity<Map<String, Object>> listReviews(
-            @PathVariable String slug,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+        @GetMapping("/{slug}/reviews")
+        @Transactional(readOnly = true)
+        public ResponseEntity<Map<String, Object>> listReviews(
+                        @PathVariable String slug,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size) {
 
-        Venue venue = venueRepository.findBySlug(slug)
-                .orElseThrow(() -> new VenueNotFoundException("Venue not found: " + slug));
+                Venue venue = venueRepository.findBySlug(slug)
+                                .orElseThrow(() -> new VenueNotFoundException("Venue not found: " + slug));
 
-        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        int safePage = Math.max(page, 0);
+                int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+                int safePage = Math.max(page, 0);
 
-        List<PublicReviewResponse> items = reviewRepository
-                .findPublishedForVenue(venue.getId(), PageRequest.of(safePage, safeSize))
-                .stream()
-                .map(PublicReviewResponse::from)
-                .toList();
+                List<PublicReviewResponse> items = reviewRepository
+                                .findPublishedForVenue(venue.getId(), PageRequest.of(safePage, safeSize))
+                                .stream()
+                                .map(PublicReviewResponse::from)
+                                .toList();
 
-        Integer total = reviewRepository.getReviewCountForVenue(venue.getId());
-        int totalItems = total != null ? total : 0;
+                Integer total = reviewRepository.getReviewCountForVenue(venue.getId());
+                int totalItems = total != null ? total : 0;
 
-        return ResponseEntity.ok(Map.of(
-                "items", items,
-                "page", safePage,
-                "size", safeSize,
-                "totalItems", totalItems,
-                "hasMore", (long) (safePage + 1) * safeSize < totalItems));
-    }
+                return ResponseEntity.ok(Map.of(
+                                "items", items,
+                                "page", safePage,
+                                "size", safeSize,
+                                "totalItems", totalItems,
+                                "hasMore", (long) (safePage + 1) * safeSize < totalItems));
+        }
 }

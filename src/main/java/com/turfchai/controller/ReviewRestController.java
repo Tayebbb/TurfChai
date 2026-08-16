@@ -15,13 +15,15 @@ import org.springframework.web.bind.annotation.*;
 /**
  * REST controller for player review submission and matchday check-in.
  *
- * <p>Both operations act on behalf of the authenticated principal only. The
+ * <p>
+ * Both operations act on behalf of the authenticated principal only. The
  * author of a review and the actor of a check-in are never read from the
  * request payload.
  *
  * <ul>
- *   <li>{@code POST /api/v1/reviews}           — submit a post-booking venue review</li>
- *   <li>{@code POST /api/v1/matchday/checkin}  — record a player check-in at the venue</li>
+ * <li>{@code POST /api/v1/reviews} — submit a post-booking venue review</li>
+ * <li>{@code POST /api/v1/matchday/checkin} — record a player check-in at the
+ * venue</li>
  * </ul>
  */
 @RestController

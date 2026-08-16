@@ -26,20 +26,20 @@ import java.util.Map;
  * </pre>
  *
  * All endpoints consume multipart/form-data with a single "file" part.
- * Responses return a JSON object {@code {"url": "https://res.cloudinary.com/..."}}
+ * Responses return a JSON object
+ * {@code {"url": "https://res.cloudinary.com/..."}}
  */
 @RestController
 @RequestMapping("/api/v1/media")
 public class MediaUploadRestController {
 
-    private static final org.slf4j.Logger log =
-            org.slf4j.LoggerFactory.getLogger(MediaUploadRestController.class);
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MediaUploadRestController.class);
 
     private final MediaUploadService mediaUploadService;
     private final com.turfchai.venue.service.VenueManagementService venueManagementService;
 
     public MediaUploadRestController(MediaUploadService mediaUploadService,
-                                     com.turfchai.venue.service.VenueManagementService venueManagementService) {
+            com.turfchai.venue.service.VenueManagementService venueManagementService) {
         this.mediaUploadService = mediaUploadService;
         this.venueManagementService = venueManagementService;
     }
@@ -52,7 +52,9 @@ public class MediaUploadRestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url));
     }
 
-    /** Upload a photo for a specific venue — stores in TurfChai/venues/{venueId}/ */
+    /**
+     * Upload a photo for a specific venue — stores in TurfChai/venues/{venueId}/
+     */
     @PostMapping(value = "/venues/{venueId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadVenuePhoto(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -72,7 +74,8 @@ public class MediaUploadRestController {
     public ResponseEntity<Map<String, String>> uploadAvatar(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam("file") MultipartFile file) throws IOException {
-        String url = mediaUploadService.uploadAvatar(file, com.turfchai.security.AuthenticatedUser.requireId(principal));
+        String url = mediaUploadService.uploadAvatar(file,
+                com.turfchai.security.AuthenticatedUser.requireId(principal));
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url));
     }
 

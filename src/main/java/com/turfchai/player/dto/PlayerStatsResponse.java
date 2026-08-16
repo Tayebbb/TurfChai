@@ -6,7 +6,8 @@ import java.util.List;
 /**
  * A player's activity summary.
  *
- * <p>Every figure is derived from records the platform already holds — bookings,
+ * <p>
+ * Every figure is derived from records the platform already holds — bookings,
  * check-ins, reviews and open-game memberships. Nothing here is estimated: if a
  * number cannot be computed it is zero, and match results are not included
  * because TurfChai never records a score for a casual booking.

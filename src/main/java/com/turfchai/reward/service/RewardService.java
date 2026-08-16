@@ -40,7 +40,8 @@ import java.util.Optional;
  * </p>
  * <p>
  * <b>Concurrency note:</b> debits that spend real value take a pessimistic lock
- * on the user row first ({@link com.turfchai.repository.UserRepository#findByIdForUpdate}),
+ * on the user row first
+ * ({@link com.turfchai.repository.UserRepository#findByIdForUpdate}),
  * because a balance derived by summing a ledger can otherwise be read by two
  * concurrent requests and spent twice. Slot holds are protected separately by
  * {@link com.turfchai.booking.service.BookingService}'s row lock on the slot.
@@ -70,7 +71,8 @@ public class RewardService {
      * fixed award applies.
      */
     @Transactional
-    public PointLedgerEntry earnPoints(Long userId, PointReason reason, int points, Long bookingId, Long openGameId, String note) {
+    public PointLedgerEntry earnPoints(Long userId, PointReason reason, int points, Long bookingId, Long openGameId,
+            String note) {
         if (points <= 0) {
             throw new IllegalArgumentException("Earned points must be a positive amount");
         }
@@ -95,7 +97,8 @@ public class RewardService {
     /** +30 pts for attending and playing a booked match. */
     @Transactional
     public PointLedgerEntry awardMatchAttendedPoints(Long userId, Long bookingId) {
-        return earnPoints(userId, PointReason.ATTENDED_MATCH, PointReason.ATTENDED_MATCH.defaultPoints(), bookingId, null,
+        return earnPoints(userId, PointReason.ATTENDED_MATCH, PointReason.ATTENDED_MATCH.defaultPoints(), bookingId,
+                null,
                 "Attended & played your match");
     }
 
@@ -115,14 +118,16 @@ public class RewardService {
         if (pointLedgerRepository.existsByUserIdAndReason(userId, PointReason.PROFILE_COMPLETION)) {
             return Optional.empty();
         }
-        return Optional.of(earnPoints(userId, PointReason.PROFILE_COMPLETION, PointReason.PROFILE_COMPLETION.defaultPoints(),
-                null, null, "Completed your profile"));
+        return Optional
+                .of(earnPoints(userId, PointReason.PROFILE_COMPLETION, PointReason.PROFILE_COMPLETION.defaultPoints(),
+                        null, null, "Completed your profile"));
     }
 
     /** +15 pts for joining an open game as a solo player. */
     @Transactional
     public PointLedgerEntry awardOpenGameJoinedPoints(Long userId, Long openGameId) {
-        return earnPoints(userId, PointReason.JOINED_OPEN_GAME, PointReason.JOINED_OPEN_GAME.defaultPoints(), null, openGameId,
+        return earnPoints(userId, PointReason.JOINED_OPEN_GAME, PointReason.JOINED_OPEN_GAME.defaultPoints(), null,
+                openGameId,
                 "Joined an open game as a solo");
     }
 
@@ -132,15 +137,20 @@ public class RewardService {
      * for peak-hour bookings.
      */
     @Transactional
-    public Optional<PointLedgerEntry> awardOffPeakBonusIfApplicable(Long userId, Long bookingId, LocalTime slotStartTime) {
+    public Optional<PointLedgerEntry> awardOffPeakBonusIfApplicable(Long userId, Long bookingId,
+            LocalTime slotStartTime) {
         if (!isOffPeak(slotStartTime)) {
             return Optional.empty();
         }
-        return Optional.of(earnPoints(userId, PointReason.OFF_PEAK_BONUS, PointReason.OFF_PEAK_BONUS.defaultPoints(), bookingId,
-                null, "Booked an off-peak slot"));
+        return Optional.of(
+                earnPoints(userId, PointReason.OFF_PEAK_BONUS, PointReason.OFF_PEAK_BONUS.defaultPoints(), bookingId,
+                        null, "Booked an off-peak slot"));
     }
 
-    /** Whether a slot starting at {@code startTime} qualifies for the off-peak bonus. */
+    /**
+     * Whether a slot starting at {@code startTime} qualifies for the off-peak
+     * bonus.
+     */
     public boolean isOffPeak(LocalTime startTime) {
         return startTime != null && !startTime.isBefore(OFF_PEAK_START) && startTime.isBefore(OFF_PEAK_END);
     }
@@ -148,10 +158,12 @@ public class RewardService {
     /** Variable-amount monthly activity bonus (e.g. "5th booking this month"). */
     @Transactional
     public PointLedgerEntry awardMonthlyActivityBonus(Long userId, int points, String note) {
-        return earnPoints(userId, PointReason.MONTHLY_BONUS, points, null, null, note != null ? note : "Monthly activity bonus");
+        return earnPoints(userId, PointReason.MONTHLY_BONUS, points, null, null,
+                note != null ? note : "Monthly activity bonus");
     }
 
-    private PointLedgerEntry recordLedgerEntry(Long userId, PointReason reason, int delta, Long bookingId, Long openGameId,
+    private PointLedgerEntry recordLedgerEntry(Long userId, PointReason reason, int delta, Long bookingId,
+            Long openGameId,
             Long rewardId, String note) {
         if (userId == null) {
             throw new IllegalArgumentException("userId is required");
@@ -179,7 +191,10 @@ public class RewardService {
 
     // ── Reading ──────────────────────────────────────────────────────────
 
-    /** Balance, wallet balance, current/next tier, and progress toward the next tier. */
+    /**
+     * Balance, wallet balance, current/next tier, and progress toward the next
+     * tier.
+     */
     @Transactional(readOnly = true)
     public PointsSummaryResponse getMyPoints(Long userId) {
         int balance = currentBalance(userId);
@@ -221,7 +236,10 @@ public class RewardService {
                 .build();
     }
 
-    /** Active reward catalog, annotated with whether the caller can currently afford each one. */
+    /**
+     * Active reward catalog, annotated with whether the caller can currently afford
+     * each one.
+     */
     @Transactional(readOnly = true)
     public List<RewardProductResponse> listRewardProducts(Long userId) {
         int balance = userId != null ? currentBalance(userId) : 0; // visitors browse the catalog with no balance
@@ -321,7 +339,10 @@ public class RewardService {
                 .build();
     }
 
-    /** The caller's current wallet balance — the running sum of {@code wallet_transactions}. */
+    /**
+     * The caller's current wallet balance — the running sum of
+     * {@code wallet_transactions}.
+     */
     @Transactional(readOnly = true)
     public BigDecimal getWalletBalance(Long userId) {
         return walletTransactionRepository.sumDeltaByUserId(userId);
@@ -330,7 +351,8 @@ public class RewardService {
     /**
      * The wallet balance together with the entries that produced it.
      *
-     * <p>The ledger was already being written on every reward credit and every
+     * <p>
+     * The ledger was already being written on every reward credit and every
      * checkout that spent wallet money; until now there was no way to read it
      * back, so the balance appeared without any explanation of where it came
      * from.
@@ -338,12 +360,11 @@ public class RewardService {
     @Transactional(readOnly = true)
     public com.turfchai.reward.dto.WalletHistoryResponse getWalletHistory(Long userId, int limit) {
         int pageSize = Math.max(1, Math.min(limit, 100));
-        List<com.turfchai.reward.dto.WalletHistoryResponse.Entry> entries =
-                walletTransactionRepository
-                        .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, pageSize))
-                        .stream()
-                        .map(com.turfchai.reward.dto.WalletHistoryResponse.Entry::from)
-                        .toList();
+        List<com.turfchai.reward.dto.WalletHistoryResponse.Entry> entries = walletTransactionRepository
+                .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, pageSize))
+                .stream()
+                .map(com.turfchai.reward.dto.WalletHistoryResponse.Entry::from)
+                .toList();
         return new com.turfchai.reward.dto.WalletHistoryResponse(
                 walletTransactionRepository.sumDeltaByUserId(userId), entries);
     }
@@ -351,7 +372,8 @@ public class RewardService {
     /**
      * How much wallet credit was spent on one booking.
      *
-     * <p>A refund has to be split by tender: the gateway can only be refunded
+     * <p>
+     * A refund has to be split by tender: the gateway can only be refunded
      * what the gateway actually took, and the rest has to go back to the wallet.
      */
     @Transactional(readOnly = true)
@@ -383,7 +405,8 @@ public class RewardService {
     /**
      * Removes the points a booking earned, once it is cancelled.
      *
-     * <p>Without this, booking and cancelling at a full refund left the points
+     * <p>
+     * Without this, booking and cancelling at a full refund left the points
      * behind — a free points farm. Idempotent: a booking whose points were
      * already reversed does nothing.
      */

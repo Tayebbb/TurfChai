@@ -19,95 +19,91 @@ import java.util.List;
 /** Request payloads for the tournament API. */
 public final class TournamentRequests {
 
-    private TournamentRequests() {
-    }
-
-    public record CreateTournamentRequest(
-            @NotBlank @Size(max = 150) String name,
-            @NotBlank String venueSlug,
-            @NotNull LocalDate date,
-            @NotNull LocalTime windowStart,
-            @NotNull LocalTime windowEnd,
-            @NotBlank @Pattern(regexp = "5_a_side|6_a_side|7_a_side|knockout",
-                    message = "must be one of 5_a_side, 6_a_side, 7_a_side, knockout") String format,
-            @Min(2) @Max(64) int teamCapacity,
-            @NotNull @DecimalMin("0") BigDecimal entryFeePerTeam,
-            @DecimalMin("0") BigDecimal prizePool,
-            @Pattern(regexp = "open|invite_only") String privacy) {
-    }
-
-    public record RegisterTeamRequest(
-            @NotBlank @Size(max = 100) String name,
-            @Size(max = 100) String captainName) {
-    }
-
-    public record SlotRequest(
-            @NotNull Long pitchId,
-            @NotNull LocalTime startTime,
-            @NotNull LocalTime endTime) {
-    }
-
-    /**
-     * @param repeatWeeks how many consecutive weeks the slot pattern repeats,
-     *                    counting the tournament date itself. Null means one.
-     */
-    public record ReserveSlotsRequest(@NotEmpty List<@Valid SlotRequest> slots,
-                                      @Min(1) @Max(26) Integer repeatWeeks) {
-
-        /** Single-week reservation — the default before a recurrence is chosen. */
-        public ReserveSlotsRequest(List<SlotRequest> slots) {
-            this(slots, null);
+        private TournamentRequests() {
         }
 
-        public int weeks() {
-            return repeatWeeks == null ? 1 : repeatWeeks;
+        public record CreateTournamentRequest(
+                        @NotBlank @Size(max = 150) String name,
+                        @NotBlank String venueSlug,
+                        @NotNull LocalDate date,
+                        @NotNull LocalTime windowStart,
+                        @NotNull LocalTime windowEnd,
+                        @NotBlank @Pattern(regexp = "5_a_side|6_a_side|7_a_side|knockout", message = "must be one of 5_a_side, 6_a_side, 7_a_side, knockout") String format,
+                        @Min(2) @Max(64) int teamCapacity,
+                        @NotNull @DecimalMin("0") BigDecimal entryFeePerTeam,
+                        @DecimalMin("0") BigDecimal prizePool,
+                        @Pattern(regexp = "open|invite_only") String privacy) {
         }
-    }
 
-    /**
-     * Confirms the bulk reservation and records the deposit. The amount is
-     * always computed server-side, so the client cannot name its own price.
-     */
-    public record PayDepositRequest(
-            @Min(1) @Max(26) Integer repeatWeeks,
-            @NotBlank @Pattern(regexp = "bKash|Nagad|Card|Bank transfer",
-                    message = "must be one of bKash, Nagad, Card, Bank transfer") String method,
-            @Size(max = 60) String payerReference) {
-
-        public int weeks() {
-            return repeatWeeks == null ? 1 : repeatWeeks;
+        public record RegisterTeamRequest(
+                        @NotBlank @Size(max = 100) String name,
+                        @Size(max = 100) String captainName) {
         }
-    }
 
-    /**
-     * Settles the remainder after the deposit. As with the deposit, the amount is
-     * computed server-side from the reservations actually held.
-     */
-    public record PayBalanceRequest(
-            @NotBlank @Pattern(regexp = "bKash|Nagad|Card|Bank transfer",
-                    message = "must be one of bKash, Nagad, Card, Bank transfer") String method,
-            @Size(max = 60) String payerReference) {
-    }
+        public record SlotRequest(
+                        @NotNull Long pitchId,
+                        @NotNull LocalTime startTime,
+                        @NotNull LocalTime endTime) {
+        }
 
-    /**
-     * Host-editable tournament settings. Every field is optional; only the ones
-     * present are applied.
-     */
-    public record UpdateTournamentSettingsRequest(
-            @Pattern(regexp = "open|invite_only",
-                    message = "must be one of open, invite_only") String privacy,
-            @Size(max = 2000) String hostNotes) {
-    }
+        /**
+         * @param repeatWeeks how many consecutive weeks the slot pattern repeats,
+         *                    counting the tournament date itself. Null means one.
+         */
+        public record ReserveSlotsRequest(@NotEmpty List<@Valid SlotRequest> slots,
+                        @Min(1) @Max(26) Integer repeatWeeks) {
 
-    /** Player-facing registration for a tournament. */
-    public record RegisterPlayerRequest(
-            @NotBlank @Size(max = 100) String teamName,
-            @Size(max = 100) String captainName,
-            @Size(max = 20) String contactPhone,
-            @Size(max = 120) String emergencyContact,
-            @Size(max = 8) String jerseyNumber,
-            @Pattern(regexp = "BEGINNER|INTERMEDIATE|ADVANCED|ALL_LEVELS|") String skillLevel,
-            @Size(max = 500) String medicalNotes,
-            @AssertTrue(message = "must accept the tournament rules") boolean agreedToRules) {
-    }
+                /** Single-week reservation — the default before a recurrence is chosen. */
+                public ReserveSlotsRequest(List<SlotRequest> slots) {
+                        this(slots, null);
+                }
+
+                public int weeks() {
+                        return repeatWeeks == null ? 1 : repeatWeeks;
+                }
+        }
+
+        /**
+         * Confirms the bulk reservation and records the deposit. The amount is
+         * always computed server-side, so the client cannot name its own price.
+         */
+        public record PayDepositRequest(
+                        @Min(1) @Max(26) Integer repeatWeeks,
+                        @NotBlank @Pattern(regexp = "bKash|Nagad|Card|Bank transfer", message = "must be one of bKash, Nagad, Card, Bank transfer") String method,
+                        @Size(max = 60) String payerReference) {
+
+                public int weeks() {
+                        return repeatWeeks == null ? 1 : repeatWeeks;
+                }
+        }
+
+        /**
+         * Settles the remainder after the deposit. As with the deposit, the amount is
+         * computed server-side from the reservations actually held.
+         */
+        public record PayBalanceRequest(
+                        @NotBlank @Pattern(regexp = "bKash|Nagad|Card|Bank transfer", message = "must be one of bKash, Nagad, Card, Bank transfer") String method,
+                        @Size(max = 60) String payerReference) {
+        }
+
+        /**
+         * Host-editable tournament settings. Every field is optional; only the ones
+         * present are applied.
+         */
+        public record UpdateTournamentSettingsRequest(
+                        @Pattern(regexp = "open|invite_only", message = "must be one of open, invite_only") String privacy,
+                        @Size(max = 2000) String hostNotes) {
+        }
+
+        /** Player-facing registration for a tournament. */
+        public record RegisterPlayerRequest(
+                        @NotBlank @Size(max = 100) String teamName,
+                        @Size(max = 100) String captainName,
+                        @Size(max = 20) String contactPhone,
+                        @Size(max = 120) String emergencyContact,
+                        @Size(max = 8) String jerseyNumber,
+                        @Pattern(regexp = "BEGINNER|INTERMEDIATE|ADVANCED|ALL_LEVELS|") String skillLevel,
+                        @Size(max = 500) String medicalNotes,
+                        @AssertTrue(message = "must accept the tournament rules") boolean agreedToRules) {
+        }
 }

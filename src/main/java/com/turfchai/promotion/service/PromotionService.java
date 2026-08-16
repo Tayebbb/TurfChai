@@ -14,15 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
  * Handles promotion lifecycle and discount calculation.
  *
- * <p>Discount math:
+ * <p>
+ * Discount math:
  * <ul>
- *   <li>PERCENT: discount = orderTotal × (discountValue / 100), capped by maxDiscountAmount</li>
- *   <li>FLAT:    discount = discountValue (capped at orderTotal)</li>
+ * <li>PERCENT: discount = orderTotal × (discountValue / 100), capped by
+ * maxDiscountAmount</li>
+ * <li>FLAT: discount = discountValue (capped at orderTotal)</li>
  * </ul>
  */
 @Service
@@ -33,7 +36,7 @@ public class PromotionService {
     private final VenueRepository venueRepository;
 
     public PromotionService(PromotionRepository promotionRepository,
-                            VenueRepository venueRepository) {
+            VenueRepository venueRepository) {
         this.promotionRepository = promotionRepository;
         this.venueRepository = venueRepository;
     }
@@ -57,7 +60,12 @@ public class PromotionService {
         promo.setMinOrderAmount(req.minOrderAmount() != null ? req.minOrderAmount() : BigDecimal.ZERO);
         promo.setMaxDiscountAmount(req.maxDiscountAmount());
         promo.setConditions(req.conditions() != null ? req.conditions() : "{}");
-        promo.setValidFrom(req.validFrom() != null ? req.validFrom() : Instant.now());
+        // No start date given means "live now". Truncate to the second so the
+        // timestamp column cannot round the start forward past the clock and
+        // refuse the code the owner just published.
+        promo.setValidFrom(req.validFrom() != null
+                ? req.validFrom()
+                : Instant.now().truncatedTo(ChronoUnit.SECONDS));
         promo.setValidUntil(req.validUntil());
         promo.setUsageLimit(req.usageLimit());
         promo.setActive(true);
@@ -76,21 +84,30 @@ public class PromotionService {
 
     /** Applies a partial update. Absent fields are left as they are. */
     public PromotionDto updatePromotion(Long ownerUserId, Long venueId, Long promoId,
-                                        com.turfchai.promotion.dto.UpdatePromotionRequest request) {
+            com.turfchai.promotion.dto.UpdatePromotionRequest request) {
         requireOwnership(ownerUserId, venueId);
         Promotion promo = promotionRepository.findById(promoId)
                 .filter(p -> p.getVenue().getId().equals(venueId))
                 .orElseThrow(() -> new IllegalArgumentException("Promotion not found: " + promoId));
 
-        if (request.active() != null) promo.setActive(request.active());
-        if (request.label() != null && !request.label().isBlank()) promo.setLabel(request.label());
-        if (request.discountType() != null) promo.setDiscountType(request.discountType());
-        if (request.discountValue() != null) promo.setDiscountValue(request.discountValue());
-        if (request.minOrderAmount() != null) promo.setMinOrderAmount(request.minOrderAmount());
-        if (request.maxDiscountAmount() != null) promo.setMaxDiscountAmount(request.maxDiscountAmount());
-        if (request.validFrom() != null) promo.setValidFrom(request.validFrom());
-        if (request.validUntil() != null) promo.setValidUntil(request.validUntil());
-        if (request.usageLimit() != null) promo.setUsageLimit(request.usageLimit());
+        if (request.active() != null)
+            promo.setActive(request.active());
+        if (request.label() != null && !request.label().isBlank())
+            promo.setLabel(request.label());
+        if (request.discountType() != null)
+            promo.setDiscountType(request.discountType());
+        if (request.discountValue() != null)
+            promo.setDiscountValue(request.discountValue());
+        if (request.minOrderAmount() != null)
+            promo.setMinOrderAmount(request.minOrderAmount());
+        if (request.maxDiscountAmount() != null)
+            promo.setMaxDiscountAmount(request.maxDiscountAmount());
+        if (request.validFrom() != null)
+            promo.setValidFrom(request.validFrom());
+        if (request.validUntil() != null)
+            promo.setValidUntil(request.validUntil());
+        if (request.usageLimit() != null)
+            promo.setUsageLimit(request.usageLimit());
 
         return toDto(promotionRepository.save(promo));
     }
@@ -115,10 +132,18 @@ public class PromotionService {
         String code = req.code().toUpperCase().strip();
         BigDecimal orderTotal = req.orderTotal();
 
-        // Find the active promo
-        Promotion promo = promotionRepository.findByCodeAndActiveTrue(code).orElse(null);
+        // Codes are unique per venue, not globally, so two venues may both run
+        // "SAVE20". Scope the lookup to the venue being booked when we know it;
+        // a global lookup picked an arbitrary row and could refuse a code the
+        // venue genuinely offers.
+        Promotion promo = req.venueId() != null
+                ? promotionRepository.findByVenueIdAndCode(req.venueId(), code).orElse(null)
+                : promotionRepository.findByCodeAndActiveTrue(code).orElse(null);
 
         if (promo == null) {
+            return AppliedDiscountResponse.invalid(code, orderTotal, "Invalid or expired promo code");
+        }
+        if (!promo.isActive()) {
             return AppliedDiscountResponse.invalid(code, orderTotal, "Invalid or expired promo code");
         }
 
@@ -161,24 +186,59 @@ public class PromotionService {
                 discountAmount,
                 finalTotal,
                 true,
-                "Promo applied successfully"
-        );
+                "Promo applied successfully");
     }
 
     /**
-     * Record usage of a promo code after a booking is confirmed.
-     * Should be called within the booking transaction.
+     * Records one redemption, under a row lock so a usage limit cannot be
+     * overshot by concurrent checkouts. Returns false when the promotion has
+     * been exhausted or paused since it was quoted, which the caller must treat
+     * as "the discount no longer applies".
      */
-    public void recordUsage(String code) {
-        promotionRepository.findByCodeAndActiveTrue(code.toUpperCase())
-                .ifPresent(promo -> {
+    public boolean recordUsage(Long venueId, String code) {
+        if (code == null || code.isBlank() || venueId == null) {
+            return false;
+        }
+        return promotionRepository.findByVenueAndCodeForUpdate(venueId, code.strip())
+                .map(promo -> {
+                    if (!promo.isActive()) {
+                        return false;
+                    }
+                    if (promo.getUsageLimit() != null && promo.getUsageCount() >= promo.getUsageLimit()) {
+                        return false;
+                    }
                     promo.setUsageCount(promo.getUsageCount() + 1);
                     // Auto-deactivate if limit reached
                     if (promo.getUsageLimit() != null && promo.getUsageCount() >= promo.getUsageLimit()) {
                         promo.setActive(false);
                     }
                     promotionRepository.save(promo);
-                });
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    /**
+     * Hands a redemption back when the booking that used it is cancelled, so a
+     * cancelled booking does not permanently consume one of a limited run. A
+     * promotion that its own limit had deactivated becomes usable again.
+     */
+    public void releaseUsage(Long venueId, String code) {
+        if (code == null || code.isBlank() || venueId == null) {
+            return;
+        }
+        promotionRepository.findByVenueAndCodeForUpdate(venueId, code.strip()).ifPresent(promo -> {
+            if (promo.getUsageCount() <= 0) {
+                return;
+            }
+            boolean wasAtLimit = promo.getUsageLimit() != null
+                    && promo.getUsageCount() >= promo.getUsageLimit();
+            promo.setUsageCount(promo.getUsageCount() - 1);
+            if (wasAtLimit) {
+                promo.setActive(true);
+            }
+            promotionRepository.save(promo);
+        });
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
@@ -215,7 +275,6 @@ public class PromotionService {
                 p.getDiscountType(), p.getDiscountValue(), p.getMinOrderAmount(),
                 p.getMaxDiscountAmount(), p.getConditions(),
                 p.getValidFrom(), p.getValidUntil(), p.getUsageLimit(),
-                p.getUsageCount(), p.isActive()
-        );
+                p.getUsageCount(), p.isActive());
     }
 }

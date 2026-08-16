@@ -35,7 +35,8 @@ import java.util.List;
 /**
  * Host tournament hub.
  *
- * <p>The host is always the authenticated principal. Every operation that reads
+ * <p>
+ * The host is always the authenticated principal. Every operation that reads
  * or mutates an existing tournament additionally verifies that the caller is
  * that tournament's host, so knowing a tournament code grants nothing.
  */
@@ -55,7 +56,8 @@ public class TournamentRestController {
     private User currentUser(UserPrincipal principal) {
         Long id = AuthenticatedUser.requireId(principal);
         return users.findById(id)
-                .orElseThrow(() -> new com.turfchai.exception.UnauthenticatedException("Authenticated user no longer exists"));
+                .orElseThrow(() -> new com.turfchai.exception.UnauthenticatedException(
+                        "Authenticated user no longer exists"));
     }
 
     /** Resolves the caller and asserts they host {@code code}. */
@@ -88,23 +90,23 @@ public class TournamentRestController {
     @PostMapping("/{code}/teams")
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
     public TeamView registerTeam(@AuthenticationPrincipal UserPrincipal principal,
-                                 @PathVariable String code,
-                                 @Valid @RequestBody RegisterTeamRequest request) {
+            @PathVariable String code,
+            @Valid @RequestBody RegisterTeamRequest request) {
         requireHostOf(principal, code);
         return tournamentService.registerTeam(code, request);
     }
 
     @PostMapping("/{code}/teams/{teamId}/entry-fee")
     public TeamView markEntryFeePaid(@AuthenticationPrincipal UserPrincipal principal,
-                                     @PathVariable String code, @PathVariable Long teamId) {
+            @PathVariable String code, @PathVariable Long teamId) {
         requireHostOf(principal, code);
         return tournamentService.markEntryFeePaid(code, teamId);
     }
 
     @PostMapping("/{code}/multi-pitch-reserve")
     public TournamentView reserveSlots(@AuthenticationPrincipal UserPrincipal principal,
-                                       @PathVariable String code,
-                                       @Valid @RequestBody ReserveSlotsRequest request) {
+            @PathVariable String code,
+            @Valid @RequestBody ReserveSlotsRequest request) {
         requireHostOf(principal, code);
         return tournamentService.reserveSlots(code, request);
     }
@@ -112,8 +114,8 @@ public class TournamentRestController {
     /** Live price for repeating the reserved pattern weekly. Writes nothing. */
     @GetMapping("/{code}/reserve-quote")
     public ReservationQuote quote(@AuthenticationPrincipal UserPrincipal principal,
-                                  @PathVariable String code,
-                                  @RequestParam(defaultValue = "1") int repeatWeeks) {
+            @PathVariable String code,
+            @RequestParam(defaultValue = "1") int repeatWeeks) {
         requireHostOf(principal, code);
         return tournamentService.quoteRecurring(code, repeatWeeks);
     }
@@ -121,15 +123,15 @@ public class TournamentRestController {
     /** Confirms the bulk reservation and captures the server-priced deposit. */
     @PostMapping("/{code}/deposit")
     public TournamentView payDeposit(@AuthenticationPrincipal UserPrincipal principal,
-                                     @PathVariable String code,
-                                     @Valid @RequestBody PayDepositRequest request) {
+            @PathVariable String code,
+            @Valid @RequestBody PayDepositRequest request) {
         requireHostOf(principal, code);
         return tournamentService.payDeposit(code, request);
     }
 
     @PostMapping("/{code}/fixtures/generate")
     public List<FixtureView> generateFixtures(@AuthenticationPrincipal UserPrincipal principal,
-                                              @PathVariable String code) {
+            @PathVariable String code) {
         requireHostOf(principal, code);
         return tournamentService.generateFixtures(code);
     }
@@ -137,17 +139,19 @@ public class TournamentRestController {
     /** Settles the remainder after the deposit, at the server-computed price. */
     @PostMapping("/{code}/balance")
     public TournamentView payBalance(@AuthenticationPrincipal UserPrincipal principal,
-                                     @PathVariable String code,
-                                     @Valid @RequestBody PayBalanceRequest request) {
+            @PathVariable String code,
+            @Valid @RequestBody PayBalanceRequest request) {
         requireHostOf(principal, code);
         return tournamentService.payBalance(code, request);
     }
 
-    /** Updates host-editable settings: listing privacy and private event-day notes. */
+    /**
+     * Updates host-editable settings: listing privacy and private event-day notes.
+     */
     @PatchMapping("/{code}/settings")
     public TournamentView updateSettings(@AuthenticationPrincipal UserPrincipal principal,
-                                         @PathVariable String code,
-                                         @Valid @RequestBody UpdateTournamentSettingsRequest request) {
+            @PathVariable String code,
+            @Valid @RequestBody UpdateTournamentSettingsRequest request) {
         requireHostOf(principal, code);
         return tournamentService.updateSettings(code, request);
     }
@@ -155,14 +159,14 @@ public class TournamentRestController {
     /** Issues a new invite code; the previous link stops working immediately. */
     @PostMapping("/{code}/invite-code")
     public TournamentView regenerateInviteCode(@AuthenticationPrincipal UserPrincipal principal,
-                                               @PathVariable String code) {
+            @PathVariable String code) {
         requireHostOf(principal, code);
         return tournamentService.regenerateInviteCode(code);
     }
 
     @GetMapping("/{code}/fixtures")
     public List<FixtureView> listFixtures(@AuthenticationPrincipal UserPrincipal principal,
-                                          @PathVariable String code) {
+            @PathVariable String code) {
         requireHostOf(principal, code);
         return tournamentService.listFixtures(code);
     }

@@ -37,7 +37,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SlotRestController {
 
-    /** Refuse absurd dates outright rather than opening a stream nothing will ever publish to. */
+    /**
+     * Refuse absurd dates outright rather than opening a stream nothing will ever
+     * publish to.
+     */
     private static final int MAX_STREAM_DAYS_AHEAD = 365;
 
     private final SlotAvailabilityService slotAvailabilityService;
@@ -51,7 +54,8 @@ public class SlotRestController {
      * has none yet (there is no generation job), so a player can always pick
      * a time in the 7-day availability strip.
      *
-     * <p>An unknown venue is a 404, not an empty list: "this venue has no
+     * <p>
+     * An unknown venue is a 404, not an empty list: "this venue has no
      * slots today" and "this venue does not exist" are different answers and
      * the client cannot act on them the same way.
      */
@@ -73,13 +77,15 @@ public class SlotRestController {
      * GET /api/v1/venues/{venueId}/slots/stream?date=YYYY-MM-DD — live
      * availability for one venue/day as Server-Sent Events.
      *
-     * <p>Public for the same reason the snapshot above is: availability is not
+     * <p>
+     * Public for the same reason the snapshot above is: availability is not
      * private, and {@code EventSource} cannot attach an {@code Authorization}
      * header, so requiring a token here would break the feature outright
      * rather than secure it. The payload is scoped to what the snapshot
      * already reveals — no holder identity is ever emitted.
      *
-     * <p>Clients should re-read the snapshot on every {@code open}: reconnects
+     * <p>
+     * Clients should re-read the snapshot on every {@code open}: reconnects
      * are silent and any change published while disconnected is not replayed.
      */
     @GetMapping(value = "/{venueId}/slots/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

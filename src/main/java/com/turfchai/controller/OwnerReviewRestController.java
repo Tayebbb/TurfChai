@@ -31,11 +31,14 @@ public class OwnerReviewRestController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> getOwnerReviews(
             @AuthenticationPrincipal UserPrincipal principal) {
-        
+
         return ResponseEntity.ok(ownerReviewService.getReviewsSummary(principal.getId()));
     }
 
-    /** Publishes the owner's public reply; it is then shown under the review on the venue page. */
+    /**
+     * Publishes the owner's public reply; it is then shown under the review on the
+     * venue page.
+     */
     @PostMapping("/{id}/response")
     public ResponseEntity<Map<String, Object>> respond(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -46,8 +49,6 @@ public class OwnerReviewRestController {
     }
 
     public record ReviewResponseRequest(
-            @NotBlank(message = "Response cannot be empty")
-            @Size(max = 2000, message = "Response cannot exceed 2000 characters")
-            String response) {
+            @NotBlank(message = "Response cannot be empty") @Size(max = 2000, message = "Response cannot exceed 2000 characters") String response) {
     }
 }

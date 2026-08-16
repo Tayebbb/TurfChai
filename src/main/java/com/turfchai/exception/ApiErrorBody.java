@@ -9,7 +9,8 @@ import java.util.Map;
 /**
  * The one shape every error in this API takes.
  *
- * <p>It lives outside {@link GlobalExceptionHandler} because the security
+ * <p>
+ * It lives outside {@link GlobalExceptionHandler} because the security
  * filter chain rejects requests before any controller advice runs, and those
  * rejections used to come back with an empty body — so clients had to special
  * case 401 and 403 against every other failure.

@@ -1,13 +1,11 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { getBooking } from "@/api/bookings";
-import { getPaymentsForBooking, getRefundPreview, cancelAndRefund } from "@/api/payments";
+import { getPaymentsForBooking, getRefundPreview } from "@/api/payments";
 import { getUser } from "@/api/client";
 import { useApi } from "@/hooks/useApi";
-import { useToast } from "@/hooks/useToast";
 import { canCall, canGetDirections, callNumber, openDirections } from "@/utils/deviceActions";
 import { paths } from "@/routes/paths";
 import "./BookingDetailPage.css";
@@ -50,10 +48,8 @@ function formatDateTime(iso) {
 
 export default function BookingDetailPage() {
   const { bookingId } = useParams();
-  const { showToast } = useToast();
-  const [cancelling, setCancelling] = useState(false);
 
-  const { data: booking, loading, error, reload } = useApi(
+  const { data: booking, loading, error } = useApi(
     () => getBooking(bookingId),
     [bookingId],
   );
@@ -84,24 +80,6 @@ export default function BookingDetailPage() {
     Number(booking.userId) === Number(currentUser.id);
 
   const badge = STATUS_BADGE[booking?.status] ?? STATUS_BADGE.CONFIRMED;
-
-  const onCancel = async () => {
-    setCancelling(true);
-    try {
-      const result = await cancelAndRefund(bookingId);
-      showToast(
-        result.refundAmount > 0
-          ? `Booking cancelled — ${bdt(result.refundAmount)} refund recorded`
-          : "Booking cancelled — no refund under this venue's policy at this time",
-      );
-      reload();
-      paymentsApi.reload();
-    } catch (cancelError) {
-      showToast(cancelError.message || "Could not cancel this booking");
-    } finally {
-      setCancelling(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -182,6 +160,15 @@ export default function BookingDetailPage() {
   const refundedTotal = payments
     .filter((p) => p.type === "REFUND" && p.status !== "FAILED")
     .reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
+
+  // What the player still owes, rather than what has already been collected.
+  // The summary used to label the settled figure "Total due", so an unpaid
+  // booking claimed a balance of zero and a paid one claimed the full price.
+  const netPaid = settledTotal - refundedTotal;
+  const isCancelled = booking?.status === "CANCELLED";
+  const stillDue = isCancelled
+    ? 0
+    : Math.max(0, Number(booking?.netAmount ?? 0) - netPaid);
 
   return (
     <>
@@ -323,6 +310,12 @@ export default function BookingDetailPage() {
                 <span>Slot</span>
                 <span className="num">{bdt(booking?.netAmount)}</span>
               </div>
+              {settledTotal > 0 ? (
+                <div className="pricerow">
+                  <span>Paid</span>
+                  <span className="num">{bdt(settledTotal)}</span>
+                </div>
+              ) : null}
               {refundPayment ? (
                 <div className="pricerow">
                   <span className="neg">Refunded</span>
@@ -330,14 +323,15 @@ export default function BookingDetailPage() {
                 </div>
               ) : null}
               <div className="pricerow total">
-                <span>{refundPayment ? "Net due" : "Total due"}</span>
-                <span className="num">
-                  {bdt(settledTotal - refundedTotal)}
-                </span>
+                <span>{stillDue > 0 ? "Still due" : isCancelled ? "Net charged" : "Settled"}</span>
+                <span className="num">{bdt(stillDue > 0 ? stillDue : netPaid)}</span>
               </div>
-              {/* Nothing is collected online, so "paid" would be a false claim. */}
               <p className="tiny subtle" style={{ margin: '8px 0 0' }}>
-                Payable to the venue — TurfChai does not take payment online yet.
+                {stillDue > 0
+                  ? `${bdt(stillDue)} is payable to the venue on match day.`
+                  : isCancelled
+                    ? 'This booking is cancelled — nothing further is owed.'
+                    : 'Nothing left to pay for this booking.'}
               </p>
             </div>
             <div className="card">
@@ -355,9 +349,7 @@ export default function BookingDetailPage() {
                     size="sm"
                     variant="ghostDanger"
                     block
-                    onClick={onCancel}
-                    loading={cancelling}
-                    disabled={cancelling}
+                    to={paths.player.cancelFor(bookingId)}
                   >
                     Cancel booking
                   </Button>

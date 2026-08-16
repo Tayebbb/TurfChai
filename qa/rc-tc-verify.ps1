@@ -21,7 +21,8 @@ function Verdict($id, $ok, $what, $evidence) {
     $script:results += [ordered]@{ id = $id; verdict = $(if ($ok) { 'PASS' } else { 'FAIL' }); what = $what; evidence = $evidence }
     if ($ok) {
         Write-Host ("PASS  {0,-10} {1}" -f $id, $what) -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host ("FAIL  {0,-10} {1}" -f $id, $what) -ForegroundColor Red
         Write-Host ("      evidence: {0}" -f $evidence) -ForegroundColor Red
         $script:failed++
@@ -42,7 +43,8 @@ function Call($method, $path, $token, $body, $extraHeaders) {
     try {
         $r = Invoke-WebRequest @req
         return @{ status = [int]$r.StatusCode; body = $r.Content }
-    } catch {
+    }
+    catch {
         $resp = $_.Exception.Response
         if ($resp) {
             $text = ''
@@ -52,7 +54,8 @@ function Call($method, $path, $token, $body, $extraHeaders) {
                 # looks empty, which silently turns real assertions into passes.
                 if ($stream.CanSeek) { $stream.Position = 0 }
                 $text = (New-Object System.IO.StreamReader($stream)).ReadToEnd()
-            } catch { $text = '' }
+            }
+            catch { $text = '' }
             return @{ status = [int]$resp.StatusCode; body = $text }
         }
         return @{ status = 0; body = "$($_.Exception.Message)" }
@@ -208,7 +211,7 @@ $after = Call GET '/players/me' $playerB.token $null
 $tampered = ($after.body -match 'TC001 TAMPERED')
 Verdict 'TC-001' (($bad.Count -eq 0) -and (-not $tampered)) `
     'X-User-Id impersonation refused on all 6 original probes; victim profile intact' `
-    $(if ($bad.Count) { $bad -join '; ' } else { 'all 401/403, profile unchanged' })
+$(if ($bad.Count) { $bad -join '; ' } else { 'all 401/403, profile unchanged' })
 
 # --- TC-002: anonymous tournament manipulation ------------------------------
 $code = 'TR-CUP-0091'
@@ -226,7 +229,7 @@ foreach ($pr in $anonProbes) {
     if ($r.status -notin 401, 403) { $bad += "$($pr.m) $($pr.p) -> $($r.status)" }
 }
 Verdict 'TC-002' ($bad.Count -eq 0) 'every anonymous tournament operation refused' `
-    $(if ($bad.Count) { $bad -join '; ' } else { 'all 6 probes 401/403' })
+$(if ($bad.Count) { $bad -join '; ' } else { 'all 6 probes 401/403' })
 
 # --- TC-003: player bookings list renders with REAL bookings ----------------
 # The crash came from a link built on a path key that does not exist; the data
@@ -248,8 +251,9 @@ if ($admin) {
         if ($a.status -ne 200) { $bad += "analytics $($v.id)->$($a.status)" }
     }
     Verdict 'TC-004' (($bad.Count -eq 0) -and ($adminVenues.Count -gt 0)) 'admin turf detail + analytics answer 200 for every id tried' `
-        $(if ($bad.Count) { $bad -join '; ' } elseif ($adminVenues.Count -eq 0) { "no venue resolved: $adminVenuesNote" } else { "$($adminVenues.Count) venue ids checked, all 200" })
-} else {
+    $(if ($bad.Count) { $bad -join '; ' } elseif ($adminVenues.Count -eq 0) { "no venue resolved: $adminVenuesNote" } else { "$($adminVenues.Count) venue ids checked, all 200" })
+}
+else {
     Verdict 'TC-004' $false 'admin turf detail' 'admin 2FA rate-limited; restart the backend and re-run'
 }
 
@@ -259,7 +263,8 @@ if ($bkB) {
     $r = Call POST '/reviews' $playerA.token @{ bookingId = $bkB.id; userId = $playerA.user.id; venueId = $bkB.venueId; overallRating = 1; subRatings = @{}; comment = 'TC-007 forged authorship'; parentReview = $false }
     Verdict 'TC-007' ($r.status -in 401, 403, 404) "reviewing another player's booking is refused" "HTTP $($r.status)"
     Verdict 'TC-005' ($r.status -lt 500) 'the review path answers 4xx, never 5xx' "HTTP $($r.status)"
-} else {
+}
+else {
     Verdict 'TC-007' $false "reviewing another player's booking is refused" 'no booking for player B to attack'
     Verdict 'TC-005' $false 'review path answers 4xx' 'no booking fixture'
 }
@@ -268,7 +273,8 @@ if ($bkB) {
 if ($bkB) {
     $r = Call POST "/matchday/checkin?bookingId=$($bkB.id)" $playerA.token $null
     Verdict 'TC-006' ($r.status -in 401, 403, 404) "checking in another player's booking is refused" "HTTP $($r.status)"
-} else {
+}
+else {
     Verdict 'TC-006' $false 'check-in ownership' 'no booking fixture'
 }
 
@@ -279,7 +285,7 @@ foreach ($p in @('/players/me', '/me', '/bookings', '/rewards/my-points', '/noti
     if ($r.status -notin 401, 403) { $leaks += "$p -> $($r.status)" }
 }
 Verdict 'TC-008' ($leaks.Count -eq 0) 'no identity endpoint answers an anonymous caller' `
-    $(if ($leaks.Count) { $leaks -join '; ' } else { '5 identity endpoints all 401/403' })
+$(if ($leaks.Count) { $leaks -join '; ' } else { '5 identity endpoints all 401/403' })
 
 # --- TC-009 / QA-N07: elapsed slots -----------------------------------------
 $vs = (Call GET '/venues?page=0&size=1' $null $null).body | ConvertFrom-Json
@@ -296,7 +302,8 @@ Verdict 'TC-009' ($wrong.Count -eq 0) 'no elapsed slot is advertised as bookable
 if ($elapsed.Count -gt 0) {
     $r = Call POST '/bookings/hold-slot' $playerA.token @{ slotId = $elapsed[0].id }
     Verdict 'TC-009b' ($r.status -ge 400) 'holding an elapsed slot is refused' "HTTP $($r.status)"
-} else {
+}
+else {
     Verdict 'TC-009b' $true 'holding an elapsed slot is refused' 'no elapsed slot today to attempt (checked)'
 }
 $past = Rows (Call GET "/venues/$venueId/slots?date=1999-01-01" $null $null).body
@@ -315,7 +322,8 @@ if ($ownerA) {
     $occ = (@($dj.kpis) | Where-Object { $_.label -eq 'Occupancy' } | Select-Object -First 1).value
     Verdict 'TC-012' (($d.status -eq 200) -and ($occ -ne '100%')) 'owner occupancy is derived, not the hardcoded 100%' `
         "HTTP $($d.status) occupancy=$occ"
-} else { Verdict 'TC-012' $false 'owner occupancy' 'no OWNER actor with a venue found' }
+}
+else { Verdict 'TC-012' $false 'owner occupancy' 'no OWNER actor with a venue found' }
 
 # --- TC-013: admin turf analytics are real ----------------------------------
 if ($adminVenues.Count -gt 0) {
@@ -325,7 +333,8 @@ if ($adminVenues.Count -gt 0) {
     $fabricated = ($a.revenue30d -eq 150000) -or ($a.bookings30d -eq 142) -or ($a.occupancyPercent -eq 72)
     Verdict 'TC-013' (($an.status -eq 200) -and ($null -ne $a) -and (-not $fabricated)) 'admin turf analytics come from real rows' `
         "HTTP $($an.status) venueId=$vid bookings30d=$($a.bookings30d) revenue30d=$($a.revenue30d) occupancy=$($a.occupancyPercent)"
-} else { Verdict 'TC-013' $false 'admin turf analytics' "no venue resolved: $adminVenuesNote" }
+}
+else { Verdict 'TC-013' $false 'admin turf analytics' "no venue resolved: $adminVenuesNote" }
 
 # --- TC-014: admin roster is paginated server-side --------------------------
 if ($admin) {
@@ -338,7 +347,8 @@ if ($admin) {
     $j2 = Unwrap $r2.body
     Verdict 'TC-014b' (($r2.status -ge 400) -or (@($j2.items).Count -le 100)) 'page size is capped' `
         "HTTP $($r2.status) rows=$(@($j2.items).Count)"
-} else {
+}
+else {
     Verdict 'TC-014' $false 'admin roster pagination' 'admin rate-limited'
     Verdict 'TC-014b' $false 'page size cap' 'admin rate-limited'
 }
@@ -347,7 +357,8 @@ if ($admin) {
 if ($admin) {
     $r = Call GET '/admin/turf-requests/REQ-NOPE-0000' $admin.token $null
     Verdict 'TC-015' ($r.status -eq 404) 'an unknown turf-request code is 404' "HTTP $($r.status)"
-} else { Verdict 'TC-015' $false 'unknown turf-request code' 'admin rate-limited' }
+}
+else { Verdict 'TC-015' $false 'unknown turf-request code' 'admin rate-limited' }
 
 # --- TC-017: pricing payloads never 500 -------------------------------------
 $payloads = @(
@@ -362,7 +373,7 @@ foreach ($p in $payloads) {
     if ($r.status -ge 500) { $bad += "$($p | ConvertTo-Json -Compress) -> $($r.status)" }
 }
 Verdict 'TC-017' ($bad.Count -eq 0) 'every bad pricing payload is a deliberate 4xx, never a 500' `
-    $(if ($bad.Count) { $bad -join '; ' } else { "$($payloads.Count) payloads, no 5xx" })
+$(if ($bad.Count) { $bad -join '; ' } else { "$($payloads.Count) payloads, no 5xx" })
 
 # --- TC-018: identity payload carries fullName ------------------------------
 $me = Call GET '/me' $ownerA.token $null
@@ -401,7 +412,8 @@ $newOwner = Login $newEmail 'Demo@12345'
 if ($newOwner) {
     $vlist = Rows (Call GET '/owner/venues' $newOwner.token $null).body
     Verdict 'TC-026' ($vlist.Count -eq 0) 'registering as OWNER creates no placeholder venue' "$($vlist.Count) venue(s) after signup"
-} else {
+}
+else {
     Verdict 'TC-026' $false 'OWNER signup placeholder venue' "registration HTTP $($reg.status)"
 }
 
@@ -413,7 +425,7 @@ if ($rows.Count -gt 0) {
     foreach ($f in $ownerFields) { if ($names -contains $f) { $leaked += $f } }
 }
 Verdict 'TC-028' ($leaked.Count -eq 0) "a player's booking list carries no owner-view fields" `
-    $(if ($leaked.Count) { "leaked: $($leaked -join ',')" } else { 'none of 6 owner fields present' })
+$(if ($leaked.Count) { "leaked: $($leaked -join ',')" } else { 'none of 6 owner fields present' })
 
 # --- TC-029: API docs require authentication --------------------------------
 $d1 = Call GET "$ROOT/v3/api-docs" $null $null
@@ -436,10 +448,12 @@ if ($ownerA -and $ownerB) {
         $r = Call PUT "/owner/venues/$($target.id)" $ownerB.token @{ name = 'CROSS OWNER TAMPER' }
         Verdict 'QA-N09' ($r.status -in 401, 403, 404) "owner B cannot modify owner A's venue" `
             "HTTP $($r.status) targetVenue=$($target.id)"
-    } else {
+    }
+    else {
         Verdict 'QA-N09' $false 'cross-owner isolation' "owner A venue list HTTP $($vaResp.status) len=$($vaResp.body.Length) head=$($vaResp.body.Substring(0,[Math]::Min(60,$vaResp.body.Length)))"
     }
-} else { Verdict 'QA-N09' $false 'cross-owner isolation' 'two OWNER actors not found' }
+}
+else { Verdict 'QA-N09' $false 'cross-owner isolation' 'two OWNER actors not found' }
 
 # --- summary ----------------------------------------------------------------
 $outDir = Join-Path $PSScriptRoot 'baseline'

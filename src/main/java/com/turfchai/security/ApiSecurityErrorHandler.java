@@ -18,11 +18,14 @@ import java.io.IOException;
 /**
  * Renders filter-chain rejections in the same envelope every other error uses.
  *
- * <p>Previously these came back as a bare status with no body, which meant a
+ * <p>
+ * Previously these came back as a bare status with no body, which meant a
  * client parsing {@code message} succeeded for a 409 and threw for a 401.
  *
- * <p>Note on unrouted paths: an anonymous request to a path that matches no
- * handler is answered 401, not 404, because {@code anyRequest().authenticated()}
+ * <p>
+ * Note on unrouted paths: an anonymous request to a path that matches no
+ * handler is answered 401, not 404, because
+ * {@code anyRequest().authenticated()}
  * runs before dispatch. That is deliberate — deny-by-default must not depend on
  * a route existing, and answering 404 here would let an anonymous caller
  * enumerate which endpoints are real. Authenticated callers do get a 404.

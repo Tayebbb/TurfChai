@@ -161,9 +161,6 @@ function OwnerChrome() {
           <Button block to={paths.owner.venueSetup} onClick={account.close}>
             Venue settings
           </Button>
-          <Button block to={paths.owner.staff} onClick={account.close}>
-            Staff &amp; shifts
-          </Button>
           <Button block to={paths.player.home} onClick={account.close}>
             ⚽ Switch to player workspace
           </Button>

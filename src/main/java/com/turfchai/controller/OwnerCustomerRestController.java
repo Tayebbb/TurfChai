@@ -40,33 +40,34 @@ public class OwnerCustomerRestController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getOwnerCustomers(
             @AuthenticationPrincipal UserPrincipal principal) {
-        
+
         List<Venue> ownerVenues = venueRepository.findByOwnerId(principal.getId());
         if (ownerVenues.isEmpty()) {
             return ResponseEntity.ok(List.of());
         }
-        
+
         List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
         List<Booking> allBookings = bookingRepository.findByVenueIdIn(venueIds);
-        
+
         // Group by user
         Map<Long, List<Booking>> userBookings = allBookings.stream()
-            .collect(Collectors.groupingBy(Booking::getUserId));
-            
+                .collect(Collectors.groupingBy(Booking::getUserId));
+
         List<Map<String, Object>> customers = new ArrayList<>();
-        
+
         for (Map.Entry<Long, List<Booking>> entry : userBookings.entrySet()) {
             Long userId = entry.getKey();
             List<Booking> bkgs = entry.getValue();
-            
+
             User user = userRepository.findById(userId).orElse(null);
-            if (user == null) continue;
-            
+            if (user == null)
+                continue;
+
             int bookingCount = bkgs.size();
             BigDecimal totalSpend = BigDecimal.ZERO;
             java.time.LocalDate lastVisit = null;
             int confirmedVisits = 0;
-            
+
             for (Booking b : bkgs) {
                 if (b.getStatus() == BookingStatus.CONFIRMED && b.getGrossAmount() != null) {
                     totalSpend = totalSpend.add(b.getGrossAmount());
@@ -82,14 +83,14 @@ public class OwnerCustomerRestController {
                     }
                 }
             }
-            
-            String initials = user.getFullName() != null && user.getFullName().length() > 0 
-                ? user.getFullName().substring(0, 1).toUpperCase() 
-                : "?";
-                
+
+            String initials = user.getFullName() != null && user.getFullName().length() > 0
+                    ? user.getFullName().substring(0, 1).toUpperCase()
+                    : "?";
+
             String lastVisitStr = lastVisit != null ? lastVisit.toString() : "Never";
             int noShows = user.getGamesNoShow() != null ? user.getGamesNoShow() : 0;
-            
+
             Map<String, Object> c = new HashMap<>();
             c.put("id", user.getId().toString());
             c.put("name", user.getFullName());
@@ -103,14 +104,17 @@ public class OwnerCustomerRestController {
             c.put("loyalty", loyaltyBadge(confirmedVisits));
             c.put("noShows", noShows);
             c.put("noShowsDanger", noShows >= 3);
-            
+
             customers.add(c);
         }
-        
+
         return ResponseEntity.ok(customers);
     }
 
-    /** A confirmed booking whose kick-off has passed — the only thing that counts as a visit. */
+    /**
+     * A confirmed booking whose kick-off has passed — the only thing that counts as
+     * a visit.
+     */
     private boolean hasBeenPlayed(Booking booking) {
         if (booking.getStatus() != BookingStatus.CONFIRMED || booking.getBookingDate() == null) {
             return false;

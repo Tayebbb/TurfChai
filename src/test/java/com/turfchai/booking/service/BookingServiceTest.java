@@ -41,6 +41,8 @@ class BookingServiceTest {
     private com.turfchai.venue.repository.VenueRepository venueRepository;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private com.turfchai.service.NotificationService notificationService;
 
     /** Real policy, not a mock: these tests must exercise the actual time rules. */
     @Spy

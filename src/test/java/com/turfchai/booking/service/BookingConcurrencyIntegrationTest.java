@@ -77,8 +77,7 @@ class BookingConcurrencyIntegrationTest {
     void holdSlot_allowsExactlyOneConcurrentWinner() throws Exception {
         Slot slot = freshAvailableSlot();
 
-        Result result = runConcurrently(THREAD_COUNT, (user) ->
-                bookingService.holdSlot(user.getId(), slot.getId()));
+        Result result = runConcurrently(THREAD_COUNT, (user) -> bookingService.holdSlot(user.getId(), slot.getId()));
 
         assertTrue(result.failures.isEmpty(), "Unexpected failures: " + result.failures);
         assertEquals(1, result.successes.get(), "exactly one caller should win the hold");
@@ -98,8 +97,8 @@ class BookingConcurrencyIntegrationTest {
         User holder = users(1).get(0);
         bookingService.holdSlot(holder.getId(), slot.getId());
 
-        Result result = runConcurrently(THREAD_COUNT, (user) ->
-                bookingService.confirmBooking(holder.getId(), slot.getId()));
+        Result result = runConcurrently(THREAD_COUNT,
+                (user) -> bookingService.confirmBooking(holder.getId(), slot.getId()));
 
         assertTrue(result.failures.isEmpty(), "Unexpected failures: " + result.failures);
         assertEquals(1, result.successes.get(), "exactly one caller should confirm the booking");
@@ -119,8 +118,8 @@ class BookingConcurrencyIntegrationTest {
         User holder = users(1).get(0);
         bookingService.holdSlot(holder.getId(), slot.getId());
 
-        Result result = runConcurrently(THREAD_COUNT, (user) ->
-                paymentService.pay(holder.getId(), slot.getId(), PaymentMethod.BKASH, null));
+        Result result = runConcurrently(THREAD_COUNT,
+                (user) -> paymentService.pay(holder.getId(), slot.getId(), PaymentMethod.BKASH, null));
 
         assertEquals(1, result.successes.get(), "a slot may only be charged for once");
 

@@ -37,7 +37,8 @@ function Call($method, $path, $token, $body, $rawBody, $contentType) {
     if ($null -ne $rawBody) {
         $req['ContentType'] = $(if ($contentType) { $contentType } else { 'application/json' })
         $req['Body'] = $rawBody
-    } elseif ($null -ne $body) {
+    }
+    elseif ($null -ne $body) {
         $req['ContentType'] = 'application/json'
         $req['Body'] = ($body | ConvertTo-Json -Depth 8)
     }
@@ -47,7 +48,8 @@ function Call($method, $path, $token, $body, $rawBody, $contentType) {
         # RFC 8259) and PowerShell then assumes Latin-1, which turns every
         # Bangla or emoji response into fake mojibake findings.
         return @{ status = [int]$r.StatusCode; body = [System.Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()) }
-    } catch {
+    }
+    catch {
         $resp = $_.Exception.Response
         if ($resp) {
             $text = ''
@@ -55,7 +57,8 @@ function Call($method, $path, $token, $body, $rawBody, $contentType) {
                 $s = $resp.GetResponseStream()
                 if ($s.CanSeek) { $s.Position = 0 }
                 $text = (New-Object System.IO.StreamReader($s)).ReadToEnd()
-            } catch { $text = '' }
+            }
+            catch { $text = '' }
             return @{ status = [int]$resp.StatusCode; body = $text }
         }
         return @{ status = 0; body = "$($_.Exception.Message)" }
@@ -128,12 +131,12 @@ Write-Host '--- forged and tampered credentials ---' -ForegroundColor Yellow
 
 $parts = $playerA.token.Split('.')
 $tampered = @{
-    'signature stripped'      = "$($parts[0]).$($parts[1])."
-    'alg=none style token'    = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.' + $parts[1] + '.'
-    'payload swapped'         = "$($parts[0]).eyJzdWIiOiIxIiwicm9sZSI6IlNVUEVSX0FETUlOIn0.$($parts[2])"
-    'signature from nowhere'  = "$($parts[0]).$($parts[1]).AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    'random garbage'          = 'not.a.token'
-    'empty bearer'            = ' '
+    'signature stripped'     = "$($parts[0]).$($parts[1])."
+    'alg=none style token'   = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.' + $parts[1] + '.'
+    'payload swapped'        = "$($parts[0]).eyJzdWIiOiIxIiwicm9sZSI6IlNVUEVSX0FETUlOIn0.$($parts[2])"
+    'signature from nowhere' = "$($parts[0]).$($parts[1]).AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    'random garbage'         = 'not.a.token'
+    'empty bearer'           = ' '
 }
 foreach ($k in $tampered.Keys) {
     $r = Call GET '/me' $tampered[$k] $null
@@ -194,7 +197,8 @@ if ($playerB) {
         }
         if ($leaks.Count -eq 0) { Pass "player A cannot touch player B's booking" "$($probes.Count) probes refused" }
         else { Fail 'CROSS-USER ACCESS' ($leaks -join '; ') }
-    } else { Fail 'cross-user probe had no subject' 'player B has no booking; the check proved nothing' }
+    }
+    else { Fail 'cross-user probe had no subject' 'player B has no booking; the check proved nothing' }
 }
 
 if ($ownerA -and $ownerB) {
@@ -226,11 +230,14 @@ if ($ownerA -and $ownerB) {
         $theirs = (Call GET "/owner/analytics/dashboard?venueId=$vid" $ownerA.token $null).body
         if ($foreign -eq $own -and $foreign -ne $theirs) {
             Pass 'owner dashboard ignores a foreign venueId' 'owner B sees only their own figures'
-        } else {
+        }
+        else {
             Fail 'CROSS-OWNER DATA LEAK VIA venueId' "foreign==own:$($foreign -eq $own) foreign==theirs:$($foreign -eq $theirs)"
         }
-    } else { Fail 'cross-owner probe had no subject' 'owner A owns no venue; the check proved nothing' }
-} else { Fail 'cross-owner probe could not run' "ownerA=$([bool]$ownerA) ownerB=$([bool]$ownerB) admin=$([bool]$admin)" }
+    }
+    else { Fail 'cross-owner probe had no subject' 'owner A owns no venue; the check proved nothing' }
+}
+else { Fail 'cross-owner probe could not run' "ownerA=$([bool]$ownerA) ownerB=$([bool]$ownerB) admin=$([bool]$admin)" }
 
 # ------------------------------------------------------------ CONCURRENCY ---
 Write-Host ''
@@ -257,7 +264,8 @@ if ($playerB) {
                     $r = Invoke-WebRequest -Uri "$api/bookings/hold-slot" -Method Post -Headers @{ Authorization = "Bearer $t" } `
                         -ContentType 'application/json' -Body (@{ slotId = $slotId } | ConvertTo-Json) -UseBasicParsing -TimeoutSec 30
                     return [int]$r.StatusCode
-                } catch { if ($_.Exception.Response) { return [int]$_.Exception.Response.StatusCode }; return 0 }
+                }
+                catch { if ($_.Exception.Response) { return [int]$_.Exception.Response.StatusCode }; return 0 }
             } -ArgumentList $API, $tok, $target.id
         }
         $results = $jobs | Wait-Job -Timeout 60 | Receive-Job
@@ -265,7 +273,8 @@ if ($playerB) {
         $ok = @($results | Where-Object { $_ -eq 200 -or $_ -eq 201 }).Count
         if ($ok -le 1) { Pass 'a contested slot is held by at most one player' "results: $($results -join ',')" }
         else { Fail 'DOUBLE-SELL: two players held the same slot' "results: $($results -join ',')" }
-    } else { Fail 'slot-contention probe had no subject' 'no free future slot found; the check proved nothing' }
+    }
+    else { Fail 'slot-contention probe had no subject' 'no free future slot found; the check proved nothing' }
 }
 
 # --------------------------------------------------------------- INJECTION --

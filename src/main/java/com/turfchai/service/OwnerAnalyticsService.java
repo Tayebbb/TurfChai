@@ -76,22 +76,22 @@ public class OwnerAnalyticsService {
         // rather than the 100% this used to hardcode.
         List<Slot> todaySlots = slotRepository.findByVenueIdInAndSlotDateBetween(venueIds, today, today);
         long occupiedSlots = todaySlots.stream()
-            .filter(s -> s.getStatus() == SlotStatus.BOOKED || s.getStatus() == SlotStatus.HELD)
-            .count();
+                .filter(s -> s.getStatus() == SlotStatus.BOOKED || s.getStatus() == SlotStatus.HELD)
+                .count();
         String occupancyValue = todaySlots.isEmpty()
-            ? "—"
-            : Math.round(100.0 * occupiedSlots / todaySlots.size()) + "%";
+                ? "—"
+                : Math.round(100.0 * occupiedSlots / todaySlots.size()) + "%";
         String occupancyDelta = todaySlots.isEmpty()
-            ? "No slots published for today"
-            : occupiedSlots + " of " + todaySlots.size() + " slots today";
+                ? "No slots published for today"
+                : occupiedSlots + " of " + todaySlots.size() + " slots today";
 
         // KPIs
         List<Map<String, Object>> kpis = List.of(
-            Map.of("label", "Today's revenue", "value", "৳" + grossRevenue.intValue(), "delta", "", "trend", ""),
-            Map.of("label", "Bookings today", "value", String.valueOf(bookedCount), "delta", "", "trend", ""),
-            Map.of("label", "Occupancy", "value", occupancyValue, "delta", occupancyDelta, "trend", ""),
-            Map.of("label", "Pending payments", "value", String.valueOf(pendingPayments), "delta", "", "trend", "")
-        );
+                Map.of("label", "Today's revenue", "value", "৳" + grossRevenue.intValue(), "delta", "", "trend", ""),
+                Map.of("label", "Bookings today", "value", String.valueOf(bookedCount), "delta", "", "trend", ""),
+                Map.of("label", "Occupancy", "value", occupancyValue, "delta", occupancyDelta, "trend", ""),
+                Map.of("label", "Pending payments", "value", String.valueOf(pendingPayments), "delta", "", "trend",
+                        ""));
 
         // Next Up
         List<Map<String, Object>> nextUp = new ArrayList<>();
@@ -101,23 +101,27 @@ public class OwnerAnalyticsService {
                 User u = userRepository.findById(b.getUserId()).orElse(null);
                 boolean isManual = b.getBookingCode() != null && b.getBookingCode().startsWith("MB-");
                 String customerName = isManual ? "Manual Walk-in" : (u != null ? u.getFullName() : "Guest");
-                String pitchName = b.getSlot() != null && b.getSlot().getPitch() != null ? b.getSlot().getPitch().getName() : "Pitch";
+                String pitchName = b.getSlot() != null && b.getSlot().getPitch() != null
+                        ? b.getSlot().getPitch().getName()
+                        : "Pitch";
                 String timeStr = b.getStartTime() != null ? b.getStartTime().format(timeFormatter) : "N/A";
-                
+
                 Map<String, Object> nu = new HashMap<>();
                 nu.put("id", String.valueOf(b.getId()));
                 nu.put("slot", timeStr + " · " + pitchName);
-                
+
                 String tone = b.getStatus() == BookingStatus.CONFIRMED ? "green" : "amber";
                 String text = b.getStatus() == BookingStatus.CONFIRMED ? (isManual ? "Paid (Cash)" : "Paid") : "Unpaid";
                 nu.put("badge", Map.of("tone", tone, "text", text));
-                
+
                 nu.put("detail", customerName + " · " + b.getBookingCode());
-                nu.put("action", Map.of("kind", "link", "to", "/owner/bookings", "label", "Detail", "variant", "secondary"));
+                nu.put("action",
+                        Map.of("kind", "link", "to", "/owner/bookings", "label", "Detail", "variant", "secondary"));
                 nextUp.add(nu);
             }
         }
-        if (nextUp.size() > 5) nextUp = nextUp.subList(0, 5);
+        if (nextUp.size() > 5)
+            nextUp = nextUp.subList(0, 5);
 
         // Activity
         List<Booking> recentBookings = bookingRepository.findTop5ByVenueIdInOrderByCreatedAtDesc(venueIds);
@@ -126,12 +130,14 @@ public class OwnerAnalyticsService {
             User u = userRepository.findById(b.getUserId()).orElse(null);
             boolean isManual = b.getBookingCode() != null && b.getBookingCode().startsWith("MB-");
             String customerName = isManual ? "Manual Booking (Walk-in)" : (u != null ? u.getFullName() : "Guest");
-            String pitchName = b.getSlot() != null && b.getSlot().getPitch() != null ? b.getSlot().getPitch().getName() : "Pitch";
-            
+            String pitchName = b.getSlot() != null && b.getSlot().getPitch() != null ? b.getSlot().getPitch().getName()
+                    : "Pitch";
+
             Map<String, Object> act = new HashMap<>();
             act.put("id", String.valueOf(b.getId()));
             act.put("title", "New booking: " + pitchName);
-            act.put("detail", customerName + " booked for " + b.getBookingDate() + " · " + relativeTime(b.getCreatedAt()));
+            act.put("detail",
+                    customerName + " booked for " + b.getBookingDate() + " · " + relativeTime(b.getCreatedAt()));
             activity.add(act);
         }
 
@@ -139,13 +145,12 @@ public class OwnerAnalyticsService {
         List<Map<String, Object>> attention = new ArrayList<>();
         if (pendingPayments > 0) {
             attention.add(Map.of(
-                "id", "deposits",
-                "tone", "warn",
-                "icon", "💰",
-                "title", pendingPayments + " deposits awaiting collection",
-                "body", "Review pending bookings.",
-                "link", Map.of("to", "/owner/bookings?filter=pending", "label", "View bookings")
-            ));
+                    "id", "deposits",
+                    "tone", "warn",
+                    "icon", "💰",
+                    "title", pendingPayments + " deposits awaiting collection",
+                    "body", "Review pending bookings.",
+                    "link", Map.of("to", "/owner/bookings?filter=pending", "label", "View bookings")));
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -164,7 +169,8 @@ public class OwnerAnalyticsService {
      * this used to be four hardcoded literals (a "৳96,700 / ৳110,000" revenue
      * goal, 68% occupancy and a 61/22/17 channel split) on every venue.
      */
-    private Map<String, Object> weeklyPerformance(List<Long> venueIds, List<Booking> allOwnerBookings, LocalDate today) {
+    private Map<String, Object> weeklyPerformance(List<Long> venueIds, List<Booking> allOwnerBookings,
+            LocalDate today) {
         LocalDate weekStart = today.minusDays(6);
         LocalDate priorStart = today.minusDays(13);
         LocalDate priorEnd = today.minusDays(7);
@@ -216,26 +222,27 @@ public class OwnerAnalyticsService {
             return "time unknown";
         }
         long minutes = Duration.between(createdAt, OffsetDateTime.now()).toMinutes();
-        if (minutes < 1) return "Just now";
-        if (minutes < 60) return minutes + " min ago";
+        if (minutes < 1)
+            return "Just now";
+        if (minutes < 60)
+            return minutes + " min ago";
         long hours = minutes / 60;
-        if (hours < 24) return hours + (hours == 1 ? " hour ago" : " hours ago");
+        if (hours < 24)
+            return hours + (hours == 1 ? " hour ago" : " hours ago");
         long days = hours / 24;
         return days + (days == 1 ? " day ago" : " days ago");
     }
 
     private Map<String, Object> emptyDashboard() {
         List<Map<String, Object>> kpis = List.of(
-            Map.of("label", "Today's revenue", "value", "৳0", "delta", "", "trend", ""),
-            Map.of("label", "Bookings today", "value", "0", "delta", "", "trend", ""),
-            Map.of("label", "Occupancy", "value", "—", "delta", "No venue yet", "trend", ""),
-            Map.of("label", "Pending payments", "value", "0", "delta", "", "trend", "")
-        );
+                Map.of("label", "Today's revenue", "value", "৳0", "delta", "", "trend", ""),
+                Map.of("label", "Bookings today", "value", "0", "delta", "", "trend", ""),
+                Map.of("label", "Occupancy", "value", "—", "delta", "No venue yet", "trend", ""),
+                Map.of("label", "Pending payments", "value", "0", "delta", "", "trend", ""));
         return Map.of(
-            "kpis", kpis,
-            "nextUp", List.of(),
-            "activity", List.of(),
-            "attention", List.of()
-        );
+                "kpis", kpis,
+                "nextUp", List.of(),
+                "activity", List.of(),
+                "attention", List.of());
     }
 }

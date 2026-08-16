@@ -26,7 +26,8 @@ import java.util.UUID;
 /**
  * Player profile + saved venues.
  *
- * <p>"me" is always the authenticated principal. There is deliberately no way
+ * <p>
+ * "me" is always the authenticated principal. There is deliberately no way
  * for a caller to name a different user: no {@code X-User-Id} header, no query
  * parameter and no demo fallback.
  */
@@ -39,7 +40,7 @@ public class UserProfileRestController {
     private final com.turfchai.player.service.PlayerStatsService statsService;
 
     public UserProfileRestController(UserProfileService profileService,
-                                     com.turfchai.player.service.PlayerStatsService statsService) {
+            com.turfchai.player.service.PlayerStatsService statsService) {
         this.profileService = profileService;
         this.statsService = statsService;
     }
@@ -53,7 +54,10 @@ public class UserProfileRestController {
         return ResponseEntity.ok(profileService.getProfile(currentUserId(principal)));
     }
 
-    /** GET /api/v1/players/me/stats — activity summary derived from the caller's own records. */
+    /**
+     * GET /api/v1/players/me/stats — activity summary derived from the caller's own
+     * records.
+     */
     @GetMapping("/me/stats")
     public ResponseEntity<com.turfchai.player.dto.PlayerStatsResponse> myStats(
             @AuthenticationPrincipal UserPrincipal principal) {

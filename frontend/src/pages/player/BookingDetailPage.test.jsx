@@ -63,10 +63,25 @@ describe('BookingDetailPage payment state', () => {
   it('sums every tender rather than reporting only the first ledger row', async () => {
     mount();
 
-    // 150 + 2350. Reading a single ledger row reported ৳150 as the total due.
-    const total = (await screen.findByText(/total due/i)).parentElement;
+    // 150 + 2350. Reading a single ledger row reported ৳150 as the amount paid.
+    const paid = (await screen.findByText(/^paid$/i)).parentElement;
+    expect(paid).toHaveTextContent('2,500');
+    expect(paid).not.toHaveTextContent('150');
+
+    // The whole price is settled, so nothing is owed and the summary says so
+    // rather than repeating the price back as a balance.
+    const total = screen.getByText(/^settled$/i).parentElement;
     expect(total).toHaveTextContent('2,500');
-    expect(total).not.toHaveTextContent('150');
+    expect(screen.queryByText(/still due/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the unpaid balance as owed rather than as zero', async () => {
+    // A confirmed booking with nothing collected: the player owes the price.
+    mount([]);
+
+    const total = (await screen.findByText(/still due/i)).parentElement;
+    expect(total).toHaveTextContent('2,500');
+    expect(screen.queryByText(/^paid$/i)).not.toBeInTheDocument();
   });
 
   it('labels the wallet leg as wallet credit, not as a bKash payment', async () => {
@@ -105,10 +120,12 @@ describe('BookingDetailPage payment state', () => {
       },
     ], { status: 'CANCELLED' });
 
-    // 2500 taken, 1250 given back across both tenders.
-    expect(await screen.findByText(/net due/i)).toBeInTheDocument();
-    const net = screen.getByText(/net due/i).parentElement;
+    // 2500 taken, 1250 given back across both tenders, so the venue kept 1250.
+    // A cancelled booking owes nothing further, whatever the arithmetic.
+    expect(await screen.findByText(/net charged/i)).toBeInTheDocument();
+    const net = screen.getByText(/net charged/i).parentElement;
     expect(net).toHaveTextContent('৳1,250');
+    expect(screen.queryByText(/still due/i)).not.toBeInTheDocument();
 
     // "Refunded" also labels each refund row's status badge, so scope to the
     // summary line, which is the one carrying the combined figure.

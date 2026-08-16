@@ -9,7 +9,8 @@ import java.util.Map;
 /**
  * A published review as any visitor may see it on a venue page.
  *
- * <p>Deliberately narrower than {@link ReviewResponse}: no booking id and no
+ * <p>
+ * Deliberately narrower than {@link ReviewResponse}: no booking id and no
  * author identifiers, because this is served on a public endpoint. The author
  * is reduced to a display name and initials.
  */

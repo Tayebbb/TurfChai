@@ -117,7 +117,7 @@ export default function TurfDetailsPage() {
       pitchesList: pitchList.map((p) => ({
         name: p?.name ?? 'Pitch',
         rate: p?.hourlyRate != null ? `৳${p.hourlyRate}/hr` : '—',
-        type: p?.surfaceType || 'Synthetic',
+        type: p?.surfaceType || '—',
       })),
       recentBookings: [],
       trendLabels: analytics?.trendLabels ?? null,

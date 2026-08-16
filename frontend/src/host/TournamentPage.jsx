@@ -20,26 +20,14 @@ import { toUserMessage } from '@/utils/errorMessage';
 import { canCall, callNumber } from '@/utils/deviceActions';
 import { paths } from '@/routes/paths';
 
-const KPIS = [
-  { id: 'days', label: 'Days to kickoff', value: '12', delta: 'On track', trend: 'up' },
-  { id: 'fees', label: 'Entry fees collected', value: '40%', delta: '৳17,120 / ৳42,800' },
-  { id: 'teams', label: 'Teams registered', value: '13 / 16', delta: '▲ 4 this week', trend: 'up' },
-  { id: 'slots', label: 'Slots reserved', value: '14', delta: '3 pitches · 8 AM–6 PM' },
-];
-
-const TEAM_CHIPS = [
-  { id: 'strikers', label: 'Dhanmondi Strikers', on: true },
-  { id: 'kings', label: 'Mirpur Kings', on: true },
-  { id: 'uttara', label: 'Uttara FC', on: true },
-  { id: 'banani', label: 'Banani Blues', on: true },
-  { id: 'more', label: '+9 more', on: true },
-  { id: 'spots', label: '3 spots left', on: false },
-];
-
-const CANCELLATION_TERMS = [
-  { id: 'until-16', state: null, title: 'Until 16 Aug', body: 'Full refund of deposit' },
-  { id: '17-20', state: 'pending', title: '17 – 20 Aug', body: '50% refund' },
-  { id: 'after-20', state: 'pending', title: 'After 20 Aug', body: 'No refund · reschedule credit only' },
+// Shown before the tournament arrives, or if it cannot be loaded. Every value
+// is a dash: this card used to display another tournament's figures — 12 days
+// to kickoff, 13/16 teams, ৳17,120 collected — as if they were this one's.
+const EMPTY_KPIS = [
+  { id: 'days', label: 'Days to kickoff', value: '—' },
+  { id: 'fees', label: 'Entry fees collected', value: '—' },
+  { id: 'teams', label: 'Teams registered', value: '—' },
+  { id: 'slots', label: 'Slots reserved', value: '—' },
 ];
 
 const PRIVACY_HINTS = {
@@ -53,8 +41,7 @@ export default function TournamentPage() {
   const tournament = useApi(() => (code ? getTournament(code) : Promise.resolve(null)), [code]);
   const live = tournament.data;
 
-  // Derived view-model: live API data when available, prototype copy while
-  // loading or if the backend is unreachable.
+  // Live API data, or dashes until it arrives.
   const header = live
     ? {
         name: live.name,
@@ -115,7 +102,7 @@ export default function TournamentPage() {
           delta: `${new Set(live.reservations.map((r) => r.pitchName)).size} pitches · ${header.window}`,
         },
       ]
-    : KPIS;
+    : EMPTY_KPIS;
 
   const scheduleRows = live
     ? live.fixtures.map((fixture) => ({
@@ -139,7 +126,7 @@ export default function TournamentPage() {
           ? [{ id: 'spots', label: `${live.teamCapacity - live.teams.length} spots left`, on: false }]
           : []),
       ]
-    : TEAM_CHIPS;
+    : [];
 
   // A real link or nothing: the fallback used to be another tournament's code,
   // which any host could have copied and handed to their teams.
@@ -153,11 +140,11 @@ export default function TournamentPage() {
     ? { DRAFT: 'Draft · not published', PUBLISHED: 'Published · taking teams', CONFIRMED: 'Venue confirmed · slots reserved' }[
         live.status
       ] ?? live.status
-    : 'Venue confirmed · deposit paid';
-  const formatLabel = live?.format ? live.format.toLowerCase().replaceAll('_', '-') : 'knockout';
+    : '—';
+  const formatLabel = live?.format ? live.format.toLowerCase().replaceAll('_', '-') : '—';
   const depositPct = live && Number(live.costs.total) > 0
     ? Math.round((Number(live.costs.deposit) / Number(live.costs.total)) * 100)
-    : 40;
+    : 0;
   const teamsDue = live ? live.teams.filter((team) => team.entryFeeStatus !== 'PAID').length : null;
 
   const [notes, setNotes] = useState(null);
@@ -610,16 +597,11 @@ export default function TournamentPage() {
 
             <div className="card">
               <h3>Cancellation terms</h3>
-              <ul className="tline" style={{ marginTop: 8 }}>
-                {CANCELLATION_TERMS.map((term) => (
-                  <li key={term.id} className={term.state ?? undefined}>
-                    <b className="small">{term.title}</b>
-                    <p className="tiny muted" style={{ margin: 0 }}>
-                      {term.body}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              <p className="tiny muted" style={{ margin: '8px 0 0' }}>
+                TurfChai does not publish a refund schedule for tournament
+                reservations. Talk to support before your balance due date
+                {header.balanceDue !== '—' ? ` (${header.balanceDue})` : ''}.
+              </p>
               <button
                 className="btn btn-sm btn-ghost-danger"
                 type="button"

@@ -15,9 +15,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.UUID;
 
-/** Seeds the demo player matching the frontend's `currentPlayer` persona (test profile only). */
+/**
+ * Seeds the demo player matching the frontend's `currentPlayer` persona (test
+ * profile only).
+ */
 @Configuration
-@Profile({"dev", "test"})
+@Profile({ "dev", "test" })
 public class PlayerDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerDataSeeder.class);
@@ -29,7 +32,7 @@ public class PlayerDataSeeder {
     public static final UUID DEMO_PLAYER_PUBLIC_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     @Bean
-    @Order(1)   // demo user first — venue and tournament seeders reference it
+    @Order(1) // demo user first — venue and tournament seeders reference it
     CommandLineRunner seedDemoPlayer(UserRepository users, PasswordEncoder passwordEncoder) {
         return args -> {
             if (users.findByPublicId(DEMO_PLAYER_PUBLIC_ID.toString()).isPresent()) {

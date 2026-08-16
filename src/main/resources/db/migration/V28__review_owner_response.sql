@@ -7,5 +7,9 @@
 -- the response is surfaced on the public venue page.
 -- ============================================================================
 
-ALTER TABLE reviews ADD COLUMN IF NOT EXISTS owner_response VARCHAR(2000);
-ALTER TABLE reviews ADD COLUMN IF NOT EXISTS owner_responded_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE reviews ADD COLUMN
+IF NOT EXISTS owner_response VARCHAR
+(2000);
+ALTER TABLE reviews ADD COLUMN
+IF NOT EXISTS owner_responded_at TIMESTAMP
+WITH TIME ZONE;

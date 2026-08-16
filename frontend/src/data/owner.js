@@ -1,6 +1,6 @@
 /**
- * Owner-console sample data shared by more than one screen.
- * Swap for real API responses when the backend lands.
+ * Sport registry shared by the owner console: chart series colours (Reports)
+ * and pitch badge tones (Venue setup). Presentation only — no venue data.
  */
 
 /** Sport registry — chart series colours (Reports) and pitch badge tones (Venue setup). */

@@ -102,7 +102,7 @@ public class ReviewServiceTest {
     /** TC-007: the author is the caller, never the id supplied in the payload. */
     @Test
     void submitReview_ignoresUserIdInPayload() {
-        dto.setUserId(999L);   // attacker claims to be somebody else
+        dto.setUserId(999L); // attacker claims to be somebody else
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
         when(reviewRepository.existsByBookingIdAndUserId(1L, 1L)).thenReturn(false);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -164,7 +164,9 @@ public class ReviewServiceTest {
         verify(bookingRepository).save(booking);
     }
 
-    /** TC-006: another signed-in player must not be able to check in this booking. */
+    /**
+     * TC-006: another signed-in player must not be able to check in this booking.
+     */
     @Test
     void checkIn_rejectsCallerWhoDoesNotOwnTheBooking() {
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking)); // owned by user 1

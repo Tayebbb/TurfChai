@@ -42,7 +42,8 @@ public class TurfApprovalService {
         TurfRequest request = getByCode(requestCode);
         String currentStatus = request.getStatus();
 
-        // ponytail: no state-machine library. switch has a known ceiling, upgrade to Spring StateMachine if >10 states
+        // ponytail: no state-machine library. switch has a known ceiling, upgrade to
+        // Spring StateMachine if >10 states
         switch (action.toUpperCase()) {
             case "APPROVE":
                 if (!currentStatus.equals("PENDING") && !currentStatus.equals("CHANGES_REQUESTED")) {
@@ -50,7 +51,8 @@ public class TurfApprovalService {
                 }
                 request.setStatus("APPROVED");
                 java.util.List<String> photos = null;
-                if (request.getPhotosJson() != null && !request.getPhotosJson().isBlank() && !request.getPhotosJson().equals("[]")) {
+                if (request.getPhotosJson() != null && !request.getPhotosJson().isBlank()
+                        && !request.getPhotosJson().equals("[]")) {
                     try {
                         photos = objectMapper.readValue(request.getPhotosJson(), java.util.List.class);
                     } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
@@ -62,23 +64,23 @@ public class TurfApprovalService {
                 }
 
                 com.turfchai.venue.dto.owner.CreateVenueRequest venueReq = new com.turfchai.venue.dto.owner.CreateVenueRequest(
-                    request.getVenueName(), // name
-                    request.getArea(), // address
-                    request.getArea(), // area
-                    new java.math.BigDecimal("23.8103"), // lat
-                    new java.math.BigDecimal("90.4125"), // lng
-                    new java.math.BigDecimal("2000"), // basePrice
-                    "06:00", // openTime
-                    "23:00", // closeTime
-                    "floodlights,parking", // amenities
-                    request.getOwnerPhone(), // contactPhone
-                    request.getOwnerEmail(), // contactEmail
-                    "FULL_ONLY", // depositPolicy
-                    "FREE_24H_50_6H", // cancelPolicy
-                    false, // allowSplitPayment
-                    "Standard rules", // rules
-                    photos, // photos
-                    false // mlPricingEnabled
+                        request.getVenueName(), // name
+                        request.getArea(), // address
+                        request.getArea(), // area
+                        new java.math.BigDecimal("23.8103"), // lat
+                        new java.math.BigDecimal("90.4125"), // lng
+                        new java.math.BigDecimal("2000"), // basePrice
+                        "06:00", // openTime
+                        "23:00", // closeTime
+                        "floodlights,parking", // amenities
+                        request.getOwnerPhone(), // contactPhone
+                        request.getOwnerEmail(), // contactEmail
+                        "FULL_ONLY", // depositPolicy
+                        "FREE_24H_50_6H", // cancelPolicy
+                        false, // allowSplitPayment
+                        "Standard rules", // rules
+                        photos, // photos
+                        false // mlPricingEnabled
                 );
 
                 venueManagementService.createVenue(request.getOwnerUserId(), venueReq);

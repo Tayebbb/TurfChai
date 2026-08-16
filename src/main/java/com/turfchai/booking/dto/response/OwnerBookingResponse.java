@@ -10,7 +10,8 @@ import java.util.Map;
 /**
  * The owner console's view of a booking.
  *
- * <p>Split out of {@link BookingResponse} because the two audiences need
+ * <p>
+ * Split out of {@link BookingResponse} because the two audiences need
  * different things: a player must never receive the customer's name and phone,
  * and previously every player-facing booking carried ten owner-only keys as
  * nulls, which made the contract impossible to read and impossible to type.

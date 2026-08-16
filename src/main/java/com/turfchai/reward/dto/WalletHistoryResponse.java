@@ -9,7 +9,8 @@ import java.util.List;
 /**
  * The player's wallet: current balance plus the ledger behind it.
  *
- * <p>The balance is the sum of the deltas rather than a stored column, so it
+ * <p>
+ * The balance is the sum of the deltas rather than a stored column, so it
  * always agrees with the entries shown below it.
  */
 public record WalletHistoryResponse(

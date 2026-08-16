@@ -32,9 +32,9 @@ public class VenueApiExceptionHandler {
                 .body(ApiErrorBody.of(HttpStatus.FORBIDDEN, e.getMessage()));
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, HandlerMethodValidationException.class,
+    @ExceptionHandler({ IllegalArgumentException.class, HandlerMethodValidationException.class,
             ConstraintViolationException.class,
-            org.springframework.http.converter.HttpMessageNotReadableException.class})
+            org.springframework.http.converter.HttpMessageNotReadableException.class })
     public ResponseEntity<Map<String, Object>> handleBadRequest(Exception e) {
         String message = e instanceof IllegalArgumentException
                 ? e.getMessage()

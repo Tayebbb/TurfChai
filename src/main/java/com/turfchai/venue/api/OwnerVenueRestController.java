@@ -45,7 +45,7 @@ import java.util.List;
  * DELETE /api/v1/owner/venues/{id}/pitches/{pitchId}       — deactivate pitch
  * POST   /api/v1/owner/venues/{id}/pricing-rules           — upsert pricing rule
  * DELETE /api/v1/owner/venues/{id}/pricing-rules/{ruleId}  — remove rule
- * PUT    /api/v1/owner/venues/{id}/ml-settings             — toggle ML pricing
+ * PUT    /api/v1/owner/venues/{id}/status                  — publish / unpublish
  * GET    /api/v1/owner/venues/{id}/slot-price              — calculate slot price
  * </pre>
  */
@@ -58,7 +58,7 @@ public class OwnerVenueRestController {
     private final SlotPricingRuleEngine pricingEngine;
 
     public OwnerVenueRestController(VenueManagementService managementService,
-                                     SlotPricingRuleEngine pricingEngine) {
+            SlotPricingRuleEngine pricingEngine) {
         this.managementService = managementService;
         this.pricingEngine = pricingEngine;
     }
@@ -95,15 +95,6 @@ public class OwnerVenueRestController {
             @Valid @RequestBody UpdateVenueRequest request) {
         Long ownerId = AuthenticatedUser.requireId(principal);
         return managementService.updateVenue(ownerId, id, request);
-    }
-
-    @PutMapping("/{id}/ml-settings")
-    public VenueManagementDto updateMlSettings(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long id,
-            @RequestBody java.util.Map<String, Boolean> request) {
-        Boolean enabled = request.getOrDefault("mlPricingEnabled", true);
-        return managementService.updateMlSettings(principal.getId(), id, enabled);
     }
 
     @PutMapping("/{id}/status")
@@ -211,7 +202,8 @@ public class OwnerVenueRestController {
     // ── Dynamic Slot Price ─────────────────────────────────────────────────
 
     /**
-     * GET /api/v1/owner/venues/{id}/slot-price?sport=football&date=2026-08-10&start=18:00&end=19:30
+     * GET
+     * /api/v1/owner/venues/{id}/slot-price?sport=football&date=2026-08-10&start=18:00&end=19:30
      */
     @GetMapping("/{id}/slot-price")
     public ResponseEntity<SlotPriceResponse> getSlotPrice(

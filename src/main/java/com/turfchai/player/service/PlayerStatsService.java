@@ -24,8 +24,10 @@ import java.util.Map;
 /**
  * Derives a player's activity summary from records that already exist.
  *
- * <p>No figure here is estimated or sampled. Match results are deliberately
- * absent: TurfChai records that a pitch was booked and whether the player turned
+ * <p>
+ * No figure here is estimated or sampled. Match results are deliberately
+ * absent: TurfChai records that a pitch was booked and whether the player
+ * turned
  * up, never a score, so a "win rate" would have to be invented.
  */
 @Service

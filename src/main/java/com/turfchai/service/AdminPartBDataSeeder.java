@@ -41,13 +41,15 @@ import java.util.Random;
 /**
  * Part B of the demo dataset: bookings, payouts and audit logs.
  *
- * <p><b>Demo data only</b> — dev/ci profiles. This writes fabricated bookings
+ * <p>
+ * <b>Demo data only</b> — dev/ci profiles. This writes fabricated bookings
  * and payouts carrying money amounts, which must never reach a real database.
  * It is deliberately excluded from the {@code test} profile: over a thousand
  * synthetic bookings with no payment rows would break the money-invariant and
  * venue-cleanup suites.
  *
- * <p>Runs as an ordered {@link CommandLineRunner} after Part A. It used to run
+ * <p>
+ * Runs as an ordered {@link CommandLineRunner} after Part A. It used to run
  * from {@code @PostConstruct}, which fires during bean construction — long
  * before any {@code CommandLineRunner} — so it always found the users, venues
  * and pitches missing and silently bailed. The result was a dev database with
@@ -111,7 +113,7 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
         Random random = new Random(42);
 
         // Monthly GMV Distribution as requested
-        int[] monthlyBookings = {70, 80, 85, 90, 95, 100, 100, 105, 105, 110, 115, 145};
+        int[] monthlyBookings = { 70, 80, 85, 90, 95, 100, 100, 105, 105, 110, 115, 145 };
         LocalDate today = LocalDate.now();
 
         List<Booking> bookingsToSave = new ArrayList<>();
@@ -128,10 +130,10 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
             for (int i = 0; i < bookingsThisMonth; i++) {
                 Pitch pitch = pitches.get(random.nextInt(pitches.size()));
                 LocalDate bookingDate = monthStart.plusDays(random.nextInt(lengthOfMonth));
-                
-                int[] availableHours = {6, 8, 10, 14, 16, 18, 20};
+
+                int[] availableHours = { 6, 8, 10, 14, 16, 18, 20 };
                 int startHour = availableHours[random.nextInt(availableHours.length)];
-                
+
                 String slotKey = pitch.getId() + "_" + bookingDate + "_" + startHour;
                 if (!generatedSlots.add(slotKey)) {
                     // Collision detected, skip this booking to avoid unique constraint violation
@@ -139,7 +141,8 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                 }
 
                 User player = players.get(random.nextInt(players.size()));
-                Venue venue = venues.stream().filter(v -> v.getId().equals(pitch.getVenue().getId())).findFirst().orElse(venues.get(0));
+                Venue venue = venues.stream().filter(v -> v.getId().equals(pitch.getVenue().getId())).findFirst()
+                        .orElse(venues.get(0));
 
                 int durationHours = random.nextBoolean() ? 1 : 2;
 
@@ -151,11 +154,15 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
 
                 BookingStatus status;
                 int statusRoll = random.nextInt(100);
-                if (statusRoll < 85) status = BookingStatus.CONFIRMED;
-                else if (statusRoll < 95) status = BookingStatus.CANCELLED;
-                else status = BookingStatus.PENDING;
+                if (statusRoll < 85)
+                    status = BookingStatus.CONFIRMED;
+                else if (statusRoll < 95)
+                    status = BookingStatus.CANCELLED;
+                else
+                    status = BookingStatus.PENDING;
 
-                OffsetDateTime createdAt = bookingDate.atTime(LocalTime.of(random.nextInt(24), random.nextInt(60))).atOffset(ZoneOffset.UTC).minusDays(random.nextInt(5));
+                OffsetDateTime createdAt = bookingDate.atTime(LocalTime.of(random.nextInt(24), random.nextInt(60)))
+                        .atOffset(ZoneOffset.UTC).minusDays(random.nextInt(5));
 
                 Slot slot = Slot.builder()
                         .pitch(pitch)
@@ -168,10 +175,11 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                         .createdAt(createdAt)
                         .updatedAt(createdAt)
                         .build();
-                
+
                 slotsToSave.add(slot);
 
-                String bookingCode = String.format("BK-%04d%02d-%04d", bookingDate.getYear(), bookingDate.getMonthValue(), bookingIndex++);
+                String bookingCode = String.format("BK-%04d%02d-%04d", bookingDate.getYear(),
+                        bookingDate.getMonthValue(), bookingIndex++);
 
                 Booking booking = Booking.builder()
                         .bookingCode(bookingCode)
@@ -277,21 +285,26 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
 
                 // Simulated venue revenue for the month
                 BigDecimal grossAmount = BigDecimal.valueOf(5000 + random.nextInt(45000));
-                BigDecimal platformFee = grossAmount.multiply(BigDecimal.valueOf(0.10));
+                BigDecimal platformFee = grossAmount.multiply(BigDecimal.valueOf(0.06));
                 BigDecimal netAmount = grossAmount.subtract(platformFee);
 
                 String status = "SETTLED";
                 int statusRoll = random.nextInt(100);
-                if (statusRoll < 20) status = "PENDING";
-                else if (statusRoll < 30) status = "FLAGGED";
+                if (statusRoll < 20)
+                    status = "PENDING";
+                else if (statusRoll < 30)
+                    status = "FLAGGED";
 
                 boolean anomalyFlag = "FLAGGED".equals(status);
                 String anomalyReason = anomalyFlag ? "Refund ratio spike > 4.2% threshold" : null;
-                OffsetDateTime settledAt = "SETTLED".equals(status) ? periodEnd.plusDays(5).atStartOfDay().atOffset(ZoneOffset.UTC) : null;
+                OffsetDateTime settledAt = "SETTLED".equals(status)
+                        ? periodEnd.plusDays(5).atStartOfDay().atOffset(ZoneOffset.UTC)
+                        : null;
                 OffsetDateTime createdAt = periodEnd.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
                 LocalDate scheduledDate = periodEnd.plusDays(5);
 
-                String payoutCode = String.format("PAY-%04d%02d-%d", periodStart.getYear(), periodStart.getMonthValue(), venue.getId());
+                String payoutCode = String.format("PAY-%04d%02d-%d", periodStart.getYear(), periodStart.getMonthValue(),
+                        venue.getId());
 
                 Payout payout = Payout.builder()
                         .payoutCode(payoutCode)
@@ -314,7 +327,7 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                 payoutsToSave.add(payout);
             }
         }
-        
+
         payoutRepository.saveAll(payoutsToSave);
         log.info("Seeded {} Payouts.", payoutsToSave.size());
     }
@@ -324,14 +337,14 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
         Random random = new Random(200);
         List<AuditLog> logsToSave = new ArrayList<>();
 
-        String[] adminNames = {"Admin Sakib", "Admin Ayesha", "Admin Rahman", "System"};
+        String[] adminNames = { "Admin Sakib", "Admin Ayesha", "Admin Rahman", "System" };
         OffsetDateTime now = OffsetDateTime.now();
 
         // Target ~80 logs over 30 days
         for (int i = 0; i < 80; i++) {
             OffsetDateTime createdAt = now.minusDays(random.nextInt(30)).minusHours(random.nextInt(24));
             String adminName = adminNames[random.nextInt(adminNames.length)];
-            
+
             String action, target, details, tone;
             int typeRoll = random.nextInt(100);
 

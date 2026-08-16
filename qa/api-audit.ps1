@@ -13,7 +13,8 @@ function Call($method, $path, $body, $token, $contentType) {
     try {
         $r = Invoke-WebRequest @args
         return @{ status = [int]$r.StatusCode; body = $r.Content }
-    } catch {
+    }
+    catch {
         $s = 0; $b = ''
         $resp = $_.Exception.Response
         if (-not $resp -and $_.Exception.InnerException) { $resp = $_.Exception.InnerException.Response }
@@ -25,7 +26,8 @@ function Call($method, $path, $body, $token, $contentType) {
                 $stream = $resp.GetResponseStream()
                 $stream.Position = 0
                 $b = (New-Object System.IO.StreamReader($stream)).ReadToEnd()
-            } catch { $b = '' }
+            }
+            catch { $b = '' }
         }
         if (-not $b -and $_.ErrorDetails -and $_.ErrorDetails.Message) { $b = $_.ErrorDetails.Message }
         if (-not $b) { $b = $_.Exception.Message }
@@ -92,7 +94,8 @@ if ($elapsed.Count -gt 0) {
     Check 'TC-009a' 'elapsed AVAILABLE slots report bookable=false' 0 $anyBookable
     $hold = Call POST '/api/v1/bookings/hold-slot' @{ slotId = $elapsed[0].id } $pt
     Check 'TC-009b' 'holding an elapsed slot is refused' 409 $hold.status ($hold.body -replace '\s+', ' ' | Select-Object -First 1)
-} else {
+}
+else {
     Write-Host "  (no elapsed AVAILABLE slots today at $nowT - skipping live hold probe)" -ForegroundColor DarkGray
 }
 
@@ -127,7 +130,7 @@ Check 'TC-028' 'player bookings carry no owner-view fields' 0 $leaks.Count ($lea
 
 Write-Host "`n== entity serialization ==" -ForegroundColor Yellow
 $secretPattern = 'passwordHash|twoFactorSecret|failedLoginCount|lockedUntil|"pitches"|"pricingRules"|"owner":'
-foreach ($ep in @('/api/v1/admin/users', '/api/v1/admin/venues', '/api/v1/admin/payouts', '/api/v1/admin/turf-requests', '/api/v1/admin/audit-log', '/api/v1/admin/holidays')) {
+foreach ($ep in @('/api/v1/admin/users', '/api/v1/admin/venues', '/api/v1/admin/payouts', '/api/v1/admin/turf-requests', '/api/v1/admin/audit-log')) {
     $r = Call GET $ep $null $at
     $bad = ($r.body -match $secretPattern)
     Check 'ENT' "$ep exposes no entity internals" $false $bad "status=$($r.status)"
@@ -136,7 +139,7 @@ $notif = Call GET '/api/v1/notifications' $null $pt
 Check 'ENT' '/api/v1/notifications is a projection (no userId)' $false ($notif.body -match '"userId"') "status=$($notif.status)"
 
 Write-Host "`n== TC-005 review response ==" -ForegroundColor Yellow
-Write-Host "  (covered by qa\review-authorship-proof.ps1)" -ForegroundColor DarkGray
+Write-Host "  (covered by frontend\qa\review-flow.mjs)" -ForegroundColor DarkGray
 
 $passed = @($results | Where-Object { $_.pass }).Count
 $failed = @($results | Where-Object { -not $_.pass }).Count

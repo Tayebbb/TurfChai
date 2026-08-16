@@ -15,6 +15,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     long countByUserIdAndIsReadFalse(Long userId);
 
+    /** Dedupe key for lifecycle events: one notification of a kind per subject. */
+    boolean existsByUserIdAndTypeAndLink(Long userId, String type, String link);
+
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.userId = :userId AND n.isRead = false")
     int markAllReadByUserId(Long userId);

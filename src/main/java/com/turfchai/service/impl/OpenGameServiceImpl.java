@@ -37,7 +37,8 @@ public class OpenGameServiceImpl implements OpenGameService {
     @Override
     @Transactional
     public OpenGameResponse createOpenGame(CreateOpenGameRequest request, Long organizerUserId) {
-        if (request.getEndTime().isBefore(request.getStartTime()) || request.getEndTime().equals(request.getStartTime())) {
+        if (request.getEndTime().isBefore(request.getStartTime())
+                || request.getEndTime().equals(request.getStartTime())) {
             throw new InvalidGameStateException("End time must be after start time");
         }
 
@@ -125,8 +126,8 @@ public class OpenGameServiceImpl implements OpenGameService {
 
         if (user.getReliabilityScore() < game.getMinimumReliability()) {
             throw new LowReliabilityScoreException(
-                "Your reliability score (" + user.getReliabilityScore() + "%) is below the game minimum (" + game.getMinimumReliability() + "%)"
-            );
+                    "Your reliability score (" + user.getReliabilityScore() + "%) is below the game minimum ("
+                            + game.getMinimumReliability() + "%)");
         }
 
         validateSkillLevel(game.getSkillLevel(), user.getPlayStyle());
@@ -167,7 +168,8 @@ public class OpenGameServiceImpl implements OpenGameService {
     @Transactional
     public void updateMemberAttendance(Long openGameId, Long userId, boolean showUp) {
         OpenGameMembership membership = membershipRepository.findByOpenGameIdAndUserId(openGameId, userId)
-                .orElseThrow(() -> new OpenGameNotFoundException("Membership not found for game: " + openGameId + " and user: " + userId));
+                .orElseThrow(() -> new OpenGameNotFoundException(
+                        "Membership not found for game: " + openGameId + " and user: " + userId));
 
         membership.setShowUp(showUp);
         membershipRepository.save(membership);
@@ -188,7 +190,8 @@ public class OpenGameServiceImpl implements OpenGameService {
             return;
         }
         if (userLevel != null && userLevel != SkillLevel.ALL_LEVELS && userLevel != requiredLevel) {
-            throw new InvalidSkillLevelException("Required skill level is " + requiredLevel.getLabel() + ", but user is " + userLevel.getLabel());
+            throw new InvalidSkillLevelException(
+                    "Required skill level is " + requiredLevel.getLabel() + ", but user is " + userLevel.getLabel());
         }
     }
 
@@ -232,16 +235,19 @@ public class OpenGameServiceImpl implements OpenGameService {
                 .initials(u.getAvatarInitials() != null ? u.getAvatarInitials() : getInitials(u.getFullName()))
                 .avatarUrl(u.getAvatarUrl())
                 .reliabilityScore(u.getReliabilityScore())
-                .status(membership.getStatus() != null ? membership.getStatus().name() : GameMembershipStatus.JOINED.name())
+                .status(membership.getStatus() != null ? membership.getStatus().name()
+                        : GameMembershipStatus.JOINED.name())
                 .showUp(membership.getShowUp())
                 .joinedAt(membership.getJoinedAt())
                 .build();
     }
 
     private String getInitials(String fullName) {
-        if (fullName == null || fullName.isBlank()) return "??";
+        if (fullName == null || fullName.isBlank())
+            return "??";
         String[] parts = fullName.trim().split("\\s+");
-        if (parts.length == 1) return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
+        if (parts.length == 1)
+            return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
         return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
     }
 }

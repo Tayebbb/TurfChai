@@ -253,26 +253,58 @@ const CANCEL_OPTIONS = [
   { value: 'STRICT_NO_REFUND', label: 'Strict — no refund' },
 ];
 
+/**
+ * The amenity vocabulary. Ids are the keys the backend stores in `amenities_csv`
+ * and the player venue page maps back to labels, so they are not free to rename.
+ * Nothing is on by default: what is enabled comes from the saved venue.
+ */
 const INITIAL_AMENITIES = [
-  { id: 'floodlights', label: '💡 Floodlights', on: true },
-  { id: 'parking', label: '🅿️ Parking', on: true },
-  { id: 'changing', label: '👕 Changing room', on: true },
-  { id: 'washroom', label: '🚿 Washroom', on: true },
-  { id: 'water', label: '🚰 Drinking water', on: true },
-  { id: 'kit', label: '⚽ Bibs & balls', on: true },
+  { id: 'floodlights', label: '💡 Floodlights', on: false },
+  { id: 'parking', label: '🅿️ Parking', on: false },
+  { id: 'changing', label: '👕 Changing room', on: false },
+  { id: 'washroom', label: '🚿 Washroom', on: false },
+  { id: 'water', label: '🚰 Drinking water', on: false },
+  { id: 'kit', label: '⚽ Bibs & balls', on: false },
   { id: 'cafeteria', label: '☕ Cafeteria', on: false },
-  { id: 'firstaid', label: '🩹 First aid kit', on: true },
+  { id: 'firstaid', label: '🩹 First aid kit', on: false },
   { id: 'seating', label: '🪑 Spectator seating', on: false },
   { id: 'wifi', label: '📶 Free Wi-Fi', on: false },
 ];
 
+/** Rules are stored as free text, so these are suggestions rather than keys. */
 const INITIAL_RULES = [
-  { id: 'shoes', label: '👟 Turf / Astro shoes only (no metal studs)', on: true },
-  { id: 'smoking', label: '🚭 No smoking or vaping inside venue', on: true },
-  { id: 'arrival', label: '⏱️ Arrive 10 min before slot time', on: true },
-  { id: 'trash', label: '🗑️ Keep venue clean - disposal in bins', on: true },
+  { id: 'shoes', label: '👟 Turf / Astro shoes only (no metal studs)', on: false },
+  { id: 'smoking', label: '🚭 No smoking or vaping inside venue', on: false },
+  { id: 'arrival', label: '⏱️ Arrive 10 min before slot time', on: false },
+  { id: 'trash', label: '🗑️ Keep venue clean - disposal in bins', on: false },
   { id: 'food', label: '🍕 No outside heavy food on pitch', on: false },
 ];
+
+/** `"floodlights, parking"` -> `['floodlights','parking']`. */
+function parseCsv(value) {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Marks the catalogue against what the venue has saved, and appends anything
+ * saved that the catalogue does not know about so a save cannot silently drop
+ * amenities or rules entered elsewhere.
+ */
+function hydrateSelection(catalogue, saved, matchOn) {
+  const savedValues = parseCsv(saved);
+  const known = catalogue.map((item) => ({
+    ...item,
+    on: savedValues.includes(matchOn(item)),
+  }));
+  const extras = savedValues
+    .filter((value) => !catalogue.some((item) => matchOn(item) === value))
+    .map((value, index) => ({ id: `saved-${index}-${value}`, label: value, on: true }));
+  return [...known, ...extras];
+}
 
 const ASSIGNABLE_SPORTS = ['Football', 'Cricket', 'Futsal', 'Badminton', 'Volleyball'];
 
@@ -331,7 +363,6 @@ export default function VenueSetupPage() {
 
   const [deposit, setDeposit] = useState('THIRTY_PERCENT');
   const [policy, setPolicy] = useState('FREE_24H_50_6H');
-  const [allowSplit, setAllowSplit] = useState(true);
   const [slotDraft, setSlotDraft] = useState({
     sport: 'football',
     duration: '90',
@@ -345,30 +376,17 @@ export default function VenueSetupPage() {
   const [amenities, setAmenities] = useState(INITIAL_AMENITIES);
   const [rules, setRules] = useState(INITIAL_RULES);
   const [customRuleText, setCustomRuleText] = useState('');
+  const [savingAmenities, setSavingAmenities] = useState(false);
 
   function toggleAmenity(id) {
     setAmenities((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const nextOn = !item.on;
-          showToast(`${item.label} ${nextOn ? 'enabled ✓' : 'disabled'}`);
-          return { ...item, on: nextOn };
-        }
-        return item;
-      })
+      prev.map((item) => (item.id === id ? { ...item, on: !item.on } : item)),
     );
   }
 
   function toggleRule(id) {
     setRules((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const nextOn = !item.on;
-          showToast(`Rule ${nextOn ? 'activated ✓' : 'deactivated'}`);
-          return { ...item, on: nextOn };
-        }
-        return item;
-      })
+      prev.map((item) => (item.id === id ? { ...item, on: !item.on } : item)),
     );
   }
 
@@ -381,7 +399,28 @@ export default function VenueSetupPage() {
     };
     setRules((prev) => [...prev, newRule]);
     setCustomRuleText('');
-    showToast('Custom venue rule added ✓');
+  }
+
+  /** Writes the selected amenity keys and rule text to the venue. */
+  async function saveAmenitiesAndRules() {
+    const vId = selectedVenueId || venueData?.id;
+    if (!vId) {
+      showToast('Select a venue first');
+      return;
+    }
+    setSavingAmenities(true);
+    try {
+      await updateVenue(vId, {
+        amenities: amenities.filter((a) => a.on).map((a) => a.id).join(','),
+        rules: rules.filter((r) => r.on).map((r) => r.label).join(','),
+      });
+      showToast('Amenities & rules saved ✓');
+      refreshVenueDetails(vId);
+    } catch (error) {
+      showToast(toUserMessage(error, 'Could not save amenities and rules.'));
+    } finally {
+      setSavingAmenities(false);
+    }
   }
 
   const [generateDraft, setGenerateDraft] = useState({
@@ -419,7 +458,8 @@ export default function VenueSetupPage() {
           setVenueData(res);
           setDeposit(res.depositPolicy || 'THIRTY_PERCENT');
           setPolicy(res.cancelPolicy || 'FREE_24H_50_6H');
-          setAllowSplit(res.allowSplitPayment !== false);
+          setAmenities(hydrateSelection(INITIAL_AMENITIES, res.amenities, (item) => item.id));
+          setRules(hydrateSelection(INITIAL_RULES, res.rules, (item) => item.label));
 
           if (Array.isArray(res.photos) && res.photos.length > 0) {
             setPhotos(res.photos.map((url, idx) => ({ id: String(idx), url, name: `Photo ${idx + 1}` })));
@@ -431,10 +471,10 @@ export default function VenueSetupPage() {
             setPitches(res.pitches.map((p) => ({
               id: p.id,
               name: p.name,
-              desc: `${p.surfaceType || 'Artificial grass'} · ${p.dimensions || '30×50 m'}`,
+              desc: [p.surfaceType, p.dimensions].filter(Boolean).join(' · ') || 'No surface or size recorded',
               sports: (p.sportSlugs && p.sportSlugs.length > 0)
                 ? p.sportSlugs.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-                : ['Football'],
+                : [],
             })));
           } else {
             setPitches([]);
@@ -623,9 +663,9 @@ export default function VenueSetupPage() {
                   name: req.venueName || 'My Venue',
                   status: req.status === 'APPROVED' ? 'APPROVED' : req.status === 'REJECTED' ? 'REJECTED' : 'PENDING',
                   verified: req.status === 'APPROVED',
-                  area: req.area || 'Dhanmondi',
-                  openTime: '06:00 AM',
-                  closeTime: '11:00 PM',
+                  area: req.area || null,
+                  openTime: null,
+                  closeTime: null,
                 };
                 setVenues([fallbackVenue]);
                 if (fallbackVenue.id) {
@@ -721,7 +761,7 @@ export default function VenueSetupPage() {
 
   async function savePitch() {
     const name = pitchDraft.name.trim() || 'New Pitch';
-    const desc = pitchDraft.desc.trim() || 'Standard turf court';
+    const desc = pitchDraft.desc.trim();
 
     const vId = await getActiveVenueId();
     if (!vId) {
@@ -757,7 +797,7 @@ export default function VenueSetupPage() {
         const newPitchObj = {
           id: createdPitch?.id || Date.now(),
           name: createdPitch?.name || name,
-          desc: `${createdPitch?.surfaceType || 'Artificial grass'} · ${createdPitch?.dimensions || '30×50 m'}`,
+          desc: [createdPitch?.surfaceType, createdPitch?.dimensions].filter(Boolean).join(' · ') || desc,
           sports: (createdPitch?.sportSlugs && createdPitch.sportSlugs.length > 0)
             ? createdPitch.sportSlugs.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
             : pitchDraft.sports,
@@ -783,7 +823,6 @@ export default function VenueSetupPage() {
       await updateVenue(vId, {
         depositPolicy: deposit,
         cancelPolicy: policy,
-        allowSplitPayment: allowSplit,
       });
     } catch (error) {
       // This used to swallow the failure and toast success anyway, so an
@@ -856,8 +895,8 @@ export default function VenueSetupPage() {
   }
 
   const hoursList = [
-    { id: 'open', label: 'OPEN', value: venueData?.openTime || '06:00 AM' },
-    { id: 'close', label: 'CLOSE', value: venueData?.closeTime || '11:00 PM' },
+    { id: 'open', label: 'OPEN', value: venueData?.openTime || '—' },
+    { id: 'close', label: 'CLOSE', value: venueData?.closeTime || '—' },
     { id: 'buffer', label: 'BUFFER', value: '10 min' },
   ];
 
@@ -870,7 +909,9 @@ export default function VenueSetupPage() {
       pitches.length > 0,
       sportPricing.some((sport) => Number(sport.basePrice) > 0),
       Boolean(venueData?.openTime && venueData?.closeTime),
-      amenities.some((item) => item.on) || rules.some((item) => item.on),
+      // Read from the saved venue, not the on-screen toggles. This used to count
+      // hardcoded defaults, so it passed for every venue before anything was set.
+      parseCsv(venueData?.amenities).length > 0 || parseCsv(venueData?.rules).length > 0,
     ];
     const done = checks.filter(Boolean).length;
     return { done, total: checks.length, percent: Math.round((done / checks.length) * 100) };
@@ -1252,12 +1293,6 @@ export default function VenueSetupPage() {
                     </Select>
                   </Field>
 
-                  <Checkline
-                    label="Allow players to split payment with teammates"
-                    checked={allowSplit}
-                    onChange={(event) => setAllowSplit(event.target.checked)}
-                  />
-
                   <Button size="sm" variant="primary" style={{ marginTop: 10 }} onClick={saveDepositSection}>
                     Save section
                   </Button>
@@ -1272,7 +1307,7 @@ export default function VenueSetupPage() {
                   </div>
 
                   <p className="subtle small" style={{ margin: '6px 0 10px' }}>
-                    Click any amenity or facility to toggle it on/off for player view.
+                    Toggle what this venue offers, then save. Players see these on the venue page.
                   </p>
 
                   <div className="row-wrap" style={{ gap: 8, marginTop: 10 }}>
@@ -1336,6 +1371,17 @@ export default function VenueSetupPage() {
                       + Add
                     </Button>
                   </div>
+
+                  <Button
+                    variant="primary"
+                    block
+                    style={{ marginTop: 14 }}
+                    loading={savingAmenities}
+                    disabled={savingAmenities}
+                    onClick={saveAmenitiesAndRules}
+                  >
+                    Save amenities &amp; rules
+                  </Button>
                 </section>
 
                 <div className="glass glass-card center" style={{ border: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-soft)' }}>
@@ -1365,10 +1411,13 @@ export default function VenueSetupPage() {
                       : '🚀 Go Live (Publish Venue)'}
                   </Button>
 
+                  {/* Without a slug this used to preview a different venue entirely. */}
                   <Button
                     variant="tertiary"
                     block
-                    to={paths.player.venue(venueData?.slug || 'kick-off-arena')}
+                    to={venueData?.slug ? paths.player.venue(venueData.slug) : undefined}
+                    disabled={!venueData?.slug}
+                    title={venueData?.slug ? undefined : 'Save your venue first to preview how players will see it.'}
                     style={{ marginTop: 8 }}
                   >
                     Preview player view
@@ -1562,7 +1611,7 @@ export default function VenueSetupPage() {
           <Select id="genPitch" value={generateDraft.pitchId} onChange={e => setGenerateDraft(c => ({...c, pitchId: e.target.value}))}>
             <option value="">Select Pitch...</option>
             {pitches.map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({p.sports?.join(', ') || 'Football'})</option>
+              <option key={p.id} value={p.id}>{p.name}{p.sports?.length ? ` (${p.sports.join(', ')})` : ''}</option>
             ))}
           </Select>
         </Field>

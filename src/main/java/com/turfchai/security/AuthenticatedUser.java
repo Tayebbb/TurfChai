@@ -7,7 +7,8 @@ import java.util.UUID;
 /**
  * Single place where a handler turns "the caller" into a user id.
  *
- * <p>Identity is only ever read from the verified {@link UserPrincipal} that the
+ * <p>
+ * Identity is only ever read from the verified {@link UserPrincipal} that the
  * JWT filter put in the security context. Client-supplied identity — headers
  * such as {@code X-User-Id}, request-body {@code userId} fields, query
  * parameters — must never reach this class.

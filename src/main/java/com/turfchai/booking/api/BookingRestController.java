@@ -82,7 +82,8 @@ public class BookingRestController {
     /**
      * Confirms a hold and creates a booking <em>without taking payment</em>.
      *
-     * <p>Restricted to venue staff. A booking created here is CONFIRMED with no
+     * <p>
+     * Restricted to venue staff. A booking created here is CONFIRMED with no
      * payment row, and owner revenue is derived from booking status — so leaving
      * it open to players was a way to book a slot for free. Players book through
      * {@code POST /api/v1/payments/checkout}, which records a payment first.

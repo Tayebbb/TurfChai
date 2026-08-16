@@ -40,20 +40,6 @@ export function DashEmpty({ icon = '✦', title, children, actions }) {
   );
 }
 
-/**
- * Shown where a feature's backing service does not exist yet. Naming the
- * missing endpoint keeps this honest instead of rendering invented data.
- */
-export function ServicePending({ icon, title, description, cta }) {
-  return (
-    <DashCard>
-      <DashEmpty icon={icon} title={title} actions={cta}>
-        {description}
-      </DashEmpty>
-    </DashCard>
-  );
-}
-
 export function DashSkeleton({ rows = 3, height = 62 }) {
   return (
     <div className="dash-rows" aria-hidden="true">

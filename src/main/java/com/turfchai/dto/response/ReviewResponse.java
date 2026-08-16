@@ -9,7 +9,8 @@ import java.util.Map;
 /**
  * Response shape for a submitted review.
  *
- * <p>Returned instead of the {@code Review} entity so the response cannot drag
+ * <p>
+ * Returned instead of the {@code Review} entity so the response cannot drag
  * the booking/user/venue object graph (and the lazy proxies behind it) into the
  * serializer, and so no field of the author or the booking is exposed beyond
  * what the reviewer already knows.
@@ -23,8 +24,7 @@ public record ReviewResponse(
         String comment,
         List<String> tags,
         String status,
-        ZonedDateTime createdAt
-) {
+        ZonedDateTime createdAt) {
 
     public static ReviewResponse from(Review review) {
         return new ReviewResponse(

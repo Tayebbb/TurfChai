@@ -29,62 +29,62 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles({ "test", "dev" })
 @TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:otp-exposure-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
-        "app.otp.expose-dev-code=false"
+                "spring.datasource.url=jdbc:h2:mem:otp-exposure-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
+                "app.otp.expose-dev-code=false"
 })
 class OtpCodeExposureTest {
 
-    @Autowired
-    private MockMvc mvc;
-    @Autowired
-    private UserRepository users;
-    @Autowired
-    private PasswordEncoder encoder;
+        @Autowired
+        private MockMvc mvc;
+        @Autowired
+        private UserRepository users;
+        @Autowired
+        private PasswordEncoder encoder;
 
-    private static final String PHONE = "+8801911100011";
+        private static final String PHONE = "+8801911100011";
 
-    @Test
-    @DisplayName("Requesting a code never returns it when dev-code exposure is off")
-    void requestDoesNotLeakTheCode() throws Exception {
-        mvc.perform(post("/api/v1/auth/otp/request")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phone\":\"" + PHONE + "\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sent").value(true))
-                .andExpect(jsonPath("$.devCode").doesNotExist());
-    }
+        @Test
+        @DisplayName("Requesting a code never returns it when dev-code exposure is off")
+        void requestDoesNotLeakTheCode() throws Exception {
+                mvc.perform(post("/api/v1/auth/otp/request")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"" + PHONE + "\"}"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.sent").value(true))
+                                .andExpect(jsonPath("$.devCode").doesNotExist());
+        }
 
-    @Test
-    @DisplayName("A guessed code cannot mint a session for someone else's account")
-    void guessedCodeIsRejected() throws Exception {
-        User victim = TestAuth.user(users, encoder, "otp.victim@turfchai.test", RoleType.PLAYER);
-        victim.setPhone("+8801911100022");
-        users.save(victim);
+        @Test
+        @DisplayName("A guessed code cannot mint a session for someone else's account")
+        void guessedCodeIsRejected() throws Exception {
+                User victim = TestAuth.user(users, encoder, "otp.victim@turfchai.test", RoleType.PLAYER);
+                victim.setPhone("+8801911100022");
+                users.save(victim);
 
-        mvc.perform(post("/api/v1/auth/otp/request")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phone\":\"+8801911100022\"}"))
-                .andExpect(status().isOk());
+                mvc.perform(post("/api/v1/auth/otp/request")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"+8801911100022\"}"))
+                                .andExpect(status().isOk());
 
-        mvc.perform(post("/api/v1/auth/otp/verify")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phone\":\"+8801911100022\",\"code\":\"0000\"}"))
-                .andExpect(status().is4xxClientError())
-                .andExpect(jsonPath("$.token").doesNotExist());
-    }
+                mvc.perform(post("/api/v1/auth/otp/verify")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"+8801911100022\",\"code\":\"0000\"}"))
+                                .andExpect(status().is4xxClientError())
+                                .andExpect(jsonPath("$.token").doesNotExist());
+        }
 
-    @Test
-    @DisplayName("Codes cannot be requested in a tight loop for one number")
-    void repeatedRequestsAreThrottled() throws Exception {
-        String phone = "+8801911100033";
-        mvc.perform(post("/api/v1/auth/otp/request")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phone\":\"" + phone + "\"}"))
-                .andExpect(status().isOk());
+        @Test
+        @DisplayName("Codes cannot be requested in a tight loop for one number")
+        void repeatedRequestsAreThrottled() throws Exception {
+                String phone = "+8801911100033";
+                mvc.perform(post("/api/v1/auth/otp/request")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"" + phone + "\"}"))
+                                .andExpect(status().isOk());
 
-        mvc.perform(post("/api/v1/auth/otp/request")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phone\":\"" + phone + "\"}"))
-                .andExpect(status().is4xxClientError());
-    }
+                mvc.perform(post("/api/v1/auth/otp/request")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"phone\":\"" + phone + "\"}"))
+                                .andExpect(status().is4xxClientError());
+        }
 }

@@ -1,38 +1,45 @@
 # Running the tests
 
+This is the operator's manual: how to run each layer, and what to do when one
+fails. For what each layer *proves* and the current verified counts, see
+[docs/testing.md](docs/testing.md).
+
 Six layers, each catching what the one below it cannot.
 
-| Layer | What it proves | Where |
-|---|---|---|
-| Backend (JUnit) | Domain rules, authorization, money invariants, concurrency | `src/test/java` |
-| Frontend (Vitest) | Component and page behaviour against mocked APIs | `frontend/src/**/*.test.jsx` |
-| Frontend honesty | No handler hides a failure or reports success it did not achieve | `frontend/scan-honesty.mjs` |
-| Live API (PowerShell) | Every role against a running server, plus the cross-role attack matrix | `qa/*.ps1` |
-| Browser (Playwright) | Real user journeys with nothing mocked | `frontend/e2e` |
-| End-to-end journeys | Whole workflows, with UI, URL, API and database checked against each other at every transition | `frontend/qa/journey-*.mjs` |
+| Layer                 | What it proves                                                                                 | Where                        |
+| --------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------- |
+| Backend (JUnit)       | Domain rules, authorization, money invariants, concurrency                                     | `src/test/java`              |
+| Frontend (Vitest)     | Component and page behaviour against mocked APIs                                               | `frontend/src/**/*.test.jsx` |
+| Frontend honesty      | No handler hides a failure or reports success it did not achieve                               | `frontend/scan-honesty.mjs`  |
+| Live API (PowerShell) | Every role against a running server, plus the cross-role attack matrix                         | `qa/*.ps1`                   |
+| Browser (Playwright)  | Real user journeys with nothing mocked                                                         | `frontend/e2e`               |
+| End-to-end journeys   | Whole workflows, with UI, URL, API and database checked against each other at every transition | `frontend/qa/journey-*.mjs`  |
 
 Current size, all green:
 
-| Layer | Count |
-|---|---|
-| Backend (JUnit) | 462 |
-| Frontend (Vitest) | 120 across 24 files |
-| Frontend honesty | every `catch` in `frontend/src`, 14 reviewed exemptions |
-| Live API role matrix | 140 checks, 8 roles |
-| Live API contract audit | 28 checks |
-| Live TC regression matrix | 27 checks (TC-001..TC-032 + QA-N07/N09) |
-| Live adversarial break | 23 checks |
-| Live data integrity | 14 checks |
-| Live multi-agent probe | 25 contract / security / robustness assertions |
-| Route crawl | 105 route visits across 6 actors |
-| Journey: player | 21 checks |
-| Journey: owner / host / admin | 21 checks |
-| Journey: cross-area state | 23 checks |
-| Journey: interruptions | 13 checks |
-| Cross-surface consistency | 60 checks |
-| Accessibility + responsive | 45 page/viewport combinations |
-| Browser (Playwright) | 35 |
-
+| Layer                         | Count                                                   |
+| ----------------------------- | ------------------------------------------------------- |
+| Backend (JUnit)               | 492                                                     |
+| Frontend (Vitest)             | 126 across 24 files                                     |
+| Frontend honesty              | every `catch` in `frontend/src`, 14 reviewed exemptions |
+| Live API role matrix          | 140 checks, 8 roles                                     |
+| Live API contract audit       | 28 checks                                               |
+| Live TC regression matrix     | 27 checks (TC-001..TC-032 + QA-N07/N09)                 |
+| Live adversarial break        | 23 checks                                               |
+| Live data integrity           | 14 checks                                               |
+| Live multi-agent probe        | 25 contract / security / robustness assertions          |
+| Route crawl                   | 105 route visits across 6 actors                        |
+| Journey: player               | 21 checks                                               |
+| Journey: owner / host / admin | 21 checks                                               |
+| Journey: cross-area state     | 23 checks                                               |
+| Journey: interruptions        | 13 checks                                               |
+| Cross-surface consistency     | 60 checks                                               |
+| Promotion redemption flow     | 12 checks                                               |
+| Venue amenities flow          | 6 checks                                                |
+| Player notification flow      | 16 checks                                               |
+| Solo open games flow          | 12 checks                                               |
+| Accessibility + responsive    | 45 page/viewport combinations                           |
+| Browser (Playwright)          | 35                                                      |
 
 ## One command
 
@@ -65,7 +72,7 @@ in-memory, so restarting the backend clears it.
 
 ## The journey layer
 
-Every other layer checks a screen or an endpoint. These four check a *workflow*,
+Every other layer checks a screen or an endpoint. These four check a _workflow_,
 and at each transition they require the UI, the URL, the API response and the
 database to agree with one another. A screen that says a booking is confirmed
 when no row exists fails here even though the page renders perfectly.
@@ -84,7 +91,7 @@ cancellation, refund, points reversal, saved venue, notifications, logout.
 
 **`journey-roles.mjs`** — the owner, host and admin workspaces, written around
 cross-area consistency: a cancellation policy the owner saves has to reach the
-public venue record *and* the refund table a player reads; a slot the owner
+public venue record _and_ the refund table a player reads; a slot the owner
 blocks has to stop being holdable; a team the host accepts has to appear on the
 player's tournament page.
 
@@ -104,7 +111,7 @@ Two defects these found, both fixed:
 
 - `tournaments/:code` sat outside `RequireAuth`, so an anonymous visitor got a
   dead "Authentication is required / Try again" panel instead of a sign-in page.
-- `TournamentService.register` guarded duplicate *team names* but never checked
+- `TournamentService.register` guarded duplicate _team names_ but never checked
   whether the player already had an entry, while `withdraw`, `myTournaments` and
   the tournament card all resolve a player to exactly one team. A second
   registration therefore produced a state the player could not leave: withdrawal
@@ -136,7 +143,7 @@ Four defects it found, all fixed at the source rather than on the screen:
   record carries `venueName`, `venueArea` and `pitchName`, and every owner
   surface shows them — but the confirmation ticket and the booking detail page
   used them only for the Directions and Contact buttons. Both now show them.
-- **The owner dashboard counted a booking as today's trade because it was *sold*
+- **The owner dashboard counted a booking as today's trade because it was _sold_
   today.** `isToday` was `bookingDate == today || createdAt == today`, so a
   fixture sold now for next week landed in "Today's revenue" and "Bookings
   today" — and would be counted again on the day it was played, beside an
@@ -168,7 +175,7 @@ the profile body; cross-user and cross-owner reads; two players racing for one
 slot; SQL/XSS/traversal payloads; malformed and deeply nested bodies; hostile
 ids; date extremes; pagination extremes; and abusive checkout amounts.
 
-Two assertions here are deliberately *not* status-code based, because the
+Two assertions here are deliberately _not_ status-code based, because the
 obvious version of each was wrong:
 
 - The owner dashboard is caller-scoped, so it answers 200 to a foreign
@@ -224,11 +231,10 @@ with an account that turned out to be the tournament's own host.
 
 ### `qa/rc-tc-verify.ps1`
 
-Re-runs the original reproduction for every finding in `qa/baseline/QA-BASELINE.md`
+Re-runs the original reproduction for every historical finding (TC-001..TC-032)
 and demands the safe answer, so a fix is proved by the server rather than by
 reading the source. It creates its own booking fixture and discovers its own
-owners, because a probe that skips its subject proves nothing. Writes
-`qa/baseline/rc-tc-matrix.json`.
+owners, because a probe that skips its subject proves nothing.
 
 Two traps this script exists to avoid, both of which silently turned real
 assertions into passes:
@@ -365,11 +371,12 @@ everything else `Demo@12345`.
 A test that never fails is decoration. Two deliberate regressions were injected
 and then reverted, to confirm each layer reports them:
 
-| Injected fault | Caught by |
-|---|---|
-| `BookingDetailPage` sums only the first payment row | Vitest — 2 failures, "Net paid ৳-1,100" |
+| Injected fault                                          | Caught by                                                                                                                                |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `BookingDetailPage` sums only the first payment row     | Vitest — 2 failures, "Net paid ৳-1,100"                                                                                                  |
 | `BookingService.canAccess` returns `true` for any owner | JUnit `BookingAccessControlIntegrationTest` (2 failures) **and** Playwright `access-control.spec.js` ("Expected: >= 400, Received: 200") |
-| Owner occupancy hardcoded back to `"100%"` | JUnit `OwnerDashboardOccupancyTest` — 2 failures, "but was: 100%" |
+| Owner occupancy hardcoded back to `"100%"`              | JUnit `OwnerDashboardOccupancyTest` — 2 failures, "but was: 100%"                                                                        |
+
 Repeat this whenever a layer starts looking suspiciously reliable.
 
 ## A trap in the PowerShell scripts

@@ -93,7 +93,9 @@ export default function ProfilePage() {
       value: auditApi.loading ? '…' : `${myEntries.length} Actions`,
       style: undefined,
     },
-    { id: 'security', label: 'SECURITY LEVEL', value: 'High (2FA)', style: { color: 'var(--mint)' } },
+    // Not a graded score — this is simply what the admin sign-in actually
+    // enforces: password plus a one-time code, for every admin, every time.
+    { id: 'security', label: 'SIGN-IN', value: 'Email + one-time code', style: { color: 'var(--mint)' } },
   ];
 
   return (

@@ -14,7 +14,7 @@ import { Panel } from '@/components/ui/Panel';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PLAYER_BOTTOM_NAV, PLAYER_NAV_LINKS } from '@/constants/navigation';
-import { getNotifications, getUnreadCount, markAllRead } from '@/api/notifications';
+import { getNotifications, getUnreadCount, markAllRead, markRead } from '@/api/notifications';
 import { clearSession } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
 import { useBodyClass } from '@/hooks/useBodyClass';
@@ -61,6 +61,25 @@ export function PlayerLayout({ withFooter = false }) {
       reloadUnread();
     } catch (e) {
       showToast(toUserMessage(e, 'Could not mark your notifications as read.'));
+    }
+  };
+
+  // Opening one is what marks it read, and it takes the player to whatever it
+  // is about — a notification you cannot act on is just an announcement.
+  const openNotification = async (item) => {
+    if (!item?.isRead) {
+      try {
+        await markRead(item.id);
+        reloadNotifs();
+        reloadUnread();
+      } catch (e) {
+        showToast(toUserMessage(e, 'Could not mark that notification as read.'));
+        return;
+      }
+    }
+    if (item?.link) {
+      notifications.close();
+      navigate(item.link);
     }
   };
 
@@ -144,15 +163,23 @@ export function PlayerLayout({ withFooter = false }) {
             <div className="subtle center" style={{ padding: '40px 0' }}>No notifications yet.</div>
           ) : (
             notificationsList.map((item) => (
-              <Panel key={item.id} style={{ opacity: item.isRead ? 0.6 : 1 }}>
-                <b>{item.title}</b>
-                <p className="small muted" style={{ margin: '2px 0 0' }}>
-                  {item.body}
-                </p>
-                <span className="tiny subtle">
-                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
-                </span>
-              </Panel>
+              <button
+                key={item.id}
+                type="button"
+                className="notif-item"
+                aria-label={`${item.title}${item.isRead ? '' : ', unread'}`}
+                onClick={() => openNotification(item)}
+              >
+                <Panel style={{ opacity: item.isRead ? 0.6 : 1 }}>
+                  <b>{item.title}</b>
+                  <p className="small muted" style={{ margin: '2px 0 0' }}>
+                    {item.body}
+                  </p>
+                  <span className="tiny subtle">
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+                  </span>
+                </Panel>
+              </button>
             ))
           )}
         </div>

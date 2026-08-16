@@ -207,12 +207,12 @@ export default function MultiPitchPage() {
         <div className="stickybar-inner">
           <div>
             <b className="num" style={{ fontSize: 18 }}>
-              {costs ? bdt(costs.total) : '৳42,800'}
+              {costs ? bdt(costs.total) : '৳0'}
             </b>
             <span className="subtle small">
               {costs
                 ? ` · ${costs.slotCount} slots reserved`
-                : ' · 14 slots across 3 pitches · 8 AM–6 PM'}
+                : ' · no slots selected yet'}
             </span>
             <div className="tiny subtle">
               {costs && Number(costs.discount) > 0

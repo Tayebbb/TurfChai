@@ -176,3 +176,20 @@
     border-radius: var(--r-md);
     padding: 12px 14px
 }
+
+/* A notification is a control: it opens what it is about and marks itself read. */
+.notif-item {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer
+}
+
+.notif-item:hover .panel {
+    border-color: var(--brand)
+}

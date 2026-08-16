@@ -749,7 +749,7 @@ export default function CalendarPage() {
             {selectedDetailCell?.status === 'BLOCKED' ? 'Blocked for Maintenance' : selectedDetailCell?.variant === 'held' ? 'Held · checkout' : 'Booked · Active'}
           </Badge>
           <Badge tone="blue" dot={false}>
-            Status: {selectedDetailCell?.status || 'BOOKED'}
+            Status: {selectedDetailCell?.status || '—'}
           </Badge>
         </div>
         <div className="stack-sm">

@@ -224,7 +224,7 @@ const ROUTES = {
     '/player/dashboard/tournaments', '/player/dashboard/venues', '/solo/open-games', '/solo/alerts',
     '/player/tournaments/TR-CUP-0091', '/host/tournament', '/host/multi-pitch', '/host/reserve']],
   ownerA: [ownerA, ['/owner', '/owner/calendar', '/owner/bookings', '/owner/payments', '/owner/venue-setup',
-    '/owner/customers', '/owner/promotions', '/owner/reviews', '/owner/staff']],
+    '/owner/customers', '/owner/promotions', '/owner/reviews']],
   admin: [admin ? { token: admin.token, user: admin.user ?? {} } : null,
     ['/admin', '/admin/turfs', '/admin/users', '/admin/turf-requests', '/admin/payouts',
       '/admin/activity', '/admin/admins', '/admin/profile', '/admin/users/growth', '/admin/users/segments']],

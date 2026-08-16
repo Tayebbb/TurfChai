@@ -46,5 +46,10 @@ public class CreateOpenGameRequest {
     @Min(value = 0, message = "Price cannot be negative")
     private BigDecimal pricePerPlayer;
 
+    // The entity caps this at 0..100. Without the same bound here the request
+    // passed validation and then failed at persist time, so a bad number came
+    // back as a 500 blaming the server for the caller's input.
+    @Min(value = 0, message = "Minimum reliability cannot be negative")
+    @Max(value = 100, message = "Minimum reliability cannot exceed 100")
     private Integer minimumReliability;
 }

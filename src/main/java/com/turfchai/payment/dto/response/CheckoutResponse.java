@@ -18,7 +18,10 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class CheckoutResponse {
-    /** "SUCCESS" or "FAILED" — mirrors PaymentStatus but keeps this DTO decoupled from the entity enum's full range. */
+    /**
+     * "SUCCESS" or "FAILED" — mirrors PaymentStatus but keeps this DTO decoupled
+     * from the entity enum's full range.
+     */
     private String status;
     private PaymentResponse payment;
     private Long bookingId;
@@ -26,5 +29,8 @@ public class CheckoutResponse {
     private BigDecimal walletApplied;
     private BigDecimal newWalletBalance;
     private Integer pointsEarned;
+    /** Code redeemed for this booking, if any, and what the server priced it at. */
+    private String promoCode;
+    private BigDecimal discountApplied;
     private String message;
 }

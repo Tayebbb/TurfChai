@@ -23,7 +23,7 @@ public class TournamentApiExceptionHandler {
                 .body(ApiErrorBody.of(HttpStatus.NOT_FOUND, e.getMessage()));
     }
 
-    @ExceptionHandler({PitchConflictException.class, TournamentConflictException.class})
+    @ExceptionHandler({ PitchConflictException.class, TournamentConflictException.class })
     public ResponseEntity<Map<String, Object>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiErrorBody.of(HttpStatus.CONFLICT, e.getMessage()));

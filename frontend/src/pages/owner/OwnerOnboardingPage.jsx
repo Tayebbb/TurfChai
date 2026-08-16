@@ -22,7 +22,8 @@ import {
 import {
   createTurfRequest,
   getMyTurfRequests,
-  uploadTurfDoc,
+  recordTurfDocName,
+  uploadTurfPhoto,
 } from '@/api/turfRequests';
 
 
@@ -126,6 +127,7 @@ export default function OwnerOnboardingPage() {
   const [saving, setSaving] = useState(false);
 
   const located = Number.isFinite(location.lat) && Number.isFinite(location.lng);
+  const documentCount = [documents.tradeLicense, documents.leaseProof].filter(Boolean).length;
 
   const venueSummary = [
     { id: 'name', label: 'Venue name', value: venueName || '—' },
@@ -152,13 +154,13 @@ export default function OwnerOnboardingPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', docType);
-      await uploadTurfDoc(formData);
+      await recordTurfDocName(formData);
     } catch (error) {
       // This used to fall through to the success toast, so an owner believed a
       // trade licence or lease proof had been filed for verification when it
       // only ever existed as a blob URL in this tab, lost on the next refresh.
       URL.revokeObjectURL(previewUrl);
-      showToast(toUserMessage(error, `Could not upload ${file.name}. Please try again.`));
+      showToast(toUserMessage(error, `Could not add ${file.name}. Please try again.`));
       return;
     }
 
@@ -167,7 +169,8 @@ export default function OwnerOnboardingPage() {
     } else if (docType === 'leaseProof') {
       setDocuments((prev) => ({ ...prev, leaseProof: docInfo }));
     }
-    showToast(`${file.name} uploaded successfully ✓`);
+    // The file is not stored anywhere; only its name travels with the request.
+    showToast(`${file.name} listed on your request — bring the original to verification`);
   };
 
   const handlePhotoUpload = async (event) => {
@@ -179,16 +182,14 @@ export default function OwnerOnboardingPage() {
 
     for (const file of files) {
       const previewUrl = URL.createObjectURL(file);
-      let persistentUrl = previewUrl;
+      let persistentUrl = null;
 
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('type', 'photo');
-        const res = await uploadTurfDoc(formData);
-        if (res && (res.url || res.data?.url)) {
-          persistentUrl = res.url || res.data.url;
-        }
+        const res = await uploadTurfPhoto(formData);
+        persistentUrl = res?.url ?? res?.data?.url ?? null;
+        if (!persistentUrl) throw new Error('No stored location returned');
       } catch {
         // This used to substitute a hardcoded Unsplash stock photo, so a failed
         // upload produced a listing showing someone else's field as if it were
@@ -292,9 +293,12 @@ export default function OwnerOnboardingPage() {
         }
       }
 
-      const photoUrls = photos.length > 0 
-        ? photos.map((p) => (p.url && p.url.startsWith('blob:') ? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800' : p.url)) 
-        : [];
+      // A blob URL only exists in this tab. Submitting one used to be papered
+      // over with a stock Unsplash field, so the listing showed a pitch that
+      // was not this venue. An unstored photo is simply not submitted.
+      const photoUrls = photos
+        .map((p) => p.url)
+        .filter((url) => typeof url === 'string' && !url.startsWith('blob:'));
 
       await createTurfRequest({
         venueName: venueName.trim(),
@@ -302,10 +306,10 @@ export default function OwnerOnboardingPage() {
         pitchCount: 1,
         sportsCsv: 'Football',
         ownerPhone: ownerPhone,
-        ownerEmail: authState?.signupEmail || 'owner@turfchai.com',
-        docTradeLicense: documents.tradeLicense?.name || 'Trade_License.pdf',
-        docOwnerNid: nid || 'NID.pdf',
-        docUtilityBill: documents.leaseProof?.name || 'Lease_Agreement.pdf',
+        ownerEmail: authState?.signupEmail || undefined,
+        docTradeLicense: documents.tradeLicense?.name || undefined,
+        docOwnerNid: nid || undefined,
+        docUtilityBill: documents.leaseProof?.name || undefined,
         photos: photoUrls,
       });
 
@@ -414,15 +418,15 @@ export default function OwnerOnboardingPage() {
                   ))}
                   <div className="between small">
                     <span className="muted">Trade License</span>
-                    <b>{documents.tradeLicense?.name || 'Attached ✓'}</b>
+                    <b>{documents.tradeLicense?.name || 'Not provided'}</b>
                   </div>
                   <div className="between small">
                     <span className="muted">Ownership / Lease Proof</span>
-                    <b>{documents.leaseProof?.name || 'Attached ✓'}</b>
+                    <b>{documents.leaseProof?.name || 'Not provided'}</b>
                   </div>
                   <div className="between small">
                     <span className="muted">Venue Photos</span>
-                    <b>{photos.length > 0 ? `${photos.length} photo(s) attached` : 'Default photos'}</b>
+                    <b>{photos.length > 0 ? `${photos.length} photo(s) attached` : 'None attached'}</b>
                   </div>
                 </Stack>
 
@@ -543,7 +547,7 @@ export default function OwnerOnboardingPage() {
                           <span onClick={() => setPreviewFile(documents.tradeLicense)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
                             <b>{documents.tradeLicense.name}</b>
                           </span>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ✓</span>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Listed ✓</span>
                         </div>
                       </div>
                     ) : (
@@ -568,7 +572,7 @@ export default function OwnerOnboardingPage() {
                           <span onClick={() => setPreviewFile(documents.leaseProof)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
                             <b>{documents.leaseProof.name}</b>
                           </span>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ✓</span>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Listed ✓</span>
                         </div>
                       </div>
                     ) : (
@@ -622,7 +626,12 @@ export default function OwnerOnboardingPage() {
                     <div className="between small"><span className="muted">Owner Name</span><b>{ownerName}</b></div>
                     <div className="between small"><span className="muted">Venue Name</span><b>{venueName}</b></div>
                     <div className="between small"><span className="muted">Location</span><b>{location.address}</b></div>
-                    <div className="between small"><span className="muted">Documents</span><b style={{ color: 'var(--brand-500)' }}>Attached ✓</b></div>
+                    <div className="between small">
+                      <span className="muted">Documents</span>
+                      <b style={documentCount > 0 ? { color: 'var(--brand-500)' } : undefined} className={documentCount > 0 ? undefined : 'subtle'}>
+                        {documentCount > 0 ? `${documentCount} listed ✓` : 'None provided'}
+                      </b>
+                    </div>
                   </Stack>
                 </div>
 

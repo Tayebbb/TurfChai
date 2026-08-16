@@ -13,31 +13,31 @@ import java.util.Optional;
 
 public interface TournamentRepository extends JpaRepository<Tournament, Long> {
 
-    Optional<Tournament> findByCode(String code);
+        Optional<Tournament> findByCode(String code);
 
-    boolean existsByCode(String code);
+        boolean existsByCode(String code);
 
-    /** Browse feed: published/confirmed tournaments, soonest first. */
-    @Query("""
-            select t from Tournament t
-            where t.status in ('PUBLISHED', 'CONFIRMED')
-              and (:openOnly = false or t.privacy = 'OPEN')
-              and (:fromDate is null or t.tournamentDate >= :fromDate)
-            order by t.tournamentDate asc
-            """)
-    Page<Tournament> browse(@Param("openOnly") boolean openOnly,
-                            @Param("fromDate") LocalDate fromDate,
-                            Pageable pageable);
+        /** Browse feed: published/confirmed tournaments, soonest first. */
+        @Query("""
+                        select t from Tournament t
+                        where t.status in ('PUBLISHED', 'CONFIRMED')
+                          and (:openOnly = false or t.privacy = 'OPEN')
+                          and (:fromDate is null or t.tournamentDate >= :fromDate)
+                        order by t.tournamentDate asc
+                        """)
+        Page<Tournament> browse(@Param("openOnly") boolean openOnly,
+                        @Param("fromDate") LocalDate fromDate,
+                        Pageable pageable);
 
-    /** Tournaments a player has registered a team for. */
-    @Query("""
-            select distinct t from Tournament t
-            join TournamentTeam team on team.tournament = t
-            where team.registeredBy.id = :userId
-            order by t.tournamentDate desc
-            """)
-    List<Tournament> findRegisteredBy(@Param("userId") Long userId);
+        /** Tournaments a player has registered a team for. */
+        @Query("""
+                        select distinct t from Tournament t
+                        join TournamentTeam team on team.tournament = t
+                        where team.registeredBy.id = :userId
+                        order by t.tournamentDate desc
+                        """)
+        List<Tournament> findRegisteredBy(@Param("userId") Long userId);
 
-    /** Tournaments the caller hosts, soonest first. */
-    List<Tournament> findByHostIdOrderByTournamentDateDesc(Long hostId);
+        /** Tournaments the caller hosts, soonest first. */
+        List<Tournament> findByHostIdOrderByTournamentDateDesc(Long hostId);
 }

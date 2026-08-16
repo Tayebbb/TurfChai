@@ -27,7 +27,3 @@ TurfChai venues choose one of three cancellation policies. The policy shown on t
 ## No-shows
 
 If you do not show up for a confirmed booking, no refund is given and repeated no-shows lower your reliability score, which can restrict access to open games.
-
-## Cancelling a split-payment booking
-
-Only the booking captain can cancel a split booking. Members who already paid their share are refunded individually according to the venue's policy tiers.

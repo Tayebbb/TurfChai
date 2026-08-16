@@ -85,12 +85,24 @@ public class Booking {
     /**
      * The venue's cancellation policy as it stood when this booking was confirmed.
      *
-     * <p>Refunds are quoted and paid from this, not from the venue's current
+     * <p>
+     * Refunds are quoted and paid from this, not from the venue's current
      * setting — otherwise an owner could tighten their terms after a player had
      * already paid and keep money the player was owed.
      */
     @Column(name = "cancel_policy_snapshot", length = 30)
     private String cancelPolicySnapshot;
+
+    /**
+     * Promo code redeemed for this booking, so a cancellation can hand the use
+     * back.
+     */
+    @Column(name = "promo_code", length = 30)
+    private String promoCode;
+
+    @Column(name = "discount_amount")
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

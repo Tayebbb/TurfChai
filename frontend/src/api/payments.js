@@ -11,12 +11,25 @@ import { api } from './client';
  * POST /api/v1/payments/checkout — pays for the caller's currently held
  * slot (mock bKash/Nagad/Card/Cash).
  */
-export async function checkout({ slotId, method, applyWalletAmount }) {
+export async function checkout({ slotId, method, applyWalletAmount, promoCode }) {
   const res = await api('/payments/checkout', {
     method: 'POST',
-    body: { slotId, method, applyWalletAmount },
+    body: { slotId, method, applyWalletAmount, promoCode },
   });
   return res.data;
+}
+
+/**
+ * POST /api/v1/promotions/validate-code — quotes what a promo code is worth for
+ * an order total. A quote only; the discount that actually applies is priced
+ * again by the server during checkout, so this cannot be used to pay less.
+ * Answers 422 with `valid: false` and a reason when the code does not apply.
+ */
+export async function validatePromoCode({ code, orderTotal, venueId }) {
+  return api('/promotions/validate-code', {
+    method: 'POST',
+    body: { code, orderTotal, venueId },
+  });
 }
 
 /** GET /api/v1/payments/booking/{bookingId} — a booking's payment history, most recent first. */

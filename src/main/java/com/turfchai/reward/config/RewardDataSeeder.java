@@ -27,12 +27,13 @@ import java.util.Map;
  * Seeds {@code loyalty_tiers} and {@code reward_products} for the H2 dev/test
  * profiles, which skip Flyway (see {@code application-dev.properties}) and so
  * never run the V1 baseline's seed rows. Mirrors those rows exactly — see
- * {@code V1__baseline.sql} section 18 and {@code ai-knowledge/loyalty-rewards.md}.
+ * {@code V1__baseline.sql} section 18 and
+ * {@code ai-knowledge/loyalty-rewards.md}.
  * Also grants the demo player ({@code rafi@turfchai.dev}) a starting point
  * history so the rewards page has something to show on a fresh checkout.
  */
 @Configuration
-@Profile({"dev", "test"})
+@Profile({ "dev", "test" })
 public class RewardDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(RewardDataSeeder.class);
@@ -109,33 +110,36 @@ public class RewardDataSeeder {
      */
     @Transactional
     void seedDemoPlayerHistory(PointLedgerRepository ledger, UserRepository users, RewardService rewardService) {
-        users.findByPublicId(com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()).ifPresent(demoUser -> {
-            Long userId = demoUser.getId();
-            if (!ledger.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 1)).isEmpty()) {
-                return;
-            }
+        users.findByPublicId(com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString())
+                .ifPresent(demoUser -> {
+                    Long userId = demoUser.getId();
+                    if (!ledger.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 1)).isEmpty()) {
+                        return;
+                    }
 
-            for (long bookingId = 101; bookingId < 111; bookingId++) {
-                rewardService.awardBookingPoints(userId, bookingId, BigDecimal.valueOf(200)); // 10 x 200 = 2,000
-            }
-            for (long bookingId = 101; bookingId < 107; bookingId++) {
-                rewardService.awardMatchAttendedPoints(userId, bookingId); // 6 x 30 = 180
-            }
-            for (long bookingId = 101; bookingId < 106; bookingId++) {
-                rewardService.awardReviewPoints(userId, bookingId); // 5 x 20 = 100
-            }
-            for (long bookingId = 201; bookingId < 205; bookingId++) {
-                rewardService.awardOffPeakBonusIfApplicable(userId, bookingId, LocalTime.of(9, 0)); // 4 x 10 = 40
-            }
-            for (long gameId = 301; gameId < 304; gameId++) {
-                rewardService.awardOpenGameJoinedPoints(userId, gameId); // 3 x 15 = 45
-            }
-            rewardService.awardProfileCompletionPointsOnce(userId); // 10
-            rewardService.awardMonthlyActivityBonus(userId, 200, "Welcome bonus");
-            rewardService.awardMonthlyActivityBonus(userId, 165, "5th booking this month");
-            // Total: 2,000 + 180 + 100 + 40 + 45 + 10 + 200 + 165 = 2,740 pts
+                    for (long bookingId = 101; bookingId < 111; bookingId++) {
+                        rewardService.awardBookingPoints(userId, bookingId, BigDecimal.valueOf(200)); // 10 x 200 =
+                                                                                                      // 2,000
+                    }
+                    for (long bookingId = 101; bookingId < 107; bookingId++) {
+                        rewardService.awardMatchAttendedPoints(userId, bookingId); // 6 x 30 = 180
+                    }
+                    for (long bookingId = 101; bookingId < 106; bookingId++) {
+                        rewardService.awardReviewPoints(userId, bookingId); // 5 x 20 = 100
+                    }
+                    for (long bookingId = 201; bookingId < 205; bookingId++) {
+                        rewardService.awardOffPeakBonusIfApplicable(userId, bookingId, LocalTime.of(9, 0)); // 4 x 10 =
+                                                                                                            // 40
+                    }
+                    for (long gameId = 301; gameId < 304; gameId++) {
+                        rewardService.awardOpenGameJoinedPoints(userId, gameId); // 3 x 15 = 45
+                    }
+                    rewardService.awardProfileCompletionPointsOnce(userId); // 10
+                    rewardService.awardMonthlyActivityBonus(userId, 200, "Welcome bonus");
+                    rewardService.awardMonthlyActivityBonus(userId, 165, "5th booking this month");
+                    // Total: 2,000 + 180 + 100 + 40 + 45 + 10 + 200 + 165 = 2,740 pts
 
-            log.info("Seeded demo player point history: 2,740 pts for {}", demoUser.getEmail());
-        });
+                    log.info("Seeded demo player point history: 2,740 pts for {}", demoUser.getEmail());
+                });
     }
 }

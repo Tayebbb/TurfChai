@@ -12,32 +12,32 @@ public final class TournamentViews {
     }
 
     public record TeamView(Long id, String name, String captainName,
-                           String entryFeeStatus, BigDecimal entryFeePaid,
-                           String registrationCode) {
+            String entryFeeStatus, BigDecimal entryFeePaid,
+            String registrationCode) {
     }
 
     /** Compact card for browse feeds and the player's tournament history. */
     public record TournamentCard(String code, String name, String venueSlug, String venueName,
-                                 LocalDate date, LocalTime windowStart, LocalTime windowEnd,
-                                 String format, String privacy, String status,
-                                 int teamCapacity, int registeredTeams, int spotsLeft,
-                                 BigDecimal entryFeePerTeam, BigDecimal prizePool,
-                                 String myRegistrationCode, String myPaymentStatus) {
+            LocalDate date, LocalTime windowStart, LocalTime windowEnd,
+            String format, String privacy, String status,
+            int teamCapacity, int registeredTeams, int spotsLeft,
+            BigDecimal entryFeePerTeam, BigDecimal prizePool,
+            String myRegistrationCode, String myPaymentStatus) {
     }
 
     public record FixtureView(Long id, String roundLabel, int matchNumber,
-                              String pitchName, LocalTime startTime,
-                              String teamA, String teamB, String status) {
+            String pitchName, LocalTime startTime,
+            String teamA, String teamB, String status) {
     }
 
     public record ReservationView(Long id, Long pitchId, String pitchName,
-                                  LocalDate slotDate, LocalTime startTime,
-                                  LocalTime endTime, BigDecimal price) {
+            LocalDate slotDate, LocalTime startTime,
+            LocalTime endTime, BigDecimal price) {
     }
 
     /** Cost roll-up shown on the dashboard and reserve checkout. */
     public record CostSummary(int slotCount, BigDecimal slotTotal, BigDecimal discount,
-                              BigDecimal total, BigDecimal deposit, BigDecimal balance) {
+            BigDecimal total, BigDecimal deposit, BigDecimal balance) {
     }
 
     /**
@@ -45,12 +45,12 @@ public final class TournamentViews {
      * would owe in total; {@code weeklyTotal} is one week of it.
      */
     public record ReservationQuote(int repeatWeeks, int slotsPerWeek, BigDecimal weeklyTotal,
-                                   LocalDate firstDate, LocalDate lastDate, CostSummary costs) {
+            LocalDate firstDate, LocalDate lastDate, CostSummary costs) {
     }
 
     /** Deposit state for the reserve checkout. */
     public record DepositView(String status, BigDecimal amount, String method,
-                              String reference, java.time.Instant paidAt) {
+            String reference, java.time.Instant paidAt) {
     }
 
     /** The venue owner the host coordinates with on the day. */
@@ -58,14 +58,14 @@ public final class TournamentViews {
     }
 
     public record TournamentView(Long id, String code, String name,
-                                 String venueSlug, String venueName,
-                                 LocalDate date, LocalTime windowStart, LocalTime windowEnd,
-                                 String format, int teamCapacity, BigDecimal entryFeePerTeam,
-                                 BigDecimal prizePool, String privacy, String inviteCode,
-                                 String status, LocalDate balanceDueDate, int repeatWeeks,
-                                 List<TeamView> teams, List<FixtureView> fixtures,
-                                 List<ReservationView> reservations, CostSummary costs,
-                                 DepositView deposit, DepositView balance,
-                                 String hostNotes, VenueContactView venueContact) {
+            String venueSlug, String venueName,
+            LocalDate date, LocalTime windowStart, LocalTime windowEnd,
+            String format, int teamCapacity, BigDecimal entryFeePerTeam,
+            BigDecimal prizePool, String privacy, String inviteCode,
+            String status, LocalDate balanceDueDate, int repeatWeeks,
+            List<TeamView> teams, List<FixtureView> fixtures,
+            List<ReservationView> reservations, CostSummary costs,
+            DepositView deposit, DepositView balance,
+            String hostNotes, VenueContactView venueContact) {
     }
 }

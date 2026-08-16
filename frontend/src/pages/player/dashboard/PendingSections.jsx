@@ -1,17 +1,17 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/buttons/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Panel';
 import { paths } from '@/routes/paths';
 import { listBookings, formatBookingDate, formatTimeRange } from '@/api/bookings';
-import { getNotifications, markAllRead } from '@/api/notifications';
+import { getNotifications, markAllRead, markRead } from '@/api/notifications';
 import { getWalletHistory } from '@/api/rewards';
 import { getMyStats } from '@/api/players';
 import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
 import { toUserMessage } from '@/utils/errorMessage';
 import { formatBdt } from '@/utils/format';
-import { DashCard, DashEmpty, DashError, DashHeader, DashSkeleton, ServicePending } from './DashboardKit';
+import { DashCard, DashEmpty, DashError, DashHeader, DashSkeleton } from './DashboardKit';
 
 export function BookingsSection() {
   const { data: bookings, loading, error, reload } = useApi(listBookings, []);
@@ -71,45 +71,6 @@ export function BookingsSection() {
           })}
         </div>
       )}
-    </>
-  );
-}
-
-export function TeamsSection() {
-  return (
-    <>
-      <DashHeader title="My teams" subtitle="Teams you own, teams you’ve joined and squad invites." />
-      <ServicePending
-        icon="👥"
-        title="Teams & Squads"
-        description="Build persistent team squads, invite players, manage pitch rosters, and track win streaks."
-        cta={
-          <Button size="sm" to={paths.player.dashboard.tournaments}>
-            See tournament squads
-          </Button>
-        }
-      />
-    </>
-  );
-}
-
-export function NetworkSection() {
-  return (
-    <>
-      <DashHeader
-        title="Player network"
-        subtitle="People you’ve played with and who to invite next."
-      />
-      <ServicePending
-        icon="🤝"
-        title="Player Network"
-        description="Connect with recently-played teammates, view match attendance records, and invite players to your next game."
-        cta={
-          <Button size="sm" to={paths.solo.openGames}>
-            Find open games
-          </Button>
-        }
-      />
     </>
   );
 }
@@ -302,6 +263,7 @@ export function WalletSection() {
 export function NotificationsSection() {
   const { data: notifData, loading, error, reload } = useApi(getNotifications, []);
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const notificationsList = Array.isArray(notifData) ? notifData : [];
   const hasUnread = notificationsList.some((item) => !item?.isRead);
 
@@ -311,6 +273,21 @@ export function NotificationsSection() {
       reload();
     } catch (e) {
       showToast(toUserMessage(e, 'Could not mark these as read.'));
+    }
+  };
+
+  const openNotification = async (item) => {
+    if (!item?.isRead) {
+      try {
+        await markRead(item.id);
+        reload();
+      } catch (e) {
+        showToast(toUserMessage(e, 'Could not mark that notification as read.'));
+        return;
+      }
+    }
+    if (item?.link) {
+      navigate(item.link);
     }
   };
 
@@ -339,15 +316,23 @@ export function NotificationsSection() {
       ) : (
         <div className="stack-sm">
           {notificationsList.map((item, index) => (
-            <Panel key={item?.id ?? `notification-${index}`} style={{ opacity: item?.isRead ? 0.6 : 1 }}>
-              <b>{item?.title ?? 'Notification'}</b>
-              <p className="small muted" style={{ margin: '2px 0 0' }}>
-                {item?.body}
-              </p>
-              <span className="tiny subtle">
-                {item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
-              </span>
-            </Panel>
+            <button
+              key={item?.id ?? `notification-${index}`}
+              type="button"
+              className="notif-item"
+              aria-label={`${item?.title ?? 'Notification'}${item?.isRead ? '' : ', unread'}`}
+              onClick={() => openNotification(item)}
+            >
+              <Panel style={{ opacity: item?.isRead ? 0.6 : 1 }}>
+                <b>{item?.title ?? 'Notification'}</b>
+                <p className="small muted" style={{ margin: '2px 0 0' }}>
+                  {item?.body}
+                </p>
+                <span className="tiny subtle">
+                  {item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+                </span>
+              </Panel>
+            </button>
           ))}
         </div>
       )}

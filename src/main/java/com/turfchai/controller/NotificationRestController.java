@@ -17,7 +17,8 @@ public class NotificationRestController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public List<NotificationResponse> listNotifications(@AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
+    public List<NotificationResponse> listNotifications(
+            @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
         return notificationService.listForUser(userDetails.getId())
                 .stream()
                 .map(NotificationResponse::from)
@@ -30,7 +31,8 @@ public class NotificationRestController {
     }
 
     @PostMapping("/{id}/read")
-    public void markRead(@PathVariable Long id, @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
+    public void markRead(@PathVariable Long id,
+            @AuthenticationPrincipal com.turfchai.security.UserPrincipal userDetails) {
         notificationService.markRead(id, userDetails.getId());
     }
 

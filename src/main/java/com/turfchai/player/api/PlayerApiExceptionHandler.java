@@ -16,7 +16,7 @@ import java.util.Map;
 @org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class PlayerApiExceptionHandler {
 
-    @ExceptionHandler({UserNotFoundException.class, VenueNotFoundException.class})
+    @ExceptionHandler({ UserNotFoundException.class, VenueNotFoundException.class })
     public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiErrorBody.of(HttpStatus.NOT_FOUND, e.getMessage()));

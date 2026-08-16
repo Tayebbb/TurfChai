@@ -22,10 +22,14 @@ import org.springframework.web.bind.annotation.RestController;
  * Admin analytics REST endpoints.
  *
  * <ul>
- *   <li>{@code GET /api/v1/admin/analytics/growth}   — user growth KPIs + signup chart</li>
- *   <li>{@code GET /api/v1/admin/analytics/revenue}  — GMV + booking count time-series</li>
- *   <li>{@code GET /api/v1/admin/analytics/segments} — user segment breakdown</li>
- *   <li>{@code POST /api/v1/admin/analytics/seed}    — trigger demo data seeder (dev/test only)</li>
+ * <li>{@code GET /api/v1/admin/analytics/growth} — user growth KPIs + signup
+ * chart</li>
+ * <li>{@code GET /api/v1/admin/analytics/revenue} — GMV + booking count
+ * time-series</li>
+ * <li>{@code GET /api/v1/admin/analytics/segments} — user segment
+ * breakdown</li>
+ * <li>{@code POST /api/v1/admin/analytics/seed} — trigger demo data seeder
+ * (dev/test only)</li>
  * </ul>
  */
 
@@ -39,7 +43,7 @@ public class AdminAnalyticsRestController {
     private final ObjectProvider<AdminDemoDataSeeder> seeder;
 
     public AdminAnalyticsRestController(AdminAnalyticsService analyticsService,
-                                        ObjectProvider<AdminDemoDataSeeder> seeder) {
+            ObjectProvider<AdminDemoDataSeeder> seeder) {
         this.analyticsService = analyticsService;
         this.seeder = seeder;
     }
@@ -50,7 +54,8 @@ public class AdminAnalyticsRestController {
      * fake accounts and money into a real database.
      */
     @PostMapping("/seed")
-    public ResponseEntity<ApiResponse<String>> seedData(@RequestParam(required = false, defaultValue = "true") boolean force) {
+    public ResponseEntity<ApiResponse<String>> seedData(
+            @RequestParam(required = false, defaultValue = "true") boolean force) {
         AdminDemoDataSeeder demoSeeder = seeder.getIfAvailable();
         if (demoSeeder == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

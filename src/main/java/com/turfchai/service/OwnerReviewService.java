@@ -50,9 +50,10 @@ public class OwnerReviewService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy");
 
         for (Review r : reviews) {
-            String customerName = (r.getUser() != null && r.getUser().getFullName() != null && !r.getUser().getFullName().isBlank())
-                    ? r.getUser().getFullName()
-                    : "Guest User";
+            String customerName = (r.getUser() != null && r.getUser().getFullName() != null
+                    && !r.getUser().getFullName().isBlank())
+                            ? r.getUser().getFullName()
+                            : "Guest User";
             String initials = !customerName.isEmpty() ? customerName.substring(0, 1).toUpperCase() : "?";
 
             Integer overall = r.getOverallRating() != null ? r.getOverallRating() : 0;
@@ -75,7 +76,8 @@ public class OwnerReviewService {
             item.put("initials", initials);
             item.put("avatarTone", "brand");
             item.put("rating", overall);
-            item.put("subtitle", (r.getVenue() != null ? r.getVenue().getName() : "") + (r.getCreatedAt() != null ? " · " + r.getCreatedAt().format(formatter) : ""));
+            item.put("subtitle", (r.getVenue() != null ? r.getVenue().getName() : "")
+                    + (r.getCreatedAt() != null ? " · " + r.getCreatedAt().format(formatter) : ""));
             item.put("date", r.getCreatedAt() != null ? r.getCreatedAt().format(formatter) : "N/A");
             item.put("text", r.getComment() != null ? r.getComment() : "");
             item.put("comment", r.getComment() != null ? r.getComment() : "");
@@ -107,16 +109,17 @@ public class OwnerReviewService {
                 "ratingBreakdown", ratingBreakdown,
                 "categoryAverages", categoryAverages,
                 "averageRating", averageRating,
-                "totalReviews", reviews.size()
-        );
+                "totalReviews", reviews.size());
     }
 
     /**
      * Publishes the venue owner's public reply to one of their own reviews.
      *
      * @throws ReviewNotFoundException if the review does not exist, or belongs to a
-     *                                 venue this owner does not own — the two cases are
-     *                                 deliberately indistinguishable so review ids of
+     *                                 venue this owner does not own — the two cases
+     *                                 are
+     *                                 deliberately indistinguishable so review ids
+     *                                 of
      *                                 other venues cannot be probed.
      */
     @Transactional
@@ -149,7 +152,8 @@ public class OwnerReviewService {
     }
 
     private String capitalize(String str) {
-        if (str == null || str.isEmpty()) return str;
+        if (str == null || str.isEmpty())
+            return str;
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
@@ -168,8 +172,7 @@ public class OwnerReviewService {
                 Map.of("star", 4, "stars", 4, "pct", 0, "count", 0, "width", "0%"),
                 Map.of("star", 3, "stars", 3, "pct", 0, "count", 0, "width", "0%"),
                 Map.of("star", 2, "stars", 2, "pct", 0, "count", 0, "width", "0%"),
-                Map.of("star", 1, "stars", 1, "pct", 0, "count", 0, "width", "0%")
-        ));
+                Map.of("star", 1, "stars", 1, "pct", 0, "count", 0, "width", "0%")));
         res.put("categoryAverages", List.of());
         res.put("averageRating", "0.0");
         res.put("totalReviews", 0);

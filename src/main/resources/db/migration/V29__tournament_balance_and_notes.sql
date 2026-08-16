@@ -10,9 +10,21 @@
 -- (invite-code regeneration reuses the existing invite_code column.)
 -- ============================================================================
 
-ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS balance_status VARCHAR(15) NOT NULL DEFAULT 'UNPAID';
-ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS balance_paid_at TIMESTAMP WITH TIME ZONE;
-ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS balance_amount NUMERIC(12, 2);
-ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS balance_method VARCHAR(30);
-ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS balance_reference VARCHAR(60);
-ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS host_notes VARCHAR(2000);
+ALTER TABLE tournaments ADD COLUMN
+IF NOT EXISTS balance_status VARCHAR
+(15) NOT NULL DEFAULT 'UNPAID';
+ALTER TABLE tournaments ADD COLUMN
+IF NOT EXISTS balance_paid_at TIMESTAMP
+WITH TIME ZONE;
+ALTER TABLE tournaments ADD COLUMN
+IF NOT EXISTS balance_amount NUMERIC
+(12, 2);
+ALTER TABLE tournaments ADD COLUMN
+IF NOT EXISTS balance_method VARCHAR
+(30);
+ALTER TABLE tournaments ADD COLUMN
+IF NOT EXISTS balance_reference VARCHAR
+(60);
+ALTER TABLE tournaments ADD COLUMN
+IF NOT EXISTS host_notes VARCHAR
+(2000);

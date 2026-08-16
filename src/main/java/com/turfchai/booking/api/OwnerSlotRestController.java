@@ -46,7 +46,7 @@ public class OwnerSlotRestController {
     public ResponseEntity<List<SlotResponse>> generateSlots(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody SlotGenerationRequest request) {
-        
+
         List<Slot> generated = slotManagementService.generateSlots(principal.getId(), request);
         return ResponseEntity.ok(generated.stream().map(this::toResponse).collect(Collectors.toList()));
     }
@@ -56,7 +56,7 @@ public class OwnerSlotRestController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @Valid @RequestBody UpdateSlotRequest request) {
-        
+
         Slot updated = slotManagementService.updateSlot(principal.getId(), id, request);
         return ResponseEntity.ok(toResponse(updated));
     }
@@ -67,7 +67,7 @@ public class OwnerSlotRestController {
             @RequestParam Long venueId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        
+
         List<Slot> slots = slotManagementService.getOwnerSlots(principal.getId(), venueId, startDate, endDate);
         return ResponseEntity.ok(slots.stream().map(this::toResponse).collect(Collectors.toList()));
     }

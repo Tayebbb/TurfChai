@@ -3,7 +3,7 @@
 Set-Location -Path 'e:\TurfChai\frontend'
 
 $src = (Get-ChildItem -Recurse -Include *.js, *.jsx src |
-        Where-Object { $_.FullName -notmatch 'node_modules' }).FullName
+    Where-Object { $_.FullName -notmatch 'node_modules' }).FullName
 $apiFiles = (Get-ChildItem -Recurse -Include *.js src\api).FullName
 
 $exports = @()
@@ -22,7 +22,7 @@ foreach ($e in $exports) {
     # so intra-api callers count too — just not the file that defines it.
     $definingFile = Join-Path (Resolve-Path 'src/api') $e.File
     $uses = Select-String -Path $src -Pattern "\b$($e.Name)\b" |
-            Where-Object { $_.Path -ne $definingFile }
+    Where-Object { $_.Path -ne $definingFile }
     if (-not $uses) { '{0,-30} {1}' -f $e.Name, $e.File }
 }
 

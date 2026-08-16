@@ -70,11 +70,6 @@ export default function DashboardLayout() {
                   {section.icon}
                 </span>
                 <span className="dash-label">{section.label}</span>
-                {section.pending ? (
-                  <span className="dash-soon" title="Waiting on its service">
-                    soon
-                  </span>
-                ) : null}
               </NavLink>
             ))}
           </nav>

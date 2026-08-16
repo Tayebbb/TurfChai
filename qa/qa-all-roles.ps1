@@ -36,7 +36,8 @@ function Call($method, $path, $token, $body) {
         $data = $null
         if ($r.Content) { try { $data = $r.Content | ConvertFrom-Json } catch { $data = $r.Content } }
         return @{ status = [int]$r.StatusCode; ok = $true; data = $data }
-    } catch {
+    }
+    catch {
         $code = 0
         if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
         return @{ status = $code; ok = $false; error = $_.ErrorDetails.Message }
@@ -49,7 +50,8 @@ function Raw($method, $url, $token) {
     try {
         $r = Invoke-WebRequest -Method $method -Uri $url -Headers $headers -UseBasicParsing
         return @{ status = [int]$r.StatusCode; ok = $true }
-    } catch {
+    }
+    catch {
         $code = 0
         if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
         return @{ status = $code; ok = $false }
@@ -75,13 +77,13 @@ if ($rafi) { $roles['playerA'] = $rafi }
 
 # Find a second player, two owners and a host from the demo dataset by probing
 # the deterministic seeded email pattern.
-$firstNames = @('Fahim','Nadia','Tariq','Meem','Rahim','Sadia','Arman','Tania','Imran','Riya',
-                'Karim','Fatema','Jakir','Layla','Rasel','Sumaiya','Shamim','Nusrat','Naim','Mitu',
-                'Riyad','Sabina','Farhan','Ayesha','Sagor','Jannatul','Mizan','Tasnim','Rubel','Noor',
-                'Abdur','Rifat','Masum','Shirin','Pavel','Brishty','Shakil','Parveen','Shohag','Meher',
-                'Habib','Sunita','Zahid','Liza','Tomal','Ruma','Babu','Tamanna','Robin','Moni')
-$lastNames = @('Rahman','Hossain','Islam','Amin','Chowdhury','Ahmed','Khan','Sultana','Begum','Malik',
-               'Sarkar','Molla','Hasan','Uddin','Mia','Bhuiyan','Dey','Roy','Paul','Biswas')
+$firstNames = @('Fahim', 'Nadia', 'Tariq', 'Meem', 'Rahim', 'Sadia', 'Arman', 'Tania', 'Imran', 'Riya',
+    'Karim', 'Fatema', 'Jakir', 'Layla', 'Rasel', 'Sumaiya', 'Shamim', 'Nusrat', 'Naim', 'Mitu',
+    'Riyad', 'Sabina', 'Farhan', 'Ayesha', 'Sagor', 'Jannatul', 'Mizan', 'Tasnim', 'Rubel', 'Noor',
+    'Abdur', 'Rifat', 'Masum', 'Shirin', 'Pavel', 'Brishty', 'Shakil', 'Parveen', 'Shohag', 'Meher',
+    'Habib', 'Sunita', 'Zahid', 'Liza', 'Tomal', 'Ruma', 'Babu', 'Tamanna', 'Robin', 'Moni')
+$lastNames = @('Rahman', 'Hossain', 'Islam', 'Amin', 'Chowdhury', 'Ahmed', 'Khan', 'Sultana', 'Begum', 'Malik',
+    'Sarkar', 'Molla', 'Hasan', 'Uddin', 'Mia', 'Bhuiyan', 'Dey', 'Roy', 'Paul', 'Biswas')
 
 function SeededEmail($index) {
     $f = $firstNames[$index % $firstNames.Count].ToLower()
@@ -95,8 +97,8 @@ for ($i = 0; $i -lt 260; $i++) {
     $auth = Login (SeededEmail $i) $DEMO_PW
     if (-not $auth) { continue }
     $r = $auth.user.role
-    if ($r -eq 'OWNER') { $found.OWNER += ,$auth }
-    elseif ($found.ContainsKey($r) -and $found[$r].Count -lt 1) { $found[$r] += ,$auth }
+    if ($r -eq 'OWNER') { $found.OWNER += , $auth }
+    elseif ($found.ContainsKey($r) -and $found[$r].Count -lt 1) { $found[$r] += , $auth }
 }
 
 if ($found.PLAYER.Count -ge 1) { $roles['playerB'] = $found.PLAYER[0] }
@@ -108,7 +110,7 @@ $withBookings = @()
 $withoutBookings = @()
 foreach ($o in $found.OWNER) {
     $b = Call GET '/owner/bookings' $o.token $null
-    if ($b.status -eq 200 -and $b.data -and @($b.data).Count -gt 0) { $withBookings += ,$o } else { $withoutBookings += ,$o }
+    if ($b.status -eq 200 -and $b.data -and @($b.data).Count -gt 0) { $withBookings += , $o } else { $withoutBookings += , $o }
 }
 $ordered = @($withBookings) + @($withoutBookings)
 if ($ordered.Count -ge 1) { $roles['ownerA'] = $ordered[0] }
@@ -148,7 +150,7 @@ if (-not $superAdmin) { $superAdmin = AdminLogin 'superadmin@turfchai.com' $DEMO
 Check 'super admin signs in through 2FA' ($null -ne $superAdmin) 'super admin 2FA failed'
 if ($superAdmin) { $roles['superAdmin'] = $superAdmin }
 
-foreach ($k in @('playerA','playerB','ownerA','ownerB','host','admin','superAdmin')) {
+foreach ($k in @('playerA', 'playerB', 'ownerA', 'ownerB', 'host', 'admin', 'superAdmin')) {
     if ($roles.ContainsKey($k)) {
         Write-Host ("        {0,-11} {1,-34} {2}" -f $k, $roles[$k].user.email, $roles[$k].user.role) -ForegroundColor DarkGray
     }
@@ -176,33 +178,33 @@ foreach ($p in $publicGets) {
 
 # Private data must never be readable without a token.
 $protected = @(
-    @{ m='GET';  p='/me' },
-    @{ m='GET';  p='/players/me' },
-    @{ m='GET';  p='/players/me/stats' },
-    @{ m='GET';  p='/bookings' },
-    @{ m='GET';  p='/bookings/1' },
-    @{ m='GET';  p='/rewards/my-points' },
-    @{ m='GET';  p='/rewards/wallet' },
-    @{ m='GET';  p='/rewards/activity' },
-    @{ m='GET';  p='/notifications' },
-    @{ m='GET';  p='/owner/venues' },
-    @{ m='GET';  p='/owner/bookings' },
-    @{ m='GET';  p='/owner/payments' },
-    @{ m='GET';  p='/admin/admins' },
-    @{ m='GET';  p='/admin/users' },
-    @{ m='GET';  p='/admin/turf-requests' },
-    @{ m='GET';  p='/admin/analytics/dashboard' },
-    @{ m='GET';  p='/admin/audit-log' },
-    @{ m='GET';  p='/admin/payouts' },
-    @{ m='GET';  p='/host/tournaments/TR-CUP-0091' },
-    @{ m='GET';  p='/tournaments' },
-    @{ m='GET';  p='/tournaments/me' },
-    @{ m='POST'; p='/bookings/hold-slot'; b=@{ slotId = 1 } },
-    @{ m='POST'; p='/payments/checkout'; b=@{ slotId = 1; method = 'BKASH' } },
-    @{ m='POST'; p='/payments/cancel/1' },
-    @{ m='GET';  p='/payments/refund-preview/1' },
-    @{ m='POST'; p='/rewards/redeem'; b=@{ rewardId = 1 } },
-    @{ m='GET';  p='/v3/api-docs' }
+    @{ m = 'GET'; p = '/me' },
+    @{ m = 'GET'; p = '/players/me' },
+    @{ m = 'GET'; p = '/players/me/stats' },
+    @{ m = 'GET'; p = '/bookings' },
+    @{ m = 'GET'; p = '/bookings/1' },
+    @{ m = 'GET'; p = '/rewards/my-points' },
+    @{ m = 'GET'; p = '/rewards/wallet' },
+    @{ m = 'GET'; p = '/rewards/activity' },
+    @{ m = 'GET'; p = '/notifications' },
+    @{ m = 'GET'; p = '/owner/venues' },
+    @{ m = 'GET'; p = '/owner/bookings' },
+    @{ m = 'GET'; p = '/owner/payments' },
+    @{ m = 'GET'; p = '/admin/admins' },
+    @{ m = 'GET'; p = '/admin/users' },
+    @{ m = 'GET'; p = '/admin/turf-requests' },
+    @{ m = 'GET'; p = '/admin/analytics/dashboard' },
+    @{ m = 'GET'; p = '/admin/audit-log' },
+    @{ m = 'GET'; p = '/admin/payouts' },
+    @{ m = 'GET'; p = '/host/tournaments/TR-CUP-0091' },
+    @{ m = 'GET'; p = '/tournaments' },
+    @{ m = 'GET'; p = '/tournaments/me' },
+    @{ m = 'POST'; p = '/bookings/hold-slot'; b = @{ slotId = 1 } },
+    @{ m = 'POST'; p = '/payments/checkout'; b = @{ slotId = 1; method = 'BKASH' } },
+    @{ m = 'POST'; p = '/payments/cancel/1' },
+    @{ m = 'GET'; p = '/payments/refund-preview/1' },
+    @{ m = 'POST'; p = '/rewards/redeem'; b = @{ rewardId = 1 } },
+    @{ m = 'GET'; p = '/v3/api-docs' }
 )
 foreach ($e in $protected) {
     $r = Call $e.m $e.p $null $e.b
@@ -255,7 +257,7 @@ Check 'player can unsave a venue' ($unsaved.status -lt 400) "status $($unsaved.s
 
 Section 'Player: rewards, notifications, open games, tournaments'
 
-foreach ($p in @('/rewards/my-points','/rewards/wallet','/rewards/activity','/notifications','/solo/open-games','/bookings')) {
+foreach ($p in @('/rewards/my-points', '/rewards/wallet', '/rewards/activity', '/notifications', '/solo/open-games', '/bookings')) {
     $r = Call GET $p (T 'playerA') $null
     Check "player GET $p" ($r.status -eq 200) "status $($r.status)"
 }
@@ -304,7 +306,8 @@ if ($slot) {
         if ($payments.status -eq 200) {
             $total = ($payments.data.data | Where-Object { $_.type -eq 'BOOKING' } | Measure-Object -Property amount -Sum).Sum
             Check 'payment ledger equals the booking price' ($total -eq [decimal]$booking.data.netAmount) "ledger $total vs booking $($booking.data.netAmount)"
-        } else {
+        }
+        else {
             Skip 'payment ledger equals the booking price' "GET /payments/booking/{id} returned $($payments.status)"
         }
 
@@ -351,7 +354,8 @@ if ($pastSlot) {
     Check 'a slot in the past cannot be held' ($r.status -ge 400) "status $($r.status)"
     $r = Call POST '/payments/checkout' (T 'playerA') @{ slotId = $pastSlot.id; method = 'BKASH' }
     Check 'a slot in the past cannot be paid for' ($r.status -ge 400) "status $($r.status)"
-} else {
+}
+else {
     Skip 'past-slot booking refused' 'no past slots in the dataset'
 }
 
@@ -362,7 +366,7 @@ Check 'an unknown slot id is refused' ($ghost.status -ge 400) "status $($ghost.s
 
 Section 'Owner: own data'
 
-foreach ($p in @('/owner/venues','/owner/bookings','/owner/payments','/owner/customers','/owner/reviews','/owner/analytics/dashboard')) {
+foreach ($p in @('/owner/venues', '/owner/bookings', '/owner/payments', '/owner/customers', '/owner/reviews', '/owner/analytics/dashboard')) {
     $r = Call GET $p (T 'ownerA') $null
     Check "owner A GET $p" ($r.status -eq 200) "status $($r.status) $($r.error)"
 }
@@ -386,7 +390,8 @@ if ($bIds.Count -gt 0) {
 
     $r = Call PATCH "/owner/venues/$target" (T 'ownerA') @{ name = 'Hijacked By Owner A' }
     Check "owner A cannot rename owner B's venue" ($r.status -ge 400) "status $($r.status)"
-} else {
+}
+else {
     Skip 'owner A -> owner B venue access' 'owner B has no venues'
 }
 
@@ -408,7 +413,8 @@ if ($bBookings.Count -gt 0) {
 
     $after = Call GET "/bookings/$bBookingId" (T 'ownerB') $null
     Check "owner B's booking survived owner A's attempts" ($after.data.status -ne 'CANCELLED') "status $($after.data.status)"
-} else {
+}
+else {
     Skip "owner A -> owner B booking actions" 'owner B has no bookings'
 }
 
@@ -462,27 +468,27 @@ Check 'admin can read the API docs' ($docs.status -eq 200) "status $($docs.statu
 Section 'Cross-role attacks'
 
 $attacks = @(
-    @{ from='playerA'; label='player -> owner';       m='GET';   p='/owner/venues' },
-    @{ from='playerA'; label='player -> owner';       m='GET';   p='/owner/bookings' },
-    @{ from='playerA'; label='player -> owner';       m='GET';   p='/owner/payments' },
-    @{ from='playerA'; label='player -> owner';       m='GET';   p='/owner/customers' },
-    @{ from='playerA'; label='player -> owner';       m='GET';   p='/owner/analytics/dashboard' },
-    @{ from='playerA'; label='player -> admin';       m='GET';   p='/admin/users' },
-    @{ from='playerA'; label='player -> admin';       m='GET';   p='/admin/admins' },
-    @{ from='playerA'; label='player -> admin';       m='GET';   p='/admin/analytics/dashboard' },
-    @{ from='playerA'; label='player -> admin';       m='GET';   p='/admin/analytics/revenue' },
-    @{ from='playerA'; label='player -> admin';       m='GET';   p='/admin/audit-log' },
-    @{ from='playerA'; label='player -> admin';       m='GET';   p='/admin/payouts' },
-    @{ from='playerA'; label='player -> admin';       m='GET';   p='/admin/turf-requests' },
-    @{ from='ownerA';  label='owner -> admin';        m='GET';   p='/admin/users' },
-    @{ from='ownerA';  label='owner -> admin';        m='GET';   p='/admin/admins' },
-    @{ from='ownerA';  label='owner -> admin';        m='GET';   p='/admin/payouts' },
-    @{ from='ownerA';  label='owner -> admin';        m='GET';   p='/admin/analytics/revenue' },
-    @{ from='ownerA';  label='owner -> admin';        m='GET';   p='/admin/audit-log' },
-    @{ from='host';    label='host -> owner';         m='GET';   p='/owner/venues' },
-    @{ from='host';    label='host -> owner';         m='GET';   p='/owner/payments' },
-    @{ from='host';    label='host -> admin';         m='GET';   p='/admin/users' },
-    @{ from='playerB'; label='player -> host area';   m='GET';   p='/host/tournaments/TR-CUP-0091' }
+    @{ from = 'playerA'; label = 'player -> owner'; m = 'GET'; p = '/owner/venues' },
+    @{ from = 'playerA'; label = 'player -> owner'; m = 'GET'; p = '/owner/bookings' },
+    @{ from = 'playerA'; label = 'player -> owner'; m = 'GET'; p = '/owner/payments' },
+    @{ from = 'playerA'; label = 'player -> owner'; m = 'GET'; p = '/owner/customers' },
+    @{ from = 'playerA'; label = 'player -> owner'; m = 'GET'; p = '/owner/analytics/dashboard' },
+    @{ from = 'playerA'; label = 'player -> admin'; m = 'GET'; p = '/admin/users' },
+    @{ from = 'playerA'; label = 'player -> admin'; m = 'GET'; p = '/admin/admins' },
+    @{ from = 'playerA'; label = 'player -> admin'; m = 'GET'; p = '/admin/analytics/dashboard' },
+    @{ from = 'playerA'; label = 'player -> admin'; m = 'GET'; p = '/admin/analytics/revenue' },
+    @{ from = 'playerA'; label = 'player -> admin'; m = 'GET'; p = '/admin/audit-log' },
+    @{ from = 'playerA'; label = 'player -> admin'; m = 'GET'; p = '/admin/payouts' },
+    @{ from = 'playerA'; label = 'player -> admin'; m = 'GET'; p = '/admin/turf-requests' },
+    @{ from = 'ownerA'; label = 'owner -> admin'; m = 'GET'; p = '/admin/users' },
+    @{ from = 'ownerA'; label = 'owner -> admin'; m = 'GET'; p = '/admin/admins' },
+    @{ from = 'ownerA'; label = 'owner -> admin'; m = 'GET'; p = '/admin/payouts' },
+    @{ from = 'ownerA'; label = 'owner -> admin'; m = 'GET'; p = '/admin/analytics/revenue' },
+    @{ from = 'ownerA'; label = 'owner -> admin'; m = 'GET'; p = '/admin/audit-log' },
+    @{ from = 'host'; label = 'host -> owner'; m = 'GET'; p = '/owner/venues' },
+    @{ from = 'host'; label = 'host -> owner'; m = 'GET'; p = '/owner/payments' },
+    @{ from = 'host'; label = 'host -> admin'; m = 'GET'; p = '/admin/users' },
+    @{ from = 'playerB'; label = 'player -> host area'; m = 'GET'; p = '/host/tournaments/TR-CUP-0091' }
 )
 foreach ($a in $attacks) {
     $tok = T $a.from
@@ -499,7 +505,7 @@ if ($pbId) {
 }
 
 # The API reference is a map of every route and schema, so it is staff-only.
-foreach ($who in @('playerA','ownerA','host')) {
+foreach ($who in @('playerA', 'ownerA', 'host')) {
     $r = Raw GET 'http://localhost:8080/v3/api-docs' (T $who)
     Check "$who cannot read the API docs" ($r.status -eq 401 -or $r.status -eq 403) "status $($r.status)"
 }

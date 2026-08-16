@@ -34,7 +34,6 @@ export const OWNER_NAV_LINKS = [
   { to: paths.owner.customers, label: 'Customers', icon: '👥' },
   { to: paths.owner.promotions, label: 'Promotions', icon: '🎁' },
   { to: paths.owner.reviews, label: 'Reviews', icon: '⭐' },
-  { to: paths.owner.staff, label: 'Staff & Shifts', icon: '🧑‍🤝‍🧑' },
 ];
 
 /** Admin console navigation. */
