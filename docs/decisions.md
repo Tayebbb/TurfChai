@@ -195,8 +195,19 @@ Stated plainly. Nothing here is presented as working.
 
 - The `dev`/`test` profiles rebuild H2 on every restart, so ids are not stable
   between runs.
-- The route-crawl QA stage occasionally wedges on a single page and must be
-  re-run.
+- The browser QA probes run against the **production preview** (`4173`, and
+  `4175` for accessibility), not the dev server on `5173`. Started without it
+  they fail with `ERR_CONNECTION_REFUSED` on every route, which reads like a
+  hung crawler rather than a missing server.
+- **Seeded demo venues are owned by the demo *player* account.**
+  `VenueDataSeeder` assigns `PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID` — a
+  `PLAYER`-role user — as the owner of its venues, so `/owner/**` returns 403
+  for them and their owner console cannot be opened. Venues created through
+  owner onboarding, and those seeded by `AdminDemoDataSeeder`, are unaffected.
+  This is dev/demo seed data only; no production path assigns a venue to a
+  non-owner.
+- `frontend/qa/review-flow.mjs` reads `/owner/reviews` without checking the HTTP
+  status, so a 403 is reported as "0 reviews" rather than as a refusal.
 - `OTP_EXPOSE_DEV_CODE=true` returns admin one-time codes in the API response.
   It is a demo convenience and **must be false in production**.
 
@@ -220,7 +231,9 @@ Stated plainly. Nothing here is presented as working.
 3. Document storage for venue verification, so the admin reviews real files.
 4. Refresh-token rotation in the frontend, so sessions survive expiry without a
    re-login.
-5. Make the route crawler resilient to a wedged page.
+5. Give the seeded demo venues a genuine `OWNER`-role owner, so the owner
+   console can be opened against seed data, and make `review-flow.mjs` assert
+   the HTTP status so a refusal is never reported as an empty list.
 
 ### P2 — enhancements
 

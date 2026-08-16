@@ -96,12 +96,30 @@ Feature-flow probes, verified individually against a running system:
 | `frontend/qa/open-games-flow.mjs` | 12 |
 | `frontend/qa/amenities-flow.mjs` | 6 |
 
-> **Browser stages.** The route crawl, journey, consistency, accessibility and
-> Playwright stages passed in earlier full runs during this work, but the final
-> run's route crawl did not complete — that stage occasionally wedges on a
-> single page and hangs (a known flake in the crawler, not a product failure).
-> Their results are therefore **not** included in the verified table above.
-> Re-run `pwsh qa/run-qa.ps1` to reproduce them.
+> **Browser stages.** These run against the **production preview** on `4173`
+> (accessibility on `4175`), not the dev server. Re-run individually against a
+> freshly seeded database, they gave:
+>
+> | Probe | Result |
+> |---|---|
+> | `a11y-audit.mjs` | no accessibility violations; no horizontal overflow at any viewport |
+> | `consistency-audit.mjs` | **60 of 60 checks pass** |
+> | `promo-flow.mjs` | 12 checks pass |
+> | `notification-flow.mjs` | 16 checks pass |
+> | `open-games-flow.mjs` | 12 checks pass |
+> | `amenities-flow.mjs` | 6 checks pass |
+> | `review-flow.mjs` | 10 pass, **2 fail** — see below |
+> | `ui-crawl.mjs`, journeys, Playwright | **did not complete** in this run |
+>
+> The two `review-flow` failures are a **seed-data defect, not a review defect**:
+> `VenueDataSeeder` makes the demo *player* account the owner of its venues, so
+> `/owner/reviews` correctly returns 403 for it. The probe does not check the
+> status and reports the refusal as "0 reviews". Both are recorded in
+> [decisions.md](decisions.md#operational-limitations).
+>
+> An earlier run of `consistency-audit` reported 2 failures; those did not
+> reproduce on a clean database and were cross-run data pollution from executing
+> the probe twice against one long-lived H2 instance.
 
 ---
 

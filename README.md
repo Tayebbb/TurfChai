@@ -153,6 +153,34 @@ the honesty scan and the production build.
 What each layer proves, and the browser-stage caveat:
 **[docs/testing.md](docs/testing.md)**
 
+## API overview
+
+**145 REST endpoints** across 38 controllers, all under `/api/v1` except the AI
+assistant (`/api/ai`) and actuator health. Responses are JSON; authenticated
+calls carry `Authorization: Bearer <jwt>`.
+
+| Domain | Examples |
+|---|---|
+| Authentication | `POST /auth/register`, `/auth/login`, `/auth/refresh-token`, admin `/admin/auth/login` + `/verify` |
+| Discovery | `GET /venues`, `/venues/{slug}`, `/venues/{slug}/slots`, `/venues/{slug}/reviews` |
+| Booking | `POST /bookings/hold`, `GET /bookings`, `/bookings/{code}`, `POST /bookings/{code}/cancel` |
+| Payments | `POST /payments/checkout`, `GET /payments/history` |
+| Promotions | `POST /promotions/validate-code`, owner CRUD under `/owner/promotions` |
+| Rewards | `GET /rewards/products`, `/rewards/tiers`, `POST /rewards/redeem` |
+| Open games | `GET /open-games`, `POST /open-games`, `POST /open-games/{id}/join` |
+| Tournaments | player `/tournaments/**`, host `/host/tournaments/**` |
+| Owner | `/owner/venues/**`, `/owner/bookings/**`, `/owner/reviews/**`, `/owner/payments/**` |
+| Admin | `/admin/venues/**`, `/admin/users/**`, `/admin/payouts/**`, `/admin/turf-requests/**` |
+
+Public without a token: registration, login, OTP, venue catalogue and detail,
+slots, venue reviews, open-game reads, the reward catalogue, promo-code
+validation and the AI chat. Everything else requires authentication, and
+`/admin/**` and `/owner/**` are additionally role-gated.
+
+Swagger UI is served at `/swagger-ui/index.html` to `ADMIN` and above.
+
+Every endpoint, grouped by domain: **[docs/api.md](docs/api.md)**
+
 ## Security
 
 - Stateless JWT with BCrypt password hashing; admin sign-in additionally
@@ -189,7 +217,22 @@ their keys.
 
 The full list, honestly separated into _not implemented_, _partially
 implemented_ and _operational_: **[docs/decisions.md](docs/decisions.md#part-2--known-limitations)**
+## Future roadmap
 
+**Before any real deployment** — integrate a payment gateway behind the existing
+`PaymentService` boundary; set `OTP_EXPOSE_DEV_CODE=false` and configure SMTP so
+admin codes are delivered out of band; configure `CLOUDINARY_URL` so venue
+photos and documents persist; rotate `JWT_SECRET` into a platform secret store.
+
+**Next** — gate the tournament workspace on the `HOST` role (or drop the role);
+password change and reset; real document storage for venue verification;
+refresh-token rotation so sessions survive expiry.
+
+**Later** — owner-scheduled payouts, league and group tournament formats,
+player-to-player invitations on the existing open-game roster, push
+notifications, and retraining the pricing model on real booking data.
+
+Full P0–P3 breakdown: **[docs/decisions.md](docs/decisions.md#part-3--roadmap)**
 ## Capstone summary
 
 **Objective** — build a complete, honest, multi-role booking platform rather
