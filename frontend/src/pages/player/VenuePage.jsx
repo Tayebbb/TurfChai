@@ -329,9 +329,22 @@ export default function VenuePage() {
 
   const slots = useMemo(
     () =>
-      (slotsApi.data ?? []).map((slot) =>
-        toGridSlot(liveStatus[slot.id] ? { ...slot, status: liveStatus[slot.id] } : slot),
-      ),
+      (slotsApi.data ?? []).map((slot) => {
+        const liveOverride = liveStatus[slot.id];
+        if (!liveOverride) return toGridSlot(slot);
+        // The overlay only ever touches `status` — `bookable` was left at
+        // whatever it was in the original fetch. That's stale the moment a
+        // hold lapses: the slot was fetched while HELD (bookable: false),
+        // the SSE hook's own expiry timer flips the overlay to AVAILABLE,
+        // and toGridSlot's "AVAILABLE but not bookable" rule then misread
+        // that stale `false` as the slot having *started*, mislabeling a
+        // perfectly free slot "Started" until the next full refetch.
+        return toGridSlot({
+          ...slot,
+          status: liveOverride,
+          bookable: liveOverride === 'AVAILABLE' ? true : slot.bookable,
+        });
+      }),
     [slotsApi.data, liveStatus],
   );
 
