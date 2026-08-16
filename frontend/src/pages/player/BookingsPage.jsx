@@ -6,14 +6,17 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Photo } from "@/components/ui/Photo";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import {
+  downloadBookingPdf,
   formatBookingDate,
   formatTimeRange,
   groupBookings,
   listBookings,
 } from "@/api/bookings";
 import { useApi } from "@/hooks/useApi";
+import { useToast } from "@/hooks/useToast";
 import { paths } from "@/routes/paths";
 import { formatBdt } from "@/utils/format";
+import { toUserMessage } from "@/utils/errorMessage";
 
 const THUMB_STYLE = { width: 56, height: 56, fontSize: 22, flex: "none" };
 
@@ -68,9 +71,22 @@ const GROUP_KEYS = Object.keys(GROUPS);
 
 function BookingCard({ booking, groupKey }) {
   const group = GROUPS[groupKey];
+  const { showToast } = useToast();
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const title =
     [booking.venueName, booking.pitchName].filter(Boolean).join(" · ") || "Booking";
   const when = `${formatBookingDate(booking)} · ${formatTimeRange(booking.startTime, booking.endTime)}`;
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      await downloadBookingPdf(booking);
+    } catch (downloadError) {
+      showToast(toUserMessage(downloadError, "Could not download the PDF. Please try again."));
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   return (
     <div className="card">
@@ -117,6 +133,14 @@ function BookingCard({ booking, groupKey }) {
               Cancel
             </Button>
           ) : null}
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={downloadingPdf}
+            onClick={handleDownloadPdf}
+          >
+            Download PDF
+          </Button>
           <Button
             size="sm"
             variant="primary"
