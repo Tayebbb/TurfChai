@@ -5,5 +5,7 @@ public enum WalletReason {
     REWARD_CREDIT,
     CHECKOUT_APPLY,
     ADJUSTMENT,
-    CASHOUT
+    CASHOUT,
+    /** Wallet money handed back when a booking it paid for is cancelled. */
+    REFUND
 }

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -40,6 +41,10 @@ class BookingServiceTest {
     private com.turfchai.venue.repository.VenueRepository venueRepository;
     @Mock
     private ApplicationEventPublisher events;
+
+    /** Real policy, not a mock: these tests must exercise the actual time rules. */
+    @Spy
+    private SlotTimePolicy slotTimePolicy = new SlotTimePolicy();
 
     @InjectMocks
     private BookingService bookingService;
@@ -225,6 +230,8 @@ class BookingServiceTest {
                 .status(BookingStatus.CONFIRMED)
                 .build();
         when(bookingRepository.findById(7L)).thenReturn(Optional.of(booking));
+        // The slot is re-read under a row lock before it is released.
+        when(slotRepository.findByIdForUpdate(SLOT_ID)).thenReturn(Optional.of(slot));
 
         bookingService.cancelBooking(USER_ID, 7L);
 

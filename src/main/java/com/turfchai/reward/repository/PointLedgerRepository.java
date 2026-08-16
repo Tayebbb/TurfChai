@@ -24,5 +24,10 @@ public interface PointLedgerRepository extends JpaRepository<PointLedgerEntry, L
     @Query("select coalesce(sum(e.delta), 0) from PointLedgerEntry e where e.userId = :userId")
     int sumDeltaByUserId(@Param("userId") Long userId);
 
+    /** Net points this booking is currently worth — awards minus any reversal. */
+    @Query("select coalesce(sum(e.delta), 0) from PointLedgerEntry e "
+            + "where e.userId = :userId and e.referenceBookingId = :bookingId")
+    int sumDeltaForBooking(@Param("userId") Long userId, @Param("bookingId") Long bookingId);
+
     boolean existsByUserIdAndReason(Long userId, PointReason reason);
 }

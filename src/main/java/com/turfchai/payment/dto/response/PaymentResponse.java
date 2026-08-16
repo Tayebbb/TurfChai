@@ -23,6 +23,12 @@ public class PaymentResponse {
     private PaymentMethod method;
     private PaymentStatus status;
     private String failureReason;
+    /**
+     * True when this row is the wallet-credit leg of a split payment rather than
+     * money owed to the venue. Without it a client cannot tell the two legs apart
+     * and may quote the wrong amount as due.
+     */
+    private Boolean fromWallet;
     private OffsetDateTime paidAt;
     private OffsetDateTime createdAt;
 }

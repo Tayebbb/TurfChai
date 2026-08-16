@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -81,6 +82,16 @@ public class Booking {
     @Column(name = "checked_in_at")
     private OffsetDateTime checkedInAt;
 
+    /**
+     * The venue's cancellation policy as it stood when this booking was confirmed.
+     *
+     * <p>Refunds are quoted and paid from this, not from the venue's current
+     * setting — otherwise an owner could tighten their terms after a player had
+     * already paid and keep money the player was owed.
+     */
+    @Column(name = "cancel_policy_snapshot", length = 30)
+    private String cancelPolicySnapshot;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private OffsetDateTime createdAt = OffsetDateTime.now();
@@ -88,6 +99,16 @@ public class Booking {
     @Column(name = "updated_at", nullable = false)
     @Builder.Default
     private OffsetDateTime updatedAt = OffsetDateTime.now();
+
+    /**
+     * Guards the status transitions. Confirm and cancel both read, decide, then
+     * write; without a version column two concurrent requests could each decide
+     * against the same stale status and the second write would silently win.
+     */
+    @Version
+    @Column(name = "version")
+    @Builder.Default
+    private Long version = 0L;
 
     @PreUpdate
     public void onUpdate() {

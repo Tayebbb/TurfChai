@@ -1,6 +1,6 @@
 package com.turfchai.booking.api;
 
-import com.turfchai.booking.dto.response.BookingResponse;
+import com.turfchai.booking.dto.response.OwnerBookingResponse;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.service.BookingService;
 import com.turfchai.security.UserPrincipal;
@@ -29,12 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class OwnerBookingRestController {
 
     private final BookingService bookingService;
+    private final com.turfchai.payment.service.PaymentService paymentService;
     private final com.turfchai.repository.UserRepository userRepository;
 
     @GetMapping
-    public ResponseEntity<List<BookingResponse>> listOwnerBookings(
+    public ResponseEntity<List<OwnerBookingResponse>> listOwnerBookings(
             @AuthenticationPrincipal UserPrincipal principal) {
-        List<BookingResponse> bookings = bookingService.listOwnerBookings(principal.getId())
+        List<OwnerBookingResponse> bookings = bookingService.listOwnerBookings(principal.getId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -57,7 +58,19 @@ public class OwnerBookingRestController {
         return ResponseEntity.ok().build();
     }
 
-    private BookingResponse toResponse(Booking booking) {
+    /**
+     * Cancels a confirmed booking and records the refund the venue's policy
+     * allows. The refund engine already existed for player-initiated cancels;
+     * the owner console had a Refund button with nothing behind it.
+     */
+    @PostMapping("/{id}/refund")
+    public ResponseEntity<com.turfchai.payment.dto.response.CancelRefundResponse> refundBooking(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.cancelAndRefund(principal.getId(), id));
+    }
+
+    private OwnerBookingResponse toResponse(Booking booking) {
         boolean isManual = booking.getBookingCode() != null && booking.getBookingCode().startsWith("MB-");
         String customerName = "Guest";
         String phone = "";
@@ -88,24 +101,24 @@ public class OwnerBookingRestController {
 
         java.util.List<java.util.Map<String, String>> actions = new java.util.ArrayList<>();
         if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.PENDING) {
-            actions.add(java.util.Map.of("variant", "primary", "label", "Approve", "toast", "Approved"));
-            actions.add(java.util.Map.of("variant", "secondary", "label", "Cancel", "toast", "Cancelled"));
+            // `action` is the operation the row performs. It used to be a
+            // `toast` string, so the UI could only announce success.
+            actions.add(java.util.Map.of("variant", "primary", "label", "Approve", "action", "approve"));
+            actions.add(java.util.Map.of("variant", "secondary", "label", "Cancel", "action", "cancel"));
         } else if (booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CONFIRMED) {
-            actions.add(java.util.Map.of("variant", "secondary", "label", "Refund", "toast", "Refund initiated"));
+            actions.add(java.util.Map.of("variant", "secondary", "label", "Refund", "action", "refund"));
         }
 
         Map<String, String> sourceMap = isManual
                 ? java.util.Map.of("tone", "amber", "text", "Phone / Walk-in")
                 : java.util.Map.of("tone", "green", "text", "Online");
 
-        return BookingResponse.builder()
+        return OwnerBookingResponse.builder()
                 .id(booking.getId())
                 .bookingCode(booking.getBookingCode())
                 .slotId(booking.getSlot() != null ? booking.getSlot().getId() : null)
                 .userId(booking.getUserId())
                 .status(booking.getStatus() != null ? booking.getStatus().name() : null)
-                .createdAt(booking.getCreatedAt())
-                .updatedAt(booking.getUpdatedAt())
                 .customer(customerName)
                 .sub(phone)
                 .subNum(true)

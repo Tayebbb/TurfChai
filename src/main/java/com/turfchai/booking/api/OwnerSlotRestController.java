@@ -2,8 +2,11 @@ package com.turfchai.booking.api;
 
 import com.turfchai.booking.dto.request.SlotGenerationRequest;
 import com.turfchai.booking.dto.request.UpdateSlotRequest;
+import com.turfchai.booking.dto.response.SlotResponse;
 import com.turfchai.booking.entity.Slot;
+import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.service.SlotManagementService;
+import com.turfchai.booking.service.SlotTimePolicy;
 import com.turfchai.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -37,9 +40,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class OwnerSlotRestController {
 
     private final SlotManagementService slotManagementService;
+    private final SlotTimePolicy slotTimePolicy;
 
     @PostMapping("/generate")
-    public ResponseEntity<List<Map<String, Object>>> generateSlots(
+    public ResponseEntity<List<SlotResponse>> generateSlots(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody SlotGenerationRequest request) {
         
@@ -48,7 +52,7 @@ public class OwnerSlotRestController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> updateSlot(
+    public ResponseEntity<SlotResponse> updateSlot(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @Valid @RequestBody UpdateSlotRequest request) {
@@ -58,7 +62,7 @@ public class OwnerSlotRestController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getSlots(
+    public ResponseEntity<List<SlotResponse>> getSlots(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam Long venueId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -68,16 +72,19 @@ public class OwnerSlotRestController {
         return ResponseEntity.ok(slots.stream().map(this::toResponse).collect(Collectors.toList()));
     }
 
-    private Map<String, Object> toResponse(Slot slot) {
-        return Map.of(
-                "id", slot.getId(),
-                "pitchId", slot.getPitch().getId(),
-                "pitchName", slot.getPitch().getName(),
-                "slotDate", slot.getSlotDate().toString(),
-                "startTime", slot.getStartTime().toString(),
-                "endTime", slot.getEndTime().toString(),
-                "price", slot.getPrice(),
-                "status", slot.getStatus().name()
-        );
+    private SlotResponse toResponse(Slot slot) {
+        // Map.of rejects null values, so a slot missing a pitch or a price used
+        // to fail the whole calendar with a NullPointerException.
+        return SlotResponse.builder()
+                .id(slot.getId())
+                .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
+                .pitchName(slot.getPitch() != null ? slot.getPitch().getName() : null)
+                .slotDate(slot.getSlotDate())
+                .startTime(slot.getStartTime())
+                .endTime(slot.getEndTime())
+                .price(slot.getPrice())
+                .status(slot.getStatus() != null ? slot.getStatus().name() : null)
+                .bookable(slot.getStatus() == SlotStatus.AVAILABLE && !slotTimePolicy.hasStarted(slot))
+                .build();
     }
 }

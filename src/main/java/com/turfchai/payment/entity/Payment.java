@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,7 +38,7 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "txn_reference", nullable = false, unique = true, length = 30)
+    @Column(name = "txn_reference", nullable = false, unique = true, length = 64)
     private String txnReference;
 
     @Column(name = "user_id", nullable = false)
@@ -107,4 +108,13 @@ public class Payment {
     @Column(name = "updated_at", nullable = false)
     @Builder.Default
     private OffsetDateTime updatedAt = OffsetDateTime.now();
+
+    /**
+     * Without this, a payment flipped from SUCCESS to REFUNDED kept the timestamp
+     * of the original charge, so the ledger could not say when it was reversed.
+     */
+    @PreUpdate
+    void touch() {
+        this.updatedAt = OffsetDateTime.now();
+    }
 }

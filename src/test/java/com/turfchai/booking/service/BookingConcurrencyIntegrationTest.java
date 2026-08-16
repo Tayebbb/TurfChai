@@ -6,6 +6,8 @@ import com.turfchai.booking.exception.SlotUnavailableException;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.model.User;
+import com.turfchai.payment.entity.PaymentMethod;
+import com.turfchai.payment.entity.PaymentType;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.entity.Pitch;
 import com.turfchai.venue.entity.Venue;
@@ -61,6 +63,15 @@ class BookingConcurrencyIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private com.turfchai.payment.service.PaymentService paymentService;
+
+    @Autowired
+    private com.turfchai.payment.repository.PaymentRepository paymentRepository;
+
+    @Autowired
+    private com.turfchai.reward.service.RewardService rewardService;
+
     @Test
     @DisplayName("only one of 16 concurrent hold-slot calls wins a single AVAILABLE slot")
     void holdSlot_allowsExactlyOneConcurrentWinner() throws Exception {
@@ -99,6 +110,63 @@ class BookingConcurrencyIntegrationTest {
                 .filter(b -> b.getSlot() != null && slot.getId().equals(b.getSlot().getId()))
                 .count();
         assertEquals(1, bookingCountForSlot, "exactly one booking row should exist for this slot");
+    }
+
+    @Test
+    @DisplayName("16 concurrent pay calls on one held slot charge exactly once")
+    void pay_chargesExactlyOnce_underConcurrency() throws Exception {
+        Slot slot = freshAvailableSlot();
+        User holder = users(1).get(0);
+        bookingService.holdSlot(holder.getId(), slot.getId());
+
+        Result result = runConcurrently(THREAD_COUNT, (user) ->
+                paymentService.pay(holder.getId(), slot.getId(), PaymentMethod.BKASH, null));
+
+        assertEquals(1, result.successes.get(), "a slot may only be charged for once");
+
+        List<com.turfchai.booking.entity.Booking> forSlot = bookingRepository.findAll().stream()
+                .filter(b -> b.getSlot() != null && slot.getId().equals(b.getSlot().getId()))
+                .filter(b -> b.getStatus() == com.turfchai.booking.entity.BookingStatus.CONFIRMED)
+                .toList();
+        assertEquals(1, forSlot.size(), "exactly one confirmed booking should exist for this slot");
+
+        BigDecimal charged = paymentRepository.findByBookingIdOrderByCreatedAtDesc(forSlot.get(0).getId()).stream()
+                .filter(p -> p.getType() == PaymentType.BOOKING)
+                .map(com.turfchai.payment.entity.Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertEquals(0, charged.compareTo(slot.getPrice()),
+                "the player must be charged the slot price exactly once, was " + charged);
+    }
+
+    @Test
+    @DisplayName("two concurrent checkouts cannot spend the same wallet balance twice")
+    void wallet_cannotBeOverdrawn_underConcurrency() throws Exception {
+        User player = users(1).get(0);
+        rewardService.refundToWallet(player.getId(), new BigDecimal("500.00"), null);
+
+        Slot first = freshAvailableSlot();
+        Slot second = freshAvailableSlot();
+        bookingService.holdSlot(player.getId(), first.getId());
+        bookingService.holdSlot(player.getId(), second.getId());
+
+        CountDownLatch start = new CountDownLatch(1);
+        List<Thread> workers = List.of(first, second).stream().map(slot -> new Thread(() -> {
+            try {
+                start.await();
+                paymentService.pay(player.getId(), slot.getId(), PaymentMethod.BKASH, new BigDecimal("500.00"));
+            } catch (Exception ignored) {
+                // One of the two is expected to lose the race for the credit.
+            }
+        })).toList();
+        workers.forEach(Thread::start);
+        start.countDown();
+        for (Thread worker : workers) {
+            worker.join(30_000);
+        }
+
+        assertTrue(rewardService.getWalletBalance(player.getId()).signum() >= 0,
+                "a wallet may never go overdrawn, was "
+                        + rewardService.getWalletBalance(player.getId()));
     }
 
     private Result runConcurrently(int threads, ConcurrentCall call) throws Exception {
@@ -164,7 +232,8 @@ class BookingConcurrencyIntegrationTest {
         return slotRepository.save(Slot.builder()
                 .pitch(pitch)
                 .venueId(venue.getId())
-                .slotDate(LocalDate.of(2026, 8, 8))
+                // Must stay in the future: the engine refuses started slots.
+                .slotDate(LocalDate.now().plusDays(7))
                 .startTime(LocalTime.of(14, 0))
                 .endTime(LocalTime.of(15, 0))
                 .price(BigDecimal.valueOf(2550))

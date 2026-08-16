@@ -27,14 +27,7 @@ public class OwnerPaymentRestController {
     public ResponseEntity<Map<String, Object>> getPaymentSummary(
             @AuthenticationPrincipal UserPrincipal principal,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "daily") String timeframe) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = com.turfchai.security.AuthenticatedUser.requireId(principal);
         return ResponseEntity.ok(ownerPaymentService.getPaymentSummary(ownerId, timeframe));
-    }
-
-    @PostMapping("/close-shift")
-    public ResponseEntity<Void> closeShift(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        // Mock shift closing
-        return ResponseEntity.ok().build();
     }
 }

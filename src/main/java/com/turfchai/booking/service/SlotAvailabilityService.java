@@ -43,16 +43,23 @@ public class SlotAvailabilityService {
     private final SlotRepository slotRepository;
     private final PitchRepository pitchRepository;
     private final SportPricingRuleRepository pricingRuleRepository;
+    private final SlotTimePolicy slotTimePolicy;
 
     /**
      * A venue's bookable slots for one day, creating them on first request for
      * that date. Existing rows always win — a refetch or a later visitor sees
      * exactly what is already persisted, so availability stays consistent.
+     *
+     * <p>Generation is bounded to {@link SlotTimePolicy#mayGenerateFor}: a past
+     * date returns only what history already holds (never new rows), and dates
+     * beyond the horizon are not materialised at all. Both limits exist because
+     * this endpoint is public and unauthenticated, so anything it creates on
+     * demand is creatable by anyone.
      */
     @Transactional
     public List<Slot> ensureSlots(Long venueId, LocalDate date) {
         List<Slot> existing = slotRepository.findByVenueIdAndSlotDateOrderByStartTimeAsc(venueId, date);
-        if (!existing.isEmpty()) {
+        if (!existing.isEmpty() || !slotTimePolicy.mayGenerateFor(date)) {
             return existing;
         }
 

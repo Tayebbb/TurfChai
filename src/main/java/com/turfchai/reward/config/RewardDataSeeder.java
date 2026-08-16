@@ -109,7 +109,7 @@ public class RewardDataSeeder {
      */
     @Transactional
     void seedDemoPlayerHistory(PointLedgerRepository ledger, UserRepository users, RewardService rewardService) {
-        users.findByPublicId(UserProfileRestController.DEMO_USER_ID.toString()).ifPresent(demoUser -> {
+        users.findByPublicId(com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()).ifPresent(demoUser -> {
             Long userId = demoUser.getId();
             if (!ledger.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 1)).isEmpty()) {
                 return;

@@ -61,6 +61,8 @@ class BookingRestControllerTest {
 
     private User user;
     private String token;
+    /** POST /api/v1/bookings books without payment, so it is staff-only. */
+    private String staffToken;
 
     @BeforeEach
     void setUp() {
@@ -71,6 +73,15 @@ class BookingRestControllerTest {
                 .passwordHash("x")
                 .build());
         token = jwtService.generateToken(user);
+
+        User staff = userRepository.save(User.builder()
+                .fullName("Booking Staff")
+                .email("booking-staff-" + System.nanoTime() + "@turfchai.test")
+                .phone("+88017" + ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999))
+                .passwordHash("x")
+                .role(com.turfchai.model.enums.RoleType.OWNER)
+                .build());
+        staffToken = jwtService.generateToken(staff);
     }
 
     @Test
@@ -151,13 +162,29 @@ class BookingRestControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Confirming without payment used to be open to any signed-in player, which
+     * booked the slot for free. Only venue staff may use it.
+     */
     @Test
-    void createBooking_confirmsHeldSlot() throws Exception {
+    void createBooking_isRefusedForPlayers() throws Exception {
         Slot slot = freshSlot();
         hold(slot);
 
         mockMvc.perform(post("/api/v1/bookings")
                         .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"slotId\":" + slot.getId() + "}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createBooking_confirmsHeldSlot() throws Exception {
+        Slot slot = freshSlot();
+        holdAs(slot, staffToken);
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .header("Authorization", "Bearer " + staffToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"slotId\":" + slot.getId() + "}"))
                 .andExpect(status().isOk())
@@ -170,7 +197,7 @@ class BookingRestControllerTest {
     void createBooking_conflictsWithoutHold() throws Exception {
         Slot slot = freshSlot();
         mockMvc.perform(post("/api/v1/bookings")
-                        .header("Authorization", "Bearer " + token)
+                        .header("Authorization", "Bearer " + staffToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"slotId\":" + slot.getId() + "}"))
                 .andExpect(status().isConflict());
@@ -188,15 +215,17 @@ class BookingRestControllerTest {
         Long bookingId = holdAndCreate(slot);
 
         mockMvc.perform(post("/api/v1/bookings/" + bookingId + "/cancel")
-                        .header("Authorization", "Bearer " + token))
+                        .header("Authorization", "Bearer " + staffToken))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void cancelBooking_conflictsWhenNotFound() throws Exception {
+    void cancelBooking_notFoundWhenMissing() throws Exception {
+        // Used to answer 409 Conflict, which means "the slot is already taken".
+        // A booking that is not there is a 404.
         mockMvc.perform(post("/api/v1/bookings/999999/cancel")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isConflict());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -211,17 +240,31 @@ class BookingRestControllerTest {
         Long bookingId = holdAndCreate(slot);
 
         mockMvc.perform(get("/api/v1/bookings/" + bookingId)
-                        .header("Authorization", "Bearer " + token))
+                        .header("Authorization", "Bearer " + staffToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bookingCode").isNotEmpty())
                 .andExpect(jsonPath("$.slotId").value(slot.getId()));
     }
 
     @Test
-    void getBooking_conflictsWhenNotFound() throws Exception {
+    void getBooking_notFoundWhenMissing() throws Exception {
         mockMvc.perform(get("/api/v1/bookings/999999")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isConflict());
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * A booking belonging to someone else must answer exactly as a missing one,
+     * or the id space becomes a directory of other people's bookings.
+     */
+    @Test
+    void getBooking_foreignBookingLooksExactlyLikeAMissingOne() throws Exception {
+        Slot slot = freshSlot();
+        Long bookingId = holdAndCreate(slot);
+
+        mockMvc.perform(get("/api/v1/bookings/" + bookingId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -236,7 +279,7 @@ class BookingRestControllerTest {
         holdAndCreate(slot);
 
         mockMvc.perform(get("/api/v1/bookings")
-                        .header("Authorization", "Bearer " + token))
+                        .header("Authorization", "Bearer " + staffToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].bookingCode").exists());
     }
@@ -265,7 +308,10 @@ class BookingRestControllerTest {
         return slotRepository.save(Slot.builder()
                 .pitch(pitch)
                 .venueId(venue.getId())
-                .slotDate(LocalDate.of(2026, 8, 8))
+                // Relative to today, not a fixed date: the booking engine now
+                // refuses slots whose start time has passed, so a hardcoded
+                // date silently becomes unbookable once it goes by.
+                .slotDate(LocalDate.now().plusDays(7))
                 .startTime(LocalTime.of(10, 0))
                 .endTime(LocalTime.of(11, 0))
                 .price(BigDecimal.valueOf(2550))
@@ -274,17 +320,21 @@ class BookingRestControllerTest {
     }
 
     private void hold(Slot slot) throws Exception {
+        holdAs(slot, token);
+    }
+
+    private void holdAs(Slot slot, String bearer) throws Exception {
         mockMvc.perform(post("/api/v1/bookings/hold-slot")
-                        .header("Authorization", "Bearer " + token)
+                        .header("Authorization", "Bearer " + bearer)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"slotId\":" + slot.getId() + "}"))
                 .andExpect(status().isOk());
     }
 
     private Long holdAndCreate(Slot slot) throws Exception {
-        hold(slot);
+        holdAs(slot, staffToken);
         MvcResult created = mockMvc.perform(post("/api/v1/bookings")
-                        .header("Authorization", "Bearer " + token)
+                        .header("Authorization", "Bearer " + staffToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"slotId\":" + slot.getId() + "}"))
                 .andExpect(status().isOk())

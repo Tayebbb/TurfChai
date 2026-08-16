@@ -5,6 +5,10 @@ import com.turfchai.booking.entity.BookingStatus;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.model.User;
+import com.turfchai.payment.entity.Payment;
+import com.turfchai.payment.entity.PaymentMethod;
+import com.turfchai.payment.entity.PaymentStatus;
+import com.turfchai.payment.entity.PaymentType;
 import com.turfchai.payment.repository.PaymentRepository;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.entity.Pitch;
@@ -133,11 +137,11 @@ class OwnerPaymentServiceTest {
     }
 
     @Test
-    @DisplayName("Reconciliation summary values are calculated accurately from bookings")
+    @DisplayName("Reconciliation counts a booking as online only when the ledger shows an online charge")
     void testReconciliationValuesCalculated() {
         Booking booking = Booking.builder()
                 .id(1L)
-                .bookingCode("BKG-1001")
+                .bookingCode("TC-1001")
                 .venueId(1L)
                 .pitchId(10L)
                 .bookingDate(LocalDate.now())
@@ -149,6 +153,15 @@ class OwnerPaymentServiceTest {
         when(pitchRepository.findByVenueIdInAndActiveTrue(List.of(1L))).thenReturn(List.of(footballPitch));
         when(bookingRepository.findByVenueIdIn(List.of(1L))).thenReturn(List.of(booking));
         when(slotRepository.findByVenueIdIn(List.of(1L))).thenReturn(List.of());
+        when(paymentRepository.findByBookingIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(
+                Payment.builder()
+                        .id(1L)
+                        .bookingId(1L)
+                        .type(PaymentType.BOOKING)
+                        .status(PaymentStatus.SUCCESS)
+                        .method(PaymentMethod.BKASH)
+                        .amount(new BigDecimal("2500"))
+                        .build()));
 
         Map<String, Object> summary = ownerPaymentService.getPaymentSummary(101L, "daily");
 
@@ -156,6 +169,34 @@ class OwnerPaymentServiceTest {
         Map<String, Object> recon = (Map<String, Object>) summary.get("reconciliation");
         assertNotNull(recon);
         assertTrue(recon.get("onlineMatched").toString().contains("2500"));
+    }
+
+    @Test
+    @DisplayName("A booking settled in cash is not reported as online revenue")
+    void testCashBookingIsNotCountedAsOnline() {
+        Booking booking = Booking.builder()
+                .id(2L)
+                .bookingCode("MB-2002")
+                .venueId(1L)
+                .pitchId(10L)
+                .bookingDate(LocalDate.now())
+                .grossAmount(new BigDecimal("1800"))
+                .status(BookingStatus.CONFIRMED)
+                .build();
+
+        when(venueRepository.findByOwnerId(101L)).thenReturn(List.of(venueA));
+        when(pitchRepository.findByVenueIdInAndActiveTrue(List.of(1L))).thenReturn(List.of(footballPitch));
+        when(bookingRepository.findByVenueIdIn(List.of(1L))).thenReturn(List.of(booking));
+        when(slotRepository.findByVenueIdIn(List.of(1L))).thenReturn(List.of());
+        // No payment rows at all: the venue took the money at the gate.
+        when(paymentRepository.findByBookingIdOrderByCreatedAtDesc(2L)).thenReturn(List.of());
+
+        Map<String, Object> summary = ownerPaymentService.getPaymentSummary(101L, "daily");
+
+        Map<String, Object> recon = (Map<String, Object>) summary.get("reconciliation");
+        assertTrue(recon.get("onlineMatched").toString().contains("৳0"),
+                "cash bookings must not be counted as online revenue");
+        assertTrue(recon.get("cashCollected").toString().contains("1800"));
     }
 
     @Test

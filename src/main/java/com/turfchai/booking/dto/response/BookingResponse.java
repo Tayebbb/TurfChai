@@ -44,6 +44,18 @@ public class BookingResponse {
     @Schema(description = "Venue area", example = "Dhanmondi")
     private String venueArea;
 
+    @Schema(description = "Venue street address, for directions", example = "Road 27, Dhanmondi")
+    private String venueAddress;
+
+    @Schema(description = "Venue latitude, for directions", example = "23.7461")
+    private BigDecimal venueLat;
+
+    @Schema(description = "Venue longitude, for directions", example = "90.3742")
+    private BigDecimal venueLng;
+
+    @Schema(description = "Venue phone, for the contact action", example = "+8801700000000")
+    private String venueContactPhone;
+
     @Schema(description = "Pitch booked", example = "7")
     private Long pitchId;
 
@@ -73,16 +85,4 @@ public class BookingResponse {
 
     @Schema(description = "When the booking was last updated", example = "2026-08-06T18:05:00+06:00")
     private OffsetDateTime updatedAt;
-    
-    // Enriched fields for frontend BookingsPage
-    private String customer;
-    private String sub;
-    private Boolean subNum;
-    private String time;
-    private String pitch;
-    private java.util.Map<String, String> source;
-    private String amountFormatted;
-    private java.util.Map<String, String> payment;
-    private java.util.List<java.util.Map<String, String>> actions;
-    private Boolean dim;
 }

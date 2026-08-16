@@ -39,14 +39,11 @@ import java.util.Optional;
  * carries its own point-in-time {@code balance_after} snapshot).
  * </p>
  * <p>
- * <b>Concurrency note:</b> like the rest of the pre-launch codebase, this
- * service does not take a row lock while computing a balance for a debit —
- * {@link com.turfchai.booking.service.BookingService} uses pessimistic
- * locking for slot holds because double-booking is the critical race here;
- * two simultaneous redemptions by the same user is a far narrower window.
- * If that hardening is needed later, wrap {@link #redeem} in a lock on the
- * user's ledger (e.g. {@code SELECT ... FOR UPDATE} via a per-user marker
- * row) before recomputing the balance.
+ * <b>Concurrency note:</b> debits that spend real value take a pessimistic lock
+ * on the user row first ({@link com.turfchai.repository.UserRepository#findByIdForUpdate}),
+ * because a balance derived by summing a ledger can otherwise be read by two
+ * concurrent requests and spent twice. Slot holds are protected separately by
+ * {@link com.turfchai.booking.service.BookingService}'s row lock on the slot.
  * </p>
  */
 @Service
@@ -63,6 +60,7 @@ public class RewardService {
     private final RewardProductRepository rewardProductRepository;
     private final RewardRedemptionRepository rewardRedemptionRepository;
     private final WalletTransactionRepository walletTransactionRepository;
+    private final com.turfchai.repository.UserRepository userRepository;
 
     // ── Earning ──────────────────────────────────────────────────────────
 
@@ -257,6 +255,14 @@ public class RewardService {
                 .toList();
     }
 
+    /** The whole tier ladder in display order, for the rewards page. */
+    @Transactional(readOnly = true)
+    public List<TierResponse> listTiers() {
+        return loyaltyTierRepository.findAllByOrderBySortOrderAsc().stream()
+                .map(this::toTierResponse)
+                .toList();
+    }
+
     private TierResponse toTierResponse(LoyaltyTier tier) {
         return TierResponse.builder()
                 .name(tier.getName())
@@ -322,6 +328,84 @@ public class RewardService {
     }
 
     /**
+     * The wallet balance together with the entries that produced it.
+     *
+     * <p>The ledger was already being written on every reward credit and every
+     * checkout that spent wallet money; until now there was no way to read it
+     * back, so the balance appeared without any explanation of where it came
+     * from.
+     */
+    @Transactional(readOnly = true)
+    public com.turfchai.reward.dto.WalletHistoryResponse getWalletHistory(Long userId, int limit) {
+        int pageSize = Math.max(1, Math.min(limit, 100));
+        List<com.turfchai.reward.dto.WalletHistoryResponse.Entry> entries =
+                walletTransactionRepository
+                        .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, pageSize))
+                        .stream()
+                        .map(com.turfchai.reward.dto.WalletHistoryResponse.Entry::from)
+                        .toList();
+        return new com.turfchai.reward.dto.WalletHistoryResponse(
+                walletTransactionRepository.sumDeltaByUserId(userId), entries);
+    }
+
+    /**
+     * How much wallet credit was spent on one booking.
+     *
+     * <p>A refund has to be split by tender: the gateway can only be refunded
+     * what the gateway actually took, and the rest has to go back to the wallet.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal walletSpentOnBooking(Long bookingId) {
+        if (bookingId == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal spent = walletTransactionRepository.sumSpentOnBooking(bookingId);
+        return spent == null ? BigDecimal.ZERO : spent.abs();
+    }
+
+    /** Returns wallet credit that was spent on a booking which is now cancelled. */
+    @Transactional
+    public BigDecimal refundToWallet(Long userId, BigDecimal amount, Long bookingId) {
+        if (amount == null || amount.signum() <= 0) {
+            return getWalletBalance(userId);
+        }
+        BigDecimal newBalance = getWalletBalance(userId).add(amount);
+        walletTransactionRepository.save(WalletTransaction.builder()
+                .userId(userId)
+                .delta(amount)
+                .reason(WalletReason.REFUND)
+                .bookingId(bookingId)
+                .balanceAfter(newBalance)
+                .build());
+        return newBalance;
+    }
+
+    /**
+     * Removes the points a booking earned, once it is cancelled.
+     *
+     * <p>Without this, booking and cancelling at a full refund left the points
+     * behind — a free points farm. Idempotent: a booking whose points were
+     * already reversed does nothing.
+     */
+    @Transactional
+    public int reverseBookingPoints(Long userId, Long bookingId) {
+        int awarded = pointLedgerRepository.sumDeltaForBooking(userId, bookingId);
+        if (awarded <= 0) {
+            return 0;
+        }
+        int newBalance = currentBalance(userId) - awarded;
+        pointLedgerRepository.save(PointLedgerEntry.builder()
+                .userId(userId)
+                .referenceBookingId(bookingId)
+                .delta(-awarded)
+                .reason(PointReason.ADJUSTMENT)
+                .balanceAfter(newBalance)
+                .note("Booking cancelled")
+                .build());
+        return awarded;
+    }
+
+    /**
      * Applies (spends) wallet balance toward a booking's payment at
      * checkout. The payment/checkout module is the only caller of this —
      * see {@link com.turfchai.reward.entity.WalletTransaction}'s Javadoc,
@@ -332,11 +416,19 @@ public class RewardService {
         if (amount == null || amount.signum() <= 0) {
             throw new IllegalArgumentException("Wallet amount to apply must be positive");
         }
+        // Serialise on the owning user: the balance is a sum over the ledger, so
+        // without this two checkouts could read the same balance and each spend
+        // it in full, leaving the wallet overdrawn.
+        userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         BigDecimal balance = getWalletBalance(userId);
         if (amount.compareTo(balance) > 0) {
             throw new IllegalStateException("Insufficient wallet balance");
         }
         BigDecimal newBalance = balance.subtract(amount);
+        if (newBalance.signum() < 0) {
+            throw new IllegalStateException("Insufficient wallet balance");
+        }
         walletTransactionRepository.save(WalletTransaction.builder()
                 .userId(userId)
                 .delta(amount.negate())

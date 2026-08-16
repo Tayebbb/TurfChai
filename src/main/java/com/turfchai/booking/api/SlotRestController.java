@@ -5,6 +5,9 @@ import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.service.SlotAvailabilityService;
 import com.turfchai.booking.service.SlotEventBroadcaster;
+import com.turfchai.booking.service.SlotTimePolicy;
+import com.turfchai.exception.VenueNotFoundException;
+import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -39,17 +42,26 @@ public class SlotRestController {
 
     private final SlotAvailabilityService slotAvailabilityService;
     private final SlotEventBroadcaster slotEventBroadcaster;
+    private final SlotTimePolicy slotTimePolicy;
+    private final VenueRepository venueRepository;
 
     /**
      * GET /api/v1/venues/{venueId}/slots?date=YYYY-MM-DD — a venue's slots for
      * one day, earliest first. Slots are generated on demand for a date that
      * has none yet (there is no generation job), so a player can always pick
      * a time in the 7-day availability strip.
+     *
+     * <p>An unknown venue is a 404, not an empty list: "this venue has no
+     * slots today" and "this venue does not exist" are different answers and
+     * the client cannot act on them the same way.
      */
     @GetMapping("/{venueId}/slots")
     public ResponseEntity<List<SlotResponse>> listSlots(
             @PathVariable Long venueId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        if (!venueRepository.existsById(venueId)) {
+            throw new VenueNotFoundException("Venue not found: " + venueId);
+        }
         List<SlotResponse> slots = slotAvailabilityService.ensureSlots(venueId, date)
                 .stream()
                 .map(this::toResponse)
@@ -100,6 +112,7 @@ public class SlotRestController {
     }
 
     private SlotResponse toResponse(Slot slot) {
+        String status = displayStatus(slot);
         return SlotResponse.builder()
                 .id(slot.getId())
                 .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
@@ -108,7 +121,8 @@ public class SlotRestController {
                 .startTime(slot.getStartTime())
                 .endTime(slot.getEndTime())
                 .price(slot.getPrice())
-                .status(displayStatus(slot))
+                .status(status)
+                .bookable(SlotStatus.AVAILABLE.name().equals(status) && !slotTimePolicy.hasStarted(slot))
                 .build();
     }
 

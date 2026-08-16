@@ -23,4 +23,12 @@ public class SlotResponse {
     private LocalTime endTime;
     private BigDecimal price;
     private String status;
+
+    /**
+     * Whether this slot can actually be bought right now. A slot that is
+     * AVAILABLE but whose start time has passed is not bookable, and the
+     * booking engine will refuse it — clients must gate the CTA on this
+     * rather than on {@code status} alone.
+     */
+    private boolean bookable;
 }

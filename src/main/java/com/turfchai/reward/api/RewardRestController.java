@@ -6,6 +6,7 @@ import com.turfchai.reward.dto.response.PointActivityResponse;
 import com.turfchai.reward.dto.response.PointsSummaryResponse;
 import com.turfchai.reward.dto.response.RedemptionResponse;
 import com.turfchai.reward.dto.response.RewardProductResponse;
+import com.turfchai.reward.dto.response.TierResponse;
 import com.turfchai.reward.service.RewardService;
 import com.turfchai.security.UserPrincipal;
 import jakarta.validation.Valid;
@@ -41,6 +42,16 @@ public class RewardRestController {
         return ResponseEntity.ok(ApiResponse.ok(products));
     }
 
+    /**
+     * GET /api/v1/rewards/tiers — the whole ladder, in order. Public, because the
+     * rewards page shows it to visitors too; without it the page had to hardcode
+     * every threshold and perk, which then drifted from the seeded rows.
+     */
+    @GetMapping("/tiers")
+    public ResponseEntity<ApiResponse<List<TierResponse>>> listTiers() {
+        return ResponseEntity.ok(ApiResponse.ok(rewardService.listTiers()));
+    }
+
     /** POST /api/v1/rewards/redeem — spends points on a catalog item. */
     @PostMapping("/redeem")
     public ResponseEntity<ApiResponse<RedemptionResponse>> redeem(
@@ -63,6 +74,15 @@ public class RewardRestController {
             @RequestParam(defaultValue = "30") int limit) {
         List<PointActivityResponse> activity = rewardService.getRecentActivity(currentUserId(authentication), limit);
         return ResponseEntity.ok(ApiResponse.ok(activity));
+    }
+
+    /** GET /api/v1/rewards/wallet — wallet balance plus the ledger behind it. */
+    @GetMapping("/wallet")
+    public ResponseEntity<ApiResponse<com.turfchai.reward.dto.WalletHistoryResponse>> wallet(
+            Authentication authentication,
+            @RequestParam(defaultValue = "30") int limit) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                rewardService.getWalletHistory(currentUserId(authentication), limit)));
     }
 
     private Long currentUserId(Authentication authentication) {

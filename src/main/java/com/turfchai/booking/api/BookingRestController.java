@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -78,14 +79,23 @@ public class BookingRestController {
         return ResponseEntity.ok(body);
     }
 
-    /** Confirms the caller's hold and creates a booking. */
-    @Operation(summary = "Confirm hold and create booking", description = "Converts the caller's active hold on the slot into a confirmed booking with a generated booking code.")
+    /**
+     * Confirms a hold and creates a booking <em>without taking payment</em>.
+     *
+     * <p>Restricted to venue staff. A booking created here is CONFIRMED with no
+     * payment row, and owner revenue is derived from booking status — so leaving
+     * it open to players was a way to book a slot for free. Players book through
+     * {@code POST /api/v1/payments/checkout}, which records a payment first.
+     */
+    @Operation(summary = "Confirm hold and create booking (staff only)", description = "Converts an active hold on the slot into a confirmed booking without taking payment. Restricted to OWNER/ADMIN. Players must use /api/v1/payments/checkout.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Booking created and returned"),
             @ApiResponse(responseCode = "400", description = "Validation failed (missing slotId)"),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
-            @ApiResponse(responseCode = "409", description = "Slot not found, or hold is invalid, not owned by the caller, or expired")
+            @ApiResponse(responseCode = "403", description = "Caller is not venue staff"),
+            @ApiResponse(responseCode = "409", description = "Slot not found, already started, or the hold is invalid, not owned by the caller, or expired")
     })
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','SUPER_ADMIN')")
     @PostMapping
     public ResponseEntity<BookingResponse> createBooking(
             Authentication authentication,

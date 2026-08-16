@@ -7,6 +7,10 @@ import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.model.User;
+import com.turfchai.payment.entity.Payment;
+import com.turfchai.payment.entity.PaymentMethod;
+import com.turfchai.payment.entity.PaymentStatus;
+import com.turfchai.payment.entity.PaymentType;
 import com.turfchai.payment.repository.PaymentRepository;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.entity.Pitch;
@@ -30,12 +34,51 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class OwnerPaymentService {
 
+    /** Platform commission on online takings. */
+    static final BigDecimal PLATFORM_FEE_RATE = new BigDecimal("0.06");
+
     private final VenueRepository venueRepository;
     private final PitchRepository pitchRepository;
     private final BookingRepository bookingRepository;
     private final SlotRepository slotRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+
+    /** Payments for the given bookings, keyed by booking id. */
+    private Map<Long, List<Payment>> paymentsFor(List<Booking> bookings) {
+        Map<Long, List<Payment>> byBooking = new HashMap<>();
+        for (Booking booking : bookings) {
+            if (booking.getId() != null) {
+                byBooking.put(booking.getId(),
+                        paymentRepository.findByBookingIdOrderByCreatedAtDesc(booking.getId()));
+            }
+        }
+        return byBooking;
+    }
+
+    /** A booking counts as paid online when a non-cash charge succeeded against it. */
+    private static boolean isPaidOnline(List<Payment> payments) {
+        if (payments == null) {
+            return false;
+        }
+        return payments.stream().anyMatch(p ->
+                p.getType() == PaymentType.BOOKING
+                        && p.getStatus() != PaymentStatus.FAILED
+                        && p.getMethod() != PaymentMethod.CASH);
+    }
+
+    private static BigDecimal refundedTotal(Map<Long, List<Payment>> byBooking) {
+        return byBooking.values().stream()
+                .flatMap(List::stream)
+                .filter(p -> p.getType() == PaymentType.REFUND && p.getStatus() == PaymentStatus.SUCCESS)
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** Whole taka for display, rounded rather than truncated. */
+    private static String money(BigDecimal amount) {
+        return String.valueOf(amount.setScale(0, RoundingMode.HALF_UP).longValue());
+    }
 
     public Map<String, Object> getPaymentSummary(Long ownerUserId) {
         return getPaymentSummary(ownerUserId, "daily");
@@ -100,29 +143,16 @@ public class OwnerPaymentService {
             }
         }
 
+        // A BOOKED slot with no booking row is a data problem to investigate, not
+        // revenue to invent. This used to fabricate a CONFIRMED booking for each
+        // one — from a read-only GET — which manufactured income, named the owner
+        // as the customer, and consumed the slot's unique-booking index entry so a
+        // real player could never book it.
         List<Slot> allOwnerSlots = slotRepository.findByVenueIdIn(venueIds);
-        for (Slot s : allOwnerSlots) {
-            if (s.getStatus() == SlotStatus.BOOKED && !existingBookedSlotIds.contains(s.getId())) {
-                BigDecimal amount = (s.getPrice() != null) ? s.getPrice() : BigDecimal.valueOf(2000);
-                Booking synthetic = Booking.builder()
-                        .bookingCode("MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                        .slot(s)
-                        .userId(ownerUserId)
-                        .venueId(s.getVenueId() != null ? s.getVenueId() : venueIds.get(0))
-                        .pitchId(s.getPitch() != null ? s.getPitch().getId() : 0L)
-                        .bookingDate(s.getSlotDate() != null ? s.getSlotDate() : today)
-                        .startTime(s.getStartTime() != null ? s.getStartTime() : LocalTime.of(16, 0))
-                        .endTime(s.getEndTime() != null ? s.getEndTime() : LocalTime.of(17, 30))
-                        .grossAmount(amount)
-                        .netAmount(amount)
-                        .status(BookingStatus.CONFIRMED)
-                        .build();
-                bookingRepository.save(synthetic);
-                allOwnerBookings.add(synthetic);
-            }
-        }
+        long unreconciledSlots = allOwnerSlots.stream()
+                .filter(s -> s.getStatus() == SlotStatus.BOOKED && !existingBookedSlotIds.contains(s.getId()))
+                .count();
 
-        BigDecimal grossToday = BigDecimal.ZERO;
         BigDecimal grossTotal = BigDecimal.ZERO;
         BigDecimal onlineGross = BigDecimal.ZERO;
         BigDecimal cashGross = BigDecimal.ZERO;
@@ -131,18 +161,25 @@ public class OwnerPaymentService {
         int onlineCount = 0;
         int cashCount = 0;
         int pendingCount = 0;
+        int cancelledCount = 0;
+
+        // Whether a booking was paid online is a fact about its payments, not a
+        // guess from its reference prefix. The old test was `startsWith("BKG-")`,
+        // which no booking code has ever used, so every online sale was counted as
+        // cash and the platform fee was permanently zero.
+        Map<Long, List<Payment>> paymentsByBooking = paymentsFor(allOwnerBookings);
 
         for (Booking b : allOwnerBookings) {
             if (b.getGrossAmount() != null) {
                 LocalDate bDate = b.getBookingDate() != null ? b.getBookingDate() : (b.getCreatedAt() != null ? b.getCreatedAt().toLocalDate() : null);
-                if (bDate != null && (bDate.isEqual(startDateFilter) || bDate.isAfter(startDateFilter))) {
+                // The window is closed at both ends. It used to be open-ended, so
+                // "Gross today" also swept in every booking already sold for a
+                // future date -- money not yet earned, and counted again on the
+                // day it is played.
+                if (bDate != null && !bDate.isBefore(startDateFilter) && !bDate.isAfter(today)) {
                     if (b.getStatus() == BookingStatus.CONFIRMED) {
                         grossTotal = grossTotal.add(b.getGrossAmount());
-                        boolean isToday = today.equals(bDate);
-                        if (isToday) {
-                            grossToday = grossToday.add(b.getGrossAmount());
-                        }
-                        if (b.getBookingCode() != null && b.getBookingCode().startsWith("BKG-")) {
+                        if (isPaidOnline(paymentsByBooking.get(b.getId()))) {
                             onlineGross = onlineGross.add(b.getGrossAmount());
                             onlineCount++;
                         } else {
@@ -152,21 +189,42 @@ public class OwnerPaymentService {
                     } else if (b.getStatus() == BookingStatus.PENDING) {
                         pendingGross = pendingGross.add(b.getGrossAmount());
                         pendingCount++;
+                    } else if (b.getStatus() == BookingStatus.CANCELLED) {
+                        cancelledCount++;
                     }
                 }
             }
         }
 
-        BigDecimal platformFees = onlineGross.multiply(new BigDecimal("0.06")).setScale(0, RoundingMode.HALF_UP);
-        BigDecimal refunds = BigDecimal.ZERO;
+        BigDecimal platformFees = onlineGross.multiply(PLATFORM_FEE_RATE).setScale(2, RoundingMode.HALF_UP);
+        // Refunds come from the payments ledger. This used to be a hardcoded zero
+        // while the repository sat injected and unused, so the payout figure never
+        // deducted a single refund.
+        BigDecimal refunds = refundedTotal(paymentsByBooking);
         BigDecimal netToYou = grossTotal.subtract(platformFees).subtract(refunds);
 
         // 3. Dynamic KPIs
+        //
+        // All four must describe the same period, or the row contradicts itself:
+        // "net to you" is computed over the selected timeframe, so pairing it with
+        // a today-only gross showed ৳0 gross, ৳0 fees, ৳0 refunds and a non-zero
+        // net under the caption "Gross − fees − refunds".
+        String periodLabel = switch (timeframe == null ? "" : timeframe.toLowerCase()) {
+            case "weekly" -> "this week";
+            case "monthly" -> "this month";
+            case "yearly" -> "this year";
+            default -> "today";
+        };
+        int confirmedCount = onlineCount + cashCount;
         List<Map<String, String>> kpis = List.of(
-            Map.of("label", "Gross today", "value", "৳" + grossToday.intValue(), "delta", "+0% vs yesterday"),
-            Map.of("label", "Platform fees", "value", "৳" + platformFees.intValue(), "delta", "6% flat fee"),
-            Map.of("label", "Refunds", "value", "৳" + refunds.intValue(), "delta", "0 cancellations"),
-            Map.of("label", "Net to you", "value", "৳" + netToYou.intValue(), "delta", "Available for payout")
+            Map.of("label", "Gross " + periodLabel, "value", "৳" + money(grossTotal),
+                    "delta", confirmedCount == 0
+                            ? "No confirmed bookings " + periodLabel
+                            : confirmedCount + (confirmedCount == 1 ? " booking" : " bookings")),
+            Map.of("label", "Platform fees", "value", "৳" + money(platformFees), "delta", "6% of online takings"),
+            Map.of("label", "Refunds", "value", "৳" + money(refunds),
+                    "delta", cancelledCount + (cancelledCount == 1 ? " cancellation" : " cancellations")),
+            Map.of("label", "Net to you", "value", "৳" + money(netToYou), "delta", "Gross − fees − refunds")
         );
 
         // 4. Dynamic Reconciliation Summary
@@ -210,6 +268,9 @@ public class OwnerPaymentService {
             int totalSlotsForSport = 0;
             int bookedSlotsForSport = 0;
             int missedSlotsForSport = 0;
+            // Priced from the slots themselves; this used to assume a flat ৳2000
+            // per missed slot regardless of what the owner actually charges.
+            BigDecimal missedValue = BigDecimal.ZERO;
             List<String> missedItems = new ArrayList<>();
 
             for (Slot s : ownerSlots) {
@@ -218,6 +279,9 @@ public class OwnerPaymentService {
                     bookedSlotsForSport++;
                 } else if (s.getStatus() == SlotStatus.AVAILABLE || s.getStatus() == SlotStatus.BLOCKED) {
                     missedSlotsForSport++;
+                    if (s.getPrice() != null) {
+                        missedValue = missedValue.add(s.getPrice());
+                    }
                     if (missedItems.size() < 5) {
                         missedItems.add((s.getSlotDate() != null ? s.getSlotDate().toString() : "Date") + " · " +
                             (s.getStartTime() != null ? s.getStartTime().toString() : "Slot") + " (Unbooked)");
@@ -226,7 +290,6 @@ public class OwnerPaymentService {
             }
 
             int occupancyPct = totalSlotsForSport > 0 ? (bookedSlotsForSport * 100) / totalSlotsForSport : 0;
-            int estimatedLoss = missedSlotsForSport * 2000;
 
             sportReport.add(Map.of(
                 "sport", sportName,
@@ -234,7 +297,7 @@ public class OwnerPaymentService {
                 "booked", bookedSlotsForSport,
                 "missed", missedSlotsForSport,
                 "missedCount", missedSlotsForSport,
-                "missedLoss", "৳" + estimatedLoss,
+                "missedLoss", "৳" + missedValue.intValue(),
                 "items", missedItems.isEmpty() ? List.of("No missed slots recorded") : missedItems,
                 "occ", Map.of("text", occupancyPct + "% Occupancy", "tone", occupancyPct > 50 ? "green" : "amber"),
                 "bar", Map.of("width", occupancyPct + "%", "background", getSportColor(sportName)),
@@ -243,9 +306,14 @@ public class OwnerPaymentService {
         }
 
         // 7. Method Split
+        // The bar widths used to be fixed at 65/35 next to real amounts, so the
+        // picture contradicted the numbers beside it on every venue.
+        BigDecimal methodTotal = onlineGross.add(cashGross);
+        String onlineWidth = barWidth(onlineGross, methodTotal);
+        String cashWidth = barWidth(cashGross, methodTotal);
         List<Map<String, Object>> methodSplit = List.of(
-            Map.of("id", "bkash", "label", "bKash / Online", "value", "৳" + onlineGross.intValue(), "width", "65%", "color", "#E2136E"),
-            Map.of("id", "cash", "label", "Cash at venue", "value", "৳" + cashGross.intValue(), "width", "35%", "color", "var(--green)")
+            Map.of("id", "bkash", "label", "bKash / Online", "value", "৳" + onlineGross.intValue(), "width", onlineWidth, "color", "#E2136E"),
+            Map.of("id", "cash", "label", "Cash at venue", "value", "৳" + cashGross.intValue(), "width", cashWidth, "color", "var(--green)")
         );
 
         // 8. Recent Ledger Transactions
@@ -331,5 +399,15 @@ public class OwnerPaymentService {
             case "volleyball" -> "#F472B6";
             default -> "#06B6D4";
         };
+    }
+
+    /** Share of a total as a CSS width, or 0% when there is nothing to divide. */
+    private String barWidth(BigDecimal part, BigDecimal total) {
+        if (total == null || total.signum() <= 0 || part == null) {
+            return "0%";
+        }
+        return part.multiply(BigDecimal.valueOf(100))
+                .divide(total, 0, RoundingMode.HALF_UP)
+                .intValue() + "%";
     }
 }
