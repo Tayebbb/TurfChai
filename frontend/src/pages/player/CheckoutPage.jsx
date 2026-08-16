@@ -6,7 +6,7 @@ import { Photo } from '@/components/ui/Photo';
 import { getVenueSlots, holdSlot, listBookings } from '@/api/bookings';
 import { getToken } from '@/api/client';
 import { getVenue } from '@/api/venues';
-import { checkout, validatePromoCode } from '@/api/payments';
+import { checkout, getAvailablePromoCodes, validatePromoCode } from '@/api/payments';
 import { getMyPoints } from '@/api/rewards';
 import { useApi } from '@/hooks/useApi';
 import { useCountdown } from '@/hooks/useCountdown';
@@ -106,6 +106,12 @@ const POLICY = [
 const secondsUntil = (heldUntil) =>
   Math.max(0, Math.round((new Date(heldUntil).getTime() - Date.now()) / 1000));
 
+// sessionStorage helpers — keyed by slotId so switching slots never bleeds.
+const HOLD_KEY = (slotId) => `slot_hold_${slotId}`;
+const saveHold  = (slotId, heldUntil) => sessionStorage.setItem(HOLD_KEY(slotId), heldUntil);
+const loadHold  = (slotId) => sessionStorage.getItem(HOLD_KEY(slotId));
+const clearHold = (slotId) => sessionStorage.removeItem(HOLD_KEY(slotId));
+
 const bdt = (value) =>
   value == null ? '—' : `৳${Math.round(Number(value)).toLocaleString('en-IN')}`;
 
@@ -141,15 +147,37 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState('BKASH');
   const [understood, setUnderstood] = useState(true);
   const [applyWallet, setApplyWallet] = useState(false);
-  const [hold, setHold] = useState(() =>
-    slotId ? { state: 'holding', heldUntil: null, message: '' } : { state: 'idle', heldUntil: null, message: '' },
-  );
+  // On mount, check sessionStorage for a still-valid hold so a page refresh
+  // doesn't reset the 5-minute window by calling holdSlot a second time.
+  //
+  // A *cached-but-expired* entry means this browser already held this slot
+  // and the hold ran out — that must land on 'expired' (manual "Re-lock
+  // slot" only), not fall through to the same bucket as a slot never held
+  // in this session. Treating them the same was the bug: refreshing after
+  // expiry looked exactly like a first visit, so the mount effect below
+  // auto-called holdSlot() again and silently restarted a fresh 5-minute
+  // timer with no click from the player at all.
+  const [hold, setHold] = useState(() => {
+    if (!slotId) return { state: 'idle', heldUntil: null, message: '' };
+    const cached = loadHold(slotId);
+    if (cached) {
+      return secondsUntil(cached) > 0
+        ? { state: 'held', heldUntil: cached, message: '' }
+        : { state: 'expired', heldUntil: null, message: 'Your 5-minute hold expired.' };
+    }
+    return { state: 'holding', heldUntil: null, message: '' };
+  });
   const [slotInfo, setSlotInfo] = useState(null);
-  const [lockSeconds, setLockSeconds] = useState(0);
+  const [lockSeconds, setLockSeconds] = useState(() => {
+    if (!slotId) return 0;
+    const cached = loadHold(slotId);
+    return cached ? secondsUntil(cached) : 0;
+  });
   const [busy, setBusy] = useState(false);
   // `applied` is the server's quote for the typed code; `error` is its reason
   // for refusing one. Nothing here is trusted at payment time.
   const [promo, setPromo] = useState({ input: '', applied: null, error: '', checking: false });
+  const [promoListOpen, setPromoListOpen] = useState(false);
 
   // Confirmation overlay state. No payment credentials are collected.
   const [gatewayStep, setGatewayStep] = useState(null); // null | 'confirm' | 'processing'
@@ -158,6 +186,12 @@ export default function CheckoutPage() {
   const wallet = useApi(() => (signedIn ? getMyPoints() : Promise.resolve(null)), [signedIn]);
   const walletBalance = wallet.data?.walletBalance ?? 0;
   const slotPrice = slotInfo?.price ?? null;
+  const venueIdForPromos = slotInfo?.venueId ?? null;
+  const availablePromos = useApi(
+    () => (venueIdForPromos ? getAvailablePromoCodes(venueIdForPromos) : Promise.resolve([])),
+    [venueIdForPromos],
+  );
+  const promoOptions = Array.isArray(availablePromos.data) ? availablePromos.data : [];
   // The server prices the discount again at checkout; this is only the quote the
   // player is shown, so a tampered value cannot buy a cheaper booking.
   const discount = promo.applied ? Math.min(promo.applied.discountAmount, slotPrice ?? 0) : 0;
@@ -168,6 +202,7 @@ export default function CheckoutPage() {
   const acquireHold = useCallback(async () => {
     try {
       const result = await holdSlot(slotId);
+      saveHold(slotId, result.heldUntil);
       setHold({ state: 'held', heldUntil: result.heldUntil, message: '' });
       setLockSeconds(secondsUntil(result.heldUntil));
       setSlotInfo({
@@ -181,7 +216,34 @@ export default function CheckoutPage() {
       });
       return true;
     } catch (error) {
+      clearHold(slotId);
       const taken = error.status === 409;
+      // The server allows only one active hold per player. Landing here with
+      // this specific reason means the player already has a *different* slot
+      // held elsewhere — the fix is to send them back to it, not to imply
+      // this slot itself is unavailable.
+      if (taken && /already have a slot on hold/i.test(error.detail || '')) {
+        setHold({
+          state: 'blocked-elsewhere',
+          heldUntil: null,
+          message: 'You already have another slot on hold. Finish or release it before starting a new booking.',
+        });
+        return false;
+      }
+      // The slot's own kick-off time has passed — not "someone else took it"
+      // (nobody did), and re-locking is never going to succeed no matter how
+      // many times it's retried. This used to fall into the generic 409
+      // branch below, which kept the "Re-lock slot" button live: clicking it
+      // just flashed "Locking your slot…" and failed the same way again,
+      // reading as a broken, endlessly restarting timer.
+      if (taken && /already started/i.test(error.detail || '')) {
+        setHold({
+          state: 'slot-started',
+          heldUntil: null,
+          message: 'This slot’s start time has passed, so it can no longer be booked.',
+        });
+        return false;
+      }
       if (taken) {
         // The commonest way to land here is the back button after paying: the
         // slot is unavailable because this very user booked it. Saying
@@ -224,6 +286,13 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (signedIn && slotId && holdRequestedForRef.current !== slotId) {
       holdRequestedForRef.current = slotId;
+      // Skip the network call entirely when sessionStorage already has an
+      // opinion about this slot: a still-valid cached hold needs no re-fetch
+      // (the user refreshed mid-checkout), and an *expired* one must not
+      // silently re-acquire — that reopens the "refresh restarts the timer
+      // with no click" bug. Only a slot never touched in this session (no
+      // cache entry at all) should auto-hold on arrival.
+      if (loadHold(slotId) != null) return;
       acquireHold();
     }
   }, [signedIn, slotId, acquireHold]);
@@ -264,7 +333,15 @@ export default function CheckoutPage() {
   const { label: lockLabel } = useCountdown(lockSeconds, {
     onExpire:
       hold.state === 'held'
-        ? () => setHold({ state: 'expired', heldUntil: null, message: 'Your 5-minute hold expired.' })
+        ? () => {
+            // Deliberately NOT clearing sessionStorage here. The stale,
+            // now-expired entry is what tells a page refresh "this browser
+            // already held this slot and it ran out" — wiping it made a
+            // refresh look identical to a first visit, so the mount effect
+            // auto-called holdSlot() again and silently handed back a fresh
+            // 5-minute timer with no click from the player.
+            setHold({ state: 'expired', heldUntil: null, message: 'Your 5-minute hold expired.' });
+          }
         : undefined,
   });
 
@@ -282,10 +359,11 @@ export default function CheckoutPage() {
     setGatewayStep(null);
   };
 
-  const applyPromo = async () => {
-    const code = promo.input.trim();
+  const applyPromo = async (codeOverride) => {
+    const code = (codeOverride ?? promo.input).trim();
     if (!code || slotPrice == null) return;
-    setPromo((prev) => ({ ...prev, checking: true, error: '' }));
+    setPromoListOpen(false);
+    setPromo((prev) => ({ ...prev, input: code, checking: true, error: '' }));
     try {
       const quote = await validatePromoCode({
         code,
@@ -444,7 +522,11 @@ export default function CheckoutPage() {
           ? 'Already booked by you'
           : hold.state === 'expired'
             ? 'Hold expired'
-            : 'Slot unavailable';
+            : hold.state === 'blocked-elsewhere'
+              ? 'Another slot is on hold'
+              : hold.state === 'slot-started'
+                ? 'Slot start time passed'
+                : 'Slot unavailable';
 
   if (!slotId) {
     return (
@@ -521,6 +603,34 @@ export default function CheckoutPage() {
                 to={paths.player.bookingDetail(hold.bookingId)}
               >
                 View booking
+              </Link>
+            </div>
+          </div>
+        ) : null}
+
+        {hold.state === 'blocked-elsewhere' ? (
+          <div className="alert warn" role="status" style={{ marginBottom: 20 }}>
+            <span className="ico">⚠️</span>
+            <div>
+              <b>Another slot is on hold</b>
+              {hold.message} Look for the "Booking in progress" banner at the top of the app to jump
+              back to it, or wait for that hold to expire.
+            </div>
+          </div>
+        ) : null}
+
+        {hold.state === 'slot-started' ? (
+          <div className="alert warn" role="status" style={{ marginBottom: 20 }}>
+            <span className="ico">⚠️</span>
+            <div>
+              <b>Slot start time passed</b>
+              {hold.message} It cannot be re-locked — pick another time instead.
+              <Link
+                className="btn btn-secondary btn-sm"
+                style={{ marginLeft: 10 }}
+                to={paths.player.explore}
+              >
+                Browse venues
               </Link>
             </div>
           </div>
@@ -689,28 +799,71 @@ export default function CheckoutPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      className="input"
-                      aria-label="Promo code"
-                      placeholder="Promo code"
-                      value={promo.input}
-                      onChange={(event) =>
-                        setPromo((prev) => ({ ...prev, input: event.target.value, error: '' }))
-                      }
-                      onKeyDown={(event) => event.key === 'Enter' && applyPromo()}
-                      style={{ flex: 1, textTransform: 'uppercase' }}
-                    />
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={applyPromo}
-                      loading={promo.checking}
-                      disabled={promo.checking || !promo.input.trim()}
-                      style={{ flexShrink: 0 }}
-                    >
-                      Apply
-                    </Button>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        className="input"
+                        aria-label="Promo code"
+                        placeholder="Promo code"
+                        value={promo.input}
+                        onChange={(event) =>
+                          setPromo((prev) => ({ ...prev, input: event.target.value, error: '' }))
+                        }
+                        onFocus={() => setPromoListOpen(true)}
+                        onBlur={() => setPromoListOpen(false)}
+                        onKeyDown={(event) => event.key === 'Enter' && applyPromo()}
+                        style={{ flex: 1, textTransform: 'capitalize' }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => applyPromo()}
+                        loading={promo.checking}
+                        disabled={promo.checking || !promo.input.trim()}
+                        style={{ flexShrink: 0 }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+
+                    {promoListOpen ? (
+                      <div
+                        className="promo-suggest"
+                        role="listbox"
+                        aria-label="Available promo codes"
+                        // Keeps the input focused when a suggestion is clicked, so
+                        // onBlur above doesn't close the list before the click lands.
+                        onMouseDown={(event) => event.preventDefault()}
+                      >
+                        {availablePromos.loading ? (
+                          <div className="promo-suggest-empty">Loading codes…</div>
+                        ) : promoOptions.length === 0 ? (
+                          <div className="promo-suggest-empty">No promo codes available right now</div>
+                        ) : (
+                          promoOptions
+                            .filter((item) =>
+                              item.code.toLowerCase().includes(promo.input.trim().toLowerCase()),
+                            )
+                            .map((item) => (
+                              <button
+                                key={item.code}
+                                type="button"
+                                role="option"
+                                className="promo-suggest-item"
+                                onClick={() => applyPromo(item.code)}
+                              >
+                                <span className="promo-suggest-code">{item.code}</span>
+                                <span className="promo-suggest-label">
+                                  {item.label ||
+                                    (item.discountType === 'PERCENT'
+                                      ? `${item.discountValue}% off`
+                                      : `${bdt(item.discountValue)} off`)}
+                                </span>
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 )}
                 {promo.error ? (

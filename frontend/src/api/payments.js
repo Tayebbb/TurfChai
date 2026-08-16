@@ -32,6 +32,15 @@ export async function validatePromoCode({ code, orderTotal, venueId }) {
   });
 }
 
+/**
+ * GET /api/v1/venues/{venueId}/promotions/available — every promo code
+ * currently redeemable at a venue, for the checkout page's "browse codes"
+ * list. Public, no auth — same as venue/slot browsing.
+ */
+export function getAvailablePromoCodes(venueId) {
+  return api(`/venues/${encodeURIComponent(venueId)}/promotions/available`, { token: false });
+}
+
 /** GET /api/v1/payments/booking/{bookingId} — a booking's payment history, most recent first. */
 export async function getPaymentsForBooking(bookingId) {
   const res = await api(`/payments/booking/${encodeURIComponent(bookingId)}`);
