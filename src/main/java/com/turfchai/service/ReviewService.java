@@ -84,7 +84,7 @@ public class ReviewService {
         review.setOverallRating(dto.getOverallRating());
         review.setSubRatings(dto.getSubRatings());
         review.setComment(dto.getComment());
-        review.setStatus(ReviewStatus.published); // assuming auto-publish for now
+        review.setStatus(ReviewStatus.PUBLISHED); // assuming auto-publish for now
 
         List<String> tags = new ArrayList<>();
         tags.add("verified_booking");

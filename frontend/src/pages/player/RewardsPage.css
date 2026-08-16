@@ -433,7 +433,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
     gap: 14px;
-    align-items: start
+    align-items: stretch
 }
 
 .redeem-card {
@@ -442,6 +442,7 @@
     gap: 12px;
     padding: 20px;
     border-radius: var(--r-xl);
+    height: 100%;
     transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
@@ -472,7 +473,7 @@
     gap: 12px
 }
 
-.redeem-card h4 {
+.redeem-card h3 {
     margin: 0;
     font-size: 15px;
     line-height: 1.3

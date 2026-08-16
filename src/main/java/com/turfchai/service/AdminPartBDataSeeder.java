@@ -250,7 +250,7 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
             review.setVenue(venue);
             review.setOverallRating(rating);
             review.setComment(REVIEW_COMMENTS[random.nextInt(REVIEW_COMMENTS.length)]);
-            review.setStatus(ReviewStatus.published);
+            review.setStatus(ReviewStatus.PUBLISHED);
             review.setCreatedAt(booking.getBookingDate().plusDays(1).atStartOfDay(ZoneOffset.UTC));
             review.setUpdatedAt(review.getCreatedAt());
             reviews.add(review);

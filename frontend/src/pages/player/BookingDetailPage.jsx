@@ -216,7 +216,7 @@ export default function BookingDetailPage() {
                 ))}
               </div>
               <div className="row" style={{ marginTop: 12 }}>
-                <Button size="sm" variant="primary" to={paths.player.matchday}>
+                <Button size="sm" variant="primary" to={paths.player.matchdayFor(booking?.id)}>
                   Open match-day ticket
                 </Button>
                 <Button

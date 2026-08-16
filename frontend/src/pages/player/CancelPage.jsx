@@ -108,7 +108,11 @@ export default function CancelPage() {
       ? `${formatTime(booking.startTime)} – ${formatTime(booking.endTime)}`
       : "—";
   const preview = previewApi.data;
-  const canCancel = booking?.status === "CONFIRMED";
+  // PENDING is included: the backend allows cancelling it (it only rejects an
+  // already-CANCELLED booking), and a PENDING booking has no successful
+  // payment yet, so the refund preview below correctly computes ৳0 paid / ৳0
+  // refund rather than needing different handling here.
+  const canCancel = booking?.status === "CONFIRMED" || booking?.status === "PENDING";
 
   return (
     <>
