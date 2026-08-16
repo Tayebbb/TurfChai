@@ -46,3 +46,10 @@ Mugdho/
 
 ### Runtime logs ###
 boot.log
+
+### QA run artefacts (regenerated on every gate run) ###
+qa/*.log
+qa/.*.log
+frontend/e2e/.artifacts/
+frontend/e2e/.state/
+frontend/qa/*.log

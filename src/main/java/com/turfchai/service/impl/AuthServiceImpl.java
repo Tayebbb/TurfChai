@@ -38,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final OtpService otpService;
+    private final com.turfchai.admin.auth.AdminAuthProperties otpProperties;
 
     @Override
     @Transactional
@@ -92,12 +93,22 @@ public class AuthServiceImpl implements AuthService {
         return toAuthResponse(user);
     }
 
+    /**
+     * Issues a login code for a phone number.
+     *
+     * <p>The code is only echoed back to the caller when dev-code exposure is
+     * switched on. This endpoint is public, so returning the code
+     * unconditionally would let anyone sign in as any account whose phone number
+     * they know.
+     */
     @Override
     @Transactional
     public OtpRequestResponse requestOtp(OtpRequest request) {
         String phone = request.phone().trim();
         String code = otpService.generateAndStore(phone);
-        return new OtpRequestResponse(true, "Verification code sent to " + maskPhone(phone), 300, code);
+        boolean exposeCode = otpProperties.exposeDevCode();
+        return new OtpRequestResponse(true, "Verification code sent to " + maskPhone(phone), 300,
+                exposeCode ? code : null);
     }
 
     @Override

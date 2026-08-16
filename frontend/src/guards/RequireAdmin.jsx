@@ -1,54 +1,26 @@
-import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { RouteFallback } from '@/components/common/RouteFallback';
-import { getMe } from '@/api/auth';
-import { clearSession, getToken } from '@/api/client';
+import { useSession } from '@/hooks/useSession';
 
 const ADMIN_ROLES = new Set(['ADMIN', 'SUPER_ADMIN']);
 
 /**
  * Guards the admin console. The API is already protected server-side, but the
- * console shell must not render for anonymous visitors — so before showing
- * anything this component validates the stored session against the backend
- * (`GET /me`) and bounces non-admins to the sign-in page.
+ * console shell must not render for anonymous visitors, and a locally-spoofed
+ * "session" must not reach it either — the role compared here is the one the
+ * server reported for the stored token.
  *
- * Any locally-spoofed "session" is caught here too: a made-up token fails the
- * `/me` call, the session is cleared, and the visitor is redirected.
+ * The identity comes from `SessionProvider` rather than a second `GET /me`,
+ * which is what every admin navigation used to cost.
  */
 export default function RequireAdmin({ children }) {
   const location = useLocation();
-  const token = getToken();
-  const [status, setStatus] = useState(() => (token ? 'checking' : 'redirect')); // checking | ok | redirect
+  const { signedIn, role, loading, error } = useSession();
 
-  useEffect(() => {
-    if (!token) return;
-
-    let cancelled = false;
-
-    getMe()
-      .then((user) => {
-        if (cancelled) return;
-        if (user && ADMIN_ROLES.has(user.role)) {
-          setStatus('ok');
-        } else {
-          clearSession();
-          setStatus('redirect');
-        }
-      })
-      .catch(() => {
-        if (cancelled) return;
-        clearSession();
-        setStatus('redirect');
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  if (status === 'checking') return <RouteFallback />;
-  if (status === 'redirect') {
-    return <Navigate to="/admin/login" replace state={{ from: location }} />;
+  if (!signedIn || error || (!loading && !ADMIN_ROLES.has(role))) {
+    return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
   }
+  if (loading) return <RouteFallback />;
+
   return children;
 }
