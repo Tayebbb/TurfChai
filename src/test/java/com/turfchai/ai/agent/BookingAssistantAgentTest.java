@@ -16,9 +16,7 @@ import com.turfchai.ai.rag.KnowledgeRetriever;
 import com.turfchai.ai.rag.TextChunker;
 import com.turfchai.ai.state.InMemoryConversationStateStore;
 import com.turfchai.ai.tool.ToolRegistry;
-import com.turfchai.ai.tool.mock.BookingContextTool;
-import com.turfchai.ai.tool.mock.MockBookingTool;
-import com.turfchai.ai.tool.mock.MockVenueSearchTool;
+import com.turfchai.ai.tool.impl.BookingContextTool;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,8 +41,10 @@ class BookingAssistantAgentTest {
         stateStore = new InMemoryConversationStateStore();
 
         ToolRegistry registry = new ToolRegistry(List.of(
-                new MockVenueSearchTool(),
-                new MockBookingTool(),
+                new StubTool("search_venues", Map.of("count", 1, "venues",
+                        List.of(Map.of("slug", "greenturf-arena", "name", "GreenTurf Arena",
+                                "area", "Banani", "fromPriceBdt", 2500)))),
+                new StubTool("manage_booking", Map.of("count", 0, "bookings", List.of())),
                 new BookingContextTool(stateStore)));
 
         KnowledgeRetriever retriever = new KnowledgeRetriever(

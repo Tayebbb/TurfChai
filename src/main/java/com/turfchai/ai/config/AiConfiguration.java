@@ -24,12 +24,6 @@ import com.turfchai.ai.state.ConversationStateStore;
 import com.turfchai.ai.state.InMemoryConversationStateStore;
 import com.turfchai.ai.tool.Tool;
 import com.turfchai.ai.tool.ToolRegistry;
-import com.turfchai.ai.tool.mock.BookingContextTool;
-import com.turfchai.ai.tool.mock.MockBookingTool;
-import com.turfchai.ai.tool.mock.MockPaymentTool;
-import com.turfchai.ai.tool.mock.MockTournamentTool;
-import com.turfchai.ai.tool.mock.MockUserProfileTool;
-import com.turfchai.ai.tool.mock.MockVenueSearchTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -45,9 +39,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Wires the AI platform. Mock tools are explicit beans here; when real
- * backend services land, replace the mock bean definitions — the agent,
- * registry and API stay untouched.
+ * Wires the AI platform. Tools are {@code @Component}s under
+ * {@code ai.tool.impl}, each holding the same application service its REST
+ * controller uses, so the assistant and the app read one database.
  */
 @Configuration
 @EnableConfigurationProperties(AiProperties.class)
@@ -175,15 +169,15 @@ public class AiConfiguration {
         return new InMemoryConversationStateStore();
     }
 
+    /**
+     * Every {@link Tool} bean on the classpath. Registering by injection means
+     * adding a capability is one new {@code @Component}, with no second place
+     * to remember to update.
+     */
     @Bean
-    ToolRegistry toolRegistry(ConversationStateStore stateStore) {
-        return new ToolRegistry(List.<Tool>of(
-                new MockVenueSearchTool(),
-                new MockBookingTool(),
-                new MockUserProfileTool(),
-                new MockPaymentTool(),
-                new MockTournamentTool(),
-                new BookingContextTool(stateStore)));
+    ToolRegistry toolRegistry(List<Tool> tools) {
+        log.info("Registered {} AI tools: {}", tools.size(), tools.stream().map(t -> t.spec().name()).toList());
+        return new ToolRegistry(tools);
     }
 
     @Bean

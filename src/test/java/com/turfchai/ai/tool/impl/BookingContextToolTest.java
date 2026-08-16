@@ -1,4 +1,4 @@
-package com.turfchai.ai.tool.mock;
+package com.turfchai.ai.tool.impl;
 
 import com.turfchai.ai.state.BookingState;
 import com.turfchai.ai.state.InMemoryConversationStateStore;
@@ -30,7 +30,7 @@ class BookingContextToolTest {
     @Test
     void reportsReadyToBookWhenVenueDateTimeSet() {
         ToolResult result = tool.execute(Map.of(
-                "venueId", "V-0044", "venueName", "GreenTurf Arena",
+                "venueId", "kick-off-arena", "venueName", "Kick Off Arena",
                 "date", "2026-08-10", "time", "19:00-20:00"),
                 new ToolContext("s2", "u1"));
 

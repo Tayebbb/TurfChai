@@ -73,7 +73,7 @@ public class AiChatController {
         }
 
         try {
-            AgentResponse response = agent.chat(sessionId, userId, request.message());
+            AgentResponse response = agent.chat(sessionId, userId, principalId(principal), request.message());
             metrics.recordSuccess(response);
             return ResponseEntity.ok(new ChatResponse(
                     sessionId,
@@ -110,6 +110,15 @@ public class AiChatController {
             return "user:" + principal.getId();
         }
         return fromBody == null ? "" : fromBody;
+    }
+
+    /**
+     * The only identity a tool may use to read personal data. Null for an
+     * anonymous visitor — the body's {@code userId} must never stand in for it,
+     * or naming a victim would be enough to read their bookings.
+     */
+    private Long principalId(com.turfchai.security.UserPrincipal principal) {
+        return principal == null ? null : principal.getId();
     }
 
     @GetMapping("/metrics")

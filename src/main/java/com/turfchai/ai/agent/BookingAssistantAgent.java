@@ -75,6 +75,15 @@ public class BookingAssistantAgent {
     }
 
     public AgentResponse chat(String sessionId, String userId, String userMessage) {
+        return chat(sessionId, userId, null, userMessage);
+    }
+
+    /**
+     * @param authenticatedUserId verified principal id, or null for an
+     *                            anonymous visitor. Tools that read personal
+     *                            data scope on this and nothing else.
+     */
+    public AgentResponse chat(String sessionId, String userId, Long authenticatedUserId, String userMessage) {
         long start = System.currentTimeMillis();
 
         Intent intent = intentRouter.route(userMessage);
@@ -83,7 +92,7 @@ public class BookingAssistantAgent {
 
         List<ChatMessage> messages = assembleMessages(sessionId, userMessage, plan);
         List<ToolSpec> tools = toolRegistry.specs(plan.allowedTools());
-        ToolContext toolContext = new ToolContext(sessionId, userId);
+        ToolContext toolContext = new ToolContext(sessionId, userId, authenticatedUserId);
 
         List<String> toolsInvoked = new ArrayList<>();
         Set<String> executedCalls = new HashSet<>();

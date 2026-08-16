@@ -1,4 +1,4 @@
-package com.turfchai.ai.tool.mock;
+package com.turfchai.ai.tool.impl;
 
 import com.turfchai.ai.state.BookingState;
 import com.turfchai.ai.state.ConversationStateStore;
@@ -7,15 +7,21 @@ import com.turfchai.ai.tool.ToolContext;
 import com.turfchai.ai.tool.ToolParam;
 import com.turfchai.ai.tool.ToolResult;
 import com.turfchai.ai.tool.ToolSpec;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
 /**
  * Lets the model persist confirmed booking details into structured session
- * state — the single source of truth for in-progress bookings (chat history
+ * state — the single source of truth for an in-progress booking (chat history
  * is never used as application state).
+ *
+ * <p>
+ * The only tool that writes anything, and it writes to an in-memory
+ * conversation store, never to the database.
  */
+@Component
 public class BookingContextTool implements Tool {
 
     private final ConversationStateStore stateStore;
@@ -32,7 +38,7 @@ public class BookingContextTool implements Tool {
                 List.of(
                         ToolParam.optional("sport", "string", "Chosen sport"),
                         ToolParam.optional("area", "string", "Preferred area"),
-                        ToolParam.optional("venueId", "string", "Selected venue id, e.g. V-0044"),
+                        ToolParam.optional("venueId", "string", "Selected venue slug from search_venues"),
                         ToolParam.optional("venueName", "string", "Selected venue name"),
                         ToolParam.optional("date", "string", "Booking date, ISO format YYYY-MM-DD"),
                         ToolParam.optional("time", "string", "Slot time window, e.g. 19:00-20:00"),
