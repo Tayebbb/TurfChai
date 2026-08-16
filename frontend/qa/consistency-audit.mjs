@@ -533,30 +533,37 @@ section('PAYMENT CONSISTENCY');
 section('REVIEW CONSISTENCY');
 
 {
-  // Reviews need a booking whose match has started, so use a seeded account
-  // with real history rather than the fresh one above.
+  // A review needs a booking whose kick-off has passed, and one cannot be
+  // created through the API, so this hunts the real roster for an un-reviewed
+  // one. Earlier stages of the same gate run consume them, so the pool has to
+  // be wide and the section has to stay meaningful when it is exhausted.
   let author = null;
   let subject = null;
   const candidates = [host];
   if (admin) {
-    const roster = unwrap((await api('/admin/users?page=0&size=40&role=PLAYER', { token: admin })).json);
-    for (const u of roster?.items ?? []) {
-      if (!u.email || u.email === HOST.email) continue;
-      try { candidates.push(await login({ email: u.email, password: 'Demo@12345' })); } catch { /* other password */ }
-      if (candidates.length >= 10) break;
+    for (let p = 0; p < 3 && candidates.length < 45; p += 1) {
+      const roster = unwrap((await api(`/admin/users?page=${p}&size=60&role=PLAYER`, { token: admin })).json);
+      for (const u of roster?.items ?? []) {
+        if (!u.email || u.email === HOST.email) continue;
+        try { candidates.push(await login({ email: u.email, password: 'Demo@12345' })); } catch { /* other password */ }
+        if (candidates.length >= 45) break;
+      }
     }
   }
 
   let venueBefore = null;
   let feedBefore = [];
   let slug = null;
+  let scanned = 0;
   outer: for (const candidate of candidates) {
     const bookings = (await api('/bookings', { token: candidate.token })).json;
     for (const b of (Array.isArray(bookings) ? bookings : [])) {
       if (b.status === 'CANCELLED') continue;
       if (new Date(`${b.bookingDate}T${b.startTime}`) >= new Date()) continue;
+      scanned += 1;
       slug = b.venueSlug;
-      venueBefore = unwrap((await api(`/venues/${slug}`)).json);      const feed = unwrap((await api(`/venues/${slug}/reviews?page=0&size=100`)).json);
+      venueBefore = unwrap((await api(`/venues/${slug}`)).json);
+      const feed = unwrap((await api(`/venues/${slug}/reviews?page=0&size=100`)).json);
       feedBefore = Array.isArray(feed) ? feed : (feed?.items ?? feed?.content ?? []);
       const attempt = await api('/reviews', {
         method: 'POST', token: candidate.token,
@@ -570,7 +577,27 @@ section('REVIEW CONSISTENCY');
   }
 
   if (!author) {
-    check('a reviewable booking could be found', false, 'every past booking on every candidate account is already reviewed');
+    // Nothing left to review on this database. The invariants that do not need
+    // a fresh review still have to hold, so assert those against a venue that
+    // already has some rather than skipping the section.
+    const venues = unwrap((await api('/venues?page=0&size=50')).json);
+    const reviewed = (venues?.items ?? []).find((v) => (v.reviewCount ?? 0) > 0);
+    const detail = unwrap((await api(`/venues/${reviewed.slug}`)).json);
+    const feedRaw = unwrap((await api(`/venues/${reviewed.slug}/reviews?page=0&size=100`)).json);
+    const feed = Array.isArray(feedRaw) ? feedRaw : (feedRaw?.items ?? feedRaw?.content ?? []);
+    const mean = feed.reduce((s, r) => s + Number(r.overallRating ?? r.rating ?? 0), 0) / feed.length;
+
+    check('REVIEW COUNT on the venue matches the number of reviews it lists',
+      detail?.reviewCount === feed.length,
+      `${scanned} past booking(s) across ${candidates.length} account(s) were all already reviewed, so this asserts on ${reviewed.slug}: reviewCount=${detail?.reviewCount}, list holds ${feed.length}`);
+
+    check('VENUE RATING is the average of the reviews the venue actually has',
+      Math.abs(Number(detail?.rating ?? 0) - mean) < 0.06,
+      `venue says ${detail?.rating}, the listed reviews average ${mean.toFixed(2)}`);
+
+    check('SEARCH RESULTS quote the same rating and review count as the venue page',
+      Number(reviewed.rating) === Number(detail.rating) && reviewed.reviewCount === detail.reviewCount,
+      `search ${reviewed.rating}★ (${reviewed.reviewCount}) vs venue ${detail.rating}★ (${detail.reviewCount})`);
   } else {
     const me = unwrap((await api('/me', { token: author.token })).json);
     const feedAfterRaw = unwrap((await api(`/venues/${slug}/reviews?page=0&size=100`)).json);
