@@ -12,6 +12,8 @@ import com.turfchai.venue.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,10 @@ import java.util.UUID;
  * Auto-seeds a realistic demo dataset on startup.
  * Triggers when the {@code users} table has fewer than 50 rows.
  *
+ * <p><b>Demo data only.</b> Restricted to the dev/test/ci profiles: this writes
+ * hundreds of fabricated users, venues and turf requests, which must never
+ * reach a real database.
+ *
  * <p>Part A of the AdminDemoDataSeeder plan:
  * <ul>
  *   <li>800 Users across all roles, spread over 6 months</li>
@@ -39,6 +45,8 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
+@Profile({ "dev", "test", "ci" })
+@Order(10)
 @RequiredArgsConstructor
 public class AdminDemoDataSeeder implements CommandLineRunner {
 
@@ -313,8 +321,10 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
                     .area(addressArea[1])
                     .lat(BigDecimal.valueOf(coords[0]))
                     .lng(BigDecimal.valueOf(coords[1]))
-                    .ratingAvg(BigDecimal.valueOf(3.5 + RNG.nextDouble() * 1.5).setScale(2, java.math.RoundingMode.HALF_UP))
-                    .reviewCount(10 + RNG.nextInt(291))
+                    // Rating and review count are NOT seeded: they are derived
+                    // from real review rows by ReviewService.recalculateVenueRating.
+                    // Inventing them here made venues advertise "167 reviews"
+                    // above a reviews tab that showed none.
                     .savedCount(5 + RNG.nextInt(150))
                     .verified(i < 28) // first 28 venues are verified
                     .tournamentReady(i % 5 == 0)

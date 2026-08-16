@@ -1,5 +1,6 @@
 package com.turfchai.venue.api;
 
+import com.turfchai.security.AuthenticatedUser;
 import com.turfchai.security.UserPrincipal;
 import com.turfchai.venue.dto.owner.CreatePitchRequest;
 import com.turfchai.venue.dto.owner.CreateVenueRequest;
@@ -69,24 +70,21 @@ public class OwnerVenueRestController {
     public VenueManagementDto createVenue(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateVenueRequest request) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = AuthenticatedUser.requireId(principal);
         return managementService.createVenue(ownerId, request);
     }
 
     @GetMapping
     public List<VenueManagementDto> listVenues(
             @AuthenticationPrincipal UserPrincipal principal) {
-        if (principal == null || principal.getId() == null) {
-            return List.of();
-        }
-        return managementService.listOwnerVenues(principal.getId());
+        return managementService.listOwnerVenues(AuthenticatedUser.requireId(principal));
     }
 
     @GetMapping("/{id}")
     public VenueManagementDto getVenue(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = AuthenticatedUser.requireId(principal);
         return managementService.getOwnerVenue(ownerId, id);
     }
 
@@ -95,7 +93,7 @@ public class OwnerVenueRestController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @Valid @RequestBody UpdateVenueRequest request) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = AuthenticatedUser.requireId(principal);
         return managementService.updateVenue(ownerId, id, request);
     }
 
@@ -175,7 +173,7 @@ public class OwnerVenueRestController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = AuthenticatedUser.requireId(principal);
         LocalDate targetDate = date != null ? date : LocalDate.now();
         return ResponseEntity.ok(managementService.getOwnerCalendar(ownerId, id, targetDate));
     }
@@ -185,7 +183,7 @@ public class OwnerVenueRestController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @PathVariable Long slotId) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = AuthenticatedUser.requireId(principal);
         managementService.blockSlot(ownerId, id, slotId);
         return ResponseEntity.ok().build();
     }
@@ -195,7 +193,7 @@ public class OwnerVenueRestController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @PathVariable Long slotId) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = AuthenticatedUser.requireId(principal);
         managementService.unblockSlot(ownerId, id, slotId);
         return ResponseEntity.ok().build();
     }
@@ -205,7 +203,7 @@ public class OwnerVenueRestController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id,
             @RequestBody com.turfchai.venue.dto.owner.ManualBookingRequestDto req) {
-        Long ownerId = principal != null ? principal.getId() : 1L;
+        Long ownerId = AuthenticatedUser.requireId(principal);
         managementService.createManualBooking(ownerId, id, req);
         return ResponseEntity.ok().build();
     }

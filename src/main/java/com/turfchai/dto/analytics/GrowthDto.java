@@ -28,7 +28,7 @@ public class GrowthDto {
      * Derived from bookings: users who booked in both the prior period
      * and the current period.
      */
-    private double retentionRate;
+    private Double retentionRate;
 
     /** Day-of-week labels for the signup chart (e.g. "Mon", "Tue", …). */
     private List<String> signupLabels;
@@ -50,7 +50,7 @@ public class GrowthDto {
     public GrowthDto() {}
 
     public GrowthDto(long totalUsers, long newUsersToday,
-                     double activeRatio, double retentionRate,
+                     double activeRatio, Double retentionRate,
                      List<String> signupLabels, List<Long> signupCounts) {
         this.totalUsers = totalUsers;
         this.newUsersToday = newUsersToday;
@@ -71,8 +71,8 @@ public class GrowthDto {
     public double getActiveRatio() { return activeRatio; }
     public void setActiveRatio(double activeRatio) { this.activeRatio = activeRatio; }
 
-    public double getRetentionRate() { return retentionRate; }
-    public void setRetentionRate(double retentionRate) { this.retentionRate = retentionRate; }
+    public Double getRetentionRate() { return retentionRate; }
+    public void setRetentionRate(Double retentionRate) { this.retentionRate = retentionRate; }
 
     public List<String> getSignupLabels() { return signupLabels; }
     public void setSignupLabels(List<String> signupLabels) { this.signupLabels = signupLabels; }

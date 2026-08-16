@@ -6,12 +6,15 @@ import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
+import com.turfchai.domain.Review;
+import com.turfchai.domain.ReviewStatus;
 import com.turfchai.model.AuditLog;
 import com.turfchai.model.Payout;
 import com.turfchai.model.User;
 import com.turfchai.model.enums.RoleType;
 import com.turfchai.repository.AuditLogRepository;
 import com.turfchai.repository.PayoutRepository;
+import com.turfchai.repository.ReviewRepository;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.venue.entity.Pitch;
 import com.turfchai.venue.entity.Venue;
@@ -20,6 +23,9 @@ import com.turfchai.venue.repository.VenueRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,10 +38,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Part B of the demo dataset: bookings, payouts and audit logs.
+ *
+ * <p><b>Demo data only</b> — dev/ci profiles. This writes fabricated bookings
+ * and payouts carrying money amounts, which must never reach a real database.
+ * It is deliberately excluded from the {@code test} profile: over a thousand
+ * synthetic bookings with no payment rows would break the money-invariant and
+ * venue-cleanup suites.
+ *
+ * <p>Runs as an ordered {@link CommandLineRunner} after Part A. It used to run
+ * from {@code @PostConstruct}, which fires during bean construction — long
+ * before any {@code CommandLineRunner} — so it always found the users, venues
+ * and pitches missing and silently bailed. The result was a dev database with
+ * no bookings, no payouts and no audit logs at all, leaving every owner
+ * dashboard and the admin payout queue permanently empty.
+ */
 @Slf4j
 @Service
+@Profile({ "dev", "ci" })
+@Order(11)
 @RequiredArgsConstructor
-public class AdminPartBDataSeeder {
+public class AdminPartBDataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final VenueRepository venueRepository;
@@ -43,9 +67,15 @@ public class AdminPartBDataSeeder {
     private final BookingRepository bookingRepository;
     private final SlotRepository slotRepository;
     private final PayoutRepository payoutRepository;
+    private final ReviewRepository reviewRepository;
     private final AuditLogRepository auditLogRepository;
 
-    @PostConstruct
+    @Override
+    @Transactional
+    public void run(String... args) {
+        seed();
+    }
+
     @Transactional
     public void seed() {
         if (bookingRepository.count() > 0) {
@@ -69,6 +99,7 @@ public class AdminPartBDataSeeder {
                 .toList();
 
         seedBookingsAndSlots(players, venues, pitches);
+        seedReviews();
         seedPayouts(venues);
         seedAuditLogs(users);
 
@@ -166,6 +197,71 @@ public class AdminPartBDataSeeder {
         slotRepository.saveAll(slotsToSave);
         bookingRepository.saveAll(bookingsToSave);
         log.info("Seeded {} Bookings and Slots.", bookingsToSave.size());
+    }
+
+    private static final String[] REVIEW_COMMENTS = {
+            "Pitch was in great shape and the floodlights are genuinely bright.",
+            "Booking was quick, but the changing room was crowded at peak hour.",
+            "Good surface, fair price. Parking fills up fast after 7pm.",
+            "Turf is well maintained. Staff let us start a few minutes early.",
+            "Decent ground, though the nets need replacing on one side.",
+            "Great for 7-a-side. We come back every week.",
+            "Clean facilities and the cafeteria is a nice touch.",
+            "Slot ran on time and check-in with the QR was painless.",
+    };
+
+    /**
+     * Reviews are seeded from real completed bookings so a venue's rating and
+     * review count are earned rather than asserted. Venues used to ship a
+     * fabricated count - "167 reviews" over an empty reviews tab.
+     */
+    private void seedReviews() {
+        Random random = new Random(300);
+        List<Booking> completed = bookingRepository.findAll().stream()
+                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
+                .filter(b -> b.getBookingDate() != null && b.getBookingDate().isBefore(LocalDate.now()))
+                .toList();
+
+        List<Review> reviews = new ArrayList<>();
+        java.util.Set<Long> venueIds = new java.util.HashSet<>();
+        for (Booking booking : completed) {
+            // Not every player leaves a review.
+            if (random.nextInt(100) >= 45) {
+                continue;
+            }
+            Venue venue = venueRepository.findById(booking.getVenueId()).orElse(null);
+            User author = booking.getUserId() == null ? null
+                    : userRepository.findById(booking.getUserId()).orElse(null);
+            if (venue == null || author == null) {
+                continue;
+            }
+            int rating = 3 + random.nextInt(3);
+            Review review = new Review();
+            review.setBooking(booking);
+            review.setUser(author);
+            review.setVenue(venue);
+            review.setOverallRating(rating);
+            review.setComment(REVIEW_COMMENTS[random.nextInt(REVIEW_COMMENTS.length)]);
+            review.setStatus(ReviewStatus.published);
+            review.setCreatedAt(booking.getBookingDate().plusDays(1).atStartOfDay(ZoneOffset.UTC));
+            review.setUpdatedAt(review.getCreatedAt());
+            reviews.add(review);
+            venueIds.add(venue.getId());
+        }
+        reviewRepository.saveAll(reviews);
+
+        for (Long venueId : venueIds) {
+            Venue venue = venueRepository.findById(venueId).orElse(null);
+            if (venue == null) {
+                continue;
+            }
+            BigDecimal avg = reviewRepository.getAverageRatingForVenue(venueId);
+            Integer count = reviewRepository.getReviewCountForVenue(venueId);
+            venue.setRatingAvg(avg != null ? avg.setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+            venue.setReviewCount(count != null ? count : 0);
+            venueRepository.save(venue);
+        }
+        log.info("Seeded {} Reviews across {} venues.", reviews.size(), venueIds.size());
     }
 
     private void seedPayouts(List<Venue> venues) {

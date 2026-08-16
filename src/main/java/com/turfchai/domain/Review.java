@@ -50,6 +50,12 @@ public class Review {
     @Column(name = "status", nullable = false)
     private ReviewStatus status = ReviewStatus.pending;
 
+    @Column(name = "owner_response", length = 2000)
+    private String ownerResponse;
+
+    @Column(name = "owner_responded_at")
+    private ZonedDateTime ownerRespondedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private ZonedDateTime createdAt = ZonedDateTime.now();
 
@@ -126,6 +132,22 @@ public class Review {
 
     public void setStatus(ReviewStatus status) {
         this.status = status;
+    }
+
+    public String getOwnerResponse() {
+        return ownerResponse;
+    }
+
+    public void setOwnerResponse(String ownerResponse) {
+        this.ownerResponse = ownerResponse;
+    }
+
+    public ZonedDateTime getOwnerRespondedAt() {
+        return ownerRespondedAt;
+    }
+
+    public void setOwnerRespondedAt(ZonedDateTime ownerRespondedAt) {
+        this.ownerRespondedAt = ownerRespondedAt;
     }
 
     public ZonedDateTime getCreatedAt() {

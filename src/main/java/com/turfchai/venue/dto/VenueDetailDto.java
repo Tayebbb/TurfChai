@@ -20,6 +20,8 @@ public record VenueDetailDto(
         List<String> amenities,
         List<String> photos,
         List<String> rules,
+        /** e.g. {@code FREE_24H_50_6H} — the ladder the refund engine actually applies. */
+        String cancelPolicy,
         String status,
         BigDecimal basePrice,
         String contactPhone,

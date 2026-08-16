@@ -34,6 +34,22 @@ public class PayoutSettlementService {
                 .orElseThrow(() -> new IllegalArgumentException("Payout not found: " + payoutCode));
     }
 
+    /** Settled/pending/flagged totals for the admin dashboard KPI row. */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> summarise() {
+        java.util.Map<String, Object> summary = new java.util.LinkedHashMap<>();
+        summary.put("settledAmount", nullToZero(payoutRepository.sumNetAmountByStatus("SETTLED")));
+        summary.put("settledCount", payoutRepository.countByStatus("SETTLED"));
+        summary.put("pendingAmount", nullToZero(payoutRepository.sumNetAmountByStatus("PENDING")));
+        summary.put("pendingCount", payoutRepository.countByStatus("PENDING"));
+        summary.put("flaggedCount", payoutRepository.countByStatus("FLAGGED"));
+        return summary;
+    }
+
+    private BigDecimal nullToZero(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
     @Transactional
     public void settle(String payoutCode, Long adminUserId) {
         Payout payout = getByCode(payoutCode);

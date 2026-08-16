@@ -17,7 +17,13 @@ public class ReviewDto {
     @NotNull(message = "bookingId is required")
     private Long bookingId;
 
-    @NotNull(message = "userId is required")
+    /**
+     * Ignored. Authorship is taken from the authenticated principal; this
+     * field only remains so existing clients that still send it do not break.
+     * It was {@code @NotNull}, which forced callers to supply an identity the
+     * server discards.
+     */
+    @Deprecated
     private Long userId;
 
     @NotNull(message = "venueId is required")

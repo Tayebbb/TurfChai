@@ -119,7 +119,7 @@ public class VenueSearchService {
                 venue.getId(), venue.getSlug(), venue.getName(), venue.getArea(), venue.getAddress(),
                 venue.getLat(), venue.getLng(), venue.getRatingAvg(), venue.getReviewCount(),
                 venue.isVerified(), venue.getPromotionLabel(), amenityList(venue.getAmenities()),
-                photosList, rulesList, venue.getStatus(), venue.getBasePrice(),
+                photosList, rulesList, venue.getCancelPolicy(), venue.getStatus(), venue.getBasePrice(),
                 venue.getContactPhone(), venue.getContactEmail(),
                 venue.getOpenTime(), venue.getCloseTime(), pitches, pricing);
     }

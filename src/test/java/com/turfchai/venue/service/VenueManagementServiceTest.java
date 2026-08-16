@@ -37,6 +37,15 @@ class VenueManagementServiceTest {
     @Mock
     private SlotRepository slotRepository;
 
+    @Mock
+    private com.turfchai.booking.repository.BookingRepository bookingRepository;
+
+    @Mock
+    private com.turfchai.repository.UserRepository userRepository;
+
+    @Mock
+    private com.turfchai.repository.TurfRequestRepository turfRequestRepository;
+
     @InjectMocks
     private VenueManagementService venueManagementService;
 
@@ -69,6 +78,8 @@ class VenueManagementServiceTest {
         when(slotRepository.save(any(Slot.class))).thenAnswer(i -> i.getArgument(0));
         when(slotRepository.findByVenueIdAndSlotDateOrderByStartTimeAsc(eq(100L), any(LocalDate.class)))
                 .thenReturn(List.of());
+        when(bookingRepository.findByVenueIdInAndBookingDate(anyList(), any(LocalDate.class)))
+                .thenReturn(List.of());
 
         OwnerCalendarDto result = venueManagementService.getOwnerCalendar(10L, 100L, LocalDate.now());
 
@@ -86,6 +97,8 @@ class VenueManagementServiceTest {
         when(venueRepository.findByOwnerId(10L)).thenReturn(List.of(venue1));
         when(pitchRepository.findByVenueIdAndActiveTrue(100L)).thenReturn(List.of(pitch1));
         when(slotRepository.save(any(Slot.class))).thenAnswer(i -> i.getArgument(0));
+        when(bookingRepository.findByVenueIdInAndBookingDate(anyList(), any(LocalDate.class)))
+                .thenReturn(List.of());
 
         OwnerCalendarDto result = venueManagementService.getOwnerCalendar(10L, 200L, LocalDate.now());
 
@@ -226,5 +239,64 @@ class VenueManagementServiceTest {
 
         assertThrows(SecurityException.class, () ->
                 venueManagementService.requireOwnership(999L, 100L));
+    }
+
+    /** Builds an UpdateVenueRequest that only carries the two policy fields. */
+    private static com.turfchai.venue.dto.owner.UpdateVenueRequest policyRequest(String cancel, String deposit) {
+        return new com.turfchai.venue.dto.owner.UpdateVenueRequest(
+                null, null, null, null, null, null, null, null, null, null,
+                deposit, cancel, null, null, null, null, null, null, null, null);
+    }
+
+    /**
+     * The venue table constrains these columns to a fixed vocabulary
+     * (ck_venues_cancel / ck_venues_deposit in V1__baseline.sql). The owner UI
+     * used to post the human-readable label instead, which is both too long for
+     * VARCHAR(30) and outside the check constraint, so the write failed and the
+     * refund engine silently kept applying the old policy.
+     */
+    @Test
+    @DisplayName("A display label is rejected instead of being written to a constrained column")
+    void testUpdateVenue_DisplayLabelPolicyRejected() {
+        when(venueRepository.findById(100L)).thenReturn(Optional.of(venue1));
+
+        assertThrows(IllegalArgumentException.class, () -> venueManagementService.updateVenue(
+                10L, 100L,
+                policyRequest("Free cancel until 24h before \u00b7 50% within 24h \u00b7 no refund within 6h", null)));
+        assertThrows(IllegalArgumentException.class, () -> venueManagementService.updateVenue(
+                10L, 100L, policyRequest(null, "30% deposit up front")));
+        verify(venueRepository, never()).save(any(Venue.class));
+    }
+
+    @Test
+    @DisplayName("The real policy vocabulary is accepted and stored")
+    void testUpdateVenue_RealPolicyVocabularyAccepted() {
+        when(venueRepository.findById(100L)).thenReturn(Optional.of(venue1));
+        when(venueRepository.save(any(Venue.class))).thenAnswer(i -> i.getArgument(0));
+
+        venueManagementService.updateVenue(10L, 100L, policyRequest("strict_no_refund", "  FIFTY_PERCENT "));
+
+        assertEquals("STRICT_NO_REFUND", venue1.getCancelPolicy());
+        assertEquals("FIFTY_PERCENT", venue1.getDepositPolicy());
+    }
+
+    /**
+     * Listing venues used to invent one - "Kick Off Arena", Dhanmondi, ৳2000 -
+     * when the owner had none, so a brand-new owner was shown a turf they had
+     * never created, and a GET wrote to the database. A venue is created only
+     * when an admin approves the owner's turf request.
+     */
+    @Test
+    @DisplayName("An owner with no venues gets an empty list, and nothing is written")
+    void testListOwnerVenues_InventsNothing() {
+        when(venueRepository.findByOwnerId(10L)).thenReturn(List.of());
+        when(userRepository.findById(10L)).thenReturn(Optional.of(owner1));
+        when(turfRequestRepository.findByOwnerUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of());
+        when(turfRequestRepository.findByOwnerEmailOrderByCreatedAtDesc(owner1.getEmail())).thenReturn(List.of());
+
+        var result = venueManagementService.listOwnerVenues(10L);
+
+        assertTrue(result.isEmpty(), "an owner who created nothing owns nothing");
+        verify(venueRepository, never()).save(any(Venue.class));
     }
 }

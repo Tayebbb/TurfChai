@@ -36,7 +36,7 @@ public class OpenGameServiceImpl implements OpenGameService {
 
     @Override
     @Transactional
-    public OpenGameResponse createOpenGame(CreateOpenGameRequest request) {
+    public OpenGameResponse createOpenGame(CreateOpenGameRequest request, Long organizerUserId) {
         if (request.getEndTime().isBefore(request.getStartTime()) || request.getEndTime().equals(request.getStartTime())) {
             throw new InvalidGameStateException("End time must be after start time");
         }
@@ -44,8 +44,9 @@ public class OpenGameServiceImpl implements OpenGameService {
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(() -> new VenueNotFoundException("Venue not found with id: " + request.getVenueId()));
 
-        User organizer = userRepository.findById(request.getOrganizerUserId())
-                .orElseThrow(() -> new UserNotFoundException("Organizer not found with id: " + request.getOrganizerUserId()));
+        // Organizer is the authenticated caller; request.organizerUserId is ignored.
+        User organizer = userRepository.findById(organizerUserId)
+                .orElseThrow(() -> new UserNotFoundException("Organizer not found with id: " + organizerUserId));
 
         Pitch pitch = null;
         if (request.getPitchId() != null) {
@@ -101,7 +102,7 @@ public class OpenGameServiceImpl implements OpenGameService {
 
     @Override
     @Transactional
-    public JoinOpenGameResponse joinOpenGame(Long openGameId, JoinOpenGameRequest request) {
+    public JoinOpenGameResponse joinOpenGame(Long openGameId, JoinOpenGameRequest request, Long joiningUserId) {
         OpenGame game = openGameRepository.findWithLockById(openGameId)
                 .orElseThrow(() -> new OpenGameNotFoundException("Open game not found with id: " + openGameId));
 
@@ -113,12 +114,14 @@ public class OpenGameServiceImpl implements OpenGameService {
             throw new GameFullException("Game is already full");
         }
 
-        if (membershipRepository.existsByOpenGameIdAndUserId(openGameId, request.getUserId())) {
+        // The joining player is the authenticated caller; request.userId is ignored,
+        // otherwise a caller could enrol somebody else and bill them for a share.
+        if (membershipRepository.existsByOpenGameIdAndUserId(openGameId, joiningUserId)) {
             throw new AlreadyJoinedException("User has already joined this game");
         }
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + request.getUserId()));
+        User user = userRepository.findById(joiningUserId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + joiningUserId));
 
         if (user.getReliabilityScore() < game.getMinimumReliability()) {
             throw new LowReliabilityScoreException(

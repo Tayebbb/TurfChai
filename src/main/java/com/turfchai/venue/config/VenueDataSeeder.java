@@ -43,7 +43,8 @@ public class VenueDataSeeder {
         if (venues.count() > 0) {
             return;
         }
-        User owner = users.findByPublicId(UserProfileRestController.DEMO_USER_ID.toString()).orElse(null);
+        User owner = users.findByPublicId(
+                com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()).orElse(null);
 
         Sport football = sport(sports, "Football", "football");
         Sport cricket = sport(sports, "Cricket", "cricket");
@@ -103,8 +104,7 @@ public class VenueDataSeeder {
             venue.setArea(row.area());
             venue.setLat(BigDecimal.valueOf(row.lat()));
             venue.setLng(BigDecimal.valueOf(row.lng()));
-            venue.setRatingAvg(BigDecimal.valueOf(row.rating()));
-            venue.setReviewCount(row.reviews());
+            // Rating and review count come from real reviews, never from a literal.
             venue.setVerified(row.verified());
             venue.setPromotionLabel(row.promo());
             venue.setAmenities(row.amenities());

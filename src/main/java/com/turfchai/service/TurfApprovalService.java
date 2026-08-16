@@ -1,8 +1,10 @@
 package com.turfchai.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.turfchai.model.TurfRequest;
 import com.turfchai.repository.TurfRequestRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,10 +13,12 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TurfApprovalService {
 
     private final TurfRequestRepository turfRequestRepository;
     private final NotificationService notificationService;
+    private final ObjectMapper objectMapper;
     private final com.turfchai.repository.UserRepository userRepository;
     private final com.turfchai.venue.service.VenueManagementService venueManagementService;
 
@@ -29,7 +33,8 @@ public class TurfApprovalService {
     @Transactional(readOnly = true)
     public TurfRequest getByCode(String requestCode) {
         return turfRequestRepository.findByRequestCode(requestCode)
-                .orElseThrow(() -> new IllegalArgumentException("TurfRequest not found: " + requestCode));
+                .orElseThrow(() -> new com.turfchai.exception.TurfRequestNotFoundException(
+                        "TurfRequest not found: " + requestCode));
     }
 
     @Transactional
@@ -47,8 +52,13 @@ public class TurfApprovalService {
                 java.util.List<String> photos = null;
                 if (request.getPhotosJson() != null && !request.getPhotosJson().isBlank() && !request.getPhotosJson().equals("[]")) {
                     try {
-                        photos = new com.fasterxml.jackson.databind.ObjectMapper().readValue(request.getPhotosJson(), java.util.List.class);
-                    } catch (Exception e) {}
+                        photos = objectMapper.readValue(request.getPhotosJson(), java.util.List.class);
+                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                        // Approval must still go through; the gallery is not
+                        // load-bearing. Silently dropping it hid corrupt rows.
+                        log.warn("Turf request {} has unreadable photosJson; approving without a gallery",
+                                request.getRequestCode(), e);
+                    }
                 }
 
                 com.turfchai.venue.dto.owner.CreateVenueRequest venueReq = new com.turfchai.venue.dto.owner.CreateVenueRequest(

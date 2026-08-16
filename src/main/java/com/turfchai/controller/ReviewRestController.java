@@ -1,19 +1,23 @@
 package com.turfchai.controller;
 
-import com.turfchai.domain.Review;
 import com.turfchai.dto.ApiResponse;
 import com.turfchai.dto.ReviewDto;
+import com.turfchai.dto.response.ReviewResponse;
+import com.turfchai.security.AuthenticatedUser;
+import com.turfchai.security.UserPrincipal;
 import com.turfchai.service.ReviewService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * REST controller for player review submission and matchday check-in.
- * <p>
- * Error handling is delegated to {@link com.turfchai.exception.GlobalExceptionHandler};
- * this controller only handles the happy path.
- * </p>
+ *
+ * <p>Both operations act on behalf of the authenticated principal only. The
+ * author of a review and the actor of a check-in are never read from the
+ * request payload.
  *
  * <ul>
  *   <li>{@code POST /api/v1/reviews}           — submit a post-booking venue review</li>
@@ -22,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1")
-@CrossOrigin(originPatterns = "*") // For local Vite frontend
+@SecurityRequirement(name = "bearerAuth")
 public class ReviewRestController {
 
     private final ReviewService reviewService;
@@ -31,36 +35,34 @@ public class ReviewRestController {
         this.reviewService = reviewService;
     }
 
-    /**
-     * Submit a verified booking review.
-     * <p>
-     * Validates the request body via Jakarta Validation before delegating to
-     * {@link ReviewService#submitReview(ReviewDto)}.
-     * </p>
-     *
-     * @param reviewDto validated review payload
-     * @return 200 with the saved {@link Review} wrapped in {@link ApiResponse}
-     */
+    /** Submit a verified booking review. The author is the caller. */
     @PostMapping("/reviews")
-    public ResponseEntity<ApiResponse<Review>> submitReview(
+    public ResponseEntity<ApiResponse<ReviewResponse>> submitReview(
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody ReviewDto reviewDto) {
 
-        Review saved = reviewService.submitReview(reviewDto);
+        Long authorId = AuthenticatedUser.requireId(principal);
+        ReviewResponse saved = ReviewResponse.from(reviewService.submitReview(reviewDto, authorId));
         return ResponseEntity.ok(ApiResponse.ok(saved, "Review submitted successfully"));
     }
 
     /**
-     * Record the player's physical check-in for a booking.
-     * Sets {@code bookings.checked_in_at} to the current timestamp.
-     *
-     * @param bookingId the booking being checked into
-     * @return 200 with a confirmation message
+     * Record the caller's physical check-in for a booking they own, or a
+     * gate check-in performed by venue staff.
      */
     @PostMapping("/matchday/checkin")
     public ResponseEntity<ApiResponse<Void>> checkIn(
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam("bookingId") Long bookingId) {
 
-        reviewService.checkIn(bookingId);
+        UserPrincipal caller = AuthenticatedUser.require(principal);
+        boolean staff = caller.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .anyMatch(role -> role.equals("ROLE_OWNER")
+                        || role.equals("ROLE_ADMIN")
+                        || role.equals("ROLE_SUPER_ADMIN"));
+
+        reviewService.checkIn(bookingId, caller.getId(), staff);
         return ResponseEntity.ok(ApiResponse.ok("Checked in successfully"));
     }
 }

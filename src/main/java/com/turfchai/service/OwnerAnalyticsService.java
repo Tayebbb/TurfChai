@@ -3,6 +3,7 @@ package com.turfchai.service;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.entity.BookingStatus;
 import com.turfchai.booking.entity.Slot;
+import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.model.User;
@@ -14,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,8 +51,12 @@ public class OwnerAnalyticsService {
         int pendingPayments = 0;
 
         for (Booking b : allOwnerBookings) {
-            boolean isToday = (b.getBookingDate() != null && today.equals(b.getBookingDate())) ||
-                              (b.getCreatedAt() != null && today.equals(b.getCreatedAt().toLocalDate()));
+            // Played today, not *sold* today. Counting a booking because it was
+            // created today put next week's fixtures into today's takings, and
+            // the same money would be counted again on the day it is played --
+            // while the Occupancy KPI beside it, measured from today's slots,
+            // reported nothing booked.
+            boolean isToday = today.equals(b.getBookingDate());
             if (isToday) {
                 todayBookings.add(b);
                 if (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.PENDING) {
@@ -64,11 +71,25 @@ public class OwnerAnalyticsService {
             }
         }
 
+        // Occupancy is booked-or-held slots over the slots that exist for today.
+        // With no slots published there is no denominator, so it reports "--"
+        // rather than the 100% this used to hardcode.
+        List<Slot> todaySlots = slotRepository.findByVenueIdInAndSlotDateBetween(venueIds, today, today);
+        long occupiedSlots = todaySlots.stream()
+            .filter(s -> s.getStatus() == SlotStatus.BOOKED || s.getStatus() == SlotStatus.HELD)
+            .count();
+        String occupancyValue = todaySlots.isEmpty()
+            ? "—"
+            : Math.round(100.0 * occupiedSlots / todaySlots.size()) + "%";
+        String occupancyDelta = todaySlots.isEmpty()
+            ? "No slots published for today"
+            : occupiedSlots + " of " + todaySlots.size() + " slots today";
+
         // KPIs
         List<Map<String, Object>> kpis = List.of(
             Map.of("label", "Today's revenue", "value", "৳" + grossRevenue.intValue(), "delta", "", "trend", ""),
             Map.of("label", "Bookings today", "value", String.valueOf(bookedCount), "delta", "", "trend", ""),
-            Map.of("label", "Occupancy", "value", "100%", "delta", "", "trend", ""),
+            Map.of("label", "Occupancy", "value", occupancyValue, "delta", occupancyDelta, "trend", ""),
             Map.of("label", "Pending payments", "value", String.valueOf(pendingPayments), "delta", "", "trend", "")
         );
 
@@ -110,7 +131,7 @@ public class OwnerAnalyticsService {
             Map<String, Object> act = new HashMap<>();
             act.put("id", String.valueOf(b.getId()));
             act.put("title", "New booking: " + pitchName);
-            act.put("detail", customerName + " booked for " + b.getBookingDate() + " · Just now");
+            act.put("detail", customerName + " booked for " + b.getBookingDate() + " · " + relativeTime(b.getCreatedAt()));
             activity.add(act);
         }
 
@@ -131,16 +152,83 @@ public class OwnerAnalyticsService {
         response.put("kpis", kpis);
         response.put("nextUp", nextUp);
         response.put("activity", activity);
+        response.put("weekly", weeklyPerformance(venueIds, allOwnerBookings, today));
         response.put("attention", attention);
 
         return response;
+    }
+
+    /**
+     * Last seven days of real trade: takings, week-on-week movement, slot
+     * occupancy and where the bookings came from. The dashboard card that shows
+     * this used to be four hardcoded literals (a "৳96,700 / ৳110,000" revenue
+     * goal, 68% occupancy and a 61/22/17 channel split) on every venue.
+     */
+    private Map<String, Object> weeklyPerformance(List<Long> venueIds, List<Booking> allOwnerBookings, LocalDate today) {
+        LocalDate weekStart = today.minusDays(6);
+        LocalDate priorStart = today.minusDays(13);
+        LocalDate priorEnd = today.minusDays(7);
+
+        BigDecimal thisWeek = BigDecimal.ZERO;
+        BigDecimal lastWeek = BigDecimal.ZERO;
+        int online = 0;
+        int manual = 0;
+
+        for (Booking b : allOwnerBookings) {
+            LocalDate date = b.getBookingDate();
+            if (date == null || b.getStatus() != BookingStatus.CONFIRMED) {
+                continue;
+            }
+            BigDecimal amount = b.getGrossAmount() != null ? b.getGrossAmount() : BigDecimal.ZERO;
+            if (!date.isBefore(weekStart) && !date.isAfter(today)) {
+                thisWeek = thisWeek.add(amount);
+                if (b.getBookingCode() != null && b.getBookingCode().startsWith("MB-")) {
+                    manual++;
+                } else {
+                    online++;
+                }
+            } else if (!date.isBefore(priorStart) && !date.isAfter(priorEnd)) {
+                lastWeek = lastWeek.add(amount);
+            }
+        }
+
+        List<Slot> weekSlots = slotRepository.findByVenueIdInAndSlotDateBetween(venueIds, weekStart, today);
+        long bookedSlots = weekSlots.stream().filter(s -> s.getStatus() == SlotStatus.BOOKED).count();
+
+        Map<String, Object> weekly = new HashMap<>();
+        weekly.put("revenue", thisWeek.intValue());
+        weekly.put("previousRevenue", lastWeek.intValue());
+        weekly.put("occupancyPercent", weekSlots.isEmpty()
+                ? null
+                : (int) Math.round(100.0 * bookedSlots / weekSlots.size()));
+        weekly.put("slotsBooked", bookedSlots);
+        weekly.put("slotsPublished", weekSlots.size());
+        // The schema records manual bookings but cannot tell a phone booking
+        // from a walk-in, so those are reported together rather than split.
+        weekly.put("onlineBookings", online);
+        weekly.put("manualBookings", manual);
+        return weekly;
+    }
+
+    /** "Just now" was stamped on every row regardless of when it was created. */
+    private String relativeTime(OffsetDateTime createdAt) {
+        if (createdAt == null) {
+            return "time unknown";
+        }
+        long minutes = Duration.between(createdAt, OffsetDateTime.now()).toMinutes();
+        if (minutes < 1) return "Just now";
+        if (minutes < 60) return minutes + " min ago";
+        long hours = minutes / 60;
+        if (hours < 24) return hours + (hours == 1 ? " hour ago" : " hours ago");
+        long days = hours / 24;
+        return days + (days == 1 ? " day ago" : " days ago");
     }
 
     private Map<String, Object> emptyDashboard() {
         List<Map<String, Object>> kpis = List.of(
             Map.of("label", "Today's revenue", "value", "৳0", "delta", "", "trend", ""),
             Map.of("label", "Bookings today", "value", "0", "delta", "", "trend", ""),
-            Map.of("label", "Occupancy", "value", "0%", "delta", "", "trend", ""),
+            Map.of("label", "Occupancy", "value", "—", "delta", "No venue yet", "trend", ""),
             Map.of("label", "Pending payments", "value", "0", "delta", "", "trend", "")
         );
         return Map.of(

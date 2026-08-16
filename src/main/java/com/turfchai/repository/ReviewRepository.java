@@ -17,4 +17,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Integer getReviewCountForVenue(@Param("venueId") Long venueId);
 
     java.util.List<Review> findByVenueIdInOrderByCreatedAtDesc(java.util.List<Long> venueIds);
+
+    long countByUserId(Long userId);
+
+    /** Published reviews for one venue, newest first — the public venue page. */
+    @Query("SELECT r FROM Review r LEFT JOIN FETCH r.user WHERE r.venue.id = :venueId AND r.status = 'published' ORDER BY r.createdAt DESC")
+    java.util.List<Review> findPublishedForVenue(@Param("venueId") Long venueId,
+            org.springframework.data.domain.Pageable pageable);
 }

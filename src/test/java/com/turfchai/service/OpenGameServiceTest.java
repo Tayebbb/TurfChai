@@ -115,14 +115,13 @@ class OpenGameServiceTest {
                 .skillLevel(SkillLevel.INTERMEDIATE)
                 .capacity(10)
                 .pricePerPlayer(new BigDecimal("280.00"))
-                .organizerUserId(1L)
                 .build();
 
         when(venueRepository.findById(10L)).thenReturn(Optional.of(venue));
         when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
         when(openGameRepository.save(any(OpenGame.class))).thenAnswer(i -> i.getArgument(0));
 
-        OpenGameResponse response = openGameService.createOpenGame(request);
+        OpenGameResponse response = openGameService.createOpenGame(request, 1L);
 
         assertNotNull(response);
         assertEquals("Friday Night Football", response.getTitle());
@@ -144,7 +143,7 @@ class OpenGameServiceTest {
             return m;
         });
 
-        JoinOpenGameResponse response = openGameService.joinOpenGame(100L, request);
+        JoinOpenGameResponse response = openGameService.joinOpenGame(100L, request, 2L);
 
         assertTrue(response.getSuccess());
         assertEquals(2, openGame.getFilledCount());
@@ -162,7 +161,7 @@ class OpenGameServiceTest {
 
         when(openGameRepository.findWithLockById(100L)).thenReturn(Optional.of(openGame));
 
-        assertThrows(GameFullException.class, () -> openGameService.joinOpenGame(100L, request));
+        assertThrows(GameFullException.class, () -> openGameService.joinOpenGame(100L, request, 2L));
     }
 
     @Test
@@ -173,7 +172,7 @@ class OpenGameServiceTest {
         when(openGameRepository.findWithLockById(100L)).thenReturn(Optional.of(openGame));
         when(membershipRepository.existsByOpenGameIdAndUserId(100L, 2L)).thenReturn(true);
 
-        assertThrows(AlreadyJoinedException.class, () -> openGameService.joinOpenGame(100L, request));
+        assertThrows(AlreadyJoinedException.class, () -> openGameService.joinOpenGame(100L, request, 2L));
     }
 
     @Test
@@ -187,7 +186,7 @@ class OpenGameServiceTest {
         when(membershipRepository.existsByOpenGameIdAndUserId(100L, 2L)).thenReturn(false);
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
 
-        assertThrows(LowReliabilityScoreException.class, () -> openGameService.joinOpenGame(100L, request));
+        assertThrows(LowReliabilityScoreException.class, () -> openGameService.joinOpenGame(100L, request, 2L));
     }
 
     @Test
@@ -202,6 +201,6 @@ class OpenGameServiceTest {
         when(membershipRepository.existsByOpenGameIdAndUserId(100L, 2L)).thenReturn(false);
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
 
-        assertThrows(InvalidSkillLevelException.class, () -> openGameService.joinOpenGame(100L, request));
+        assertThrows(InvalidSkillLevelException.class, () -> openGameService.joinOpenGame(100L, request, 2L));
     }
 }

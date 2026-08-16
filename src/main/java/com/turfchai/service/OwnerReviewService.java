@@ -1,6 +1,7 @@
 package com.turfchai.service;
 
 import com.turfchai.domain.Review;
+import com.turfchai.exception.ReviewNotFoundException;
 import com.turfchai.repository.ReviewRepository;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +20,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class OwnerReviewService {
+
+    private static final int MAX_RESPONSE_LENGTH = 2000;
 
     private final VenueRepository venueRepository;
     private final ReviewRepository reviewRepository;
@@ -76,7 +80,8 @@ public class OwnerReviewService {
             item.put("text", r.getComment() != null ? r.getComment() : "");
             item.put("comment", r.getComment() != null ? r.getComment() : "");
             item.put("tags", r.getTags() != null ? r.getTags() : List.of());
-            item.put("needsResponse", false);
+            item.put("response", r.getOwnerResponse() != null ? r.getOwnerResponse() : "");
+            item.put("needsResponse", r.getOwnerResponse() == null || r.getOwnerResponse().isBlank());
 
             items.add(item);
         }
@@ -104,6 +109,43 @@ public class OwnerReviewService {
                 "averageRating", averageRating,
                 "totalReviews", reviews.size()
         );
+    }
+
+    /**
+     * Publishes the venue owner's public reply to one of their own reviews.
+     *
+     * @throws ReviewNotFoundException if the review does not exist, or belongs to a
+     *                                 venue this owner does not own — the two cases are
+     *                                 deliberately indistinguishable so review ids of
+     *                                 other venues cannot be probed.
+     */
+    @Transactional
+    public Map<String, Object> respond(Long ownerUserId, Long reviewId, String response) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ReviewNotFoundException(reviewId));
+
+        Venue venue = review.getVenue();
+        if (venue == null || venue.getOwner() == null || !venue.getOwner().getId().equals(ownerUserId)) {
+            throw new ReviewNotFoundException(reviewId);
+        }
+
+        String text = response == null ? "" : response.trim();
+        if (text.isEmpty()) {
+            throw new IllegalArgumentException("Response cannot be empty");
+        }
+        if (text.length() > MAX_RESPONSE_LENGTH) {
+            throw new IllegalArgumentException("Response cannot exceed " + MAX_RESPONSE_LENGTH + " characters");
+        }
+
+        review.setOwnerResponse(text);
+        review.setOwnerRespondedAt(ZonedDateTime.now());
+        review.setUpdatedAt(ZonedDateTime.now());
+        reviewRepository.save(review);
+
+        return Map.of(
+                "id", review.getId(),
+                "response", text,
+                "respondedAt", review.getOwnerRespondedAt().toString());
     }
 
     private String capitalize(String str) {

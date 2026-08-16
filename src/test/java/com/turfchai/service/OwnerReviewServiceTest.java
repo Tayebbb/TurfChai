@@ -87,5 +87,67 @@ class OwnerReviewServiceTest {
         assertEquals(2, items.size());
         assertEquals("Rahim Ahmed", items.get(0).get("author"));
         assertEquals("Great turf!", items.get(0).get("text"));
+        assertEquals(true, items.get(0).get("needsResponse"));
+    }
+
+    @Test
+    @DisplayName("respond stores the owner's reply and clears needsResponse")
+    void testRespondStoresReply() {
+        User owner = new User();
+        owner.setId(1L);
+        Venue venue = new Venue();
+        venue.setId(10L);
+        venue.setOwner(owner);
+
+        Review review = new Review();
+        review.setId(101L);
+        review.setVenue(venue);
+
+        when(reviewRepository.findById(101L)).thenReturn(java.util.Optional.of(review));
+        when(reviewRepository.save(review)).thenReturn(review);
+
+        Map<String, Object> result = ownerReviewService.respond(1L, 101L, "  Thanks for playing!  ");
+
+        assertEquals("Thanks for playing!", result.get("response"));
+        assertEquals("Thanks for playing!", review.getOwnerResponse());
+        assertNotNull(review.getOwnerRespondedAt());
+    }
+
+    @Test
+    @DisplayName("respond refuses a review that belongs to another owner's venue")
+    void testRespondRefusesForeignReview() {
+        User otherOwner = new User();
+        otherOwner.setId(99L);
+        Venue venue = new Venue();
+        venue.setId(10L);
+        venue.setOwner(otherOwner);
+
+        Review review = new Review();
+        review.setId(101L);
+        review.setVenue(venue);
+
+        when(reviewRepository.findById(101L)).thenReturn(java.util.Optional.of(review));
+
+        assertThrows(com.turfchai.exception.ReviewNotFoundException.class,
+                () -> ownerReviewService.respond(1L, 101L, "Thanks!"));
+        assertNull(review.getOwnerResponse());
+    }
+
+    @Test
+    @DisplayName("respond rejects a blank reply")
+    void testRespondRejectsBlank() {
+        User owner = new User();
+        owner.setId(1L);
+        Venue venue = new Venue();
+        venue.setId(10L);
+        venue.setOwner(owner);
+
+        Review review = new Review();
+        review.setId(101L);
+        review.setVenue(venue);
+
+        when(reviewRepository.findById(101L)).thenReturn(java.util.Optional.of(review));
+
+        assertThrows(IllegalArgumentException.class, () -> ownerReviewService.respond(1L, 101L, "   "));
     }
 }

@@ -39,15 +39,22 @@ class VenueSearchServiceTest {
     private com.turfchai.tournament.repository.TournamentRepository tournaments;
     @Autowired
     private SlotRepository slots;
+    @Autowired
+    private com.turfchai.booking.repository.BookingRepository bookings;
+    @Autowired
+    private com.turfchai.repository.ReviewRepository reviews;
 
     private Sport football;
     private Sport badminton;
 
     @BeforeEach
     void setUp() {
-        // The demo tournament seeder references venue pitches — clear it
-        // first so the venue reset below doesn't hit FK constraints.
+        // Order matters: reviews point at bookings, and tournaments and bookings
+        // both hold foreign keys into the venue graph, so each has to go before
+        // the rows it points at.
+        reviews.deleteAll();
         tournaments.deleteAll();
+        bookings.deleteAll();
         slots.deleteAll();
         venues.deleteAll();
         football = VenueTestData.sport(sports, "football");

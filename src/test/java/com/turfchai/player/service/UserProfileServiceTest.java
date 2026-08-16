@@ -1,6 +1,6 @@
 package com.turfchai.player.service;
 
-import com.turfchai.player.api.UserProfileRestController;
+import com.turfchai.player.config.PlayerDataSeeder;
 import com.turfchai.player.dto.PlayerProfileDto;
 import com.turfchai.player.dto.UpdateProfileRequest;
 import com.turfchai.player.repository.SavedVenueRepository;
@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 })
 class UserProfileServiceTest {
 
-    private static final UUID DEMO = UserProfileRestController.DEMO_USER_ID;
+    private static final UUID DEMO = PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID;
 
     @Autowired
     private UserProfileService service;

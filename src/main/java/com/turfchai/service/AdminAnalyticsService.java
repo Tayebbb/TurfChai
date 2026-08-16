@@ -21,6 +21,8 @@ import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -107,12 +109,34 @@ public class AdminAnalyticsService {
         }
 
         GrowthDto dto = new GrowthDto(totalUsers, newUsersToday, activeRatio,
-                84.2, // retentionRate — requires cohort analysis beyond simple counts
+                thirtyDayReturnRate(allUsers, now),
                 labels, counts);
         dto.setGrowthMonths(growthMonths);
         dto.setGrowthPlayers(growthPlayers);
         dto.setGrowthHosts(growthHosts);
         return dto;
+    }
+
+    /**
+     * Share of accounts older than 30 days that have booked in the last 30 days.
+     * This used to be shipped as a flat 84.2 with a comment saying it needed
+     * cohort analysis; {@code null} now means "not enough history to measure",
+     * which the dashboard renders as an em dash.
+     */
+    private Double thirtyDayReturnRate(List<User> allUsers, OffsetDateTime now) {
+        OffsetDateTime cohortCutoff = now.minusDays(30);
+        Set<Long> eligible = allUsers.stream()
+                .filter(u -> u.getCreatedAt() != null && u.getCreatedAt().isBefore(cohortCutoff))
+                .map(User::getId)
+                .collect(Collectors.toSet());
+        if (eligible.isEmpty()) {
+            return null;
+        }
+        long returned = bookingRepository
+                .findDistinctUserIdsBookingSince(now.toLocalDate().minusDays(30)).stream()
+                .filter(eligible::contains)
+                .count();
+        return Math.round(1000.0 * returned / eligible.size()) / 10.0;
     }
 
     /**

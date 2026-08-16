@@ -50,6 +50,12 @@ public class VenueManagementService {
 
     private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^a-z0-9]+");
 
+    /** Mirrors ck_venues_cancel / ck_venues_deposit in V1__baseline.sql. */
+    private static final java.util.Set<String> ALLOWED_CANCEL_POLICIES =
+            java.util.Set.of("FREE_24H_50_6H", "FLEXIBLE_6H", "STRICT_NO_REFUND");
+    private static final java.util.Set<String> ALLOWED_DEPOSIT_POLICIES =
+            java.util.Set.of("FULL_ONLY", "THIRTY_PERCENT", "FIFTY_PERCENT");
+
     private final VenueRepository venueRepository;
     private final PitchRepository pitchRepository;
     private final SportRepository sportRepository;
@@ -58,6 +64,7 @@ public class VenueManagementService {
     private final SlotRepository slotRepository;
     private final com.turfchai.repository.TurfRequestRepository turfRequestRepository;
     private final BookingRepository bookingRepository;
+    private final com.turfchai.booking.service.SlotTimePolicy slotTimePolicy;
 
     public VenueManagementService(VenueRepository venueRepository,
                                    PitchRepository pitchRepository,
@@ -66,7 +73,8 @@ public class VenueManagementService {
                                    UserRepository userRepository,
                                    SlotRepository slotRepository,
                                    com.turfchai.repository.TurfRequestRepository turfRequestRepository,
-                                   BookingRepository bookingRepository) {
+                                   BookingRepository bookingRepository,
+                                   com.turfchai.booking.service.SlotTimePolicy slotTimePolicy) {
         this.venueRepository = venueRepository;
         this.pitchRepository = pitchRepository;
         this.sportRepository = sportRepository;
@@ -75,6 +83,7 @@ public class VenueManagementService {
         this.slotRepository = slotRepository;
         this.turfRequestRepository = turfRequestRepository;
         this.bookingRepository = bookingRepository;
+        this.slotTimePolicy = slotTimePolicy;
     }
 
     // ── Venue ──────────────────────────────────────────────────────────────
@@ -103,8 +112,8 @@ public class VenueManagementService {
         if (req.amenities() != null) venue.setAmenities(req.amenities());
         if (req.contactPhone() != null) venue.setContactPhone(req.contactPhone());
         if (req.contactEmail() != null) venue.setContactEmail(req.contactEmail());
-        if (req.depositPolicy() != null) venue.setDepositPolicy(req.depositPolicy());
-        if (req.cancelPolicy() != null) venue.setCancelPolicy(req.cancelPolicy());
+        if (req.depositPolicy() != null) venue.setDepositPolicy(validDepositPolicy(req.depositPolicy()));
+        if (req.cancelPolicy() != null) venue.setCancelPolicy(validCancelPolicy(req.cancelPolicy()));
         if (req.allowSplitPayment() != null) venue.setAllowSplitPayment(req.allowSplitPayment());
         if (req.rules() != null) venue.setRules(req.rules());
         if (req.photos() != null && !req.photos().isEmpty()) venue.setPhotos(String.join(",", req.photos()));
@@ -124,7 +133,16 @@ public class VenueManagementService {
         return toDto(saved);
     }
 
-    /** List all venues owned by the given user (auto-creates a draft venue if owner has none). */
+    /**
+     * List all venues owned by the given user.
+     *
+     * <p>This used to invent a venue when the owner had none: "Kick Off Arena"
+     * in Dhanmondi at 23.8103/90.4125, ৳2000, "floodlights,parking". A brand-new
+     * owner who had created nothing was shown a turf they did not own, at an
+     * address that was not theirs. A venue is created in exactly one place -
+     * {@code TurfApprovalService} when an admin approves the owner's turf
+     * request - so an owner with no approved request correctly has none.
+     */
     @Transactional
     public List<VenueManagementDto> listOwnerVenues(Long ownerUserId) {
         if (ownerUserId == null) {
@@ -138,35 +156,6 @@ public class VenueManagementService {
         }
         boolean isApproved = !requests.isEmpty() && "APPROVED".equalsIgnoreCase(requests.get(0).getStatus());
         boolean isRejected = !requests.isEmpty() && "REJECTED".equalsIgnoreCase(requests.get(0).getStatus());
-
-        if (venues.isEmpty() && owner != null) {
-            if (owner != null) {
-                String venueName = (!requests.isEmpty() && requests.get(0).getVenueName() != null && !requests.get(0).getVenueName().isBlank())
-                        ? requests.get(0).getVenueName() : "Kick Off Arena";
-                String area = (!requests.isEmpty() && requests.get(0).getArea() != null && !requests.get(0).getArea().isBlank())
-                        ? requests.get(0).getArea() : "Dhanmondi";
-
-                List<String> parsedPhotos = null;
-                if (!requests.isEmpty() && requests.get(0).getPhotosJson() != null && !requests.get(0).getPhotosJson().isBlank()) {
-                    try {
-                        parsedPhotos = new com.fasterxml.jackson.databind.ObjectMapper()
-                                .readValue(requests.get(0).getPhotosJson(), new com.fasterxml.jackson.core.type.TypeReference<List<String>>(){});
-                    } catch (Exception ignored) {
-                    }
-                }
-
-                CreateVenueRequest autoReq = new CreateVenueRequest(
-                        venueName, area, area,
-                        new java.math.BigDecimal("23.8103"), new java.math.BigDecimal("90.4125"),
-                        new java.math.BigDecimal("2000"), "06:00", "23:00",
-                        "floodlights,parking", owner.getPhone(), owner.getEmail(),
-                        "FULL_ONLY", "FREE_24H_50_6H", true,
-                        "Standard rules", parsedPhotos, false
-                );
-                createVenue(ownerUserId, autoReq);
-                venues = venueRepository.findByOwnerId(ownerUserId);
-            }
-        }
 
         for (Venue v : venues) {
             boolean updated = false;
@@ -236,8 +225,8 @@ public class VenueManagementService {
         if (req.amenities() != null) venue.setAmenities(req.amenities());
         if (req.contactPhone() != null) venue.setContactPhone(req.contactPhone());
         if (req.contactEmail() != null) venue.setContactEmail(req.contactEmail());
-        if (req.depositPolicy() != null) venue.setDepositPolicy(req.depositPolicy());
-        if (req.cancelPolicy() != null) venue.setCancelPolicy(req.cancelPolicy());
+        if (req.depositPolicy() != null) venue.setDepositPolicy(validDepositPolicy(req.depositPolicy()));
+        if (req.cancelPolicy() != null) venue.setCancelPolicy(validCancelPolicy(req.cancelPolicy()));
         if (req.allowSplitPayment() != null) venue.setAllowSplitPayment(req.allowSplitPayment());
         if (req.rules() != null) venue.setRules(req.rules());
         if (req.status() != null) venue.setStatus(req.status());
@@ -323,7 +312,7 @@ public class VenueManagementService {
         pitchRepository.save(pitch);
     }
 
-    // ── Pricing Rules ──────────────────────────────────────────────────────
+    // ── Pricing Rules ────────────────────────────────────────────────────────────────
 
     /**
      * Upsert a pricing rule for a (venue, sport, windowType) combination.
@@ -434,6 +423,28 @@ public class VenueManagementService {
         if (hhmm == null) return null;
         String[] parts = hhmm.split(":");
         return LocalTime.of(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+    }
+
+    /**
+     * The two policy columns are constrained to a fixed vocabulary and the
+     * refund engine switches on exactly those values. Accepting anything else
+     * stored a policy no code path could honour, and the owner screen was
+     * sending its own display labels.
+     */
+    private static String validCancelPolicy(String value) {
+        String policy = value == null ? null : value.trim().toUpperCase();
+        if (!ALLOWED_CANCEL_POLICIES.contains(policy)) {
+            throw new IllegalArgumentException("cancelPolicy must be one of " + ALLOWED_CANCEL_POLICIES);
+        }
+        return policy;
+    }
+
+    private static String validDepositPolicy(String value) {
+        String policy = value == null ? null : value.trim().toUpperCase();
+        if (!ALLOWED_DEPOSIT_POLICIES.contains(policy)) {
+            throw new IllegalArgumentException("depositPolicy must be one of " + ALLOWED_DEPOSIT_POLICIES);
+        }
+        return policy;
     }
 
     // ── Mapping ────────────────────────────────────────────────────────────
@@ -552,7 +563,8 @@ public class VenueManagementService {
                 p.getSports().stream().map(Sport::getSlug).toList()
         )).toList();
 
-        List<OwnerCalendarDto.TimeRowDto> rows = buildCalendarRowsFromDbSlots(pitchHeaders, dbSlots);
+        List<OwnerCalendarDto.TimeRowDto> rows = buildCalendarRowsFromDbSlots(pitchHeaders, dbSlots,
+                liveBookingsBySlot(venue.getId(), date));
 
         return OwnerCalendarDto.builder()
                 .venueId(venue.getId())
@@ -607,34 +619,57 @@ public class VenueManagementService {
         slotRepository.save(slot);
     }
 
+    /**
+     * Records a walk-in or phone booking the owner took directly.
+     *
+     * <p>Locks the slot and refuses one that is already taken or has already
+     * started. It previously overwrote any slot unconditionally, so a manual
+     * booking could silently take a slot a player had already paid for, and could
+     * be entered against a match that had already been played.
+     */
     public void createManualBooking(Long ownerUserId, Long venueId, ManualBookingRequestDto req) {
-        if (req.getSlotId() != null) {
-            slotRepository.findById(req.getSlotId()).ifPresent(s -> {
-                s.setStatus(SlotStatus.BOOKED);
-                slotRepository.save(s);
-
-                // Create confirmed Booking record so manual calendar bookings appear in Reports, Revenue & Customer logs
-                BigDecimal amount = (s.getPrice() != null) ? s.getPrice() : BigDecimal.valueOf(2000);
-                String bookingCode = "MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-                Long targetVenueId = (s.getVenueId() != null && s.getVenueId() > 0) ? s.getVenueId() : venueId;
-
-                Booking booking = Booking.builder()
-                        .bookingCode(bookingCode)
-                        .slot(s)
-                        .userId(ownerUserId)
-                        .venueId(targetVenueId)
-                        .pitchId(s.getPitch() != null ? s.getPitch().getId() : 0L)
-                        .bookingDate(s.getSlotDate() != null ? s.getSlotDate() : LocalDate.now())
-                        .startTime(s.getStartTime() != null ? s.getStartTime() : LocalTime.of(16, 0))
-                        .endTime(s.getEndTime() != null ? s.getEndTime() : LocalTime.of(17, 30))
-                        .grossAmount(amount)
-                        .netAmount(amount)
-                        .status(BookingStatus.CONFIRMED)
-                        .build();
-
-                bookingRepository.save(booking);
-            });
+        if (req.getSlotId() == null) {
+            throw new IllegalArgumentException("Pick a slot to book");
         }
+        Slot slot = slotRepository.findByIdForUpdate(req.getSlotId())
+                .orElseThrow(() -> new com.turfchai.booking.exception.SlotUnavailableException(
+                        "Slot not found with id: " + req.getSlotId()));
+
+        slotTimePolicy.assertNotStarted(slot);
+
+        if (slot.getStatus() == SlotStatus.BOOKED) {
+            throw new com.turfchai.booking.exception.SlotUnavailableException(
+                    "That slot is already booked");
+        }
+        if (slot.getStatus() == SlotStatus.BLOCKED) {
+            throw new com.turfchai.booking.exception.SlotUnavailableException(
+                    "That slot is blocked — unblock it first");
+        }
+
+        slot.setStatus(SlotStatus.BOOKED);
+        slot.setHeldByUserId(null);
+        slot.setHoldExpiresAt(null);
+        slotRepository.save(slot);
+
+        BigDecimal amount = (slot.getPrice() != null) ? slot.getPrice() : BigDecimal.ZERO;
+        Long targetVenueId = (slot.getVenueId() != null && slot.getVenueId() > 0) ? slot.getVenueId() : venueId;
+        if (slot.getPitch() == null) {
+            throw new IllegalStateException("Slot " + slot.getId() + " has no pitch and cannot be booked");
+        }
+
+        bookingRepository.save(Booking.builder()
+                .bookingCode("MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .slot(slot)
+                .userId(ownerUserId)
+                .venueId(targetVenueId)
+                .pitchId(slot.getPitch().getId())
+                .bookingDate(slot.getSlotDate())
+                .startTime(slot.getStartTime())
+                .endTime(slot.getEndTime())
+                .grossAmount(amount)
+                .netAmount(amount)
+                .status(BookingStatus.CONFIRMED)
+                .build());
     }
 
     private List<Slot> seedSlotsForDate(Long venueId, List<Pitch> pitches, LocalDate date) {
@@ -663,9 +698,25 @@ public class VenueManagementService {
         return createdSlots;
     }
 
+    /**
+     * Indexes the venue's live (non-cancelled) bookings for a date by slot id, so the
+     * calendar can expose the real booking behind each occupied cell.
+     */
+    private java.util.Map<Long, Booking> liveBookingsBySlot(Long venueId, LocalDate date) {
+        java.util.Map<Long, Booking> bySlot = new java.util.HashMap<>();
+        for (Booking booking : bookingRepository.findByVenueIdInAndBookingDate(List.of(venueId), date)) {
+            if (booking.getStatus() == BookingStatus.CANCELLED || booking.getSlot() == null) {
+                continue;
+            }
+            bySlot.putIfAbsent(booking.getSlot().getId(), booking);
+        }
+        return bySlot;
+    }
+
     private List<OwnerCalendarDto.TimeRowDto> buildCalendarRowsFromDbSlots(
             List<OwnerCalendarDto.PitchHeaderDto> pitchHeaders,
-            List<Slot> dbSlots) {
+            List<Slot> dbSlots,
+            java.util.Map<Long, Booking> bookingsBySlot) {
 
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
 
@@ -694,6 +745,10 @@ public class VenueManagementService {
                     String label = "Available";
                     String kind = "event";
                     boolean openable = true;
+                    Booking booking = bookingsBySlot.get(pitchSlot.getId());
+                    User customer = booking != null && booking.getUserId() != null
+                            ? userRepository.findById(booking.getUserId()).orElse(null)
+                            : null;
 
                     if (pitchSlot.getStatus() == SlotStatus.BOOKED) {
                         variant = "online";
@@ -726,6 +781,11 @@ public class VenueManagementService {
                             .openable(openable)
                             .status(pitchSlot.getStatus().name())
                             .price(pitchSlot.getPrice() != null ? pitchSlot.getPrice().doubleValue() : 2000.0)
+                            .bookingId(booking != null ? booking.getId() : null)
+                            .bookingCode(booking != null ? booking.getBookingCode() : null)
+                            .customerName(customer != null ? customer.getFullName() : null)
+                            .customerPhone(customer != null ? customer.getPhone() : null)
+                            .checkedIn(booking != null && booking.getCheckedInAt() != null)
                             .build());
                 } else {
                     cells.add(OwnerCalendarDto.CellDto.builder()
