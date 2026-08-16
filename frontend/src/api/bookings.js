@@ -19,6 +19,15 @@ export function holdSlot(slotId) {
   return api('/bookings/hold-slot', { method: 'POST', body: { slotId } });
 }
 
+/**
+ * GET /api/v1/bookings/active-hold — the caller's currently held slot, if
+ * any. Resolves to `{}` (no `slotId`) rather than rejecting when nothing is
+ * held, so callers can treat "no hold" as data, not an error branch.
+ */
+export function getActiveHold() {
+  return api('/bookings/active-hold');
+}
+
 /** GET /api/v1/bookings/{id} — booking detail for the owner/admin. */
 export function getBooking(id) {
   return api(`/bookings/${encodeURIComponent(id)}`);

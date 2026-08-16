@@ -1,0 +1,58 @@
+/* Docked just under the topbar (64px tall, see navigation.css) and pinned to
+   the right edge, so it never overlaps the brand/nav links/icon buttons —
+   it used to float centered at a fixed 14px from the viewport top, which
+   sat directly on top of the navbar. */
+.held-slot-banner {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top) + 10px);
+  right: max(20px, env(safe-area-inset-right));
+  z-index: 45; /* below the topbar's sticky 50 — it docks under it, never over it */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 12px 10px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+}
+
+.held-slot-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.held-slot-banner-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.held-slot-banner-text b {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.held-slot-banner-text span {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.held-slot-banner-cta {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .held-slot-banner {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+}

@@ -143,10 +143,15 @@ class BookingConcurrencyIntegrationTest {
         User player = users(1).get(0);
         rewardService.refundToWallet(player.getId(), new BigDecimal("500.00"), null);
 
-        Slot first = freshAvailableSlot();
-        Slot second = freshAvailableSlot();
-        bookingService.holdSlot(player.getId(), first.getId());
-        bookingService.holdSlot(player.getId(), second.getId());
+        // Holds both slots directly against the repository rather than through
+        // bookingService.holdSlot(): that entrypoint now rejects a second
+        // concurrent hold for the same player (one active hold at a time),
+        // which is correct for a real client but would make this scenario
+        // impossible to set up. The wallet-overdraw guard this test exercises
+        // lives in the payment layer, not the hold-acquisition layer, and
+        // must hold regardless of how a player ended up holding two slots.
+        Slot first = holdDirectly(freshAvailableSlot(), player.getId());
+        Slot second = holdDirectly(freshAvailableSlot(), player.getId());
 
         CountDownLatch start = new CountDownLatch(1);
         List<Thread> workers = List.of(first, second).stream().map(slot -> new Thread(() -> {
@@ -213,6 +218,13 @@ class BookingConcurrencyIntegrationTest {
                     .build()));
         }
         return users;
+    }
+
+    private Slot holdDirectly(Slot slot, Long userId) {
+        slot.setStatus(SlotStatus.HELD);
+        slot.setHeldByUserId(userId);
+        slot.setHoldExpiresAt(java.time.OffsetDateTime.now().plusMinutes(5));
+        return slotRepository.save(slot);
     }
 
     private Slot freshAvailableSlot() {

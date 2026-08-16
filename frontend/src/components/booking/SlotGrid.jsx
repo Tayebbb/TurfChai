@@ -11,8 +11,10 @@ export function SlotGrid({ slots, selectedId, onSelect, label = 'Available slots
         const isSelected = slot.id === selectedId;
         const state = isSelected ? 'selected' : slot.status;
         // Anything that is not free to book is unselectable — `blocked` counts,
-        // and so does any status added later.
-        const disabled = slot.status !== 'available';
+        // and so does any status added later. The one exception is a slot the
+        // caller themselves is holding: it stays clickable so they can get
+        // back to checkout instead of being stuck on a dead "Held" cell.
+        const disabled = slot.status !== 'available' && !slot.mine;
 
         return (
           <button

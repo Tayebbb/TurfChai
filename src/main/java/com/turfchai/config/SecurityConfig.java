@@ -87,7 +87,8 @@ public class SecurityConfig {
                                                                 "/api/v1/venues/*",
                                                                 "/api/v1/venues/*/reviews",
                                                                 "/api/v1/venues/*/slots",
-                                                                "/api/v1/venues/*/slots/stream")
+                                                                "/api/v1/venues/*/slots/stream",
+                                                                "/api/v1/venues/*/promotions/available")
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/v1/solo/open-games",

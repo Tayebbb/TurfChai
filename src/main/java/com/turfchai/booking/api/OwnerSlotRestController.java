@@ -5,6 +5,7 @@ import com.turfchai.booking.dto.request.UpdateSlotRequest;
 import com.turfchai.booking.dto.response.SlotResponse;
 import com.turfchai.booking.entity.Slot;
 import com.turfchai.booking.entity.SlotStatus;
+import com.turfchai.booking.service.SlotDisplayStatus;
 import com.turfchai.booking.service.SlotManagementService;
 import com.turfchai.booking.service.SlotTimePolicy;
 import com.turfchai.security.UserPrincipal;
@@ -75,6 +76,9 @@ public class OwnerSlotRestController {
     private SlotResponse toResponse(Slot slot) {
         // Map.of rejects null values, so a slot missing a pitch or a price used
         // to fail the whole calendar with a NullPointerException.
+        // Status goes through SlotDisplayStatus so a lapsed hold reads as
+        // AVAILABLE here too, instead of waiting on the 30s cleanup job.
+        String status = SlotDisplayStatus.of(slot);
         return SlotResponse.builder()
                 .id(slot.getId())
                 .pitchId(slot.getPitch() != null ? slot.getPitch().getId() : null)
@@ -83,8 +87,8 @@ public class OwnerSlotRestController {
                 .startTime(slot.getStartTime())
                 .endTime(slot.getEndTime())
                 .price(slot.getPrice())
-                .status(slot.getStatus() != null ? slot.getStatus().name() : null)
-                .bookable(slot.getStatus() == SlotStatus.AVAILABLE && !slotTimePolicy.hasStarted(slot))
+                .status(status)
+                .bookable(SlotStatus.AVAILABLE.name().equals(status) && !slotTimePolicy.hasStarted(slot))
                 .build();
     }
 }
