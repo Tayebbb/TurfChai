@@ -1,0 +1,294 @@
+﻿{
+    "generatedAt":  "2026-08-16T00:57:02.4440072+06:00",
+    "scannedFiles":  211,
+    "summary":  {
+                    "inlineToastOnlyHandlers":  37,
+                    "namedToastOnlyHandlers":  0,
+                    "buttonsWithoutHandler":  5,
+                    "nativeDialogs":  3,
+                    "consoleStatements":  2
+                },
+    "inlineToastOnlyHandlers":  [
+                                    {
+                                        "file":  "host\\MultiPitchPage.jsx",
+                                        "line":  194,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(cell.toast)}"
+                                    },
+                                    {
+                                        "file":  "host\\TournamentPage.jsx",
+                                        "line":  236,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(`Balance paid ${header.balance} via bKash âœ“ â€” reservation fully paid`)}"
+                                    },
+                                    {
+                                        "file":  "host\\TournamentPage.jsx",
+                                        "line":  301,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Schedule editor â€” drag fixtures between pitches \u0026 times\u0027)}"
+                                    },
+                                    {
+                                        "file":  "host\\TournamentPage.jsx",
+                                        "line":  338,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Notes saved âœ“\u0027)}"
+                                    },
+                                    {
+                                        "file":  "host\\TournamentPage.jsx",
+                                        "line":  396,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027ðŸ”„ Old link disabled â€” new invite link generated\u0027)}"
+                                    },
+                                    {
+                                        "file":  "host\\TournamentPage.jsx",
+                                        "line":  418,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Calling +880 1713 442 210 ðŸ“ž\u0027)}"
+                                    },
+                                    {
+                                        "file":  "host\\TournamentPage.jsx",
+                                        "line":  425,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Chat opened ðŸ’¬\u0027)}"
+                                    },
+                                    {
+                                        "file":  "host\\TournamentPage.jsx",
+                                        "line":  449,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Cancellation flow â€” refund preview shown before you confirm\u0027)}"
+                                    },
+                                    {
+                                        "file":  "layouts\\OwnerLayout.jsx",
+                                        "line":  66,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u00273 new notifications ðŸ””\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\admin\\ActivityPage.jsx",
+                                        "line":  95,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Exporting activity-log.csv ðŸ“„\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\admin\\DashboardPage.jsx",
+                                        "line":  273,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Executive PDF Report exported ðŸ“Š\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\admin\\ProfilePage.jsx",
+                                        "line":  230,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Password change flow initiated ðŸ”’\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\admin\\ProfilePage.jsx",
+                                        "line":  276,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Other sessions terminated\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\admin\\TurfDetailsPage.jsx",
+                                        "line":  272,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Venue approved! Now active on search index âœ“\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\admin\\TurfRequestsPage.jsx",
+                                        "line":  145,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(`Reason: ${request.adminNote}`)}"
+                                    },
+                                    {
+                                        "file":  "pages\\admin\\UsersPage.jsx",
+                                        "line":  148,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Exporting user roster CSV...\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\BookingsPage.jsx",
+                                        "line":  58,
+                                        "label":  "+ Manual booking",
+                                        "code":  "\u003cButton variant=\"primary\" onClick={() =\u003e showToast(\u0027Manual booking drawer â€” see Calendar page\u0027)}\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\BookingsPage.jsx",
+                                        "line":  120,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(action.toast)}"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\BookingsPage.jsx",
+                                        "line":  131,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(row.actions[0].toast)}"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\BookingsPage.jsx",
+                                        "line":  160,
+                                        "label":  "â€¹ Prev",
+                                        "code":  "\u003cButton size=\"sm\" variant=\"tertiary\" onClick={() =\u003e showToast(\u0027Previous page\u0027)}\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\BookingsPage.jsx",
+                                        "line":  163,
+                                        "label":  "Next â€º",
+                                        "code":  "\u003cButton size=\"sm\" variant=\"tertiary\" onClick={() =\u003e showToast(\u0027Next page\u0027)}\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\CalendarPage.jsx",
+                                        "line":  665,
+                                        "label":  "ðŸ“ž Call",
+                                        "code":  "\u003cButton onClick={() =\u003e showToast(\u0027Calling customer ðŸ“ž\u0027)}\u003eðŸ“ž Call\u003c/Button\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\CalendarPage.jsx",
+                                        "line":  666,
+                                        "label":  "ðŸ” Reschedule",
+                                        "code":  "\u003cButton onClick={() =\u003e showToast(\u0027Reschedule offer sent\u0027)}\u003eðŸ” Reschedule\u003c/Button\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\CalendarPage.jsx",
+                                        "line":  667,
+                                        "label":  "Cancel booking",
+                                        "code":  "\u003cButton variant=\"ghostDanger\" onClick={() =\u003e showToast(\u0027Cancellation flow â€” refund per policy\u0027)}\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\CustomersPage.jsx",
+                                        "line":  41,
+                                        "label":  "+ Add customer",
+                                        "code":  "\u003cButton variant=\"primary\" onClick={() =\u003e showToast(\u0027Add customer form opened\u0027)}\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\CustomersPage.jsx",
+                                        "line":  100,
+                                        "label":  "ðŸ“",
+                                        "code":  "\u003cButton size=\"sm\" variant=\"tertiary\" onClick={() =\u003e showToast(row.note)}\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\DashboardPage.jsx",
+                                        "line":  240,
+                                        "label":  "",
+                                        "code":  "\u003cButton size=\"sm\" variant={row.action.variant} onClick={() =\u003e showToast(row.action.toast)}\u003e"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\PaymentsPage.jsx",
+                                        "line":  587,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Monthly report generated ðŸ“ˆ\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\ReviewsPage.jsx",
+                                        "line":  110,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Response published â€” shown under the review âœ“\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\owner\\ReviewsPage.jsx",
+                                        "line":  133,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(action.toast)}"
+                                    },
+                                    {
+                                        "file":  "pages\\player\\BookingDetailPage.jsx",
+                                        "line":  215,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\"Directions opened ðŸ—ºï¸\")}"
+                                    },
+                                    {
+                                        "file":  "pages\\player\\BookingDetailPage.jsx",
+                                        "line":  222,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\"Calling venue ðŸ“ž\")}"
+                                    },
+                                    {
+                                        "file":  "pages\\player\\BookingSuccessPage.jsx",
+                                        "line":  218,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\"Added to your calendar ðŸ“…\")}"
+                                    },
+                                    {
+                                        "file":  "pages\\player\\BookingSuccessPage.jsx",
+                                        "line":  224,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\"Opening directions ðŸ—ºï¸\")}"
+                                    },
+                                    {
+                                        "file":  "pages\\player\\BookingSuccessPage.jsx",
+                                        "line":  245,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\"Contact the venue from My Bookings ðŸ“ž\")}"
+                                    },
+                                    {
+                                        "file":  "pages\\player\\VenuePage.jsx",
+                                        "line":  564,
+                                        "label":  "",
+                                        "code":  "onClick={() =\u003e showToast(\u0027Link copied â€” share with your team\u0027)}"
+                                    },
+                                    {
+                                        "file":  "pages\\player\\VenuePage.jsx",
+                                        "line":  893,
+                                        "label":  "",
+                                        "code":  "\u003cButton size=\"sm\" style={{ marginTop: 12 }} onClick={() =\u003e showToast(\u0027Loading all reviewsâ€¦\u0027)}\u003e"
+                                    }
+                                ],
+    "namedToastOnlyHandlers":  [
+
+                               ],
+    "buttonsWithoutHandler":  [
+                                  {
+                                      "file":  "components\\buttons\\Button.jsx",
+                                      "line":  15,
+                                      "tag":  "\u003cbutton\u003e"
+                                  },
+                                  {
+                                      "file":  "components\\buttons\\Button.jsx",
+                                      "line":  57,
+                                      "tag":  "\u003cbutton className={classes} type={type} disabled={disabled || loading} {...rest}\u003e"
+                                  },
+                                  {
+                                      "file":  "components\\buttons\\IconButton.jsx",
+                                      "line":  26,
+                                      "tag":  "\u003cbutton className={classes} type=\"button\" {...a11y} {...rest}\u003e"
+                                  },
+                                  {
+                                      "file":  "pages\\player\\ReviewPage.jsx",
+                                      "line":  286,
+                                      "tag":  "\u003cbutton type=\"button\" key={star} className={star \u003e"
+                                  },
+                                  {
+                                      "file":  "solo\\GameDetailPage.jsx",
+                                      "line":  318,
+                                      "tag":  "\u003cbutton className=\"btn btn-primary btn-lg btn-block\" type=\"button\" disabled\u003e"
+                                  }
+                              ],
+    "nativeDialogs":  [
+                          {
+                              "file":  "api\\lfgAlerts.js",
+                              "line":  15,
+                              "code":  "* POST /solo/lfg-alerts â€” creates an ACTIVE alert (201) for the signed-in user."
+                          },
+                          {
+                              "file":  "components\\ui\\Alert.jsx",
+                              "line":  6,
+                              "code":  "export function Alert({ tone = \u0027info\u0027, icon, title, className, children, ...rest }) {"
+                          },
+                          {
+                              "file":  "pages\\owner\\PromotionsPage.jsx",
+                              "line":  83,
+                              "code":  "if (!confirm(\u0027Are you sure you want to delete this promotion?\u0027)) return;"
+                          }
+                      ],
+    "consoleStatements":  [
+                              {
+                                  "file":  "pages\\owner\\OwnerOnboardingPage.jsx",
+                                  "line":  263,
+                                  "code":  "console.warn(\u0027Registration fallback failed:\u0027, authErr.message || loginErr.message);"
+                              },
+                              {
+                                  "file":  "pages\\owner\\VenueSetupPage.jsx",
+                                  "line":  478,
+                                  "code":  "console.error(\u0027Failed to resolve active venue\u0027, err);"
+                              }
+                          ]
+}

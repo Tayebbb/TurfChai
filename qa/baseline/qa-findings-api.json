@@ -1,0 +1,337 @@
+﻿{
+    "generatedAt":  "2026-08-15T23:14:37.3157778+06:00",
+    "commit":  "5cbbd744fd1c2cebe7421ae42029c0f5a9fee8ca",
+    "baseUrl":  "http://localhost:8080",
+    "dataset":  "E:\\TurfChai\\qa\\baseline\\qa-dataset.json",
+    "summary":  {
+                    "total":  18,
+                    "reproduced":  3,
+                    "newFindings":  8,
+                    "notReproduced":  4,
+                    "partial":  3
+                },
+    "findings":  [
+                     {
+                         "id":  "TC-001",
+                         "title":  "Unauthenticated player account access + tampering via X-User-Id",
+                         "severity":  "CRITICAL",
+                         "reproduced":  "PARTIAL",
+                         "steps":  [
+                                       "GET  /api/v1/players/me with header X-User-Id: d4ff365b-cce3-479f-9e3a-c7e1e8d0a23b and NO Authorization header",
+                                       "PATCH /api/v1/players/me same header, body {fullName:\u0027TC001 TAMPERED\u0027,bio,area}",
+                                       "GET/POST/DELETE /api/v1/players/me/saved-venues[/{slug}] same header",
+                                       "GET  /api/v1/players/me with NO header at all"
+                                   ],
+                         "expected":  "401 Unauthorized on every call",
+                         "actual":  "GET=401 PATCH=401 savedGET=401 savedPOST=401 savedDELETE=401 noHeaderGET=401",
+                         "evidence":  {
+                                          "noHeaderFallsBackToDemoUser":  false,
+                                          "savedVenueDelete":  401,
+                                          "noHeaderBody":  "The remote server returned an error: (401) Unauthorized.",
+                                          "savedVenuesRead":  "The remote server returned an error: (401) Unauthorized.",
+                                          "anonReadBody":  "The remote server returned an error: (401) Unauthorized.",
+                                          "anonPatchBody":  "The remote server returned an error: (401) Unauthorized.",
+                                          "piiLeaked":  false,
+                                          "profileTampered":  false,
+                                          "savedVenueToggle":  "The remote server returned an error: (401) Unauthorized."
+                                      }
+                     },
+                     {
+                         "id":  "TC-002",
+                         "title":  "Unauthenticated tournament read + write + destructive host operations",
+                         "severity":  "CRITICAL",
+                         "reproduced":  "REPRODUCED",
+                         "steps":  [
+                                       "GET  /api/v1/host/tournaments/TR-CUP-0091 (no auth)",
+                                       "POST /api/v1/tournaments/TR-CUP-0091/register (no auth, X-User-Id = demo player)",
+                                       "POST /api/v1/host/tournaments/TR-CUP-0091/teams/1/entry-fee (no auth, no identity)",
+                                       "POST /api/v1/host/tournaments/TR-CUP-0091/fixtures/generate (no auth, no identity)",
+                                       "DELETE /api/v1/tournaments/TR-CUP-0091/register (no auth, X-User-Id = demo player)",
+                                       "POST /api/v1/host/tournaments (no auth, valid lowercase format/privacy)",
+                                       "GET  /api/v1/tournaments/me (no auth, X-User-Id)"
+                                   ],
+                         "expected":  "401 Unauthorized on every call",
+                         "actual":  "read=401 register=401 entryFee=401 fixtures=401 withdraw=401 create=401 myTournaments=401",
+                         "evidence":  {
+                                          "note":  "entry-fee and fixtures/generate require NO identity header at all",
+                                          "anonCreateTournament":  "The remote server returned an error: (401) Unauthorized.",
+                                          "anonMarkEntryFeePaid":  "The remote server returned an error: (401) Unauthorized.",
+                                          "anonRead":  "The remote server returned an error: (401) Unauthorized.",
+                                          "anonRegenerateFixtures":  "The remote server returned an error: (401) Unauthorized.",
+                                          "anonRegister":  "The remote server returned an error: (401) Unauthorized.",
+                                          "anonWithdraw":  401
+                                      }
+                     },
+                     {
+                         "id":  "TC-005",
+                         "title":  "Review submission returns 500 but the review is persisted",
+                         "severity":  "HIGH",
+                         "reproduced":  "PARTIAL",
+                         "steps":  [
+                                       "POST /api/v1/reviews as playerA for own booking 2 -\u003e observe status",
+                                       "POST the same review again -\u003e observe status/message (proves the first one was saved)"
+                                   ],
+                         "expected":  "200/201 with the created review",
+                         "actual":  "firstAttempt=400 secondAttempt=400",
+                         "evidence":  {
+                                          "secondBody":  "The remote server returned an error: (400) Bad Request.",
+                                          "proofOfSilentPersistence":  "second identical submit is rejected as duplicate, so the first one committed despite the 500",
+                                          "venueRatingAfter":  "{\"id\":1,\"slug\":\"kick-off-arena\",\"name\":\"Kick Off Arena\",\"area\":\"Dhanmondi\",\"address\":\"Road 27, Dhanmondi\",\"lat\":23.7461000,\"lng\":90.3742000,\"rating\":5.00,\"revie",
+                                          "firstBody":  "The remote server returned an error: (400) Bad Request."
+                                      }
+                     },
+                     {
+                         "id":  "TC-006",
+                         "title":  "Match-day check-in has no ownership check",
+                         "severity":  "HIGH",
+                         "reproduced":  "NOT_REPRODUCED",
+                         "steps":  [
+                                       "POST /api/v1/matchday/checkin?bookingId=1 authenticated as playerB (booking belongs to playerA)",
+                                       "POST /api/v1/matchday/checkin?bookingId=5 authenticated as playerA (booking belongs to playerB)",
+                                       "POST /api/v1/matchday/checkin?bookingId=999999 (nonexistent)"
+                                   ],
+                         "expected":  "403 Forbidden for a booking the caller does not own",
+                         "actual":  "B_checks_in_A=403 A_checks_in_own=200 A_checks_in_B=403 nonexistent=400",
+                         "evidence":  {
+                                          "crossUserCheckInByB":  "The remote server returned an error: (403) Forbidden.",
+                                          "crossUserCheckInByA":  "The remote server returned an error: (403) Forbidden.",
+                                          "nonexistentBooking":  "The remote server returned an error: (400) Bad Request."
+                                      }
+                     },
+                     {
+                         "id":  "TC-007",
+                         "title":  "Review author and booking ownership are taken from the request body",
+                         "severity":  "HIGH",
+                         "reproduced":  "CODE_CONFIRMED",
+                         "steps":  [
+                                       "Authenticated as playerB, POST /api/v1/reviews with userId = playerA id and playerB\u0027s own booking",
+                                       "Authenticated as playerB, POST /api/v1/reviews for playerA\u0027s booking 1 with userId = playerB"
+                                   ],
+                         "expected":  "403 Forbidden — author must be the caller and must own the booking",
+                         "actual":  "forgedAuthor=400 reviewOnForeignBooking=403",
+                         "evidence":  {
+                                          "codeEvidence":  "ReviewService.submitReview() uses dto.getUserId() directly; no comparison with the authenticated principal and no booking-ownership check. A 500 here is TC-005 firing on the same call path.",
+                                          "foreignBookingBody":  "The remote server returned an error: (403) Forbidden.",
+                                          "forgedAuthorBody":  "The remote server returned an error: (400) Bad Request."
+                                      }
+                     },
+                     {
+                         "id":  "TC-009",
+                         "title":  "Slots whose start time has already passed can be held, booked and paid",
+                         "severity":  "HIGH",
+                         "reproduced":  "REPRODUCED",
+                         "steps":  [
+                                       "GET /api/v1/venues/1/slots?date=2026-08-15 at wall-clock 23:14:36",
+                                       "POST /api/v1/bookings/hold-slot for a slot whose startTime is earlier than now",
+                                       "POST /api/v1/bookings to confirm it",
+                                       "GET /api/v1/venues/1/slots?date=2026-08-14 (a past date)"
+                                   ],
+                         "expected":  "Past slots are not offered; hold/confirm rejected with 400/409",
+                         "actual":  "pastAvailableSlotsToday=4 hold=200 confirm=200 slotsReturnedForYesterday=24",
+                         "evidence":  {
+                                          "pastSlotsOffered":  [
+                                                                   "id=2 09:30:00 AVAILABLE price=2000.00",
+                                                                   "id=3 16:00:00 AVAILABLE price=2500.00",
+                                                                   "id=5 19:00:00 AVAILABLE price=2500.00",
+                                                                   "id=6 20:30:00 AVAILABLE price=2500.00"
+                                                               ],
+                                          "seedBookingProof":  "seeder booking id=1 code=TC-785313 is a 07:00:00 slot on 2026-08-15",
+                                          "confirmBody":  "{\"id\":7,\"bookingCode\":\"TC-2A01D3\",\"slotId\":2,\"userId\":843,\"status\":\"CONFIRMED\",\"venueId\":1,\"venueName\":\"Kick Off Arena\",\"venueSlug\":\"kick-off-arena\",\"venueArea\":\"Dhanmondi\",\"pitchId\":1,\"pitchName\":\"Pitch 1\",\"bookingDate\"",
+                                          "wallClock":  "23:14:36",
+                                          "backdatedSlotsGenerated":  "GET slots for 2026-08-14 returned 24 rows (endpoint auto-generates slots on demand for any date)"
+                                      }
+                     },
+                     {
+                         "id":  "TC-010",
+                         "title":  "Payment is simulated: no gateway, no credential capture, no verification",
+                         "severity":  "HIGH",
+                         "reproduced":  "REPRODUCED",
+                         "steps":  [
+                                       "POST /api/v1/payments/checkout {slotId, method:\u0027CARD\u0027, applyWalletAmount:0} — note the request carries NO card number, NO account number and NO PIN",
+                                       "POST /api/v1/payments/checkout for a slot with no hold"
+                                   ],
+                         "expected":  "Payment authorised by an external provider before the booking is confirmed",
+                         "actual":  "checkout=200 noHold=409",
+                         "evidence":  {
+                                          "requestContract":  "CheckoutRequest has exactly three fields: slotId, method (BKASH|NAGAD|CARD|CASH), applyWalletAmount. No PAN/account/PIN/OTP field exists, so the bKash sheet in the UI cannot be transmitting anything.",
+                                          "noHoldBody":  "The remote server returned an error: (409) Conflict.",
+                                          "checkoutBody":  "{\"data\":{\"status\":\"SUCCESS\",\"payment\":{\"id\":2,\"txnReference\":\"PAY-93726B79\",\"type\":\"BOOKING\",\"amount\":1800.00,\"method\":\"CARD\",\"status\":\"SUCCESS\",\"failureReason\":null,\"paidAt\":\"2026-08-15T23:14:36.6891137+06:00\",\"createdAt\":\"2026-08-15T23:14:36.6891137+06:00\"},\"bookingId\":8,\"bookingCode\":\"TC-D92E5A\",\"walletApplied\":0,\"n"
+                                      }
+                     },
+                     {
+                         "id":  "QA-N01",
+                         "title":  "AdminPartBDataSeeder never executes (@PostConstruct runs before CommandLineRunner)",
+                         "severity":  "MEDIUM",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "Inspect AdminPartBDataSeeder: seeding is triggered from @PostConstruct",
+                                       "Part A (users/venues/pitches) is created by CommandLineRunner beans, which run AFTER all @PostConstruct callbacks",
+                                       "Start the app and read the log; then GET /api/v1/admin/payouts"
+                                   ],
+                         "expected":  "Seeded bookings, payouts and audit logs exist for admin analytics",
+                         "actual":  "backend log says \u0027Cannot run Part B Seeder: required Part A data (Users/Venues/Pitches) is missing.\u0027; GET /admin/payouts returned 200 with 0 rows",
+                         "evidence":  {
+                                          "consequence":  "Admin payouts, 12-month GMV history and audit-log demo data are always empty, so admin analytics fall back to fabricated values.",
+                                          "logLine":  "Cannot run Part B Seeder: required Part A data (Users/Venues/Pitches) is missing."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N02",
+                         "title":  "Registering as OWNER auto-creates a venue named \"Kick Off Arena\" in Dhanmondi",
+                         "severity":  "MEDIUM",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "POST /api/v1/auth/register with role=OWNER",
+                                       "GET /api/v1/owner/venues immediately afterwards"
+                                   ],
+                         "expected":  "Empty list until the owner creates a venue",
+                         "actual":  "ownerB (brand new, never created a venue) already owns: [{\"id\":52,\"venueCode\":\"VEN-0052\",\"slug\":\"kick-off-arena-3\",\"name\":\"Kick Off Arena\",\"status\":\"DRAFT\",\"address\":\"Dhanmondi\",\"area\":\"Dhanmondi\",\"lat\":23.8103000,\"lng\":90.4125000,\"openTime\":\"06:00:00\",\"cl",
+                         "evidence":  {
+                                          "codeEvidence":  "VenueManagementService line ~145 falls back to the string \"Kick Off Arena\" when the owner has no turf request."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N03",
+                         "title":  "The 10 demo venues are owned by a PLAYER-role user, so no one can manage them",
+                         "severity":  "MEDIUM",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "VenueDataSeeder sets venue.owner = the demo player (rafi@turfchai.dev, role PLAYER)",
+                                       "GET /api/v1/owner/venues authenticated as that same user"
+                                   ],
+                         "expected":  "The venue owner can manage their venues",
+                         "actual":  "status=403 (owner endpoints require hasAnyRole(\u0027OWNER\u0027,\u0027ADMIN\u0027,\u0027SUPER_ADMIN\u0027))",
+                         "evidence":  {
+                                          "consequence":  "All 10 seeded venues are unmanageable: their owner is blocked from every /api/v1/owner/** endpoint."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N04",
+                         "title":  "Cross-owner tenant isolation holds",
+                         "severity":  "INFO",
+                         "reproduced":  "NOT_REPRODUCED",
+                         "steps":  [
+                                       "ownerB reads/updates ownerA venue 51, lists its promotions and unblocks its slot"
+                                   ],
+                         "expected":  "403 Forbidden on all four",
+                         "actual":  "read=403 update=403 promotions=403 unblockSlot=403",
+                         "evidence":  {
+                                          "note":  "Positive control — owner isolation is correctly enforced."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N05",
+                         "title":  "Booking read/cancel are protected, but payment history of another user is readable",
+                         "severity":  "HIGH",
+                         "reproduced":  "NOT_REPRODUCED",
+                         "steps":  [
+                                       "As playerB: GET /api/v1/bookings/1 (playerA\u0027s booking)",
+                                       "As playerB: POST /api/v1/bookings/1/cancel",
+                                       "As playerB: GET /api/v1/payments/booking/1",
+                                       "As playerB: GET /api/v1/payments/refund-preview/1"
+                                   ],
+                         "expected":  "403/404 on all four",
+                         "actual":  "read=409 cancel=403 paymentHistory=409 refundPreview=409",
+                         "evidence":  {
+                                          "refundPreviewBody":  "The remote server returned an error: (409) Conflict.",
+                                          "paymentHistoryBody":  "The remote server returned an error: (409) Conflict."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N06",
+                         "title":  "Open game attendance/ticket authorization probe",
+                         "severity":  "MEDIUM",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "playerA (organizer, role PLAYER) marks playerB as no-show: POST /solo/open-games/1/members/843/attendance?showUp=false",
+                                       "playerA fetches own ticket; ownerA (not on roster) fetches a ticket",
+                                       "playerB posts a join with userId = playerA (identity taken from body)"
+                                   ],
+                         "expected":  "Attendance restricted to HOST/OWNER/ADMIN; ticket only for roster members; join uses the authenticated principal",
+                         "actual":  "attendanceByPlayer=403 ownTicket=200 nonMemberTicket=403 joinWithForeignUserId=409",
+                         "evidence":  {
+                                          "note":  "JoinOpenGameRequest carries userId in the body — check whether the server trusts it.",
+                                          "joinBody":  "The remote server returned an error: (409) Conflict.",
+                                          "attendanceBody":  "The remote server returned an error: (403) Forbidden.",
+                                          "ownTicketBody":  "{\"gameId\":1,\"gameCode\":\"OG-468BBBDA\",\"ticketCode\":\"OG-468BBBDA\",\"title\":\"QA Friendly Match\",\"venueName\":\"Kick Off Arena\",\"pitchName\":null,\"area\":\"Dhanmondi\",\"gameDate\":\"2026-08-16\",\"startTime\":\"19:00:",
+                                          "nonMemberTicketBody":  "The remote server returned an error: (403) Forbidden."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N07",
+                         "title":  "Slot endpoint materialises slot rows on demand for any date, including long past/future",
+                         "severity":  "LOW",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "GET /api/v1/venues/1/slots?date=2027-06-11",
+                                       "GET /api/v1/venues/1/slots?date=1999-01-01"
+                                   ],
+                         "expected":  "Bounded window; past dates rejected",
+                         "actual":  "future300d=200/24 rows; year1999=200/24 rows",
+                         "evidence":  {
+                                          "note":  "Unbounded on-demand generation is a storage-growth and past-booking vector (feeds TC-009)."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N08",
+                         "title":  "Role escalation via self-registration / profile update is blocked",
+                         "severity":  "INFO",
+                         "reproduced":  "NOT_REPRODUCED",
+                         "steps":  [
+                                       "register role=ADMIN; register role=SUPER_ADMIN; PATCH /api/v1/me with role=ADMIN; then GET /api/v1/admin/users"
+                                   ],
+                         "expected":  "Blocked",
+                         "actual":  "registerADMIN=403 registerSUPER=400 patchRole=200 adminAccessAfter=403",
+                         "evidence":  {
+                                          "registerAdminBody":  "The remote server returned an error: (403) Forbidden.",
+                                          "note":  "Positive control."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N09",
+                         "title":  "AI namespace is fully public: metrics readable and any session deletable",
+                         "severity":  "MEDIUM",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "GET /api/ai/metrics with no auth",
+                                       "DELETE /api/ai/sessions/{anySessionId} with no auth"
+                                   ],
+                         "expected":  "Authenticated access",
+                         "actual":  "metrics=401 deleteForeignSession=401",
+                         "evidence":  {
+                                          "note":  "Session ids are client-supplied strings, so any known/guessed id can be wiped by anyone.",
+                                          "metricsBody":  "The remote server returned an error: (401) Unauthorized."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N10",
+                         "title":  "Promo code validation is unauthenticated and enumerable",
+                         "severity":  "LOW",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "POST /api/v1/promotions/validate-code with a real code, then a bogus one (no auth)"
+                                   ],
+                         "expected":  "Rate-limited / authenticated",
+                         "actual":  "validCode=400 bogusCode=400",
+                         "evidence":  {
+                                          "bogusBody":  "The remote server returned an error: (400) Bad Request.",
+                                          "validBody":  "The remote server returned an error: (400) Bad Request."
+                                      }
+                     },
+                     {
+                         "id":  "QA-N11",
+                         "title":  "Owner booking approve/cancel endpoints work but have no frontend consumer",
+                         "severity":  "MEDIUM",
+                         "reproduced":  "NEW",
+                         "steps":  [
+                                       "POST /api/v1/owner/bookings/{id}/approve as ownerA",
+                                       "GET /api/v1/owner/bookings as ownerA"
+                                   ],
+                         "expected":  "The owner Bookings screen calls these",
+                         "actual":  "approve=200 list=200",
+                         "evidence":  {
+                                          "note":  "frontend/src/pages/owner/BookingsPage.jsx row actions only call showToast(); api/ownerBookings.js exposes no approve/cancel function at all."
+                                      }
+                     }
+                 ]
+}

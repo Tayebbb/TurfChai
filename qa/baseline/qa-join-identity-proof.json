@@ -1,0 +1,20 @@
+﻿{
+    "openGameId":  1,
+    "callerUserId":  844,
+    "bodyUserId":  848,
+    "joinStatus":  200,
+    "joinBody":  "{\"success\":true,\"message\":\"Successfully joined the game\",\"membershipId\":3,\"openGameId\":1,\"filledCount\":3,\"capacity\":10}",
+    "rosterBefore":  [
+                         842,
+                         843
+                     ],
+    "rosterAfter":  [
+                        842,
+                        843,
+                        844
+                    ],
+    "newlyAdded":  [
+                       844
+                   ],
+    "verdict":  "SAFE: server enrolled the authenticated caller"
+}

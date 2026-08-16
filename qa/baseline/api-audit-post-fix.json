@@ -1,0 +1,226 @@
+﻿[
+    {
+        "id":  "TC-024a",
+        "check":  "anonymous protected route -\u003e 401",
+        "expected":  401,
+        "actual":  401,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-024b",
+        "check":  "401 body carries the standard envelope",
+        "expected":  true,
+        "actual":  true,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-024c",
+        "check":  "authenticated unrouted path -\u003e 404",
+        "expected":  404,
+        "actual":  404,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-024d",
+        "check":  "wrong-role -\u003e 403 with a body",
+        "expected":  403,
+        "actual":  403,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-024e",
+        "check":  "403 body is not empty",
+        "expected":  true,
+        "actual":  true,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-025",
+        "check":  "unknown venue slots -\u003e 404",
+        "expected":  404,
+        "actual":  404,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "QA-N07a",
+        "check":  "far-past date generates no slots",
+        "expected":  0,
+        "actual":  0,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "QA-N07b",
+        "check":  "beyond-horizon date generates no slots",
+        "expected":  0,
+        "actual":  0,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-009a",
+        "check":  "elapsed AVAILABLE slots report bookable=false",
+        "expected":  0,
+        "actual":  0,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-009b",
+        "check":  "holding an elapsed slot is refused",
+        "expected":  409,
+        "actual":  409,
+        "pass":  true,
+        "note":  "{\"error\":\"Conflict\",\"message\":\"This slot has already started and can no longer be booked\",\"timestamp\":\"2026-08-16T15:50:07.4755271+06:00\",\"status\":409}"
+    },
+    {
+        "id":  "TC-009c",
+        "check":  "future slots are still offered",
+        "expected":  true,
+        "actual":  true,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017a",
+        "check":  "empty payload -\u003e 400",
+        "expected":  400,
+        "actual":  400,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017b",
+        "check":  "missing bookingDateTime -\u003e 400",
+        "expected":  400,
+        "actual":  400,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017c",
+        "check":  "400 names the offending field",
+        "expected":  true,
+        "actual":  true,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017d",
+        "check":  "negative daysBeforeBooking -\u003e 400",
+        "expected":  400,
+        "actual":  400,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017e",
+        "check":  "occupancyRate out of range -\u003e 400",
+        "expected":  400,
+        "actual":  400,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017f",
+        "check":  "unknown venue -\u003e 404",
+        "expected":  404,
+        "actual":  404,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017g",
+        "check":  "malformed JSON -\u003e 400",
+        "expected":  400,
+        "actual":  400,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-017h",
+        "check":  "a valid quote still succeeds",
+        "expected":  200,
+        "actual":  200,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-015",
+        "check":  "unknown turf-request code -\u003e 404",
+        "expected":  404,
+        "actual":  404,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "TC-028",
+        "check":  "player bookings carry no owner-view fields",
+        "expected":  0,
+        "actual":  0,
+        "pass":  true,
+        "note":  ""
+    },
+    {
+        "id":  "ENT",
+        "check":  "/api/v1/admin/users exposes no entity internals",
+        "expected":  false,
+        "actual":  false,
+        "pass":  true,
+        "note":  "status=200"
+    },
+    {
+        "id":  "ENT",
+        "check":  "/api/v1/admin/venues exposes no entity internals",
+        "expected":  false,
+        "actual":  false,
+        "pass":  true,
+        "note":  "status=200"
+    },
+    {
+        "id":  "ENT",
+        "check":  "/api/v1/admin/payouts exposes no entity internals",
+        "expected":  false,
+        "actual":  false,
+        "pass":  true,
+        "note":  "status=200"
+    },
+    {
+        "id":  "ENT",
+        "check":  "/api/v1/admin/turf-requests exposes no entity internals",
+        "expected":  false,
+        "actual":  false,
+        "pass":  true,
+        "note":  "status=200"
+    },
+    {
+        "id":  "ENT",
+        "check":  "/api/v1/admin/audit-log exposes no entity internals",
+        "expected":  false,
+        "actual":  false,
+        "pass":  true,
+        "note":  "status=200"
+    },
+    {
+        "id":  "ENT",
+        "check":  "/api/v1/admin/holidays exposes no entity internals",
+        "expected":  false,
+        "actual":  false,
+        "pass":  true,
+        "note":  "status=200"
+    },
+    {
+        "id":  "ENT",
+        "check":  "/api/v1/notifications is a projection (no userId)",
+        "expected":  false,
+        "actual":  false,
+        "pass":  true,
+        "note":  "status=200"
+    }
+]

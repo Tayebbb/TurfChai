@@ -15,6 +15,13 @@ export default defineConfig({
     outDir: 'dist',
     chunkSizeWarningLimit: 700,
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.js'],
+    include: ['src/**/*.test.{js,jsx}'],
+    restoreMocks: true,
+  },
   server: {
     // bind every interface so phones on the same Wi-Fi can open the dev server
     host: true,

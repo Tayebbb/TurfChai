@@ -1,0 +1,62 @@
+﻿{
+    "tc005_persistence":  {
+                              "venueSlug":  "kick-off-arena",
+                              "ratingNow":  5.00,
+                              "reviewCountNow":  1,
+                              "seededRating":  4.8,
+                              "seededReviewCount":  214,
+                              "conclusion":  "If reviewCount changed, ReviewService.recalculateVenueRating() committed, proving the review row persisted despite the HTTP 500."
+                          },
+    "qaN06b_join_identity":  {
+                                 "callerUserId":  844,
+                                 "bodyUserId":  842,
+                                 "status":  409,
+                                 "body":  "The remote server returned an error: (409) Conflict.",
+                                 "rosterUserIds":  [
+                                                       842,
+                                                       843,
+                                                       844
+                                                   ],
+                                 "conclusion":  "Server used the authenticated principal (safe)"
+                             },
+    "qaN10b_promo":  {
+                         "validScoped":  {
+                                             "status":  200,
+                                             "body":  "{\"code\":\"QA20\",\"label\":\"QA 20% off\",\"discountType\":\"PERCENT\",\"discountValue\":20.00,\"originalTotal\":1000,\"discountAmount\":200.00,\"finalTotal\":800.00,\"valid\":true,\"message\":\"Promo applied successfully\"}"
+                                         },
+                         "bogus":  {
+                                       "status":  422,
+                                       "body":  "The remote server returned an error: (422)."
+                                   },
+                         "noVenueScope":  {
+                                              "status":  200,
+                                              "body":  "{\"code\":\"QA20\",\"label\":\"QA 20% off\",\"discountType\":\"PERCENT\",\"discountValue\":20.00,\"originalTotal\":1000,\"discountAmount\":200.00,\"finalTotal\":800.00,\"valid\":true,\"message\":\"Promo applied successfully\"}"
+                                          },
+                         "negativeOrderTotal":  {
+                                                    "status":  400,
+                                                    "body":  "The remote server returned an error: (400) Bad Request."
+                                                },
+                         "unauthenticated":  true
+                     },
+    "tc006b_cancelled_checkin":  {
+                                     "bookingId":  3,
+                                     "status":  400,
+                                     "body":  "The remote server returned an error: (400) Bad Request.",
+                                     "conclusion":  "Checking in a cancelled booking should be rejected."
+                                 },
+    "qaN12_blocked_slot":  {
+                               "slotId":  180,
+                               "holdStatus":  409,
+                               "body":  "The remote server returned an error: (409) Conflict."
+                           },
+    "qaN13_wallet":  {
+                         "negative":  {
+                                          "status":  400,
+                                          "body":  "The remote server returned an error: (400) Bad Request."
+                                      },
+                         "huge":  {
+                                      "status":  409,
+                                      "body":  "The remote server returned an error: (409) Conflict."
+                                  }
+                     }
+}

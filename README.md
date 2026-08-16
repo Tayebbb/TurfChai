@@ -111,8 +111,19 @@ The application utilizes Infrastructure as Code (IaC) via `render.yaml` for zero
 
 The backend utilizes an in-memory `H2` database during the test phase to completely prevent local Postgres pollution. Seeders are heavily isolated using `@Profile("test")`.
 
+The whole suite — backend, frontend, live API and browser — runs from one command:
+
+```powershell
+pwsh qa/run-qa.ps1
+```
+
+It starts anything that is not already running, runs all four layers, stops only
+the servers it started, prints a pass/fail line per stage, and exits non-zero if
+any stage fails. See [TESTING.md](TESTING.md) for the per-layer commands and for
+how the end-to-end suite gets its data.
+
 ```bash
-# Run all 154+ unit tests and verification checks
+# Backend only
 ./mvnw -B -ntp verify
 ```
 

@@ -1,0 +1,660 @@
+﻿{
+    "generatedAt":  "2026-08-16T02:53:33.9509353+06:00",
+    "baseUrl":  "http://localhost:8080",
+    "commit":  "5cbbd744fd1c2cebe7421ae42029c0f5a9fee8ca",
+    "profile":  "dev (in-memory H2, Flyway disabled, seeders enabled)",
+    "qaPassword":  "QaPass@12345",
+    "seededAccounts":  {
+                           "admin":  {
+                                         "email":  "admin0@turfchai.com",
+                                         "password":  "Demo@12345",
+                                         "role":  "ADMIN"
+                                     },
+                           "demoPlayer":  {
+                                              "email":  "rafi@turfchai.dev",
+                                              "password":  "demo1234",
+                                              "role":  "PLAYER (owns the 10 demo venues)"
+                                          },
+                           "superAdmin":  {
+                                              "email":  "fazle.rabbi.mugdho@gmail.com",
+                                              "password":  "Demo@12345",
+                                              "role":  "SUPER_ADMIN (2FA login)"
+                                          }
+                       },
+    "qaAccounts":  [
+                       {
+                           "key":  "playerA",
+                           "email":  "qa.player.a@turfchai.test",
+                           "password":  "QaPass@12345",
+                           "role":  "PLAYER",
+                           "id":  842,
+                           "publicId":  "ab374ded-56c9-4ba4-b948-eb04f5918eca"
+                       },
+                       {
+                           "key":  "playerB",
+                           "email":  "qa.player.b@turfchai.test",
+                           "password":  "QaPass@12345",
+                           "role":  "PLAYER",
+                           "id":  843,
+                           "publicId":  "13e91d37-c917-4f3f-9a55-834f1e32850c"
+                       },
+                       {
+                           "key":  "playerZero",
+                           "email":  "qa.player.zero@turfchai.test",
+                           "password":  "QaPass@12345",
+                           "role":  "PLAYER",
+                           "id":  844,
+                           "publicId":  "77de63bf-9cff-4759-be42-3771a1e3ea67"
+                       },
+                       {
+                           "key":  "ownerA",
+                           "email":  "qa.owner.a@turfchai.test",
+                           "password":  "QaPass@12345",
+                           "role":  "OWNER",
+                           "id":  845,
+                           "publicId":  "0a3373ea-455d-436e-82b1-248b17d57217"
+                       },
+                       {
+                           "key":  "ownerB",
+                           "email":  "qa.owner.b@turfchai.test",
+                           "password":  "QaPass@12345",
+                           "role":  "OWNER",
+                           "id":  846,
+                           "publicId":  "f2ed84bd-5b0c-4602-898e-5a7dfe018703"
+                       },
+                       {
+                           "key":  "soloPlayer",
+                           "email":  "qa.solo.a@turfchai.test",
+                           "password":  "QaPass@12345",
+                           "role":  "SOLO_PLAYER",
+                           "id":  847,
+                           "publicId":  "ef1d7153-595a-4a8f-b430-868f0e23072b"
+                       }
+                   ],
+    "demoPlayer":  {
+                       "email":  "rafi@turfchai.dev",
+                       "id":  2,
+                       "publicId":  "11111111-1111-1111-1111-111111111111"
+                   },
+    "superAdmin":  {
+                       "email":  "fazle.rabbi.mugdho@gmail.com",
+                       "id":  1,
+                       "role":  "SUPER_ADMIN"
+                   },
+    "venues":  [
+                   {
+                       "id":  42,
+                       "slug":  "metro-futsal-demo-32",
+                       "name":  "Metro Futsal",
+                       "area":  "Gulshan"
+                   },
+                   {
+                       "id":  47,
+                       "slug":  "sportskill-arena-demo-37",
+                       "name":  "SportSkill Arena",
+                       "area":  "Badda"
+                   },
+                   {
+                       "id":  28,
+                       "slug":  "phoenix-arena-demo-18",
+                       "name":  "Phoenix Arena",
+                       "area":  "Rampura"
+                   },
+                   {
+                       "id":  38,
+                       "slug":  "arena-x-rampura-demo-28",
+                       "name":  "Arena X Rampura",
+                       "area":  "Rampura"
+                   },
+                   {
+                       "id":  32,
+                       "slug":  "turfnation-demo-22",
+                       "name":  "TurfNation",
+                       "area":  "Gulshan"
+                   },
+                   {
+                       "id":  46,
+                       "slug":  "turf-republic-demo-36",
+                       "name":  "Turf Republic",
+                       "area":  "Uttara"
+                   },
+                   {
+                       "id":  1,
+                       "slug":  "kick-off-arena",
+                       "name":  "Kick Off Arena",
+                       "area":  "Dhanmondi"
+                   },
+                   {
+                       "id":  37,
+                       "slug":  "pro-pitch-banani-demo-27",
+                       "name":  "Pro Pitch Banani",
+                       "area":  "Badda"
+                   },
+                   {
+                       "id":  18,
+                       "slug":  "goal-line-arena-demo-8",
+                       "name":  "Goal Line Arena",
+                       "area":  "Rampura"
+                   },
+                   {
+                       "id":  48,
+                       "slug":  "fastfoot-hub-demo-38",
+                       "name":  "FastFoot Hub",
+                       "area":  "Rampura"
+                   },
+                   {
+                       "id":  50,
+                       "slug":  "netbuster-grounds-demo-40",
+                       "name":  "NetBuster Grounds",
+                       "area":  "Khilgaon"
+                   },
+                   {
+                       "id":  49,
+                       "slug":  "zone-5-futsal-demo-39",
+                       "name":  "Zone 5 Futsal",
+                       "area":  "Wari"
+                   },
+                   {
+                       "id":  3,
+                       "slug":  "mirpur-sports-city",
+                       "name":  "Mirpur Sports City",
+                       "area":  "Mirpur"
+                   },
+                   {
+                       "id":  17,
+                       "slug":  "turfmaster-gulshan-demo-7",
+                       "name":  "TurfMaster Gulshan",
+                       "area":  "Badda"
+                   },
+                   {
+                       "id":  14,
+                       "slug":  "futsal-hub-dhaka-demo-4",
+                       "name":  "Futsal Hub Dhaka",
+                       "area":  "Banani"
+                   },
+                   {
+                       "id":  7,
+                       "slug":  "banani-futsal-hub",
+                       "name":  "Banani Futsal Hub",
+                       "area":  "Banani"
+                   },
+                   {
+                       "id":  2,
+                       "slug":  "greenturf-mohammadpur",
+                       "name":  "GreenTurf Mohammadpur",
+                       "area":  "Mohammadpur"
+                   },
+                   {
+                       "id":  31,
+                       "slug":  "goal-rush-ground-demo-21",
+                       "name":  "Goal Rush Ground",
+                       "area":  "Mirpur"
+                   },
+                   {
+                       "id":  45,
+                       "slug":  "precision-pitch-demo-35",
+                       "name":  "Precision Pitch",
+                       "area":  "Mohammadpur"
+                   },
+                   {
+                       "id":  4,
+                       "slug":  "gulshan-turf-park",
+                       "name":  "Gulshan Turf Park",
+                       "area":  "Gulshan"
+                   },
+                   {
+                       "id":  27,
+                       "slug":  "dream-pitch-demo-17",
+                       "name":  "Dream Pitch",
+                       "area":  "Badda"
+                   },
+                   {
+                       "id":  12,
+                       "slug":  "greenturf-annex-demo-2",
+                       "name":  "GreenTurf Annex",
+                       "area":  "Gulshan"
+                   },
+                   {
+                       "id":  33,
+                       "slug":  "sportika-dhaka-demo-23",
+                       "name":  "Sportika Dhaka",
+                       "area":  "Dhanmondi"
+                   },
+                   {
+                       "id":  5,
+                       "slug":  "uttara-sports-complex",
+                       "name":  "Uttara Sports Complex",
+                       "area":  "Uttara"
+                   },
+                   {
+                       "id":  35,
+                       "slug":  "green-star-futsal-demo-25",
+                       "name":  "Green Star Futsal",
+                       "area":  "Mohammadpur"
+                   },
+                   {
+                       "id":  44,
+                       "slug":  "apex-sports-hub-demo-34",
+                       "name":  "Apex Sports Hub",
+                       "area":  "Banani"
+                   },
+                   {
+                       "id":  6,
+                       "slug":  "bashundhara-arena",
+                       "name":  "Bashundhara Arena",
+                       "area":  "Bashundhara"
+                   },
+                   {
+                       "id":  16,
+                       "slug":  "skyline-sports-complex-demo-6",
+                       "name":  "Skyline Sports Complex",
+                       "area":  "Uttara"
+                   },
+                   {
+                       "id":  34,
+                       "slug":  "kickstart-arena-demo-24",
+                       "name":  "Kickstart Arena",
+                       "area":  "Banani"
+                   },
+                   {
+                       "id":  43,
+                       "slug":  "thunder-ground-demo-33",
+                       "name":  "Thunder Ground",
+                       "area":  "Dhanmondi"
+                   },
+                   {
+                       "id":  8,
+                       "slug":  "tejgaon-kick-zone",
+                       "name":  "Tejgaon Kick Zone",
+                       "area":  "Tejgaon"
+                   },
+                   {
+                       "id":  26,
+                       "slug":  "alpha-futsal-demo-16",
+                       "name":  "Alpha Futsal",
+                       "area":  "Uttara"
+                   },
+                   {
+                       "id":  23,
+                       "slug":  "sunrise-sports-club-demo-13",
+                       "name":  "Sunrise Sports Club",
+                       "area":  "Dhanmondi"
+                   },
+                   {
+                       "id":  9,
+                       "slug":  "khilgaon-sports-center",
+                       "name":  "Khilgaon Sports Center",
+                       "area":  "Khilgaon"
+                   },
+                   {
+                       "id":  40,
+                       "slug":  "turfworld-dhanmondi-demo-30",
+                       "name":  "TurfWorld Dhanmondi",
+                       "area":  "Khilgaon"
+                   },
+                   {
+                       "id":  36,
+                       "slug":  "playzone-uttara-demo-26",
+                       "name":  "PlayZone Uttara",
+                       "area":  "Uttara"
+                   },
+                   {
+                       "id":  13,
+                       "slug":  "champions-ground-demo-3",
+                       "name":  "Champions Ground",
+                       "area":  "Dhanmondi"
+                   },
+                   {
+                       "id":  30,
+                       "slug":  "flash-kick-arena-demo-20",
+                       "name":  "Flash Kick Arena",
+                       "area":  "Khilgaon"
+                   },
+                   {
+                       "id":  41,
+                       "slug":  "superfield-badda-demo-31",
+                       "name":  "SuperField Badda",
+                       "area":  "Mirpur"
+                   },
+                   {
+                       "id":  10,
+                       "slug":  "rampura-play-ground",
+                       "name":  "Rampura Play Ground",
+                       "area":  "Rampura"
+                   },
+                   {
+                       "id":  39,
+                       "slug":  "city-kick-arena-demo-29",
+                       "name":  "City Kick Arena",
+                       "area":  "Wari"
+                   },
+                   {
+                       "id":  22,
+                       "slug":  "blue-star-arena-demo-12",
+                       "name":  "Blue Star Arena",
+                       "area":  "Gulshan"
+                   },
+                   {
+                       "id":  19,
+                       "slug":  "the-pitch-house-demo-9",
+                       "name":  "The Pitch House",
+                       "area":  "Wari"
+                   },
+                   {
+                       "id":  11,
+                       "slug":  "kick-off-arena-demo-1",
+                       "name":  "Kick-Off Arena",
+                       "area":  "Mirpur"
+                   },
+                   {
+                       "id":  29,
+                       "slug":  "royal-turf-club-demo-19",
+                       "name":  "Royal Turf Club",
+                       "area":  "Wari"
+                   },
+                   {
+                       "id":  15,
+                       "slug":  "prime-pitch-mirpur-demo-5",
+                       "name":  "Prime Pitch Mirpur",
+                       "area":  "Mohammadpur"
+                   },
+                   {
+                       "id":  25,
+                       "slug":  "lightning-fields-demo-15",
+                       "name":  "Lightning Fields",
+                       "area":  "Mohammadpur"
+                   },
+                   {
+                       "id":  20,
+                       "slug":  "elite-futsal-zone-demo-10",
+                       "name":  "Elite Futsal Zone",
+                       "area":  "Khilgaon"
+                   },
+                   {
+                       "id":  21,
+                       "slug":  "victory-ground-demo-11",
+                       "name":  "Victory Ground",
+                       "area":  "Mirpur"
+                   },
+                   {
+                       "id":  24,
+                       "slug":  "urban-turf-co-demo-14",
+                       "name":  "Urban Turf Co.",
+                       "area":  "Banani"
+                   }
+               ],
+    "ownerAVenue":  {
+                        "id":  51,
+                        "name":  "Kick Off Arena",
+                        "slug":  "kick-off-arena-2",
+                        "status":  "DRAFT",
+                        "pitchId":  115
+                    },
+    "ownerBVenue":  {
+                        "id":  52,
+                        "name":  "Kick Off Arena",
+                        "slug":  "kick-off-arena-3"
+                    },
+    "ownerSlots":  [
+                       {
+                           "id":  187,
+                           "date":  "2026-08-16",
+                           "start":  "08:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  188,
+                           "date":  "2026-08-16",
+                           "start":  "10:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  189,
+                           "date":  "2026-08-16",
+                           "start":  "12:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  190,
+                           "date":  "2026-08-16",
+                           "start":  "14:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  191,
+                           "date":  "2026-08-16",
+                           "start":  "16:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  192,
+                           "date":  "2026-08-16",
+                           "start":  "18:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  193,
+                           "date":  "2026-08-17",
+                           "start":  "08:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  194,
+                           "date":  "2026-08-17",
+                           "start":  "10:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  195,
+                           "date":  "2026-08-17",
+                           "start":  "12:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  196,
+                           "date":  "2026-08-17",
+                           "start":  "14:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  197,
+                           "date":  "2026-08-17",
+                           "start":  "16:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       },
+                       {
+                           "id":  198,
+                           "date":  "2026-08-17",
+                           "start":  "18:00:00",
+                           "status":  "AVAILABLE",
+                           "price":  1800
+                       }
+                   ],
+    "blockedSlotId":  198,
+    "promotion":  {
+                      "id":  1,
+                      "code":  "QA20",
+                      "venueId":  51
+                  },
+    "bookings":  [
+                     {
+                         "label":  "playerA_paid_checkout",
+                         "owner":  "playerA",
+                         "id":  null,
+                         "code":  null,
+                         "venueId":  2,
+                         "date":  "2026-08-17",
+                         "start":  "07:00:00",
+                         "status":  "CONFIRMED",
+                         "paymentId":  null
+                     }
+                 ],
+    "tournament":  {
+                       "code":  "TR-CUP-0091",
+                       "qaTeamId":  14,
+                       "qaRegistrationCode":  "REG-R29IUZ",
+                       "qaEntryFeeStatus":  "DUE"
+                   },
+    "openGame":  {
+                     "id":  3,
+                     "code":  "OG-82A900D1",
+                     "venueId":  1
+                 },
+    "reviewAttempt":  {
+                          "body":  "The remote server returned an error: (400) Bad Request.",
+                          "status":  400
+                      },
+    "rewards":  {
+                    "demoPlayerBalance":  4750,
+                    "redemption":  {
+                                       "redemptionId":  1,
+                                       "rewardName":  "à§³50 off",
+                                       "pointsSpent":  500,
+                                       "newBalance":  4250,
+                                       "status":  "APPLIED",
+                                       "walletCreditAmount":  50.00,
+                                       "newWalletBalance":  50.00
+                                   }
+                },
+    "steps":  [
+                  {
+                      "step":  "health",
+                      "detail":  "{\"service\":\"turfchai-backend\",\"status\":\"UP\"}"
+                  },
+                  {
+                      "step":  "register",
+                      "detail":  "playerA -\u003e id=842 qa.player.a@turfchai.test"
+                  },
+                  {
+                      "step":  "register",
+                      "detail":  "playerB -\u003e id=843 qa.player.b@turfchai.test"
+                  },
+                  {
+                      "step":  "register",
+                      "detail":  "playerZero -\u003e id=844 qa.player.zero@turfchai.test"
+                  },
+                  {
+                      "step":  "register",
+                      "detail":  "ownerA -\u003e id=845 qa.owner.a@turfchai.test"
+                  },
+                  {
+                      "step":  "register",
+                      "detail":  "ownerB -\u003e id=846 qa.owner.b@turfchai.test"
+                  },
+                  {
+                      "step":  "register",
+                      "detail":  "soloPlayer -\u003e id=847 qa.solo.a@turfchai.test"
+                  },
+                  {
+                      "step":  "login",
+                      "detail":  "demoPlayer id=2 publicId=11111111-1111-1111-1111-111111111111"
+                  },
+                  {
+                      "step":  "login",
+                      "detail":  "admin id=838 role=ADMIN"
+                  },
+                  {
+                      "step":  "login",
+                      "detail":  "superAdmin id=1 role=SUPER_ADMIN"
+                  },
+                  {
+                      "step":  "venues",
+                      "detail":  "50 live venues discovered"
+                  },
+                  {
+                      "step":  "book-past",
+                      "detail":  "no past AVAILABLE slot today (run later in the day to exercise TC-009)"
+                  },
+                  {
+                      "step":  "book-playerA-upcoming-FAILED",
+                      "detail":  "confirm status=403"
+                  },
+                  {
+                      "step":  "book-playerA-to-cancel-FAILED",
+                      "detail":  "confirm status=403"
+                  },
+                  {
+                      "step":  "checkout",
+                      "detail":  "playerA-paid-bkash -\u003e {\"data\":{\"status\":\"SUCCESS\",\"payment\":{\"id\":2,\"txnReference\":\"PAY-31726C0C\",\"type\":\"BOOKING\",\"amount\":2000.00,\"method\":\"BKASH\",\"status\":\"SUCCESS\",\"failureReason\":null,\"paidAt\":\"2026-08-16T02:53:33.5421004+06:00\",\"createdAt\":\"2026-08-16T02:53:33.5421004+06:00\"},\"bookingId\":2,\"bookingCode\":\"TC-226F96\",\"walletApplied\":0,\"newWalletBalance\":0,\"pointsEarned\":2010,\"message\":\"Payment successful â your booking is confirmed.\"},\"error\":null,\"message\":null,\"success\":true}"
+                  },
+                  {
+                      "step":  "book-playerB-upcoming-FAILED",
+                      "detail":  "confirm status=403"
+                  },
+                  {
+                      "step":  "saved-venue",
+                      "detail":  "playerA + kick-off-arena -\u003e 200 {\"saved\":true}"
+                  },
+                  {
+                      "step":  "saved-venue",
+                      "detail":  "playerA + gulshan-turf-park -\u003e 200 {\"saved\":true}"
+                  },
+                  {
+                      "step":  "tournament",
+                      "detail":  "playerA team id=14 code=REG-R29IUZ fee=DUE"
+                  },
+                  {
+                      "step":  "owner-venue",
+                      "detail":  "ownerA venue id=51 name=Kick Off Arena slug=kick-off-arena-2 status=DRAFT"
+                  },
+                  {
+                      "step":  "owner-pitch",
+                      "detail":  "pitch id=115 QA Pitch 1 (create status=201)"
+                  },
+                  {
+                      "step":  "owner-pricing-rule",
+                      "detail":  "status=201"
+                  },
+                  {
+                      "step":  "owner-slots",
+                      "detail":  "generated 12 slots on QA pitch"
+                  },
+                  {
+                      "step":  "owner-block",
+                      "detail":  "blocked slot id=198 18:00:00"
+                  },
+                  {
+                      "step":  "book-playerA-at-ownerA-venue-FAILED",
+                      "detail":  "confirm status=403"
+                  },
+                  {
+                      "step":  "owner-promotion",
+                      "detail":  "promo id=1 code=QA20"
+                  },
+                  {
+                      "step":  "owner-b-venue",
+                      "detail":  "ownerB venue id=52 name=Kick Off Arena"
+                  },
+                  {
+                      "step":  "open-game",
+                      "detail":  "id=3 code=OG-82A900D1 spots=9"
+                  },
+                  {
+                      "step":  "open-game-join",
+                      "detail":  "playerB join -\u003e 200 {\"success\":true,\"message\":\"Successfully joined the game\",\"membershipId\":4,\"openGameId\":3,\"filledCount\":2,\"capacity\":10}"
+                  },
+                  {
+                      "step":  "review",
+                      "detail":  "booking  -\u003e status=400"
+                  },
+                  {
+                      "step":  "rewards",
+                      "detail":  "demoPlayer balance=4750 tier=GOLD"
+                  },
+                  {
+                      "step":  "rewards-redeem",
+                      "detail":  "redeemed rewardId=1 -\u003e {\"redemptionId\":1,\"rewardName\":\"à§³50 off\",\"pointsSpent\":500,\"newBalance\":4250,\"status\":\"APPLIED\",\"walletCreditAmount\":50.00,\"newWalletBalance\":50.00}"
+                  }
+              ]
+}

@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['dist', '.vite'] },
+  { ignores: ['dist', '.vite', 'e2e/.artifacts', 'e2e/.state', 'playwright-report'] },
   {
     files: ['*.config.js'],
     languageOptions: { globals: globals.node },
@@ -31,6 +31,16 @@ export default [
         { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' },
       ],
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    },
+  },
+  {
+    // Playwright specs run in Node, and its fixture API legitimately uses a
+    // parameter named `use` plus empty destructuring patterns.
+    files: ['e2e/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'no-empty-pattern': 'off',
     },
   },
 ];
