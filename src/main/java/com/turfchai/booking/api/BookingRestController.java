@@ -6,6 +6,7 @@ import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.booking.service.BookingService;
 import com.turfchai.security.UserPrincipal;
+import com.turfchai.venue.repository.VenueRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -44,6 +45,7 @@ public class BookingRestController {
 
     private final BookingService bookingService;
     private final SlotRepository slotRepository;
+    private final VenueRepository venueRepository;
 
     /**
      * Acquires a 5-minute hold on a slot. The response is enriched with the
@@ -70,6 +72,38 @@ public class BookingRestController {
         slotRepository.findByIdWithPitch(request.getSlotId()).ifPresent(slot -> {
             body.put("price", slot.getPrice());
             body.put("venueId", slot.getVenueId());
+            body.put("pitchId", slot.getPitch() != null ? slot.getPitch().getId() : null);
+            body.put("pitchName", slot.getPitch() != null ? slot.getPitch().getName() : null);
+            body.put("slotDate", slot.getSlotDate());
+            body.put("startTime", slot.getStartTime());
+            body.put("endTime", slot.getEndTime());
+        });
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * The caller's currently active hold, if any — the frontend polls this to
+     * show a persistent "you have a slot on hold" prompt anywhere in the app,
+     * not just on the checkout page itself, and to link straight back to it.
+     * Returns an empty body (no {@code slotId}) rather than 404 when there is
+     * no active hold, since "nothing held" is the normal case, not an error.
+     */
+    @Operation(summary = "Get the caller's active hold", description = "Returns the slot the caller currently has on hold, if any.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "The active hold, or an empty object if none"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
+    @GetMapping("/active-hold")
+    public ResponseEntity<Map<String, Object>> getActiveHold(Authentication authentication) {
+        Map<String, Object> body = new HashMap<>();
+        bookingService.getActiveHold(currentUserId(authentication)).ifPresent(slot -> {
+            body.put("slotId", slot.getId());
+            body.put("heldUntil", slot.getHoldExpiresAt());
+            body.put("price", slot.getPrice());
+            body.put("venueId", slot.getVenueId());
+            body.put("venueSlug", slot.getVenueId() == null ? null : venueRepository.findById(slot.getVenueId())
+                    .map(venue -> venue.getSlug())
+                    .orElse(null));
             body.put("pitchId", slot.getPitch() != null ? slot.getPitch().getId() : null);
             body.put("pitchName", slot.getPitch() != null ? slot.getPitch().getName() : null);
             body.put("slotDate", slot.getSlotDate());
