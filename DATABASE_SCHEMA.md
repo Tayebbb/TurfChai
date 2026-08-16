@@ -45,14 +45,14 @@
 
 TurfChai is a sports-turf booking platform operating in Dhaka (BDT / ৳). The schema covers **six workspaces**:
 
-| Workspace | Roles | Primary surfaces |
-|---|---|---|
-| Player | `player` | Book turfs, reviews, loyalty, saved venues (split payments were designed here but are **not implemented**) |
-| Solo Player | `solo_player` | Join open games, LFG alerts, reliability score |
-| Host | `host` | Run tournaments, multi-pitch reservations |
-| Owner | `owner`, venue `staff` | Venue setup, pricing, calendar, payouts (staff and shifts are **not implemented**) |
-| Admin | `admin`, `super_admin` | Turf vetting, user moderation, audit, payouts oversight |
-| System | `system` | Background jobs, alerts, audit of automated actions |
+| Workspace   | Roles                  | Primary surfaces                                                                                           |
+| ----------- | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Player      | `player`               | Book turfs, reviews, loyalty, saved venues (split payments were designed here but are **not implemented**) |
+| Solo Player | `solo_player`          | Join open games, LFG alerts, reliability score                                                             |
+| Host        | `host`                 | Run tournaments, multi-pitch reservations                                                                  |
+| Owner       | `owner`, venue `staff` | Venue setup, pricing, calendar, payouts (staff and shifts are **not implemented**)                         |
+| Admin       | `admin`, `super_admin` | Turf vetting, user moderation, audit, payouts oversight                                                    |
+| System      | `system`               | Background jobs, alerts, audit of automated actions                                                        |
 
 ### Design principles
 
@@ -71,39 +71,39 @@ TurfChai is a sports-turf booking platform operating in Dhaka (BDT / ৳). The s
 
 ### 2.1 Naming
 
-| Item | Convention | Example |
-|---|---|---|
-| Table names | `snake_case`, plural | `bookings`, `point_ledger` |
-| Column names | `snake_case`, singular | `start_time`, `total_amount` |
-| Primary keys | `id` | `id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY` |
-| Foreign keys | `<singular_table>_id` | `venue_id`, `pitch_id` |
-| Join tables | `a_b` (alphabetical) | `pitch_sports` |
-| Enum type names | descriptive, singular | `booking_status`, `payment_method` |
-| Check constraints | `ck_<table>_<description>` | `ck_payments_amount_positive` |
-| Indexes | `idx_<table>_<column(s)>` | `idx_bookings_slot_id` |
-| Partial/unique indexes | `uq_<table>_<column(s)>` | `uq_bookings_booking_code` |
-| Timestamp columns | `*_at` | `created_at`, `paid_at`, `cancelled_at` |
+| Item                   | Convention                 | Example                                              |
+| ---------------------- | -------------------------- | ---------------------------------------------------- |
+| Table names            | `snake_case`, plural       | `bookings`, `point_ledger`                           |
+| Column names           | `snake_case`, singular     | `start_time`, `total_amount`                         |
+| Primary keys           | `id`                       | `id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY` |
+| Foreign keys           | `<singular_table>_id`      | `venue_id`, `pitch_id`                               |
+| Join tables            | `a_b` (alphabetical)       | `pitch_sports`                                       |
+| Enum type names        | descriptive, singular      | `booking_status`, `payment_method`                   |
+| Check constraints      | `ck_<table>_<description>` | `ck_payments_amount_positive`                        |
+| Indexes                | `idx_<table>_<column(s)>`  | `idx_bookings_slot_id`                               |
+| Partial/unique indexes | `uq_<table>_<column(s)>`   | `uq_bookings_booking_code`                           |
+| Timestamp columns      | `*_at`                     | `created_at`, `paid_at`, `cancelled_at`              |
 
 ### 2.2 Data types
 
-| Domain | Type |
-|---|---|
-| Surrogate ID | `BIGINT GENERATED ALWAYS AS IDENTITY` |
-| User UUID (external, optional) | `UUID DEFAULT gen_random_uuid()` |
-| Short text | `VARCHAR(100)` |
-| Long text / notes | `TEXT` |
-| Currency (BDT) | `NUMERIC(12,2)` |
-| Percentage | `NUMERIC(5,2)` |
-| Money-adjacent counters | `INTEGER` |
-| Coordinates | `NUMERIC(10,7)` (lat), `NUMERIC(10,7)` (lng) |
-| Distances | `NUMERIC(6,2)` km |
-| Dates | `DATE` |
-| Clock times | `TIME` |
-| Instants | `TIMESTAMPTZ` |
-| Booleans | `BOOLEAN` |
-| Flexible attribute sets | `JSONB` (validated in app layer or via CHECK + `jsonb_typeof`) |
-| Rating values | `SMALLINT` with `CHECK (col BETWEEN 1 AND 5)` |
-| Multi-value fixed sets | `ENUM[]` (array of enum) |
+| Domain                         | Type                                                           |
+| ------------------------------ | -------------------------------------------------------------- |
+| Surrogate ID                   | `BIGINT GENERATED ALWAYS AS IDENTITY`                          |
+| User UUID (external, optional) | `UUID DEFAULT gen_random_uuid()`                               |
+| Short text                     | `VARCHAR(100)`                                                 |
+| Long text / notes              | `TEXT`                                                         |
+| Currency (BDT)                 | `NUMERIC(12,2)`                                                |
+| Percentage                     | `NUMERIC(5,2)`                                                 |
+| Money-adjacent counters        | `INTEGER`                                                      |
+| Coordinates                    | `NUMERIC(10,7)` (lat), `NUMERIC(10,7)` (lng)                   |
+| Distances                      | `NUMERIC(6,2)` km                                              |
+| Dates                          | `DATE`                                                         |
+| Clock times                    | `TIME`                                                         |
+| Instants                       | `TIMESTAMPTZ`                                                  |
+| Booleans                       | `BOOLEAN`                                                      |
+| Flexible attribute sets        | `JSONB` (validated in app layer or via CHECK + `jsonb_typeof`) |
+| Rating values                  | `SMALLINT` with `CHECK (col BETWEEN 1 AND 5)`                  |
+| Multi-value fixed sets         | `ENUM[]` (array of enum)                                       |
 
 ### 2.3 Default audit columns (present on almost every row)
 
@@ -439,6 +439,7 @@ CREATE INDEX idx_users_reliability ON users (reliability_score DESC)
 ```
 
 > **Notes**
+>
 > - `CITEXT` requires the `citext` extension (`CREATE EXTENSION citext;`).
 > - A user can hold **both** a platform role (`users.role`) and venue staff roles (`staff_members.role`); e.g. an `owner` who is also a `player`.
 > - `public_id` is the value shared with clients; `id` stays internal.
@@ -766,7 +767,7 @@ CREATE INDEX idx_payments_hold_until
     ON payments (hold_until) WHERE status = 'initiated';
 ```
 
-> **Reconciliation:** a successful incoming `type = 'booking'` payment with no `booking_id` is *unmatched* and visible in the owner reconciliation screen; an admin links it via `matched_to_booking_id`.
+> **Reconciliation:** a successful incoming `type = 'booking'` payment with no `booking_id` is _unmatched_ and visible in the owner reconciliation screen; an admin links it via `matched_to_booking_id`.
 
 ### 7.4 `reviews`
 
@@ -1364,18 +1365,18 @@ CREATE INDEX idx_chat_recipient ON chat_messages (recipient_id, is_flagged, crea
 
 ### 13.1 High-traffic read patterns
 
-| Query pattern | Index |
-|---|---|
-| List live venues by area | `idx_venues_area_status` |
-| Explore sorted by rating | `idx_venues_rating` |
-| Venue detail: pitches | `idx_pitches_venue` |
+| Query pattern                         | Index                              |
+| ------------------------------------- | ---------------------------------- |
+| List live venues by area              | `idx_venues_area_status`           |
+| Explore sorted by rating              | `idx_venues_rating`                |
+| Venue detail: pitches                 | `idx_pitches_venue`                |
 | Venue detail: availability for a date | `idx_slots_availability` (partial) |
-| Venue detail: published reviews | `idx_reviews_venue_rating` |
-| "My bookings" | `idx_bookings_booker` |
-| Owner calendar | `idx_bookings_venue_date` |
-| Open games near me | `idx_open_games_live` |
-| Notifications badge | `idx_notifications_user` |
-| Home feed (rewards/points) | `idx_point_ledger_user` |
+| Venue detail: published reviews       | `idx_reviews_venue_rating`         |
+| "My bookings"                         | `idx_bookings_booker`              |
+| Owner calendar                        | `idx_bookings_venue_date`          |
+| Open games near me                    | `idx_open_games_live`              |
+| Notifications badge                   | `idx_notifications_user`           |
+| Home feed (rewards/points)            | `idx_point_ledger_user`            |
 
 ### 13.2 Concurrency & lock contention
 
@@ -1384,13 +1385,13 @@ CREATE INDEX idx_chat_recipient ON chat_messages (recipient_id, is_flagged, crea
 
 ### 13.3 Job/cleanup scans
 
-| Job | Index |
-|---|---|
-| Expire held slots | `idx_slots_hold_cleanup` (partial on `held`) |
-| Expire unpaid split deadlines | `idx_bookings_split_deadline` |
-| Cleanup stale initiated payments | `idx_payments_hold_until` |
-| Expire loyalty point batches | `idx_point_ledger_expiry` |
-| Generate payouts | `idx_payments_booking`, `idx_bookings_venue_date` |
+| Job                              | Index                                             |
+| -------------------------------- | ------------------------------------------------- |
+| Expire held slots                | `idx_slots_hold_cleanup` (partial on `held`)      |
+| Expire unpaid split deadlines    | `idx_bookings_split_deadline`                     |
+| Cleanup stale initiated payments | `idx_payments_hold_until`                         |
+| Expire loyalty point batches     | `idx_point_ledger_expiry`                         |
+| Generate payouts                 | `idx_payments_booking`, `idx_bookings_venue_date` |
 
 ### 13.4 Full-text / geo (future)
 
@@ -1587,24 +1588,24 @@ END $$;
 
 ## 15. Business Rules & Constraints Summary
 
-| Rule | Enforced by |
-|---|---|
-| Slot uniqueness per pitch/date/time | `uq_slots_pitch_window` |
-| One `held` slot per row, with holder & expiry | `ck_slots_hold_consistent` |
-| Booking window must be valid | `ck_bookings_window` |
-| `amount_paid ≤ net_amount` | `ck_bookings_money` |
-| Split invariants (`remaining` consistency) | `ck_bookings_split` |
-| No double-sell on slot | `hold_slot()` atomic UPDATE + `trg_booking_confirmed` |
-| Refund tier by time before start | App layer from `cancel_policy` + `refund_window_full_hours`/`minimum_refund_hours`; optional `BEFORE INSERT/UPDATE` trigger on `bookings.cancel_reason` |
-| Rating range 1–5 | `CHECK` on `reviews.overall_rating`, `sub_ratings` values |
-| Payment context matches type | `ck_payments_context` |
-| Points delta never zero | `ck_point_ledger_delta` |
-| Open-game capacity invariant | `sync_open_game_fill()` trigger |
-| Platform fee 6% online only | Payout generation job (`online_revenue` × `platform_fee_rate`) |
-| Payout anomaly → auto-suspend | `handle_payout_anomaly()` |
-| Audit immutability | `REVOKE UPDATE, DELETE ON activity_logs` |
-| Team name unique per tournament | `uq_team_tournament_name` |
-| Fixture teams distinct | `ck_fixtures_distinct_teams` |
+| Rule                                          | Enforced by                                                                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Slot uniqueness per pitch/date/time           | `uq_slots_pitch_window`                                                                                                                                 |
+| One `held` slot per row, with holder & expiry | `ck_slots_hold_consistent`                                                                                                                              |
+| Booking window must be valid                  | `ck_bookings_window`                                                                                                                                    |
+| `amount_paid ≤ net_amount`                    | `ck_bookings_money`                                                                                                                                     |
+| Split invariants (`remaining` consistency)    | `ck_bookings_split`                                                                                                                                     |
+| No double-sell on slot                        | `hold_slot()` atomic UPDATE + `trg_booking_confirmed`                                                                                                   |
+| Refund tier by time before start              | App layer from `cancel_policy` + `refund_window_full_hours`/`minimum_refund_hours`; optional `BEFORE INSERT/UPDATE` trigger on `bookings.cancel_reason` |
+| Rating range 1–5                              | `CHECK` on `reviews.overall_rating`, `sub_ratings` values                                                                                               |
+| Payment context matches type                  | `ck_payments_context`                                                                                                                                   |
+| Points delta never zero                       | `ck_point_ledger_delta`                                                                                                                                 |
+| Open-game capacity invariant                  | `sync_open_game_fill()` trigger                                                                                                                         |
+| Platform fee 6% online only                   | Payout generation job (`online_revenue` × `platform_fee_rate`)                                                                                          |
+| Payout anomaly → auto-suspend                 | `handle_payout_anomaly()`                                                                                                                               |
+| Audit immutability                            | `REVOKE UPDATE, DELETE ON activity_logs`                                                                                                                |
+| Team name unique per tournament               | `uq_team_tournament_name`                                                                                                                               |
+| Fixture teams distinct                        | `ck_fixtures_distinct_teams`                                                                                                                            |
 
 ---
 
@@ -1657,6 +1658,7 @@ CREATE POLICY bookings_owner_scope ON bookings
 ```
 
 **Recommendations:**
+
 - Never grant table-level `UPDATE`/`DELETE` broadly; expose writes through a thin set of `SECURITY DEFINER` functions (`hold_slot`, `confirm_booking`, `record_payment`, `cancel_booking`, `redeem_reward`).
 - Set `app.user_id` and `app.role` per session from the authenticated JWT.
 - Store `password_hash` via `pgcrypto` `crypt()`/`gen_salt('bf')` (bcrypt) — never plaintext.
@@ -1697,4 +1699,4 @@ CREATE POLICY bookings_owner_scope ON bookings
 
 ---
 
-*Document generated from the TurfChai front-end prototype (v1.0). Schema is a target design — the backend API has not been implemented yet and should treat this document as the source of truth.*
+_Document generated from the TurfChai front-end prototype (v1.0). Schema is a target design — the backend API has not been implemented yet and should treat this document as the source of truth._

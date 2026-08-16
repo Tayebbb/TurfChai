@@ -20,13 +20,13 @@ Scale: **145 REST endpoints** across 38 controllers, **30 JPA entities**,
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Java 21, Spring Boot 4.1.0, Spring Security (JWT), Spring Data JPA / Hibernate 7, Maven wrapper |
-| Frontend | React 19.2, Vite 7, React Router 7, vanilla CSS with design tokens |
-| Database | PostgreSQL 16 + Flyway in production; in-memory H2 for `dev` and `test` |
-| Optional | ONNX Runtime (pricing model), OpenRouter (AI assistant), Cloudinary (images), SMTP |
-| Tests | JUnit 5 + Mockito + Spring Boot Test, Vitest + Testing Library, Playwright, live API probes |
+| Layer    | Technology                                                                                      |
+| -------- | ----------------------------------------------------------------------------------------------- |
+| Backend  | Java 21, Spring Boot 4.1.0, Spring Security (JWT), Spring Data JPA / Hibernate 7, Maven wrapper |
+| Frontend | React 19.2, Vite 7, React Router 7, vanilla CSS with design tokens                              |
+| Database | PostgreSQL 16 + Flyway in production; in-memory H2 for `dev` and `test`                         |
+| Optional | ONNX Runtime (pricing model), OpenRouter (AI assistant), Cloudinary (images), SMTP              |
+| Tests    | JUnit 5 + Mockito + Spring Boot Test, Vitest + Testing Library, Playwright, live API probes     |
 
 ## Running it
 
@@ -75,13 +75,13 @@ stages that did not complete in that run.
 
 ## Where to read next
 
-| Question | Document |
-|---|---|
-| What can it do? | [docs/features.md](docs/features.md) |
-| How is it built? | [docs/architecture.md](docs/architecture.md) |
-| What are the tables? | [docs/database.md](docs/database.md) |
-| What are the endpoints? | [docs/api.md](docs/api.md) |
-| How does a booking actually flow? | [docs/user-flows.md](docs/user-flows.md) |
-| How do I run it? | [docs/setup.md](docs/setup.md) |
-| How do I test it? | [docs/testing.md](docs/testing.md) · [TESTING.md](TESTING.md) |
-| Why is it built this way, and what is missing? | [docs/decisions.md](docs/decisions.md) |
+| Question                                       | Document                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------- |
+| What can it do?                                | [docs/features.md](docs/features.md)                          |
+| How is it built?                               | [docs/architecture.md](docs/architecture.md)                  |
+| What are the tables?                           | [docs/database.md](docs/database.md)                          |
+| What are the endpoints?                        | [docs/api.md](docs/api.md)                                    |
+| How does a booking actually flow?              | [docs/user-flows.md](docs/user-flows.md)                      |
+| How do I run it?                               | [docs/setup.md](docs/setup.md)                                |
+| How do I test it?                              | [docs/testing.md](docs/testing.md) · [TESTING.md](TESTING.md) |
+| Why is it built this way, and what is missing? | [docs/decisions.md](docs/decisions.md)                        |

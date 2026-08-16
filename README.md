@@ -159,18 +159,18 @@ What each layer proves, and the browser-stage caveat:
 assistant (`/api/ai`) and actuator health. Responses are JSON; authenticated
 calls carry `Authorization: Bearer <jwt>`.
 
-| Domain | Examples |
-|---|---|
+| Domain         | Examples                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------- |
 | Authentication | `POST /auth/register`, `/auth/login`, `/auth/refresh-token`, admin `/admin/auth/login` + `/verify` |
-| Discovery | `GET /venues`, `/venues/{slug}`, `/venues/{slug}/slots`, `/venues/{slug}/reviews` |
-| Booking | `POST /bookings/hold`, `GET /bookings`, `/bookings/{code}`, `POST /bookings/{code}/cancel` |
-| Payments | `POST /payments/checkout`, `GET /payments/history` |
-| Promotions | `POST /promotions/validate-code`, owner CRUD under `/owner/promotions` |
-| Rewards | `GET /rewards/products`, `/rewards/tiers`, `POST /rewards/redeem` |
-| Open games | `GET /open-games`, `POST /open-games`, `POST /open-games/{id}/join` |
-| Tournaments | player `/tournaments/**`, host `/host/tournaments/**` |
-| Owner | `/owner/venues/**`, `/owner/bookings/**`, `/owner/reviews/**`, `/owner/payments/**` |
-| Admin | `/admin/venues/**`, `/admin/users/**`, `/admin/payouts/**`, `/admin/turf-requests/**` |
+| Discovery      | `GET /venues`, `/venues/{slug}`, `/venues/{slug}/slots`, `/venues/{slug}/reviews`                  |
+| Booking        | `POST /bookings/hold`, `GET /bookings`, `/bookings/{code}`, `POST /bookings/{code}/cancel`         |
+| Payments       | `POST /payments/checkout`, `GET /payments/history`                                                 |
+| Promotions     | `POST /promotions/validate-code`, owner CRUD under `/owner/promotions`                             |
+| Rewards        | `GET /rewards/products`, `/rewards/tiers`, `POST /rewards/redeem`                                  |
+| Open games     | `GET /open-games`, `POST /open-games`, `POST /open-games/{id}/join`                                |
+| Tournaments    | player `/tournaments/**`, host `/host/tournaments/**`                                              |
+| Owner          | `/owner/venues/**`, `/owner/bookings/**`, `/owner/reviews/**`, `/owner/payments/**`                |
+| Admin          | `/admin/venues/**`, `/admin/users/**`, `/admin/payouts/**`, `/admin/turf-requests/**`              |
 
 Public without a token: registration, login, OTP, venue catalogue and detail,
 slots, venue reviews, open-game reads, the reward catalogue, promo-code
@@ -217,6 +217,7 @@ their keys.
 
 The full list, honestly separated into _not implemented_, _partially
 implemented_ and _operational_: **[docs/decisions.md](docs/decisions.md#part-2--known-limitations)**
+
 ## Future roadmap
 
 **Before any real deployment** — integrate a payment gateway behind the existing
@@ -233,6 +234,7 @@ player-to-player invitations on the existing open-game roster, push
 notifications, and retraining the pricing model on real booking data.
 
 Full P0–P3 breakdown: **[docs/decisions.md](docs/decisions.md#part-3--roadmap)**
+
 ## Capstone summary
 
 **Objective** — build a complete, honest, multi-role booking platform rather

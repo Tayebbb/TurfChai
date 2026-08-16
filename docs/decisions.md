@@ -199,7 +199,7 @@ Stated plainly. Nothing here is presented as working.
   `4175` for accessibility), not the dev server on `5173`. Started without it
   they fail with `ERR_CONNECTION_REFUSED` on every route, which reads like a
   hung crawler rather than a missing server.
-- **Seeded demo venues are owned by the demo *player* account.**
+- **Seeded demo venues are owned by the demo _player_ account.**
   `VenueDataSeeder` assigns `PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID` — a
   `PLAYER`-role user — as the owner of its venues, so `/owner/**` returns 403
   for them and their owner console cannot be opened. Venues created through
