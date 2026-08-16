@@ -13,12 +13,15 @@ import com.turfchai.booking.entity.SlotStatus;
 import com.turfchai.booking.repository.BookingRepository;
 import com.turfchai.booking.service.BookingService;
 import com.turfchai.booking.service.SlotAvailabilityService;
+import com.turfchai.booking.service.SlotDisplayStatus;
 import com.turfchai.booking.service.SlotTimePolicy;
 import com.turfchai.exception.BookingNotFoundException;
 import com.turfchai.payment.dto.response.RefundPreviewResponse;
 import com.turfchai.payment.service.PaymentService;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
+import com.turfchai.venue.service.VenueSearchCriteria;
+import com.turfchai.venue.service.VenueSearchService;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -56,6 +59,7 @@ public class BookingTool implements Tool {
     private final SlotAvailabilityService slotAvailabilityService;
     private final SlotTimePolicy slotTimePolicy;
     private final VenueRepository venueRepository;
+    private final VenueSearchService venueSearchService;
     private final PaymentService paymentService;
 
     public BookingTool(BookingService bookingService,
@@ -63,12 +67,14 @@ public class BookingTool implements Tool {
             SlotAvailabilityService slotAvailabilityService,
             SlotTimePolicy slotTimePolicy,
             VenueRepository venueRepository,
+            VenueSearchService venueSearchService,
             PaymentService paymentService) {
         this.bookingService = bookingService;
         this.bookingRepository = bookingRepository;
         this.slotAvailabilityService = slotAvailabilityService;
         this.slotTimePolicy = slotTimePolicy;
         this.venueRepository = venueRepository;
+        this.venueSearchService = venueSearchService;
         this.paymentService = paymentService;
     }
 
@@ -85,7 +91,7 @@ public class BookingTool implements Tool {
                 List.of(
                         ToolParam.required("action", "string",
                                 "One of: check_availability, list, get, cancel_quote"),
-                        ToolParam.optional("venue", "string", "Venue slug or numeric id from search_venues"),
+                        ToolParam.optional("venue", "string", "Venue slug, name or numeric id from search_venues"),
                         ToolParam.optional("date", "string", "Date to check, ISO format YYYY-MM-DD"),
                         ToolParam.optional("bookingCode", "string", "Booking code, e.g. TC-A1B2C3")));
     }
@@ -134,13 +140,14 @@ public class BookingTool implements Tool {
         List<Slot> slots = slotAvailabilityService.ensureSlots(venue.getId(), date);
 
         List<Map<String, Object>> bookable = slots.stream()
-                .filter(slot -> slot.getStatus() == SlotStatus.AVAILABLE && !slotTimePolicy.hasStarted(slot))
+                .filter(BookingTool::isAvailable)
+                .filter(slot -> !slotTimePolicy.hasStarted(slot))
                 .sorted(Comparator.comparing(Slot::getStartTime))
                 .limit(MAX_SLOT_ROWS)
                 .map(BookingTool::toSlotRow)
                 .toList();
 
-        long takenCount = slots.stream().filter(slot -> slot.getStatus() != SlotStatus.AVAILABLE).count();
+        long takenCount = slots.stream().filter(slot -> !isAvailable(slot)).count();
 
         Map<String, Object> body = ToolArgs.row();
         body.put("venue", venue.getName());
@@ -158,6 +165,14 @@ public class BookingTool implements Tool {
             body.put("note", "Every slot that day is taken, blocked or already started.");
         }
         return ToolResult.ok(body);
+    }
+
+    /**
+     * Reads status the way every other client does, so a hold that lapsed
+     * before the cleanup job ran is not reported to the user as taken.
+     */
+    private static boolean isAvailable(Slot slot) {
+        return SlotStatus.AVAILABLE.name().equals(SlotDisplayStatus.of(slot));
     }
 
     private static Map<String, Object> toSlotRow(Slot slot) {
@@ -265,10 +280,22 @@ public class BookingTool implements Tool {
             return bySlug;
         }
         try {
-            return venueRepository.findById(Long.valueOf(token));
-        } catch (NumberFormatException e) {
-            return Optional.empty();
+            Optional<Venue> byId = venueRepository.findById(Long.valueOf(token));
+            if (byId.isPresent()) {
+                return byId;
+            }
+        } catch (NumberFormatException ignored) {
+            // Not an id, so fall through to the name search.
         }
+        // The model relays whatever the user typed, which is normally the
+        // venue's name. Accepting only the slug made "check availability at
+        // Tejgaon Kick Zone" a dead end.
+        return venueSearchService
+                .search(new VenueSearchCriteria(token, null, null, null, null, null, null, null, null, null, null),
+                        0, 1, "rating")
+                .items().stream()
+                .findFirst()
+                .flatMap(match -> venueRepository.findBySlug(match.slug()));
     }
 
     private static Map<String, Object> toBookingRow(BookingResponse booking) {

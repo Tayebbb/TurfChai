@@ -57,6 +57,18 @@ class IntentRouterTest {
     void impersonalPolicyQuestionsStillUseKnowledge() {
         assertThat(router.route("what is the refund policy?")).isEqualTo(Intent.POLICY_QUESTION);
         assertThat(router.route("how does the loyalty tier ladder work?")).isEqualTo(Intent.POLICY_QUESTION);
+        assertThat(router.route("what are the house rules at this turf?")).isEqualTo(Intent.POLICY_QUESTION);
+    }
+
+    @Test
+    void aQuestionAboutOneRecordIsNotAnFaq() {
+        // POLICY_QUESTION carries no tools. It used to match the bare "what is",
+        // so asking about a specific booking got a shrug instead of a lookup.
+        assertThat(router.route("what is the payment status of booking BK-202511-0226"))
+                .isEqualTo(Intent.PAYMENT);
+        assertThat(router.route("what is the status of booking TC-48291")).isEqualTo(Intent.BOOKING);
+        assertThat(router.route("what are the free slots at kick-off-arena tomorrow"))
+                .isEqualTo(Intent.BOOKING);
     }
 
     @Test
