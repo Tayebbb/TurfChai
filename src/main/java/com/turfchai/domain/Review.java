@@ -48,7 +48,7 @@ public class Review {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private ReviewStatus status = ReviewStatus.pending;
+    private ReviewStatus status = ReviewStatus.PENDING;
 
     @Column(name = "owner_response", length = 2000)
     private String ownerResponse;
