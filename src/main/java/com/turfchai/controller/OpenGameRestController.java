@@ -27,8 +27,11 @@ public class OpenGameRestController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
-    public ResponseEntity<OpenGameResponse> createOpenGame(@Valid @RequestBody CreateOpenGameRequest request) {
-        OpenGameResponse response = openGameService.createOpenGame(request);
+    public ResponseEntity<OpenGameResponse> createOpenGame(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.turfchai.security.UserPrincipal principal,
+            @Valid @RequestBody CreateOpenGameRequest request) {
+        Long organizerId = com.turfchai.security.AuthenticatedUser.requireId(principal);
+        OpenGameResponse response = openGameService.createOpenGame(request, organizerId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -56,9 +59,11 @@ public class OpenGameRestController {
     @PostMapping("/{id}/join")
     @PreAuthorize("hasAnyRole('PLAYER','SOLO_PLAYER','HOST','OWNER','ADMIN')")
     public ResponseEntity<JoinOpenGameResponse> joinOpenGame(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.turfchai.security.UserPrincipal principal,
             @PathVariable Long id,
             @Valid @RequestBody JoinOpenGameRequest request) {
-        JoinOpenGameResponse response = openGameService.joinOpenGame(id, request);
+        Long joiningUserId = com.turfchai.security.AuthenticatedUser.requireId(principal);
+        JoinOpenGameResponse response = openGameService.joinOpenGame(id, request, joiningUserId);
         return ResponseEntity.ok(response);
     }
 
