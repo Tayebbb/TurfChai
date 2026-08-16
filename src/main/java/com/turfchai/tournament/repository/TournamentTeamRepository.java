@@ -11,5 +11,7 @@ public interface TournamentTeamRepository extends JpaRepository<TournamentTeam, 
 
     boolean existsByTournamentIdAndNameIgnoreCase(Long tournamentId, String name);
 
+    boolean existsByTournamentIdAndRegisteredById(Long tournamentId, Long registeredById);
+
     long countByTournamentId(Long tournamentId);
 }

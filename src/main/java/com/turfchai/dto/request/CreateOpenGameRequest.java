@@ -47,7 +47,4 @@ public class CreateOpenGameRequest {
     private BigDecimal pricePerPlayer;
 
     private Integer minimumReliability;
-
-    @NotNull(message = "Organizer User ID is required")
-    private Long organizerUserId;
 }

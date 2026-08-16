@@ -79,6 +79,26 @@ public final class TournamentRequests {
         }
     }
 
+    /**
+     * Settles the remainder after the deposit. As with the deposit, the amount is
+     * computed server-side from the reservations actually held.
+     */
+    public record PayBalanceRequest(
+            @NotBlank @Pattern(regexp = "bKash|Nagad|Card|Bank transfer",
+                    message = "must be one of bKash, Nagad, Card, Bank transfer") String method,
+            @Size(max = 60) String payerReference) {
+    }
+
+    /**
+     * Host-editable tournament settings. Every field is optional; only the ones
+     * present are applied.
+     */
+    public record UpdateTournamentSettingsRequest(
+            @Pattern(regexp = "open|invite_only",
+                    message = "must be one of open, invite_only") String privacy,
+            @Size(max = 2000) String hostNotes) {
+    }
+
     /** Player-facing registration for a tournament. */
     public record RegisterPlayerRequest(
             @NotBlank @Size(max = 100) String teamName,

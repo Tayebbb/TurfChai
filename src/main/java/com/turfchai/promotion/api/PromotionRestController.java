@@ -3,6 +3,7 @@ package com.turfchai.promotion.api;
 import com.turfchai.promotion.dto.AppliedDiscountResponse;
 import com.turfchai.promotion.dto.CreatePromotionRequest;
 import com.turfchai.promotion.dto.PromotionDto;
+import com.turfchai.promotion.dto.UpdatePromotionRequest;
 import com.turfchai.promotion.dto.ValidatePromoCodeRequest;
 import com.turfchai.promotion.service.PromotionService;
 import com.turfchai.security.UserPrincipal;
@@ -23,7 +24,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Promotion REST API.
@@ -73,10 +73,8 @@ public class PromotionRestController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long venueId,
             @PathVariable Long id,
-            @RequestBody Map<String, Object> body) {
-        Boolean active = body.containsKey("active") ? (Boolean) body.get("active") : null;
-        String label = body.containsKey("label") ? (String) body.get("label") : null;
-        return promotionService.updatePromotion(principal.getId(), venueId, id, active, label);
+            @Valid @RequestBody UpdatePromotionRequest request) {
+        return promotionService.updatePromotion(principal.getId(), venueId, id, request);
     }
 
     @DeleteMapping("/owner/venues/{venueId}/promotions/{id}")

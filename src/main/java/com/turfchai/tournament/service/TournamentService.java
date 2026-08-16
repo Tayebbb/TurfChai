@@ -10,11 +10,13 @@ import com.turfchai.tournament.repository.TournamentPitchReservationRepository;
 import com.turfchai.tournament.repository.TournamentRepository;
 import com.turfchai.tournament.repository.TournamentTeamRepository;
 import com.turfchai.tournament.service.TournamentRequests.CreateTournamentRequest;
+import com.turfchai.tournament.service.TournamentRequests.PayBalanceRequest;
 import com.turfchai.tournament.service.TournamentRequests.PayDepositRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterPlayerRequest;
 import com.turfchai.tournament.service.TournamentRequests.RegisterTeamRequest;
 import com.turfchai.tournament.service.TournamentRequests.ReserveSlotsRequest;
 import com.turfchai.tournament.service.TournamentRequests.SlotRequest;
+import com.turfchai.tournament.service.TournamentRequests.UpdateTournamentSettingsRequest;
 import com.turfchai.tournament.service.TournamentViews.CostSummary;
 import com.turfchai.tournament.service.TournamentViews.DepositView;
 import com.turfchai.tournament.service.TournamentViews.FixtureView;
@@ -118,6 +120,34 @@ public class TournamentService {
         return toView(require(code));
     }
 
+    /**
+     * Every tournament the caller hosts.
+     *
+     * <p>Without this a host workspace has no way to find its own tournaments,
+     * so the UI fell back to a hardcoded demo code and every other host was
+     * refused with 403 on a page that retried forever.
+     */
+    @Transactional(readOnly = true)
+    public List<TournamentView> listHostedBy(User host) {
+        return tournaments.findByHostIdOrderByTournamentDateDesc(host.getId())
+                .stream()
+                .map(this::toView)
+                .toList();
+    }
+
+    /**
+     * Fails unless {@code user} is the host of {@code code}. Host tournament
+     * operations are otherwise reachable by anyone who learns a code.
+     */
+    @Transactional(readOnly = true)
+    public void assertHost(String code, User user) {
+        Tournament tournament = require(code);
+        Long hostId = tournament.getHost() != null ? tournament.getHost().getId() : null;
+        if (hostId == null || user == null || !hostId.equals(user.getId())) {
+            throw new SecurityException("You are not the host of this tournament");
+        }
+    }
+
     // ------------------------------------------------------------------
     // Teams
     // ------------------------------------------------------------------
@@ -199,6 +229,14 @@ public class TournamentService {
         }
         if (teams.countByTournamentId(t.getId()) >= t.getTeamCapacity()) {
             throw new TournamentConflictException("Tournament is full (" + t.getTeamCapacity() + " teams)");
+        }
+        // One entry per player. The read side already assumes this — `withdraw`,
+        // `myTournaments` and the card's `myRegistrationCode` all resolve a
+        // player to a single team — so a second registration produced a state
+        // the player could never leave: withdraw removed the earliest entry, and
+        // once that one was paid it refused outright with the other still live.
+        if (teams.existsByTournamentIdAndRegisteredById(t.getId(), player.getId())) {
+            throw new TournamentConflictException("You have already registered a team for " + code);
         }
         String teamName = request.teamName().trim();
         if (teams.existsByTournamentIdAndNameIgnoreCase(t.getId(), teamName)) {
@@ -437,6 +475,53 @@ public class TournamentService {
         return toView(t);
     }
 
+    /**
+     * Settles the remainder after the deposit. The charged amount is recomputed
+     * from the reservations actually held, never taken from the request.
+     */
+    @Transactional
+    public TournamentView payBalance(String code, PayBalanceRequest request) {
+        Tournament t = require(code);
+        if (!"PAID".equals(t.getDepositStatus())) {
+            throw new TournamentConflictException("Pay the deposit for " + code + " before settling the balance");
+        }
+        if ("PAID".equals(t.getBalanceStatus())) {
+            throw new TournamentConflictException("The balance for " + code + " has already been paid");
+        }
+
+        CostSummary costs = costSummary(t);
+        t.setBalanceAmount(costs.balance());
+        t.setBalanceStatus("PAID");
+        t.setBalanceMethod(request.method());
+        t.setBalanceReference(request.payerReference() == null || request.payerReference().isBlank()
+                ? "BAL-" + t.getCode() + "-" + randomDigits(6)
+                : request.payerReference().trim());
+        t.setBalancePaidAt(Instant.now());
+        return toView(t);
+    }
+
+    /** Applies the host's privacy and event-day-note changes. Absent fields are left alone. */
+    @Transactional
+    public TournamentView updateSettings(String code, UpdateTournamentSettingsRequest request) {
+        Tournament t = require(code);
+        if (request.privacy() != null && !request.privacy().isBlank()) {
+            t.setPrivacy("invite_only".equals(request.privacy()) ? "INVITE_ONLY" : "OPEN");
+        }
+        if (request.hostNotes() != null) {
+            String notes = request.hostNotes().trim();
+            t.setHostNotes(notes.isEmpty() ? null : notes);
+        }
+        return toView(t);
+    }
+
+    /** Issues a fresh invite code, which immediately invalidates the previous link. */
+    @Transactional
+    public TournamentView regenerateInviteCode(String code) {
+        Tournament t = require(code);
+        t.setInviteCode("t/" + slugify(t.getName()) + "-" + randomDigits(4));
+        return toView(t);
+    }
+
     /** The slots on the tournament date itself — the pattern later weeks repeat. */
     private List<TournamentPitchReservation> weekOneReservations(Tournament t) {
         return reservations.findByTournamentIdOrderBySlotDateAscStartTimeAsc(t.getId()).stream()
@@ -640,7 +725,31 @@ public class TournamentService {
                 t.getStatus(), t.getBalanceDueDate(), t.getRepeatWeeks(),
                 teamViews, fixtureViews, reservationViews, costSummary(t),
                 new DepositView(t.getDepositStatus(), t.getDepositAmount(),
-                        t.getDepositMethod(), t.getDepositReference(), t.getDepositPaidAt()));
+                        t.getDepositMethod(), t.getDepositReference(), t.getDepositPaidAt()),
+                new DepositView(t.getBalanceStatus(), t.getBalanceAmount(),
+                        t.getBalanceMethod(), t.getBalanceReference(), t.getBalancePaidAt()),
+                t.getHostNotes(),
+                venueContactOf(t));
+    }
+
+    /** The venue owner's contact card, or null when the venue has no owner on file. */
+    private TournamentViews.VenueContactView venueContactOf(Tournament t) {
+        com.turfchai.model.User owner = t.getVenue() != null ? t.getVenue().getOwner() : null;
+        if (owner == null) {
+            return null;
+        }
+        String name = owner.getFullName() != null && !owner.getFullName().isBlank()
+                ? owner.getFullName()
+                : "Venue owner";
+        return new TournamentViews.VenueContactView(name, initialsOf(name), owner.getPhone(), owner.getEmail());
+    }
+
+    private static String initialsOf(String name) {
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) {
+            return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
+        }
+        return ("" + parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
     private TeamView toView(TournamentTeam x) {

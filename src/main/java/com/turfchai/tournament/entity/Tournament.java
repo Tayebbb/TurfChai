@@ -111,6 +111,26 @@ public class Tournament {
 
     private LocalDate balanceDueDate;
 
+    /** UNPAID until the host settles the remainder after the deposit. */
+    @Column(name = "balance_status", nullable = false, length = 15)
+    private String balanceStatus = "UNPAID";
+
+    @Column(name = "balance_paid_at")
+    private Instant balancePaidAt;
+
+    @Column(name = "balance_amount", precision = 12, scale = 2)
+    private BigDecimal balanceAmount;
+
+    @Column(name = "balance_method", length = 30)
+    private String balanceMethod;
+
+    @Column(name = "balance_reference", length = 60)
+    private String balanceReference;
+
+    /** Free-text event-day notes, private to the host. */
+    @Column(name = "host_notes", length = 2000)
+    private String hostNotes;
+
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 

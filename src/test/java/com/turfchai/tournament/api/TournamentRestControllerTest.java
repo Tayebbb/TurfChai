@@ -1,14 +1,26 @@
 package com.turfchai.tournament.api;
 
+import com.turfchai.model.User;
+import com.turfchai.model.enums.RoleType;
+import com.turfchai.player.config.PlayerDataSeeder;
+import com.turfchai.repository.UserRepository;
+import com.turfchai.security.JwtService;
+import com.turfchai.testsupport.TestAuth;
 import com.turfchai.tournament.config.TournamentDataSeeder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,6 +28,7 @@ import java.util.regex.Pattern;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,8 +48,95 @@ class TournamentRestControllerTest {
              "teamCapacity":8,"entryFeePerTeam":2000,"prizePool":0,"privacy":"open"}
             """;
 
-    @Autowired
+    /** Authenticated as the seeded host of the demo tournament. */
     private MockMvc mockMvc;
+
+    @Autowired
+    private MockMvc anonymousMvc;
+    @Autowired
+    private WebApplicationContext context;
+    @Autowired
+    private FilterChainProxy securityFilterChain;
+    @Autowired
+    private UserRepository users;
+    @Autowired
+    private PasswordEncoder encoder;
+    @Autowired
+    private JwtService jwtService;
+
+    private String outsiderToken;
+
+    @BeforeEach
+    void authenticateAsHost() {
+        User host = users.findByPublicId(PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()).orElseThrow();
+        outsiderToken = TestAuth.bearerFor(users, encoder, jwtService,
+                "outsider.host@turfchai.test", RoleType.HOST);
+
+        mockMvc = MockMvcBuilders.webAppContextSetup(context)
+                .addFilters(securityFilterChain)
+                .defaultRequest(get("/").header(HttpHeaders.AUTHORIZATION, TestAuth.bearer(jwtService, host)))
+                .build();
+    }
+
+    /** TC-002: no host route is reachable without a token. */
+    @Test
+    void anonymousCallersAreRejectedOnEveryHostRoute() throws Exception {
+        String code = TournamentDataSeeder.DEMO_CODE;
+        anonymousMvc.perform(get(BASE + "/" + code)).andExpect(status().isUnauthorized());
+        anonymousMvc.perform(post(BASE).contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY))
+                .andExpect(status().isUnauthorized());
+        anonymousMvc.perform(post(BASE + "/" + code + "/teams/1/entry-fee"))
+                .andExpect(status().isUnauthorized());
+        anonymousMvc.perform(post(BASE + "/" + code + "/fixtures/generate"))
+                .andExpect(status().isUnauthorized());
+        anonymousMvc.perform(get(BASE + "/" + code + "/fixtures"))
+                .andExpect(status().isUnauthorized());
+        anonymousMvc.perform(post(BASE + "/" + code + "/multi-pitch-reserve")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"slots\":[]}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /** TC-002: an X-User-Id header must not stand in for a token. */
+    @Test
+    void spoofedUserHeaderDoesNotAuthenticate() throws Exception {
+        anonymousMvc.perform(post(BASE + "/" + TournamentDataSeeder.DEMO_CODE + "/fixtures/generate")
+                        .header("X-User-Id", PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /** TC-002: knowing a tournament code is not authority over it. */
+    @Test
+    void authenticatedNonHostCannotTouchSomeoneElsesTournament() throws Exception {
+        String code = TournamentDataSeeder.DEMO_CODE;
+        anonymousMvc.perform(get(BASE + "/" + code).header(HttpHeaders.AUTHORIZATION, outsiderToken))
+                .andExpect(status().isForbidden());
+        anonymousMvc.perform(post(BASE + "/" + code + "/teams/1/entry-fee")
+                        .header(HttpHeaders.AUTHORIZATION, outsiderToken))
+                .andExpect(status().isForbidden());
+        anonymousMvc.perform(post(BASE + "/" + code + "/fixtures/generate")
+                        .header(HttpHeaders.AUTHORIZATION, outsiderToken))
+                .andExpect(status().isForbidden());
+        anonymousMvc.perform(post(BASE + "/" + code + "/teams")
+                        .header(HttpHeaders.AUTHORIZATION, outsiderToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Ghost\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    /** A host's own list must contain only their tournaments. */
+    @Test
+    void hostListsOnlyOwnTournaments() throws Exception {
+        mockMvc.perform(get(BASE))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(TournamentDataSeeder.DEMO_CODE)));
+
+        // A different host hosts nothing, so the same route must come back empty
+        // rather than leaking somebody else's tournament.
+        anonymousMvc.perform(get(BASE).header(HttpHeaders.AUTHORIZATION, outsiderToken))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(TournamentDataSeeder.DEMO_CODE))));
+    }
 
     private String createTournament() throws Exception {
         MvcResult result = mockMvc.perform(post(BASE)

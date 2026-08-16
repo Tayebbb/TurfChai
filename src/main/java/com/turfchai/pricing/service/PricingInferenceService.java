@@ -2,7 +2,10 @@ package com.turfchai.pricing.service;
 
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
+import ai.onnxruntime.OrtException;
 import ai.onnxruntime.OrtSession;
+import com.turfchai.exception.PricingUnavailableException;
+import com.turfchai.exception.VenueNotFoundException;
 import com.turfchai.pricing.dto.PricingQuoteRequest;
 import com.turfchai.pricing.dto.PricingQuoteResponse;
 import com.turfchai.pricing.entity.WeatherForecastGridId;
@@ -53,35 +56,40 @@ public class PricingInferenceService {
      * OutOfMemoryError
      * on memory-constrained deployments (such as Render free/starter tiers).
      */
-    private synchronized void ensureModelLoaded() throws Exception {
+    private synchronized void ensureModelLoaded() {
         if (session != null) {
             return;
         }
 
-        log.info("Initializing ONNX pricing model environment lazily...");
-        env = OrtEnvironment.getEnvironment();
-        ClassPathResource resource = new ClassPathResource("ml_models/pricing_model.onnx");
+        try {
+            log.info("Initializing ONNX pricing model environment lazily...");
+            env = OrtEnvironment.getEnvironment();
+            ClassPathResource resource = new ClassPathResource("ml_models/pricing_model.onnx");
 
-        File modelFile;
-        if (resource.isFile()) {
-            modelFile = resource.getFile();
-        } else {
-            modelFile = File.createTempFile("pricing_model_", ".onnx");
-            modelFile.deleteOnExit();
-            try (InputStream is = resource.getInputStream()) {
-                Files.copy(is, modelFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            File modelFile;
+            if (resource.isFile()) {
+                modelFile = resource.getFile();
+            } else {
+                modelFile = File.createTempFile("pricing_model_", ".onnx");
+                modelFile.deleteOnExit();
+                try (InputStream is = resource.getInputStream()) {
+                    Files.copy(is, modelFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
             }
-        }
 
-        session = env.createSession(modelFile.getAbsolutePath(), new OrtSession.SessionOptions());
-        log.info("ONNX pricing model loaded successfully from file path: {}", modelFile.getAbsolutePath());
+            session = env.createSession(modelFile.getAbsolutePath(), new OrtSession.SessionOptions());
+            log.info("ONNX pricing model loaded successfully from file path: {}", modelFile.getAbsolutePath());
+        } catch (Exception e) {
+            throw new PricingUnavailableException("Pricing model could not be loaded", e);
+        }
     }
 
-    public PricingQuoteResponse getQuote(PricingQuoteRequest request) throws Exception {
+    public PricingQuoteResponse getQuote(PricingQuoteRequest request) {
+        validate(request);
         ensureModelLoaded();
 
         Venue venue = venueRepository.findById(request.getVenueId())
-                .orElseThrow(() -> new IllegalArgumentException("Venue not found"));
+                .orElseThrow(() -> new VenueNotFoundException("Venue not found: " + request.getVenueId()));
 
         LocalDateTime dt = request.getBookingDateTime();
 
@@ -145,6 +153,31 @@ public class PricingInferenceService {
                     .suggestedPrice(suggestedPrice)
                     .featureBreakdown(breakdown)
                     .build();
+        } catch (OrtException e) {
+            throw new PricingUnavailableException("Pricing model inference failed", e);
+        }
+    }
+
+    /**
+     * Guards the model against inputs it was never trained on. Without this a
+     * null date reached {@code dt.getDayOfMonth()} and surfaced as a 500.
+     */
+    private void validate(PricingQuoteRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        if (request.getVenueId() == null) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (request.getBookingDateTime() == null) {
+            throw new IllegalArgumentException("bookingDateTime is required");
+        }
+        if (request.getDaysBeforeBooking() < 0) {
+            throw new IllegalArgumentException("daysBeforeBooking cannot be negative");
+        }
+        float occupancy = request.getOccupancyRate();
+        if (Float.isNaN(occupancy) || occupancy < 0f || occupancy > 1f) {
+            throw new IllegalArgumentException("occupancyRate must be between 0.0 and 1.0");
         }
     }
 
@@ -158,7 +191,8 @@ public class PricingInferenceService {
         List<SportPricingRule> rules = pricingRuleRepository.findActiveByVenueId(venueId);
         if (sportSlug != null && !sportSlug.isBlank()) {
             List<SportPricingRule> forSport = rules.stream()
-                    .filter(rule -> rule.getSport().getSlug().equalsIgnoreCase(sportSlug))
+                    .filter(rule -> rule.getSport() != null
+                            && sportSlug.equalsIgnoreCase(rule.getSport().getSlug()))
                     .toList();
             if (!forSport.isEmpty()) {
                 rules = forSport;

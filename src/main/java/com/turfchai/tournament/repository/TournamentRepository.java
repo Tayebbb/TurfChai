@@ -37,4 +37,7 @@ public interface TournamentRepository extends JpaRepository<Tournament, Long> {
             order by t.tournamentDate desc
             """)
     List<Tournament> findRegisteredBy(@Param("userId") Long userId);
+
+    /** Tournaments the caller hosts, soonest first. */
+    List<Tournament> findByHostIdOrderByTournamentDateDesc(Long hostId);
 }

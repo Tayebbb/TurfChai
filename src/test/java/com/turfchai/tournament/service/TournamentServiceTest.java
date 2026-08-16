@@ -1,6 +1,6 @@
 package com.turfchai.tournament.service;
 
-import com.turfchai.player.api.UserProfileRestController;
+import com.turfchai.player.config.PlayerDataSeeder;
 import com.turfchai.model.User;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.tournament.config.TournamentDataSeeder;
@@ -60,7 +60,7 @@ class TournamentServiceTest {
     }
 
     private User demoHost() {
-        return users.findByPublicId(UserProfileRestController.DEMO_USER_ID.toString()).orElseThrow();
+        return users.findByPublicId(PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()).orElseThrow();
     }
 
     private TournamentView createTournament(int capacity) {
@@ -294,6 +294,71 @@ class TournamentServiceTest {
         assertThatThrownBy(() -> service.payDeposit(t.code(), new PayDepositRequest(1, "bKash", null)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Reserve at least one pitch slot");
+    }
+
+    // ------------------------------------------------------------------
+    // Balance, settings and invite code
+
+    @Test
+    void balanceSettlesTheRemainderAtTheServerPrice() {
+        TournamentView t = createTournament(8);
+        Long pitchId = pitchIdOf("kick-off-arena");
+        service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)))));
+        service.payDeposit(t.code(), new PayDepositRequest(1, "bKash", null));
+
+        TournamentView settled = service.payBalance(t.code(),
+                new TournamentRequests.PayBalanceRequest("Card", "REF-9911"));
+
+        assertThat(settled.balance().status()).isEqualTo("PAID");
+        assertThat(settled.balance().method()).isEqualTo("Card");
+        assertThat(settled.balance().reference()).isEqualTo("REF-9911");
+        assertThat(settled.balance().paidAt()).isNotNull();
+        assertThat(settled.balance().amount()).isEqualByComparingTo(settled.costs().balance());
+    }
+
+    @Test
+    void balanceCannotBePaidBeforeTheDepositOrTwice() {
+        TournamentView t = createTournament(8);
+        Long pitchId = pitchIdOf("kick-off-arena");
+        service.reserveSlots(t.code(), new ReserveSlotsRequest(List.of(
+                new SlotRequest(pitchId, LocalTime.of(8, 0), LocalTime.of(10, 0)))));
+
+        assertThatThrownBy(() -> service.payBalance(t.code(),
+                new TournamentRequests.PayBalanceRequest("Card", null)))
+                .isInstanceOf(TournamentConflictException.class);
+
+        service.payDeposit(t.code(), new PayDepositRequest(1, "bKash", null));
+        service.payBalance(t.code(), new TournamentRequests.PayBalanceRequest("Card", null));
+
+        assertThatThrownBy(() -> service.payBalance(t.code(),
+                new TournamentRequests.PayBalanceRequest("Card", null)))
+                .isInstanceOf(TournamentConflictException.class);
+    }
+
+    @Test
+    void settingsUpdatePrivacyAndNotesIndependently() {
+        TournamentView t = createTournament(8);
+
+        TournamentView withNotes = service.updateSettings(t.code(),
+                new TournamentRequests.UpdateTournamentSettingsRequest(null, "  Referees at 7:30  "));
+        assertThat(withNotes.hostNotes()).isEqualTo("Referees at 7:30");
+        assertThat(withNotes.privacy()).isEqualTo(t.privacy());
+
+        TournamentView locked = service.updateSettings(t.code(),
+                new TournamentRequests.UpdateTournamentSettingsRequest("invite_only", null));
+        assertThat(locked.privacy()).isEqualTo("INVITE_ONLY");
+        assertThat(locked.hostNotes()).isEqualTo("Referees at 7:30");
+    }
+
+    @Test
+    void regeneratingTheInviteCodeReplacesThePreviousLink() {
+        TournamentView t = createTournament(8);
+
+        TournamentView rotated = service.regenerateInviteCode(t.code());
+
+        assertThat(rotated.inviteCode()).isNotEqualTo(t.inviteCode());
+        assertThat(rotated.inviteCode()).startsWith("t/");
     }
 
     // ------------------------------------------------------------------

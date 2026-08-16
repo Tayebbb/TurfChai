@@ -69,7 +69,8 @@ public class TournamentDataSeeder {
               PitchRepository pitches,
               UserRepository users) {
         Venue venue = venues.findBySlug("mirpur-sports-city").orElse(null);
-        User host = users.findByPublicId(TournamentRestController.DEMO_USER_ID.toString()).orElse(null);
+        User host = users.findByPublicId(
+                com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString()).orElse(null);
         if (venue == null || host == null) {
             log.warn("Skipping tournament seed — demo venue or user missing");
             return;

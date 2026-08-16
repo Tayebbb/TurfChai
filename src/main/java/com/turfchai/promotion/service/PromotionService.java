@@ -74,16 +74,23 @@ public class PromotionService {
                 .toList();
     }
 
-    /** Toggle active status / update label. */
+    /** Applies a partial update. Absent fields are left as they are. */
     public PromotionDto updatePromotion(Long ownerUserId, Long venueId, Long promoId,
-                                        Boolean active, String label) {
+                                        com.turfchai.promotion.dto.UpdatePromotionRequest request) {
         requireOwnership(ownerUserId, venueId);
         Promotion promo = promotionRepository.findById(promoId)
                 .filter(p -> p.getVenue().getId().equals(venueId))
                 .orElseThrow(() -> new IllegalArgumentException("Promotion not found: " + promoId));
 
-        if (active != null) promo.setActive(active);
-        if (label != null && !label.isBlank()) promo.setLabel(label);
+        if (request.active() != null) promo.setActive(request.active());
+        if (request.label() != null && !request.label().isBlank()) promo.setLabel(request.label());
+        if (request.discountType() != null) promo.setDiscountType(request.discountType());
+        if (request.discountValue() != null) promo.setDiscountValue(request.discountValue());
+        if (request.minOrderAmount() != null) promo.setMinOrderAmount(request.minOrderAmount());
+        if (request.maxDiscountAmount() != null) promo.setMaxDiscountAmount(request.maxDiscountAmount());
+        if (request.validFrom() != null) promo.setValidFrom(request.validFrom());
+        if (request.validUntil() != null) promo.setValidUntil(request.validUntil());
+        if (request.usageLimit() != null) promo.setUsageLimit(request.usageLimit());
 
         return toDto(promotionRepository.save(promo));
     }

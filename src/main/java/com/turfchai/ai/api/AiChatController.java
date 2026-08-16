@@ -8,6 +8,7 @@ import com.turfchai.ai.state.ConversationStateStore;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,11 +47,15 @@ public class AiChatController {
     }
 
     @PostMapping("/chat")
-    public ResponseEntity<ChatResponse> chat(@Valid @RequestBody ChatRequest request) {
+    public ResponseEntity<ChatResponse> chat(
+            @AuthenticationPrincipal com.turfchai.security.UserPrincipal principal,
+            @Valid @RequestBody ChatRequest request) {
         String sessionId = request.sessionId() == null || request.sessionId().isBlank()
                 ? UUID.randomUUID().toString()
                 : request.sessionId();
-        String userId = request.userId() == null ? "" : request.userId();
+        // A signed-in caller is identified by their token, never by the body:
+        // the request field is only a label for anonymous visitors.
+        String userId = callerId(principal, request.userId());
 
         // Bind the session to its first user so one caller cannot hijack
         // another caller's session transcript/state.
@@ -84,11 +89,27 @@ public class AiChatController {
 
     /** Resets both transcript and structured state for a session. */
     @DeleteMapping("/sessions/{sessionId}")
-    public ResponseEntity<Void> resetSession(@PathVariable String sessionId) {
+    public ResponseEntity<Void> resetSession(
+            @AuthenticationPrincipal com.turfchai.security.UserPrincipal principal,
+            @PathVariable String sessionId) {
+        // Without this check any caller could wipe any transcript by guessing
+        // a session id, since ids are client-supplied strings.
+        String owner = sessionOwners.get(sessionId);
+        if (owner != null && !Objects.equals(owner, callerId(principal, null))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Session does not belong to this user");
+        }
         memory.clear(sessionId);
         stateStore.clear(sessionId);
         sessionOwners.remove(sessionId);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Token identity wins; the body value is a fallback for anonymous chat. */
+    private String callerId(com.turfchai.security.UserPrincipal principal, String fromBody) {
+        if (principal != null && principal.getId() != null) {
+            return "user:" + principal.getId();
+        }
+        return fromBody == null ? "" : fromBody;
     }
 
     @GetMapping("/metrics")

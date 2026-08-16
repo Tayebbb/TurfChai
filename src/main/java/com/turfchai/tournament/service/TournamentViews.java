@@ -53,6 +53,10 @@ public final class TournamentViews {
                               String reference, java.time.Instant paidAt) {
     }
 
+    /** The venue owner the host coordinates with on the day. */
+    public record VenueContactView(String name, String initials, String phone, String email) {
+    }
+
     public record TournamentView(Long id, String code, String name,
                                  String venueSlug, String venueName,
                                  LocalDate date, LocalTime windowStart, LocalTime windowEnd,
@@ -61,6 +65,7 @@ public final class TournamentViews {
                                  String status, LocalDate balanceDueDate, int repeatWeeks,
                                  List<TeamView> teams, List<FixtureView> fixtures,
                                  List<ReservationView> reservations, CostSummary costs,
-                                 DepositView deposit) {
+                                 DepositView deposit, DepositView balance,
+                                 String hostNotes, VenueContactView venueContact) {
     }
 }
