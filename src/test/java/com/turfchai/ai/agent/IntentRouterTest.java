@@ -41,4 +41,28 @@ class IntentRouterTest {
         assertThat(router.route(null)).isEqualTo(Intent.GENERAL);
         assertThat(router.route("qwerty zxcvb")).isEqualTo(Intent.GENERAL);
     }
+
+    @Test
+    void personalQuestionsBeatTheGenericInterrogatives() {
+        // These all open with a POLICY_QUESTION trigger ("what is"/"what are"),
+        // which routes to RAG with no tools — so the assistant used to deny
+        // holding data it can read.
+        assertThat(router.route("what is my points balance?")).isEqualTo(Intent.PROFILE);
+        assertThat(router.route("what is my wallet worth right now")).isEqualTo(Intent.PROFILE);
+        assertThat(router.route("what is my payment status for TC-48291")).isEqualTo(Intent.PAYMENT);
+        assertThat(router.route("what are my tournaments this month")).isEqualTo(Intent.TOURNAMENT);
+    }
+
+    @Test
+    void impersonalPolicyQuestionsStillUseKnowledge() {
+        assertThat(router.route("what is the refund policy?")).isEqualTo(Intent.POLICY_QUESTION);
+        assertThat(router.route("how does the loyalty tier ladder work?")).isEqualTo(Intent.POLICY_QUESTION);
+    }
+
+    @Test
+    void pluralsRouteLikeTheirSingular() {
+        assertThat(router.route("list 3 turfs in Dhanmondi")).isEqualTo(Intent.VENUE_SEARCH);
+        assertThat(router.route("show me venues near Banani")).isEqualTo(Intent.VENUE_SEARCH);
+        assertThat(router.route("show my bookings")).isEqualTo(Intent.BOOKING);
+    }
 }

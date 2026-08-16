@@ -21,7 +21,7 @@ public class AgentPlanner {
             case BOOKING -> new AgentPlan(intent, false, BOOKING_TOOLS);
             case PAYMENT -> new AgentPlan(intent, true, List.of("get_payment_status", "manage_booking"));
             case TOURNAMENT -> new AgentPlan(intent, true, List.of("search_tournaments"));
-            case PROFILE -> new AgentPlan(intent, true, List.of("get_user_profile"));
+            case PROFILE -> new AgentPlan(intent, true, List.of("get_user_profile", "manage_booking"));
             case SMALL_TALK -> new AgentPlan(intent, false, List.of());
             case GENERAL -> new AgentPlan(intent, true, ALL_TOOLS);
         };

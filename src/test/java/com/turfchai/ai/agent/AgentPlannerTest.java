@@ -24,8 +24,9 @@ class AgentPlannerTest {
     }
 
     @Test
-    void profileOnlyExposesProfileTool() {
-        assertThat(planner.plan(Intent.PROFILE).allowedTools()).containsExactly("get_user_profile");
+    void profileExposesProfileAndTheUsersOwnBookings() {
+        assertThat(planner.plan(Intent.PROFILE).allowedTools())
+                .containsExactlyInAnyOrder("get_user_profile", "manage_booking");
     }
 
     @Test
