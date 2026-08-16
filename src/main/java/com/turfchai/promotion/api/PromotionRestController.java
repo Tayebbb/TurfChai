@@ -1,6 +1,7 @@
 package com.turfchai.promotion.api;
 
 import com.turfchai.promotion.dto.AppliedDiscountResponse;
+import com.turfchai.promotion.dto.AvailablePromoResponse;
 import com.turfchai.promotion.dto.CreatePromotionRequest;
 import com.turfchai.promotion.dto.PromotionDto;
 import com.turfchai.promotion.dto.UpdatePromotionRequest;
@@ -87,7 +88,19 @@ public class PromotionRestController {
         promotionService.deletePromotion(principal.getId(), venueId, id);
     }
 
-    // ── Public checkout endpoint ───────────────────────────────────────────
+    // ── Public checkout endpoints ──────────────────────────────────────────
+
+    /**
+     * GET /api/v1/venues/{venueId}/promotions/available — every promo code a
+     * player could redeem at this venue right now. Public, mirroring
+     * {@code /api/v1/venues/{venueId}/slots}: the checkout page lists these
+     * when the promo box is clicked, instead of requiring the player to
+     * already know a code.
+     */
+    @GetMapping("/venues/{venueId}/promotions/available")
+    public List<AvailablePromoResponse> listAvailablePromos(@PathVariable Long venueId) {
+        return promotionService.listAvailableForVenue(venueId);
+    }
 
     @PostMapping("/promotions/validate-code")
     public ResponseEntity<AppliedDiscountResponse> validateCode(

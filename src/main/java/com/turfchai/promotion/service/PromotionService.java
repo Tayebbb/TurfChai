@@ -1,6 +1,7 @@
 package com.turfchai.promotion.service;
 
 import com.turfchai.promotion.dto.AppliedDiscountResponse;
+import com.turfchai.promotion.dto.AvailablePromoResponse;
 import com.turfchai.promotion.dto.CreatePromotionRequest;
 import com.turfchai.promotion.dto.PromotionDto;
 import com.turfchai.promotion.dto.ValidatePromoCodeRequest;
@@ -119,6 +120,21 @@ public class PromotionService {
                 .filter(p -> p.getVenue().getId().equals(venueId))
                 .orElseThrow(() -> new IllegalArgumentException("Promotion not found: " + promoId));
         promotionRepository.delete(promo);
+    }
+
+    /**
+     * Codes a player could redeem at this venue right now — what the checkout
+     * page's promo box lists when clicked. Public, like {@code validate-code}:
+     * a code being run is not sensitive, and the player still has to type or
+     * pick it before it applies to anything.
+     */
+    @Transactional(readOnly = true)
+    public List<AvailablePromoResponse> listAvailableForVenue(Long venueId) {
+        return promotionRepository.findAvailableForVenue(venueId, Instant.now()).stream()
+                .map(p -> new AvailablePromoResponse(
+                        p.getCode(), p.getLabel(), p.getDiscountType(), p.getDiscountValue(),
+                        p.getMinOrderAmount(), p.getMaxDiscountAmount()))
+                .toList();
     }
 
     // ── Public validate & apply ────────────────────────────────────────────
