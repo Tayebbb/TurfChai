@@ -1,11 +1,21 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { PageTitle } from '@/components/common/PageTitle';
-import { api } from '@/api/client';
+import { apiGet } from '@/api/client';
+import { listAdminUsers } from '@/api/adminUsers';
 import { useApi } from '@/hooks/useApi';
-import { toUserMessage } from '@/utils/errorMessage';
 import { paths } from '@/routes/paths';
 import './UserGrowthPage.css';
+
+// ── Placeholder cards (shown while loading or when analytics are unavailable) ─
+// Values are deliberately '—' so no fabricated numbers are ever displayed.
+const PLACEHOLDER_KPIS = [
+  { id: 'total',     label: 'TOTAL REGISTERED',   value: '—', valueColor: undefined,         note: 'Cumulative users' },
+  { id: 'new',       label: 'NEW REGISTRATIONS',   value: '—', valueColor: 'var(--brand-600)', note: 'Daily growth velocity' },
+  { id: 'active',    label: 'ACTIVE RATIO',        value: '—', valueColor: 'var(--mint)',    note: 'Active monthly users' },
+  { id: 'retention', label: 'RETENTION RATE',      value: '—', valueColor: 'var(--info)',    note: '30-day user return' },
+];
 
 const SIGNUP_OPTIONS = {
   plugins: { legend: { display: false } },
@@ -15,123 +25,143 @@ const SIGNUP_OPTIONS = {
   },
 };
 
-const LINE_STYLE = {
-  borderColor: '#3b82f6',
-  backgroundColor: 'rgba(59,130,246,0.35)',
-  borderWidth: 3.5,
-  tension: 0.4,
-  fill: true,
-  pointRadius: 4.5,
-  pointBackgroundColor: '#ffffff',
-  pointBorderColor: '#3b82f6',
-  pointBorderWidth: 2.5,
-};
-
 const BARE_TABLE_WRAP = { padding: 0, borderRadius: 12, background: 'transparent', border: 0, boxShadow: 'none' };
 
-const ROLE_TONE = { PLAYER: 'green', SOLO_PLAYER: 'green', HOST: 'blue', OWNER: 'blue' };
-
+/**
+ * Formats a large number for KPI cards (e.g. 41270 → "41,270").
+ */
 function fmt(n) {
-  return Number(n ?? 0).toLocaleString('en-IN');
+  return Number(n).toLocaleString('en-IN');
 }
 
-/** "14 mins ago" from a real timestamp. */
-function joinedAgo(iso) {
+function relativeTime(iso) {
   if (!iso) return '—';
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '—';
-  const minutes = Math.max(0, Math.round((Date.now() - then) / 60000));
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (secs < 0) return 'just now';
+  if (secs < 60) return `${secs}s ago`;
+  if (secs < 3600) return `${Math.floor(secs / 60)} min ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
 }
 
-function StatCard({ label, value, note, valueColor }) {
-  return (
-    <div className="stat-card-simple">
-      <span className="subtle tiny" style={{ fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-3)' }}>
-        {label}
-      </span>
-      <b
-        style={{
-          fontSize: 22,
-          fontWeight: 800,
-          fontFamily: 'var(--font-display)',
-          display: 'block',
-          marginTop: 4,
-          color: valueColor,
-        }}
-      >
-        {value}
-      </b>
-      <span className="tiny subtle" style={{ color: 'var(--text-3)' }}>
-        {note}
-      </span>
-    </div>
-  );
+function roleLabel(role) {
+  if (role === 'HOST' || role === 'OWNER') return 'Host';
+  if (role === 'SOLO_PLAYER') return 'Solo';
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return 'Admin';
+  return 'Player';
+}
+
+function roleTone(role) {
+  if (role === 'HOST' || role === 'OWNER') return 'blue';
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return 'purple';
+  return 'green';
 }
 
 export default function UserGrowthPage() {
-  const growthApi = useApi(() => api('/admin/analytics/growth'), []);
-  const growth = growthApi.data?.data ?? growthApi.data ?? null;
+  const [kpis, setKpis] = useState([]);
+  const [signupData, setSignupData] = useState({ labels: [], datasets: [] });
+  const [channels, setChannels] = useState([]);
+  const [isLive, setIsLive] = useState(false);
+  const [error, setError] = useState(false);
 
-  const usersApi = useApi(() => api('/admin/users'), []);
-  const allUsers = usersApi.data?.data ?? usersApi.data ?? [];
+  const { data: usersRes } = useApi(() => listAdminUsers(), []);
+  const stream = useMemo(() => {
+    const arr = Array.isArray(usersRes?.data)
+      ? usersRes.data
+      : Array.isArray(usersRes)
+        ? usersRes
+        : [];
+    return [...arr]
+      .filter((u) => u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN')
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 5)
+      .map((u) => ({
+        id: `#${u.id}`,
+        name: u.fullName || '—',
+        role: roleLabel(u.role),
+        roleTone: roleTone(u.role),
+        area: u.area || '—',
+        email: u.email || '—',
+        joined: relativeTime(u.createdAt),
+      }));
+  }, [usersRes]);
 
-  // Every figure below used to fall back to an invented constant — 41,270
-  // registered users on a platform with a few hundred. There is no fallback
-  // now: until the API answers, the cards read "—".
-  const pending = growthApi.loading;
-  const dash = pending ? '…' : '—';
+  useEffect(() => {
+    let cancelled = false;
 
-  const kpis = [
-    {
-      id: 'total',
-      label: 'TOTAL REGISTERED',
-      value: growth ? fmt(growth.totalUsers) : dash,
-      note: 'Cumulative users',
-    },
-    {
-      id: 'new',
-      label: 'NEW REGISTRATIONS',
-      value: growth ? `+${fmt(growth.newUsersToday)} Today` : dash,
-      valueColor: 'var(--brand-600)',
-      note: 'Daily growth velocity',
-    },
-    {
-      id: 'active',
-      label: 'ACTIVE RATIO',
-      value: growth ? `${Number(growth.activeRatio ?? 0).toFixed(1)}%` : dash,
-      valueColor: 'var(--mint)',
-      note: growth
-        ? `${fmt(Math.round((growth.totalUsers * growth.activeRatio) / 100))} active MAU`
-        : 'Share of accounts still active',
-    },
-    {
-      id: 'retention',
-      label: '30-DAY RETURN RATE',
-      // null means the backend could not measure it, not zero.
-      value: growth?.retentionRate == null ? dash : `${Number(growth.retentionRate).toFixed(1)}%`,
-      valueColor: 'var(--info)',
-      note:
-        growth && growth.retentionRate == null
-          ? 'Not enough account history yet'
-          : 'Accounts over 30 days old that booked again',
-    },
-  ];
+    async function fetchGrowth() {
+      try {
+        const json = await apiGet('/api/v1/admin/analytics/growth');
+        // A 200 that carries no payload is still a failure. Returning quietly
+        // left the badge saying "Loading..." for as long as the page was open.
+        if (!json.success || !json.data) {
+          if (!cancelled) setError(true);
+          return;
+        }
 
-  const signupLabels = Array.isArray(growth?.signupLabels) ? growth.signupLabels : [];
-  const signupCounts = Array.isArray(growth?.signupCounts) ? growth.signupCounts : [];
-  const hasSignupSeries = signupLabels.length > 0 && signupCounts.length > 0;
+        if (cancelled) return;
 
-  const recentSignups = [...(Array.isArray(allUsers) ? allUsers : [])]
-    .filter((user) => user?.createdAt)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 8);
+        const d = json.data;
+
+        setKpis([
+          {
+            id: 'total',
+            label: 'TOTAL REGISTERED',
+            value: fmt(d.totalUsers),
+            valueColor: undefined,
+            note: 'Cumulative users',
+          },
+          {
+            id: 'new',
+            label: 'NEW REGISTRATIONS',
+            value: `+${fmt(d.newUsersToday)} Today`,
+            valueColor: 'var(--brand-600)',
+            note: 'Daily growth velocity',
+          },
+          {
+            id: 'active',
+            label: 'ACTIVE RATIO',
+            value: `${d.activeRatio.toFixed(1)}%`,
+            valueColor: 'var(--mint)',
+            note: `${fmt(Math.round(d.totalUsers * d.activeRatio / 100))} active MAU`,
+          },
+          {
+            id: 'retention',
+            label: 'RETENTION RATE',
+            value: d.retentionRate == null ? '—' : `${d.retentionRate.toFixed(1)}%`,
+            valueColor: 'var(--info)',
+            note: d.retentionRate == null ? 'Not enough account history yet' : '30-day user return',
+          },
+        ]);
+
+        setSignupData({
+          labels: d.signupLabels,
+          datasets: [
+            {
+              data: d.signupCounts,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59,130,246,0.35)',
+              borderWidth: 3.5,
+              tension: 0.4,
+              fill: true,
+              pointRadius: 4.5,
+              pointBackgroundColor: '#ffffff',
+              pointBorderColor: '#3b82f6',
+              pointBorderWidth: 2.5,
+            },
+          ],
+        });
+
+        setIsLive(true);
+        setChannels(d.channels || []);
+      } catch {
+        if (!cancelled) setError(true);
+      }
+    }
+
+    fetchGrowth();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <>
@@ -155,119 +185,126 @@ export default function UserGrowthPage() {
         </div>
       </div>
 
-      {growthApi.error ? (
-        <div className="card" style={{ padding: 18, marginBottom: 20 }}>
-          <b>Could not load growth metrics</b>
-          <p className="subtle small" style={{ margin: '6px 0 12px' }}>
-            {toUserMessage(growthApi.error, 'The analytics service did not respond.')}
-          </p>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={growthApi.reload}>
-            Try again
-          </button>
-        </div>
-      ) : null}
-
+      {/* KPI Grid */}
       <div className="kpi-grid">
-        {kpis.map((kpi) => (
-          <StatCard
-            key={kpi.id}
-            label={kpi.label}
-            value={kpi.value}
-            note={kpi.note}
-            valueColor={kpi.valueColor}
-          />
+        {(isLive ? kpis : PLACEHOLDER_KPIS).map((kpi) => (
+          <div className="stat-card-simple" key={kpi.id}>
+            <span
+              className="subtle tiny"
+              style={{ fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-3)' }}
+            >
+              {kpi.label}
+            </span>
+            <b
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                fontFamily: 'var(--font-display)',
+                display: 'block',
+                marginTop: 4,
+                color: kpi.valueColor,
+              }}
+            >
+              {kpi.value}
+            </b>
+            <span className="tiny subtle" style={{ color: 'var(--text-3)' }}>
+              {kpi.note}
+            </span>
+          </div>
         ))}
       </div>
 
       <div
         className="admin-stack-mobile"
-        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 24,
+          marginBottom: 28,
+        }}
       >
+        {/* Signup Growth Chart */}
         <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
           <div className="between" style={{ marginBottom: 16 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Signup Growth Curve</h3>
-              <span className="subtle small">Daily registrations over the past week</span>
+              <span className="subtle small">
+                Daily registration registrations over past week
+              </span>
             </div>
-            {hasSignupSeries ? <span className="badge blue nodot">Live Analytics</span> : null}
+            <span className={`badge nodot ${isLive ? 'blue' : error ? 'yellow' : 'gray'}`}>
+              {isLive ? 'Live Analytics' : error ? 'Unavailable' : 'Loading…'}
+            </span>
           </div>
-          {hasSignupSeries ? (
-            <ChartCanvas
-              type="line"
-              data={{ labels: signupLabels, datasets: [{ data: signupCounts, ...LINE_STYLE }] }}
-              options={SIGNUP_OPTIONS}
-              height={230}
-              label="Daily signup growth over the past week"
-            />
-          ) : (
-            <div className="center subtle small" style={{ padding: '72px 12px' }}>
-              {pending ? 'Loading signup history…' : 'No signup history available for this period.'}
-            </div>
-          )}
+          <ChartCanvas
+            type="line"
+            data={signupData}
+            options={SIGNUP_OPTIONS}
+            height={230}
+            label="Daily signup growth over the past week"
+          />
         </div>
 
-        {/* Referral source is not captured at signup, so there is nothing to
-            break down. The table that stood here was entirely invented. */}
+        {/* Acquisition Channels Table */}
         <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
           <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800 }}>
             Acquisition Channels breakdown
           </h3>
-          <div className="center subtle small" style={{ padding: '56px 12px' }}>
-            <div style={{ fontSize: 26, marginBottom: 8 }} aria-hidden="true">
-              📡
-            </div>
-            <b style={{ display: 'block', marginBottom: 6 }}>Not tracked yet</b>
-            TurfChai does not record where a signup came from, so there is no
-            channel, conversion or acquisition-cost data to show.
+          <div className="table-wrap" style={BARE_TABLE_WRAP}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  <th className="num">New Users</th>
+                  <th className="num">Conv. Rate</th>
+                  <th className="num">CAC</th>
+                </tr>
+              </thead>
+              <tbody>
+                {channels.map((row) => (
+                  <tr key={row.id}>
+                    <td><b>{row.channel}</b></td>
+                    <td className="num font-semibold">{fmt(row.newUsers)}</td>
+                    <td className="num font-semibold">{row.conversionRate.toFixed(1)}%</td>
+                    <td className="num font-semibold">{row.cac}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
+      {/* Real-Time Registration Stream */}
       <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
-        <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800 }}>Latest registrations</h3>
+        <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800 }}>
+          Real-Time Registration Stream
+        </h3>
         <div className="table-wrap" style={BARE_TABLE_WRAP}>
           <table className="table">
             <thead>
               <tr>
-                <th>User</th>
+                <th>User ID</th>
                 <th>Name</th>
                 <th>Role</th>
                 <th>Area</th>
+                <th>Email</th>
                 <th style={{ textAlign: 'right' }}>Time Joined</th>
               </tr>
             </thead>
             <tbody>
-              {recentSignups.map((user) => (
-                <tr key={user.id}>
-                  <td className="num">
-                    <b>{user.publicId ? `U-${String(user.publicId).slice(0, 8)}` : `#${user.id}`}</b>
-                  </td>
-                  <td>{user.fullName || '—'}</td>
+              {stream.map((row) => (
+                <tr key={row.id}>
+                  <td className="num"><b>{row.id}</b></td>
+                  <td>{row.name}</td>
                   <td>
-                    <span className={`badge ${ROLE_TONE[user.role] ?? 'gray'} nodot`}>
-                      {user.role ?? '—'}
-                    </span>
+                    <span className={`badge ${row.roleTone} nodot`}>{row.role}</span>
                   </td>
-                  <td>{user.area || '—'}</td>
-                  <td style={{ textAlign: 'right' }} className="num">
-                    {joinedAgo(user.createdAt)}
-                  </td>
+                  <td>{row.area}</td>
+                  <td>{row.email}</td>
+                  <td style={{ textAlign: 'right' }} className="num">{row.joined}</td>
                 </tr>
               ))}
-              {!usersApi.loading && recentSignups.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="center subtle small" style={{ padding: '32px 0' }}>
-                    No registrations recorded yet.
-                  </td>
-                </tr>
-              ) : null}
-              {usersApi.loading ? (
-                <tr>
-                  <td colSpan={5} className="center subtle small" style={{ padding: '32px 0' }}>
-                    Loading registrations…
-                  </td>
-                </tr>
-              ) : null}
             </tbody>
           </table>
         </div>

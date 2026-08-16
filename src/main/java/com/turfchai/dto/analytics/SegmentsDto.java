@@ -1,5 +1,8 @@
 package com.turfchai.dto.analytics;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Response DTO for {@code GET /api/v1/admin/analytics/segments}.
  * <p>
@@ -26,6 +29,15 @@ public class SegmentsDto {
      * Formatted as a long (whole taka) for simplicity.
      */
     private long avgLifetimeValueBdt;
+
+    /** Usage-tier breakdown among active players. */
+    private List<PlayerTierDto> playerTiers = new ArrayList<>();
+
+    /** Host lifecycle status breakdown. */
+    private List<HostStatusRowDto> hostStatus = new ArrayList<>();
+
+    /** Engagement cohort overview (users, bookings, retention, spend, LTV). */
+    private List<CohortDto> cohorts = new ArrayList<>();
 
     // ── Constructors ──────────────────────────────────────────────────────
 
@@ -57,4 +69,13 @@ public class SegmentsDto {
 
     public long getAvgLifetimeValueBdt() { return avgLifetimeValueBdt; }
     public void setAvgLifetimeValueBdt(long avgLifetimeValueBdt) { this.avgLifetimeValueBdt = avgLifetimeValueBdt; }
+
+    public List<PlayerTierDto> getPlayerTiers() { return playerTiers; }
+    public void setPlayerTiers(List<PlayerTierDto> playerTiers) { this.playerTiers = playerTiers; }
+
+    public List<HostStatusRowDto> getHostStatus() { return hostStatus; }
+    public void setHostStatus(List<HostStatusRowDto> hostStatus) { this.hostStatus = hostStatus; }
+
+    public List<CohortDto> getCohorts() { return cohorts; }
+    public void setCohorts(List<CohortDto> cohorts) { this.cohorts = cohorts; }
 }

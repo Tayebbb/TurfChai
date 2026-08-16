@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
@@ -5,75 +6,160 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
 import { api } from '@/api/client';
+import { listAdminUsers } from '@/api/adminUsers';
 import { useApi } from '@/hooks/useApi';
-
-// Shared slice styling only — the numbers come from /admin/analytics/segments.
-const DONUT_STYLE = {
-  backgroundColor: ['#22C55E', '#60A5FA', '#FBBF24'],
-  borderWidth: 0,
-  spacing: 4,
-};
 
 const DONUT_OPTIONS = {
   cutout: '71%',
   plugins: { legend: { display: false } },
 };
 
-const SHARE_LEGEND = [
-  {
-    id: 'players',
-    dot: 'var(--brand)',
-    name: 'Players',
-    note: 'Registered player accounts',
-    count: (players) => players,
-    shareTone: 'green',
-  },
-  {
-    id: 'hosts',
-    dot: 'var(--info)',
-    name: 'Hosts',
-    note: 'Venue & pitch managers',
-    count: (players, hosts) => hosts,
-    shareTone: 'blue',
-  },
-  {
-    id: 'inactive',
-    dot: 'var(--warn)',
-    name: 'Inactive',
-    note: 'Marked inactive',
-    count: (players, hosts, inactive) => inactive,
-    shareTone: 'amber',
-  },
-];
+const SEGMENT_COLORS = {
+  players: '#22C55E',
+  hosts: '#60A5FA',
+  inactive: '#FBBF24',
+  other: '#A855F7',
+};
+
+const HISTORY_ITEM_STYLE = {
+  padding: '14px 18px',
+  borderRadius: 14,
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid var(--border-soft)',
+};
+
+const REGION_ITEM_STYLE = {
+  padding: '12px 16px',
+  borderRadius: 12,
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid var(--border-soft)',
+};
+
+const BARE_TABLE_WRAP = {
+  padding: 0,
+  background: 'transparent',
+  border: 0,
+  boxShadow: 'none',
+};
 
 export default function UserSegmentsPage() {
   const { data: res } = useApi(() => api('/admin/analytics/segments'));
   const segments = res?.data || res;
 
-  // These field names must match the API. They did not, so every figure below
-  // silently fell back to an invented constant and showed admins a user base
-  // roughly fifty times larger than the real one.
-  const playerCount = Number(segments?.playerCount ?? 0);
-  const hostCount = Number(segments?.hostCount ?? 0);
-  const inactiveCount = Number(segments?.inactiveCount ?? 0);
-  const totalUsers = Number(segments?.totalUsers ?? 0);
-  const avgLtv = Number(segments?.avgLifetimeValueBdt ?? 0);
-  const shareOf = (n) => (totalUsers > 0 ? `${Math.round((n / totalUsers) * 100)}%` : '—');
+  const totalUsers = segments?.totalUsers || 0;
+  const playerCount = segments?.playerCount || 0;
+  const hostCount = segments?.hostCount || 0;
+  const inactiveCount = segments?.inactiveCount || 0;
+  const avgLtv = segments?.avgLifetimeValueBdt || 0;
+  const otherCount = Math.max(0, totalUsers - playerCount - hostCount - inactiveCount);
+
+  const donutData = useMemo(() => {
+    const slices = [playerCount, hostCount, inactiveCount];
+    const colors = [SEGMENT_COLORS.players, SEGMENT_COLORS.hosts, SEGMENT_COLORS.inactive];
+    const names = ['Players', 'Hosts', 'Inactive'];
+    if (otherCount > 0) {
+      slices.push(otherCount);
+      colors.push(SEGMENT_COLORS.other);
+      names.push('Other');
+    }
+    return {
+      labels: names,
+      datasets: [{ data: slices, backgroundColor: colors, borderWidth: 0, spacing: 4 }],
+    };
+  }, [playerCount, hostCount, inactiveCount, otherCount]);
+
+  const shareLegend = useMemo(() => {
+    const total = totalUsers || 1;
+    const items = [
+      {
+        id: 'players',
+        dot: SEGMENT_COLORS.players,
+        name: 'Players',
+        note: 'Regular turf bookers',
+        count: playerCount,
+        share: (playerCount / total) * 100,
+        shareTone: 'green',
+      },
+      {
+        id: 'hosts',
+        dot: SEGMENT_COLORS.hosts,
+        name: 'Hosts',
+        note: 'Venue & pitch managers',
+        count: hostCount,
+        share: (hostCount / total) * 100,
+        shareTone: 'blue',
+      },
+      {
+        id: 'inactive',
+        dot: SEGMENT_COLORS.inactive,
+        name: 'Inactive',
+        note: 'No activity in 30 days',
+        count: inactiveCount,
+        share: (inactiveCount / total) * 100,
+        shareTone: 'amber',
+      },
+    ];
+    if (otherCount > 0) {
+      items.push({
+        id: 'other',
+        dot: SEGMENT_COLORS.other,
+        name: 'Other',
+        note: 'Admins & remaining accounts',
+        count: otherCount,
+        share: (otherCount / total) * 100,
+        shareTone: 'purple',
+      });
+    }
+    return items.map((item) => ({
+      ...item,
+      count: item.count.toLocaleString('en-IN'),
+      share: item.share.toFixed(1) + '%',
+    }));
+  }, [totalUsers, playerCount, hostCount, inactiveCount, otherCount]);
+
+  const centerTotal = totalUsers >= 1000 ? `${(totalUsers / 1000).toFixed(1)}K` : String(totalUsers || '—');
+
+  const { data: usersRes } = useApi(() => listAdminUsers(), []);
+  const regions = useMemo(() => {
+    const all = Array.isArray(usersRes?.data)
+      ? usersRes.data
+      : Array.isArray(usersRes)
+        ? usersRes
+        : [];
+    const arr = all.filter((u) => u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN');
+    const counts = {};
+    arr.forEach((u) => {
+      const area = u.area || 'Unknown';
+      counts[area] = (counts[area] || 0) + 1;
+    });
+    const total = arr.length || 1;
+    const colors = ['var(--brand)', 'var(--info)', 'var(--info)', 'var(--warn)', 'var(--warn)'];
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count], index) => ({
+        id: name,
+        name,
+        width: `${(count / total) * 100}%`,
+        color: colors[index % colors.length],
+        value: `${count.toLocaleString('en-IN')} · ${((count / total) * 100).toFixed(1)}%`,
+      }));
+  }, [usersRes]);
 
   const kpiData = [
     {
       id: 'players',
-      label: 'Players',
+      label: 'Active Players',
       icon: 'users',
       color: 'var(--brand)',
       value: playerCount,
-      deltaClass: 'delta nodot',
+      deltaClass: 'delta up',
       deltaStyle: { fontSize: 12 },
-      deltaText: 'Registered player accounts',
+      deltaText: 'Regular turf bookers',
     },
     {
       id: 'hosts',
-      label: 'Hosts',
+      label: 'Verified Hosts',
       icon: 'pin',
       color: 'var(--info)',
       value: hostCount,
@@ -87,9 +173,9 @@ export default function UserSegmentsPage() {
       icon: 'alert',
       color: 'var(--warn)',
       value: inactiveCount,
-      deltaClass: 'delta nodot',
+      deltaClass: 'delta down',
       deltaStyle: { fontSize: 12 },
-      deltaText: 'Marked inactive',
+      deltaText: 'No activity in 30 days',
     },
     {
       id: 'ltv',
@@ -100,7 +186,7 @@ export default function UserSegmentsPage() {
       prefix: '৳',
       deltaClass: 'delta nodot',
       deltaStyle: { color: 'var(--text-3)', fontSize: 12 },
-      deltaText: 'Per registered cohort',
+      deltaText: 'Per registered user',
     },
   ];
 
@@ -176,15 +262,10 @@ export default function UserSegmentsPage() {
             <div style={{ position: 'relative', width: 170, height: 170, margin: '0 auto' }}>
               <ChartCanvas
                 type="doughnut"
-                data={{
-                  labels: ['Players', 'Hosts', 'Inactive'],
-                  datasets: [
-                    { ...DONUT_STYLE, data: [playerCount, hostCount, inactiveCount] },
-                  ],
-                }}
+                data={donutData}
                 options={DONUT_OPTIONS}
                 height={170}
-                label={`User distribution: ${playerCount} players, ${hostCount} hosts, ${inactiveCount} inactive`}
+                label="Live user distribution across players, hosts, inactive and other accounts"
               />
               <div
                 style={{
@@ -205,7 +286,7 @@ export default function UserSegmentsPage() {
                     fontFamily: 'var(--font-display)',
                   }}
                 >
-                  {totalUsers.toLocaleString('en-IN')}
+                  {centerTotal}
                 </span>
                 <span
                   style={{
@@ -221,7 +302,7 @@ export default function UserSegmentsPage() {
             </div>
 
             <div className="user-breakdown-legend">
-              {SHARE_LEGEND.map((item) => (
+              {shareLegend.map((item) => (
                 <div className="legend-item" key={item.id}>
                   <div>
                     <span className="legend-dot" style={{ background: item.dot }}></span>
@@ -231,12 +312,8 @@ export default function UserSegmentsPage() {
                     </span>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <b style={{ fontSize: 15, display: 'block' }}>
-                      {item.count(playerCount, hostCount, inactiveCount).toLocaleString('en-IN')}
-                    </b>
-                    <span className={`tiny badge ${item.shareTone} nodot`}>
-                      {shareOf(item.count(playerCount, hostCount, inactiveCount))}
-                    </span>
+                    <b style={{ fontSize: 15, display: 'block' }}>{item.count}</b>
+                    <span className={`tiny badge ${item.shareTone} nodot`}>{item.share}</span>
                   </div>
                 </div>
               ))}
@@ -254,11 +331,151 @@ export default function UserSegmentsPage() {
           </div>
 
           <div className="stack-sm" style={{ gap: 6 }}>
-            <p className="subtle small" style={{ margin: 0 }}>
-              Booking-frequency tiers are not computed yet, so they are left out rather than
-              estimated — an invented segment size is worse than none.
-            </p>
+            {((segments && segments.playerTiers) || []).map((tier) => (
+              <div className="history-item between" key={tier.id} style={HISTORY_ITEM_STYLE}>
+                <div>
+                  <b className="small" style={{ display: 'block', fontWeight: 700 }}>
+                    {tier.title}
+                  </b>
+                  <span className="tiny subtle">{tier.note}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <b style={{ fontSize: 15, display: 'block' }}>{tier.count.toLocaleString('en-IN')}</b>
+                  <span className="tiny subtle">{tier.share.toFixed(1)}% of players</span>
+                </div>
+              </div>
+            ))}
           </div>
+
+          <div
+            style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-soft)' }}
+          >
+            <div className="row" style={{ gap: 8, marginBottom: 14 }}>
+              <Icon name="pin" style={{ color: 'var(--info)' }} />
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Host Status Breakdown</h3>
+            </div>
+            <div className="table-wrap" style={BARE_TABLE_WRAP}>
+              <table className="table" aria-label="Host status breakdown">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th className="num">Count</th>
+                    <th className="num">Avg Revenue/mo</th>
+                    <th className="num">% of Hosts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {((segments && segments.hostStatus) || []).map((row) => (
+                    <tr key={row.id}>
+                      <td>
+                        <span className={`badge ${row.tone} nodot`} style={{ fontSize: 11 }}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="num">{row.count.toLocaleString('en-IN')}</td>
+                      <td className="num">
+                        {row.avgRevenuePerMonth > 0 ? `৳${row.avgRevenuePerMonth.toLocaleString('en-IN')}` : '—'}
+                      </td>
+                      <td className="num">{row.share.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Regional Distribution */}
+      <div className="liquid-glass" style={{ padding: 24, borderRadius: 20, marginBottom: 28 }}>
+        <div className="row" style={{ gap: 8, marginBottom: 18 }}>
+          <Icon name="pin" style={{ color: 'var(--mint)' }} />
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Regional Distribution</h3>
+        </div>
+        <div className="stack-sm">
+          {regions.map((region) => (
+            <div className="history-item between" key={region.id} style={REGION_ITEM_STYLE}>
+              <span style={{ fontSize: 13, fontWeight: 600, minWidth: 120 }}>{region.name}</span>
+              <div
+                style={{
+                  flex: 1,
+                  height: 6,
+                  background: 'var(--surface-3)',
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: region.width,
+                    height: '100%',
+                    borderRadius: 4,
+                    background: region.color,
+                    transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
+                  }}
+                ></div>
+              </div>
+              <span
+                className="num"
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  minWidth: 100,
+                  textAlign: 'right',
+                  color: 'var(--text-2)',
+                }}
+              >
+                {region.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Engagement Cohort Overview */}
+      <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
+        <div className="row" style={{ gap: 8, marginBottom: 16 }}>
+          <Icon name="activity" style={{ color: 'var(--brand)' }} />
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Engagement Cohort Overview</h3>
+        </div>
+        <div className="table-wrap" style={BARE_TABLE_WRAP}>
+          <table className="table" aria-label="Engagement cohort breakdown">
+            <thead>
+              <tr>
+                <th>Cohort</th>
+                <th className="num">Users</th>
+                <th className="num">Avg Bookings/mo</th>
+                <th className="num">Retention Rate</th>
+                <th className="num">Avg Spend</th>
+                <th className="num">LTV</th>
+              </tr>
+            </thead>
+            <tbody>
+              {((segments && segments.cohorts) || []).map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <b>{row.cohort}</b>
+                  </td>
+                  <td className="num">{row.users.toLocaleString('en-IN')}</td>
+                  <td className="num">{row.avgBookingsPerMonth.toFixed(1)}</td>
+                  <td
+                    className="num"
+                    style={{
+                      color: row.retentionRate == null ? 'var(--text-3)' : row.retentionRate >= 50 ? 'var(--brand)' : 'var(--warn)',
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {row.retentionRate == null ? '—' : `${row.retentionRate.toFixed(1)}%`}
+                  </td>
+                  <td className="num">৳{row.avgSpend.toLocaleString('en-IN')}</td>
+                  <td className="num" style={{ fontWeight: 700 }}>
+                    ৳{row.ltv.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

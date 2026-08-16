@@ -10,6 +10,9 @@ const GROWTH = {
   retentionRate: 44.9,
   signupLabels: ['Mon', 'Tue', 'Wed'],
   signupCounts: [2, 5, 3],
+  channels: [
+    { id: 'organic-search', channel: 'Organic Search', newUsers: 120, conversionRate: 12.5, cac: '৳40' },
+  ],
 };
 
 const USERS = [
@@ -19,6 +22,7 @@ const USERS = [
     fullName: 'Rafi Karim',
     role: 'PLAYER',
     area: 'Dhanmondi',
+    email: 'rafi.karim@example.com',
     createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
   },
 ];
@@ -36,7 +40,7 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
   it('shows the numbers the API returned', async () => {
     renderGrowth([
       ['/players/me', { body: {} }],
-      ['/admin/analytics/growth', { body: { data: GROWTH } }],
+      ['/admin/analytics/growth', { body: { success: true, data: GROWTH } }],
       ['/admin/users', { body: { data: USERS } }],
     ]);
 
@@ -52,7 +56,7 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
   it('admits when the return rate could not be measured instead of showing zero', async () => {
     renderGrowth([
       ['/players/me', { body: {} }],
-      ['/admin/analytics/growth', { body: { data: { ...GROWTH, retentionRate: null } } }],
+      ['/admin/analytics/growth', { body: { success: true, data: { ...GROWTH, retentionRate: null } } }],
       ['/admin/users', { body: { data: USERS } }],
     ]);
 
@@ -68,36 +72,51 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
       ['/admin/users', { body: { data: [] } }],
     ]);
 
-    expect(await screen.findByText(/could not load growth metrics/i)).toBeInTheDocument();
+    expect(await screen.findByText(/unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByText(/live analytics/i)).not.toBeInTheDocument();
     FABRICATIONS.forEach((value) => {
       expect(screen.queryByText(value)).not.toBeInTheDocument();
     });
   });
 
-  it('does not present an acquisition-channel breakdown the platform never records', async () => {
+  it('shows only the acquisition channels the API actually reports', async () => {
     renderGrowth([
       ['/players/me', { body: {} }],
-      ['/admin/analytics/growth', { body: { data: GROWTH } }],
+      ['/admin/analytics/growth', { body: { success: true, data: GROWTH } }],
+      ['/admin/users', { body: { data: USERS } }],
+    ]);
+
+    // The one channel the API returned is rendered with its own figures...
+    expect(await screen.findByText('Organic Search')).toBeInTheDocument();
+    expect(screen.getByText('12.5%')).toBeInTheDocument();
+    // ...and the rest of the table that used to be hardcoded is not.
+    expect(screen.queryByText('Meta/Facebook Ads')).not.toBeInTheDocument();
+    expect(screen.queryByText('TikTok Campaigns')).not.toBeInTheDocument();
+    expect(screen.queryByText('৳85')).not.toBeInTheDocument();
+  });
+
+  it('presents no channel breakdown at all when the platform reports none', async () => {
+    renderGrowth([
+      ['/players/me', { body: {} }],
+      ['/admin/analytics/growth', { body: { success: true, data: { ...GROWTH, channels: [] } } }],
       ['/admin/users', { body: { data: USERS } }],
     ]);
 
     await screen.findByText('842');
-    expect(screen.getByText(/not tracked yet/i)).toBeInTheDocument();
-    // The invented channel table and its costs-per-acquisition.
-    expect(screen.queryByText('Meta/Facebook Ads')).not.toBeInTheDocument();
     expect(screen.queryByText('Organic Search')).not.toBeInTheDocument();
-    expect(screen.queryByText('৳85')).not.toBeInTheDocument();
+    expect(screen.queryByText('Meta/Facebook Ads')).not.toBeInTheDocument();
+    expect(screen.queryByText('Referrals')).not.toBeInTheDocument();
   });
 
   it('lists real registrations with a real elapsed time, not a scripted stream', async () => {
     renderGrowth([
       ['/players/me', { body: {} }],
-      ['/admin/analytics/growth', { body: { data: GROWTH } }],
+      ['/admin/analytics/growth', { body: { success: true, data: GROWTH } }],
       ['/admin/users', { body: { data: USERS } }],
     ]);
 
     expect(await screen.findByText('Rafi Karim')).toBeInTheDocument();
-    expect(screen.getByText('45 mins ago')).toBeInTheDocument();
+    expect(screen.getByText('45 min ago')).toBeInTheDocument();
     // Names that were hardcoded into the "Real-Time Registration Stream".
     expect(screen.queryByText('Riazul Islam')).not.toBeInTheDocument();
     expect(screen.queryByText('Sheikh Turf Arena')).not.toBeInTheDocument();

@@ -49,7 +49,7 @@ const EARNINGS_OPTIONS = {
 const USER_GROWTH_OPTIONS = {
   plugins: { legend: { display: false } },
   scales: {
-    y: { display: false, beginAtZero: true, max: 5500 },
+    y: { display: false, beginAtZero: true },
     x: { grid: { display: false } },
   },
 };
@@ -148,7 +148,7 @@ export default function DashboardPage() {
   }, [userSegment, growthDto]);
 
   const sessionUser = getUser();
-  const userName = sessionUser?.fullName || 'Nadia Amin';
+  const userName = sessionUser?.fullName || 'Super Admin';
 
   const { data: statsRes } = useApi(() => api('/admin/analytics/dashboard'));
   const stats = statsRes?.data || statsRes;

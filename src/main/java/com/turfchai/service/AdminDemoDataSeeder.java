@@ -80,6 +80,29 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
         "Uttara", "Badda", "Rampura", "Wari", "Khilgaon"
     };
 
+    /** Weighted acquisition-channel distribution (100 entries) assigned to users. */
+    private static final String[] SIGNUP_CHANNELS = buildChannelPool();
+
+    private static String[] buildChannelPool() {
+        String[] pool = new String[100];
+        String[][] plan = {
+            {"Organic Search", "30"},
+            {"Direct", "20"},
+            {"Meta/Facebook Ads", "20"},
+            {"App Store Referral", "15"},
+            {"TikTok Campaigns", "10"},
+            {"Referrals", "5"},
+        };
+        int idx = 0;
+        for (String[] entry : plan) {
+            int count = Integer.parseInt(entry[1]);
+            for (int i = 0; i < count; i++) {
+                pool[idx++] = entry[0];
+            }
+        }
+        return pool;
+    }
+
     private static final String[] VENUE_NAMES = {
         "Kick-Off Arena", "GreenTurf Annex", "Champions Ground", "Futsal Hub Dhaka",
         "Prime Pitch Mirpur", "Skyline Sports Complex", "TurfMaster Gulshan",
@@ -279,6 +302,7 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
                 .role(role)
                 .status(status)
                 .area(area)
+                .signupChannel(SIGNUP_CHANNELS[index % SIGNUP_CHANNELS.length])
                 .avatarInitials(initials(fullName))
                 .bio("Playing football since " + (2010 + RNG.nextInt(14)))
                 .reliabilityScore(60 + RNG.nextInt(41))
