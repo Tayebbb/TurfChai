@@ -306,7 +306,14 @@
     box-shadow: 0 0 0 1px var(--brand), 0 12px 34px rgba(0, 0, 0, .5)
 }
 
+/* Dimming the whole card with opacity dragged its text under the 4.5:1
+   contrast floor, so a locked tier is marked by its surface, not by fading
+   the words describing it. */
 .tier-card.locked {
+    filter: grayscale(0.55)
+}
+
+.tier-card.locked .tier-ico {
     opacity: .62
 }
 

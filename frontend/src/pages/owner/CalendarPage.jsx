@@ -17,6 +17,12 @@ import {
   unblockOwnerSlot,
   createManualBooking,
 } from '@/api/ownerVenues';
+import { cancelOwnerBooking } from '@/api/ownerBookings';
+import { updateSlot } from '@/api/ownerSlots';
+import { getPricingQuote } from '@/api/pricing';
+import { checkInBooking } from '@/api/bookings';
+import { canCall, callNumber } from '@/utils/deviceActions';
+import { toUserMessage } from '@/utils/errorMessage';
 
 const LEGEND = [
   { id: 'AVAILABLE', label: 'Available', swatch: 'var(--success)' },
@@ -71,9 +77,16 @@ export default function CalendarPage() {
   const [selectedPitchId, setSelectedPitchId] = useState('ALL');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  // A failed load used to clear the grid, which is exactly how a genuinely free
+  // day renders - an owner could read "load failed" as "nothing is booked".
+  const [calendarError, setCalendarError] = useState(null);
   const [form, setForm] = useState(BLANK_FORM);
   const [targetCell, setTargetCell] = useState(null);
   const [selectedDetailCell, setSelectedDetailCell] = useState(null);
+  const [slotActionBusy, setSlotActionBusy] = useState(null);
+  const [priceDraft, setPriceDraft] = useState('');
+  const [savingPrice, setSavingPrice] = useState(false);
+  const [suggestion, setSuggestion] = useState(null); // null | 'loading' | {price} | 'unavailable'
 
   const dateStr = formatDateIso(date);
 
@@ -83,11 +96,13 @@ export default function CalendarPage() {
     getOwnerCalendar(selectedVenueId, dateStr)
       .then((data) => {
         if (data) {
+          setCalendarError(null);
           setPitches(Array.isArray(data.pitches) ? data.pitches : []);
           setRows(Array.isArray(data.rows) ? data.rows : []);
         }
       })
       .catch(() => {
+        setCalendarError('This day could not be loaded, so the grid below is empty rather than free.');
         setPitches([]);
         setRows([]);
       })
@@ -129,12 +144,14 @@ export default function CalendarPage() {
     getOwnerCalendar(selectedVenueId, dateStr)
       .then((data) => {
         if (!unmounted && data) {
+          setCalendarError(null);
           setPitches(Array.isArray(data.pitches) ? data.pitches : []);
           setRows(Array.isArray(data.rows) ? data.rows : []);
         }
       })
       .catch(() => {
         if (!unmounted) {
+          setCalendarError('This day could not be loaded, so the grid below is empty rather than free.');
           setPitches([]);
           setRows([]);
         }
@@ -214,8 +231,108 @@ export default function CalendarPage() {
       variant: cell.variant || (cell.status === 'BLOCKED' ? 'blocked' : 'online'),
       status: cell.status || 'BOOKED',
       price: cell.price || 2000,
+      bookingId: cell.bookingId ?? null,
+      bookingCode: cell.bookingCode ?? null,
+      customerName: cell.customerName ?? null,
+      customerPhone: cell.customerPhone ?? null,
+      checkedIn: Boolean(cell.checkedIn),
     });
+    setPriceDraft(cell.price != null ? String(cell.price) : '');
+    setSuggestion(null);
+    if (cell.status === 'AVAILABLE') {
+      loadPriceSuggestion(rowTime);
+    }
     detail.open();
+  }
+
+  /** '4:00 PM' -> '16:00:00'. The grid labels times for people, the API wants ISO. */
+  function to24Hour(label) {
+    const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(String(label ?? '').trim());
+    if (!match) return null;
+    let hour = Number(match[1]) % 12;
+    if (match[3].toUpperCase() === 'PM') hour += 12;
+    return `${String(hour).padStart(2, '0')}:${match[2]}:00`;
+  }
+
+  /**
+   * Asks the pricing model what this slot is worth. Every input is measured
+   * from the calendar the owner is looking at — occupancy is the real booked
+   * ratio for the day, not a guess — so the owner can accept or ignore a
+   * number they can reason about.
+   */
+  async function loadPriceSuggestion(rowTime) {
+    const time = to24Hour(rowTime);
+    if (!selectedVenueId || !time) return;
+
+    const allCells = rows.flatMap((row) => row.cells ?? []);
+    const occupied = allCells.filter((cell) => cell.status === 'BOOKED' || cell.status === 'HELD').length;
+    const occupancyRate = allCells.length > 0 ? occupied / allCells.length : 0;
+    const daysBefore = Math.max(
+      0,
+      Math.round((new Date(`${dateStr}T00:00:00`) - new Date(new Date().toDateString())) / 86400000),
+    );
+
+    setSuggestion('loading');
+    try {
+      const quote = await getPricingQuote({
+        venueId: selectedVenueId,
+        bookingDateTime: `${dateStr}T${time}`,
+        daysBeforeBooking: daysBefore,
+        occupancyRate: Number(occupancyRate.toFixed(2)),
+      });
+      const price = Number(quote?.suggestedPrice);
+      setSuggestion(Number.isFinite(price) && price > 0 ? { price: Math.round(price) } : 'unavailable');
+    } catch {
+      // The model is optional infrastructure; the owner can still set a price.
+      setSuggestion('unavailable');
+    }
+  }
+
+  /**
+   * Repricing only makes sense while nobody holds the slot — changing it after
+   * a booking would not change what that player was charged.
+   */
+  async function handleSavePrice() {
+    const slotId = selectedDetailCell?.slotId;
+    const price = Number(priceDraft);
+    if (!slotId || savingPrice) return;
+    if (!Number.isFinite(price) || price < 0) {
+      showToast('Enter a price of 0 or more');
+      return;
+    }
+    setSavingPrice(true);
+    try {
+      await updateSlot(slotId, { price });
+    } catch (error) {
+      showToast(toUserMessage(error, 'Could not update the slot price.'));
+      return;
+    } finally {
+      setSavingPrice(false);
+    }
+    showToast(`Slot price updated to ৳${price.toLocaleString()} ✓`);
+    detail.close();
+    refreshCalendar();
+  }
+
+  async function runBookingAction(action) {
+    const bookingId = selectedDetailCell?.bookingId;
+    if (!bookingId || slotActionBusy) return;
+    setSlotActionBusy(action);
+    try {
+      if (action === 'checkin') {
+        await checkInBooking(bookingId);
+      } else {
+        await cancelOwnerBooking(bookingId);
+      }
+    } catch (err) {
+      showToast(toUserMessage(err, action === 'checkin' ? 'Check-in failed.' : 'Could not cancel this booking.'));
+      return;
+    } finally {
+      setSlotActionBusy(null);
+    }
+    showToast(action === 'checkin' ? 'Checked in ✓' : 'Booking cancelled — slot released ✓');
+    detail.close();
+    refreshCalendar();
   }
 
   async function handleBlockSlot(slotIdToBlock) {
@@ -396,6 +513,12 @@ export default function CalendarPage() {
           <div style={{ padding: 36, textAlign: 'center', color: 'var(--text-3)' }}>
             Loading live slot availability...
           </div>
+        ) : calendarError ? (
+          <div style={{ padding: 24 }}>
+            <Alert tone="danger" icon="⚠️" title="Calendar could not be loaded">
+              {calendarError}
+            </Alert>
+          </div>
         ) : pitches.length === 0 ? (
           <div className="card center subtle" style={{ padding: '64px 24px', margin: '16px 0', textAlign: 'center' }}>
             <div style={{ fontSize: 44, marginBottom: 12 }}>🏟️</div>
@@ -510,7 +633,14 @@ export default function CalendarPage() {
                       className={`cal-cell ${(cell.status || 'AVAILABLE').toLowerCase()}`}
                       onClick={() => {
                         if (cell.status === 'AVAILABLE') {
-                          openForCell(rowIndex, originalIndex, cell, pitch, row.time);
+                          setTargetCell({
+                            rowIndex,
+                            cellIndex: originalIndex,
+                            slotId: cell?.slotId,
+                            pitchName: pitch?.name,
+                            time: row.time,
+                          });
+                          openDetailDrawer(cell, pitch, row.time);
                         } else if (cell.status === 'BOOKED' || cell.status === 'HELD' || cell.status === 'BLOCKED') {
                           openDetailDrawer(cell, pitch, row.time);
                         }
@@ -584,7 +714,7 @@ export default function CalendarPage() {
           <Field label="Payment status" htmlFor="mbPay">
             <Select id="mbPay" value={form.payment} onChange={(event) => setField('payment', event.target.value)}>
               <option>Paid in full (cash)</option>
-              <option>Deposit ৳510 · rest at venue</option>
+              <option>Deposit taken · rest at venue</option>
               <option>Unpaid — collect on arrival</option>
             </Select>
           </Field>
@@ -637,7 +767,66 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {selectedDetailCell?.status === 'BLOCKED' ? (
+        {selectedDetailCell?.status === 'AVAILABLE' ? (
+          <div className="stack-sm" style={{ marginTop: 16 }}>
+            <Field label="Slot price (৳)" htmlFor="slotPrice">
+              <Input
+                id="slotPrice"
+                type="number"
+                min="0"
+                step="50"
+                value={priceDraft}
+                onChange={(event) => setPriceDraft(event.target.value)}
+              />
+            </Field>
+
+            {suggestion === 'loading' ? (
+              <p className="tiny subtle" style={{ margin: 0 }} role="status">
+                Checking the pricing model…
+              </p>
+            ) : suggestion && suggestion !== 'unavailable' ? (
+              <div className="panel between">
+                <div>
+                  <b className="small">Suggested ৳{suggestion.price.toLocaleString()}</b>
+                  <div className="tiny subtle">
+                    From the pricing model, using this day&apos;s real occupancy.
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => setPriceDraft(String(suggestion.price))}>
+                  Use it
+                </Button>
+              </div>
+            ) : null}
+            <Button
+              variant="primary"
+              block
+              disabled={savingPrice || priceDraft === '' || Number(priceDraft) === selectedDetailCell?.price}
+              title={
+                Number(priceDraft) === selectedDetailCell?.price ? 'No change to save' : undefined
+              }
+              onClick={handleSavePrice}
+            >
+              {savingPrice ? 'Saving…' : 'Save price'}
+            </Button>
+            <div className="grid2" style={{ gap: 8 }}>
+              <Button
+                onClick={() => {
+                  detail.close();
+                  setForm((prev) => ({
+                    ...prev,
+                    slotId: selectedDetailCell?.slotId ? String(selectedDetailCell.slotId) : prev.slotId,
+                  }));
+                  manual.open();
+                }}
+              >
+                + Manual booking
+              </Button>
+              <Button variant="ghostDanger" onClick={() => handleBlockSlot(selectedDetailCell?.slotId)}>
+                ⛔ Block slot
+              </Button>
+            </div>
+          </div>
+        ) : selectedDetailCell?.status === 'BLOCKED' ? (
           <div style={{ marginTop: 20 }}>
             <Alert tone="warning" icon="⛔" title="Slot is Blocked">
               This slot is currently blocked for maintenance. Players cannot book it online.
@@ -655,17 +844,39 @@ export default function CalendarPage() {
         ) : (
           <div className="grid2" style={{ gap: 8, marginTop: 14 }}>
             <Button
-              onClick={() => {
-                detail.close();
-                showToast('Checked in ✓');
-              }}
+              disabled={!selectedDetailCell?.bookingId || selectedDetailCell?.checkedIn || slotActionBusy !== null}
+              title={
+                !selectedDetailCell?.bookingId
+                  ? 'No booking on this slot yet'
+                  : selectedDetailCell?.checkedIn
+                    ? 'This booking is already checked in'
+                    : undefined
+              }
+              onClick={() => runBookingAction('checkin')}
             >
-              ✅ Check in
+              {slotActionBusy === 'checkin'
+                ? 'Checking in…'
+                : selectedDetailCell?.checkedIn
+                  ? '✅ Checked in'
+                  : '✅ Check in'}
             </Button>
-            <Button onClick={() => showToast('Calling customer 📞')}>📞 Call</Button>
-            <Button onClick={() => showToast('Reschedule offer sent')}>🔁 Reschedule</Button>
-            <Button variant="ghostDanger" onClick={() => showToast('Cancellation flow — refund per policy')}>
-              Cancel booking
+            <Button
+              disabled={!canCall(selectedDetailCell?.customerPhone)}
+              title={canCall(selectedDetailCell?.customerPhone) ? undefined : 'No phone number on file for this booking'}
+              onClick={() => callNumber(selectedDetailCell?.customerPhone)}
+            >
+              📞 Call{selectedDetailCell?.customerName ? ` ${selectedDetailCell.customerName}` : ''}
+            </Button>
+            <Button disabled title="Rescheduling is not supported yet — cancel and rebook the preferred slot.">
+              🔁 Reschedule
+            </Button>
+            <Button
+              variant="ghostDanger"
+              disabled={!selectedDetailCell?.bookingId || slotActionBusy !== null}
+              title={selectedDetailCell?.bookingId ? undefined : 'No booking on this slot yet'}
+              onClick={() => runBookingAction('cancel')}
+            >
+              {slotActionBusy === 'cancel' ? 'Cancelling…' : 'Cancel booking'}
             </Button>
           </div>
         )}

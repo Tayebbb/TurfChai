@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
+import { TableScroll } from '@/components/tables/TableScroll';
 import { Overlay } from '@/components/modals/Overlay';
 import { Chip } from '@/components/ui/Chip';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
+import { toUserMessage } from '@/utils/errorMessage';
+import { downloadCsv } from '@/utils/deviceActions';
 import { paths } from '@/routes/paths';
 import { listAdminUsers, updateUserStatus, reinstateUser } from '@/api/adminUsers';
 import { useApi } from '@/hooks/useApi';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const FILTERS = ['All Accounts', 'Players', 'Turf Owners', 'Game Hosts', 'Suspended'];
 
@@ -15,56 +19,8 @@ const ROLE_CHIPS = ['Player', 'Turf Owner', 'Game Host'];
 
 const ACCOUNT_STANDINGS = ['Active', 'Restricted (No Matchmaking)', 'Suspended'];
 
-const STATIC_USERS = [
-  {
-    id: '#40221',
-    name: 'Rafiul Karim',
-    initials: 'RK',
-    avatarClass: 'avatar sm',
-    phone: '+880 1712 ••• 890',
-    roles: [{ label: 'Player', tone: 'green' }],
-    bookings: 12,
-    reliability: '98%',
-    joined: 'Mar 2025',
-    status: 'Active',
-    statusTone: 'green',
-    flagged: false,
-  },
-  {
-    id: '#28810',
-    name: 'Mahmudul Hasan',
-    initials: 'MH',
-    avatarClass: 'avatar sm',
-    avatarStyle: { background: 'var(--info-soft)', color: 'var(--info)' },
-    phone: '+880 1811 ••• 344',
-    roles: [
-      { label: 'Turf Owner', tone: 'blue' },
-      { label: 'Player', tone: 'green' },
-    ],
-    bookings: 31,
-    reliability: '100%',
-    joined: 'Jan 2024',
-    status: 'Active',
-    statusTone: 'green',
-    flagged: false,
-  },
-  {
-    id: '#38112',
-    name: 'M. Babul',
-    initials: 'MB',
-    avatarClass: 'avatar sm d',
-    phone: '+880 1999 ••• 402',
-    roles: [{ label: 'Player', tone: 'green' }],
-    bookings: 9,
-    reliability: '61%',
-    reliabilityStyle: { color: 'var(--danger)', fontWeight: 700 },
-    joined: 'Nov 2025',
-    status: 'Suspended',
-    statusTone: 'red',
-    rowStyle: { background: 'rgba(201,59,59,0.08)' },
-    flagged: true,
-  },
-];
+const PAGE_SIZE = 25;
+
 
 function initialsOf(name) {
   if (!name) return '??';
@@ -88,39 +44,45 @@ export default function UsersPage() {
   const roleParam = filter === 'Players' ? 'PLAYER' : filter === 'Turf Owners' ? 'HOST' : filter === 'Game Hosts' ? 'HOST' : null;
   const statusParam = filter === 'Suspended' ? 'suspended' : null;
 
-  const { data: res, loading, reload } = useApi(
-    () => listAdminUsers(roleParam, statusParam, search),
-    [filter, search],
+  // The roster used to arrive whole — 842 accounts, 421 KB, ~17k DOM nodes —
+  // and refetch on every keystroke.
+  const [page, setPage] = useState(0);
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const { data: res, loading, error, reload } = useApi(
+    () => listAdminUsers(roleParam, statusParam, debouncedSearch, page, PAGE_SIZE),
+    [filter, debouncedSearch, page],
   );
 
-  const apiUsersData = res?.data || res;
+  const pageData = res?.data ?? res;
+  const totalUsers = pageData?.total ?? 0;
+  const totalPages = pageData?.totalPages ?? 0;
 
   const userRows = useMemo(() => {
-    if (Array.isArray(apiUsersData) && apiUsersData.length > 0) {
-      return apiUsersData.map((u) => {
-        const isSuspended = Boolean(u.isSuspended) || u.status === 'SUSPENDED';
-        return {
-          dbId: u.id,
-          id: `#${u.id}`,
-          name: u.fullName,
-          initials: initialsOf(u.fullName),
-          avatarClass: 'avatar sm',
-          phone: u.phone || '—',
-          roles: [{ label: u.role || 'Player', tone: u.role === 'HOST' ? 'blue' : 'green' }],
-          bookings: u.gamesAttended || 0,
-          reliability: `${u.reliabilityScore ?? 100}%`,
-          joined: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2026',
-          status: isSuspended ? 'Suspended' : u.status || 'Active',
-          statusTone: isSuspended ? 'red' : 'green',
-          rowStyle: isSuspended ? { background: 'rgba(201,59,59,0.08)' } : undefined,
-          flagged: isSuspended,
-        };
-      });
-    }
-    return STATIC_USERS;
-  }, [apiUsersData]);
-
-  
+    const apiUsersData = pageData?.items ?? [];
+    if (!Array.isArray(apiUsersData)) return [];
+    return apiUsersData.map((u) => {
+      const isSuspended = Boolean(u.isSuspended) || u.status === 'SUSPENDED';
+      return {
+        dbId: u.id,
+        id: `#${u.id}`,
+        name: u.fullName ?? '—',
+        initials: initialsOf(u.fullName),
+        avatarClass: 'avatar sm',
+        phone: u.phone || '—',
+        roles: [{ label: u.role || 'Player', tone: u.role === 'HOST' ? 'blue' : 'green' }],
+        bookings: u.gamesAttended || 0,
+        reliability: `${u.reliabilityScore ?? 100}%`,
+        joined: u.createdAt
+          ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          : '—',
+        status: isSuspended ? 'Suspended' : u.status || 'Active',
+        statusTone: isSuspended ? 'red' : 'green',
+        rowStyle: isSuspended ? { background: 'rgba(201,59,59,0.08)' } : undefined,
+        flagged: isSuspended,
+      };
+    });
+  }, [pageData]);
 
   const handleOpenEdit = (user) => {
     setSelectedUser(user);
@@ -131,42 +93,50 @@ export default function UsersPage() {
   };
 
   const saveUser = async () => {
-    editUser.close();
-    if (selectedUser?.dbId) {
-      try {
-        const isSusp = editStanding === 'Suspended';
-        await updateUserStatus(selectedUser.dbId, {
-          status: editStanding.toUpperCase(),
-          isSuspended: isSusp,
-        });
-        reload();
-      } catch {
-        // ignore
-      }
+    if (!selectedUser?.dbId) return;
+    try {
+      const isSusp = editStanding === 'Suspended';
+      await updateUserStatus(selectedUser.dbId, {
+        status: editStanding.toUpperCase(),
+        isSuspended: isSusp,
+      });
+      reload();
+    } catch (e) {
+      // Announcing "updated ✓" after a rejected write left the admin believing
+      // an account had been suspended when nothing had changed.
+      showToast(toUserMessage(e, 'Could not update this account.'));
+      return;
     }
-    showToast('User account updated & logged ✓');
+    editUser.close();
+    showToast('User account updated ✓');
   };
 
   const handleReinstate = async (user) => {
-    if (user.dbId) {
-      try {
-        await reinstateUser(user.dbId);
-        reload();
-      } catch {
-        // ignore
-      }
+    if (!user.dbId) return;
+    try {
+      await reinstateUser(user.dbId);
+      reload();
+    } catch (e) {
+      showToast(toUserMessage(e, 'Could not lift this suspension.'));
+      return;
     }
-    showToast('Suspension lifted early — logged to audit trail');
+    showToast('Suspension lifted — logged to the audit trail');
   };
 
   const handleSuspendQuick = async (user) => {
-    if (user.dbId) {
-      try {
-        await updateUserStatus(user.dbId, { status: 'SUSPENDED', isSuspended: true });
-        reload();
-      } catch {
-        // ignore
-      }
+    // This used to swallow the failure - and skip the call entirely when dbId
+    // was missing - while still reporting success, so an admin believed an
+    // abusive account was locked out when it was still fully active.
+    if (!user.dbId) {
+      showToast('This account cannot be suspended: it has no server record.');
+      return;
+    }
+    try {
+      await updateUserStatus(user.dbId, { status: 'SUSPENDED', isSuspended: true });
+      reload();
+    } catch (e) {
+      showToast(toUserMessage(e, 'Could not suspend this account.'));
+      return;
     }
     showToast('User account suspended and logged ✓');
   };
@@ -194,9 +164,27 @@ export default function UsersPage() {
         <button
           className="btn btn-secondary"
           type="button"
-          onClick={() => showToast('Exporting user roster CSV...')}
+          disabled={userRows.length === 0}
+          title={userRows.length === 0 ? 'Nothing to export for this filter' : undefined}
+          onClick={() => {
+            downloadCsv(
+              `user-roster-page-${page + 1}.csv`,
+              ['Id', 'Name', 'Phone', 'Role', 'Bookings', 'Reliability', 'Joined', 'Status'],
+              userRows.map((user) => [
+                user.id,
+                user.name,
+                user.phone,
+                user.roles?.[0]?.label ?? '',
+                user.bookings,
+                user.reliability,
+                user.joined,
+                user.status,
+              ]),
+            );
+            showToast(`Exported ${userRows.length} user${userRows.length === 1 ? '' : 's'} from this page ✓`);
+          }}
         >
-          ⬇ Export Roster
+          ⬇ Export this page
         </button>
       </div>
 
@@ -208,17 +196,17 @@ export default function UsersPage() {
           placeholder="🔍 Search name, phone, ID…"
           aria-label="Search name, phone, ID"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => { setSearch(event.target.value); setPage(0); }}
         />
         {FILTERS.map((item) => (
-          <Chip key={item} active={filter === item} onToggle={() => setFilter(item)}>
+          <Chip key={item} active={filter === item} onToggle={() => { setFilter(item); setPage(0); }}>
             {item}
           </Chip>
         ))}
       </div>
 
       {/* Users Table */}
-      <div className="liquid-glass table-wrap" style={{ padding: 0, borderRadius: 16 }}>
+      <TableScroll label="User accounts" className="liquid-glass" style={{ padding: 0, borderRadius: 16 }}>
         <table className="table">
           <thead>
             <tr>
@@ -235,7 +223,22 @@ export default function UsersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>Loading users...</td>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>Loading users…</td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>
+                  {toUserMessage(error, 'Could not load users.')}{' '}
+                  <button type="button" className="btn btn-sm btn-tertiary" onClick={reload}>
+                    Try again
+                  </button>
+                </td>
+              </tr>
+            ) : userRows.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="subtle" style={{ textAlign: 'center', padding: 24 }}>
+                  No users match this filter.
+                </td>
               </tr>
             ) : userRows.map((user) => (
               <tr key={user.id} style={user.rowStyle}>
@@ -274,9 +277,8 @@ export default function UsersPage() {
                         <button
                           className="btn btn-sm btn-tertiary"
                           type="button"
-                          onClick={() =>
-                            showToast('Suspension Reason: Repeated no-shows & abusive chat')
-                          }
+                          disabled
+                          title="Flag reasons are not recorded against accounts yet."
                         >
                           View Flag
                         </button>
@@ -312,11 +314,41 @@ export default function UsersPage() {
             ))}
           </tbody>
         </table>
+      </TableScroll>
+
+      <div className="between small" style={{ marginTop: 14 }}>
+        <span className="subtle" role="status" aria-live="polite">
+          {loading
+            ? 'Loading users…'
+            : `Showing ${userRows.length} of ${totalUsers} account${totalUsers === 1 ? '' : 's'}`}
+        </span>
+        <div className="row" style={{ gap: 6 }}>
+          <button
+            className="btn btn-sm btn-tertiary"
+            type="button"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            ‹ Previous
+          </button>
+          <button
+            className="btn btn-sm btn-tertiary"
+            type="button"
+            disabled={page + 1 >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next ›
+          </button>
+        </div>
       </div>
 
       {/* Edit User Modal */}
       {editUser.isOpen && (
-        <Overlay title={`Edit User Profile · ${selectedUser?.id}`} onClose={editUser.close}>
+        <Overlay
+          isOpen
+          title={`Edit User Profile · ${selectedUser?.id}`}
+          onClose={editUser.close}
+        >
           <div className="col" style={{ gap: 14 }}>
             <div>
               <label className="label">Full Name</label>

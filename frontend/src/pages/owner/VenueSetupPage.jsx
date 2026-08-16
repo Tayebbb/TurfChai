@@ -180,8 +180,10 @@ import {
   uploadVenuePhotoApi,
   addPitch,
   updatePitch,
+  deactivatePitch,
   upsertPricingRule,
 } from '@/api/ownerVenues';
+import { toUserMessage } from '@/utils/errorMessage';
 
 const PHOTO_TILE = {
   width: 72,
@@ -236,7 +238,20 @@ const INITIAL_SPORT_PRICING = [
 
 const bdt = (value) => `৳${Number(value).toLocaleString('en-US')}`;
 
-const DEPOSIT_OPTIONS = ['Full payment only', '30% deposit allowed', '50% deposit'];
+// The stored values are a fixed vocabulary (ck_venues_deposit / ck_venues_cancel)
+// and the refund engine switches on exactly these. The screen used to send its
+// own display labels, which the column rejected.
+const DEPOSIT_OPTIONS = [
+  { value: 'FULL_ONLY', label: 'Full payment only' },
+  { value: 'THIRTY_PERCENT', label: '30% deposit allowed' },
+  { value: 'FIFTY_PERCENT', label: '50% deposit' },
+];
+
+const CANCEL_OPTIONS = [
+  { value: 'FREE_24H_50_6H', label: 'Free cancel until 24h before · 50% within 24h · no refund within 6h' },
+  { value: 'FLEXIBLE_6H', label: 'Flexible — free cancel until 6h before' },
+  { value: 'STRICT_NO_REFUND', label: 'Strict — no refund' },
+];
 
 const INITIAL_AMENITIES = [
   { id: 'floodlights', label: '💡 Floodlights', on: true },
@@ -304,6 +319,7 @@ export default function VenueSetupPage() {
   const [selectedVenueId, setSelectedVenueId] = useState(null);
   const [venueData, setVenueData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   const [pitches, setPitches] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -313,8 +329,8 @@ export default function VenueSetupPage() {
     sports: ['Football'],
   });
 
-  const [deposit, setDeposit] = useState('30% deposit allowed');
-  const [policy, setPolicy] = useState('Free cancel until 24h before · 50% within 24h · no refund within 6h');
+  const [deposit, setDeposit] = useState('THIRTY_PERCENT');
+  const [policy, setPolicy] = useState('FREE_24H_50_6H');
   const [allowSplit, setAllowSplit] = useState(true);
   const [slotDraft, setSlotDraft] = useState({
     sport: 'football',
@@ -381,14 +397,16 @@ export default function VenueSetupPage() {
   const [previewFile, setPreviewFile] = useState(null);
   const editFileInputRef = useRef(null);
   const [editingPhotoId, setEditingPhotoId] = useState(null);
+  const [deactivatingPitchId, setDeactivatingPitchId] = useState(null);
 
   async function handleGenerateSlots() {
     try {
-      await apiGenerateSlots(generateDraft);
-      showToast('Slots generated successfully ✓');
+      const created = await apiGenerateSlots(generateDraft);
+      const count = Array.isArray(created) ? created.length : null;
+      showToast(count == null ? 'Slots generated ✓' : `${count} slot${count === 1 ? '' : 's'} generated ✓`);
       generateSlotsModal.close();
-    } catch {
-      showToast('Failed to generate slots');
+    } catch (error) {
+      showToast(toUserMessage(error, 'Failed to generate slots'));
     }
   }
 
@@ -399,8 +417,8 @@ export default function VenueSetupPage() {
       .then((res) => {
         if (res) {
           setVenueData(res);
-          setDeposit(res.depositPolicy || '30% deposit allowed');
-          setPolicy(res.cancelPolicy || 'Free cancel until 24h before · 50% within 24h · no refund within 6h');
+          setDeposit(res.depositPolicy || 'THIRTY_PERCENT');
+          setPolicy(res.cancelPolicy || 'FREE_24H_50_6H');
           setAllowSplit(res.allowSplitPayment !== false);
 
           if (Array.isArray(res.photos) && res.photos.length > 0) {
@@ -434,7 +452,11 @@ export default function VenueSetupPage() {
           }
         }
       })
-      .catch(() => {})
+      .catch((error) => {
+        // Failing silently left the owner editing default values that had never
+        // been loaded, so a later save could overwrite real settings with them.
+        setLoadError(toUserMessage(error, 'Could not load this venue. Reload to try again.'));
+      })
       .finally(() => {
         setLoading(false);
       });
@@ -479,6 +501,32 @@ export default function VenueSetupPage() {
     }
     return null;
   }, [selectedVenueId, venues, refreshVenueDetails]);
+
+  /**
+   * Retiring a pitch is a soft deactivate on the server: the row and its history
+   * stay, it simply stops being offered. The wording says so rather than
+   * promising a delete that does not happen.
+   */
+  async function handleDeactivatePitch(pitch) {
+    if (deactivatingPitchId) return;
+    const vId = await getActiveVenueId();
+    if (!vId) return;
+    const ok = window.confirm(
+      `Retire “${pitch.name}”?\n\nIt stops being offered for new bookings. Existing bookings and history are kept.`,
+    );
+    if (!ok) return;
+    setDeactivatingPitchId(pitch.id);
+    try {
+      await deactivatePitch(vId, pitch.id);
+    } catch (error) {
+      showToast(toUserMessage(error, 'Could not retire this pitch.'));
+      return;
+    } finally {
+      setDeactivatingPitchId(null);
+    }
+    showToast(`${pitch.name} retired — no longer bookable ✓`);
+    refreshVenueDetails(vId);
+  }
 
   async function handlePhotoUpload(event) {
     const files = Array.from(event.target.files || []);
@@ -727,21 +775,24 @@ export default function VenueSetupPage() {
 
   async function saveDepositSection() {
     const vId = await getActiveVenueId();
-    if (vId) {
-      try {
-        await updateVenue(vId, {
-          depositPolicy: deposit,
-          cancelPolicy: policy,
-          allowSplitPayment: allowSplit,
-        });
-        showToast('Deposit & cancellation section saved ✓');
-        refreshVenueDetails(vId);
-        return;
-      } catch {
-        // Fallback toast
-      }
+    if (!vId) {
+      showToast('No venue to save against yet.');
+      return;
+    }
+    try {
+      await updateVenue(vId, {
+        depositPolicy: deposit,
+        cancelPolicy: policy,
+        allowSplitPayment: allowSplit,
+      });
+    } catch (error) {
+      // This used to swallow the failure and toast success anyway, so an
+      // owner believed a cancellation policy was saved that never was.
+      showToast(toUserMessage(error, 'Could not save the deposit & cancellation section.'));
+      return;
     }
     showToast('Deposit & cancellation section saved ✓');
+    refreshVenueDetails(vId);
   }
 
   async function saveSlotSettings() {
@@ -810,6 +861,21 @@ export default function VenueSetupPage() {
     { id: 'buffer', label: 'BUFFER', value: '10 min' },
   ];
 
+  // The bar used to read 83% for every unpublished venue and 100% once
+  // published, regardless of what the owner had actually filled in.
+  const setupSections = (() => {
+    const checks = [
+      Boolean(venueData?.name && venueData?.area),
+      photos.length > 0,
+      pitches.length > 0,
+      sportPricing.some((sport) => Number(sport.basePrice) > 0),
+      Boolean(venueData?.openTime && venueData?.closeTime),
+      amenities.some((item) => item.on) || rules.some((item) => item.on),
+    ];
+    const done = checks.filter(Boolean).length;
+    return { done, total: checks.length, percent: Math.round((done / checks.length) * 100) };
+  })();
+
   return (
     <>
       <PageTitle title="Venue setup" />
@@ -819,6 +885,10 @@ export default function VenueSetupPage() {
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
             Loading venue details...
           </div>
+        ) : loadError ? (
+          <Alert tone="danger" icon="⚠️" title="Venue details could not be loaded">
+            {loadError} Editing now would save default values over your real settings.
+          </Alert>
         ) : (
           <>
             {venueData?.status === 'PUBLISHED' || venueData?.status === 'LIVE' ? (
@@ -885,16 +955,16 @@ export default function VenueSetupPage() {
                   </Badge>
 
                   <span className="subtle small">
-                    {pitches.length > 0 ? '5 of 6 sections complete' : 'Incomplete setup'}
+                    {setupSections.done} of {setupSections.total} sections complete
                   </span>
                 </div>
               </div>
 
               <div className="row">
                 <div className="progress" style={{ width: 160 }}>
-                  <i style={{ width: venueData?.status === 'PUBLISHED' ? '100%' : '83%' }} />
+                  <i style={{ width: `${setupSections.percent}%` }} />
                 </div>
-                <b className="num small">{venueData?.status === 'PUBLISHED' ? '100%' : '83%'}</b>
+                <b className="num small">{setupSections.percent}%</b>
               </div>
             </div>
 
@@ -992,9 +1062,19 @@ export default function VenueSetupPage() {
                             </div>
                           </div>
 
-                          <Button size="sm" variant="tertiary" onClick={() => openEditPitch(pitch)}>
-                            Edit
-                          </Button>
+                          <div className="row" style={{ gap: 6 }}>
+                            <Button size="sm" variant="tertiary" onClick={() => openEditPitch(pitch)}>
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghostDanger"
+                              disabled={deactivatingPitchId === pitch.id}
+                              onClick={() => handleDeactivatePitch(pitch)}
+                            >
+                              {deactivatingPitchId === pitch.id ? 'Retiring…' : 'Retire'}
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1004,9 +1084,20 @@ export default function VenueSetupPage() {
                     </div>
                   )}
 
-                  <Button size="sm" style={{ marginTop: 10 }} onClick={openAddPitch}>
-                    + Add pitch
-                  </Button>
+                  <div className="row" style={{ marginTop: 10, gap: 8, flexWrap: 'wrap' }}>
+                    <Button size="sm" onClick={openAddPitch}>
+                      + Add pitch
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={pitches.length === 0}
+                      title={pitches.length === 0 ? 'Add a pitch first' : 'Create bookable slots for a date range'}
+                      onClick={generateSlotsModal.open}
+                    >
+                      🗓️ Generate slots
+                    </Button>
+                  </div>
                 </section>
 
                 <section className="card">
@@ -1140,8 +1231,12 @@ export default function VenueSetupPage() {
                     <label>Booking deposit</label>
                     <div className="row-wrap">
                       {DEPOSIT_OPTIONS.map((option) => (
-                        <Chip key={option} active={deposit === option} onToggle={() => setDeposit(option)}>
-                          {option}
+                        <Chip
+                          key={option.value}
+                          active={deposit === option.value}
+                          onToggle={() => setDeposit(option.value)}
+                        >
+                          {option.label}
                         </Chip>
                       ))}
                     </div>
@@ -1149,9 +1244,11 @@ export default function VenueSetupPage() {
 
                   <Field label="Cancellation policy" htmlFor="cxl">
                     <Select id="cxl" value={policy} onChange={(event) => setPolicy(event.target.value)}>
-                      <option>Free cancel until 24h before · 50% within 24h · no refund within 6h</option>
-                      <option>Flexible — free cancel until 6h before</option>
-                      <option>Strict — deposits non-refundable</option>
+                      {CANCEL_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </Select>
                   </Field>
 

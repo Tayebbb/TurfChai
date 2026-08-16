@@ -271,16 +271,9 @@ export default function AdminLoginPage() {
                     />
                     <span className="small">Remember device (30 days)</span>
                   </label>
-                  <a
-                    className="small subtle"
-                    href="#forgot-password"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      showToast('Password reset link sent to work email');
-                    }}
-                  >
+                  <span className="small subtle" title="Self-service password reset isn't available yet — ask a super admin to reset your credentials.">
                     Forgot password?
-                  </a>
+                  </span>
                 </div>
 
                 <Button

@@ -28,6 +28,7 @@ import {
 
 import { register, login } from '@/api/auth';
 import { setSession } from '@/api/client';
+import { toUserMessage } from '@/utils/errorMessage';
 import { useLocation } from 'react-router-dom';
 
 import {
@@ -66,6 +67,10 @@ import {
 } from '@/hooks/useDisclosure';
 
 import {
+  useSession,
+} from '@/hooks/useSession';
+
+import {
   useToast,
 } from '@/hooks/useToast';
 
@@ -86,7 +91,15 @@ const VENUE_PITCHES = '3 pitches (custom slot times per sport)';
 export default function OwnerOnboardingPage() {
   const { showToast } = useToast();
   const submitted = useDisclosure();
-  const { data: myRequests } = useApi(getMyTurfRequests, [], { intervalMs: 20000 });
+  // This page is reachable mid-signup, before an account exists. Polling a
+  // caller-scoped endpoint then produced a 401 every 20 seconds and, because
+  // the client clears the session on 401, could sign the user out repeatedly.
+  const { signedIn } = useSession();
+  const { data: myRequests } = useApi(
+    () => (signedIn ? getMyTurfRequests() : Promise.resolve([])),
+    [signedIn],
+    { intervalMs: signedIn ? 20000 : 0 },
+  );
   
   const routerLocation = useLocation();
   const authState = routerLocation.state || null;
@@ -140,8 +153,13 @@ export default function OwnerOnboardingPage() {
       formData.append('file', file);
       formData.append('type', docType);
       await uploadTurfDoc(formData);
-    } catch {
-      /* fallback to local attachment state */
+    } catch (error) {
+      // This used to fall through to the success toast, so an owner believed a
+      // trade licence or lease proof had been filed for verification when it
+      // only ever existed as a blob URL in this tab, lost on the next refresh.
+      URL.revokeObjectURL(previewUrl);
+      showToast(toUserMessage(error, `Could not upload ${file.name}. Please try again.`));
+      return;
     }
 
     if (docType === 'tradeLicense') {
@@ -156,6 +174,9 @@ export default function OwnerOnboardingPage() {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
+    let uploaded = 0;
+    let failed = 0;
+
     for (const file of files) {
       const previewUrl = URL.createObjectURL(file);
       let persistentUrl = previewUrl;
@@ -169,8 +190,12 @@ export default function OwnerOnboardingPage() {
           persistentUrl = res.url || res.data.url;
         }
       } catch {
-        /* fallback to persistent placeholder */
-        persistentUrl = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800';
+        // This used to substitute a hardcoded Unsplash stock photo, so a failed
+        // upload produced a listing showing someone else's field as if it were
+        // this venue. A photo that did not upload is simply not added.
+        URL.revokeObjectURL(previewUrl);
+        failed += 1;
+        continue;
       }
 
       const newPhoto = {
@@ -181,8 +206,18 @@ export default function OwnerOnboardingPage() {
       };
 
       setPhotos((prev) => [...prev, newPhoto]);
+      uploaded += 1;
     }
-    showToast(`${files.length} venue photo(s) added ✓`);
+
+    if (failed > 0) {
+      showToast(
+        uploaded > 0
+          ? `${uploaded} photo(s) added — ${failed} could not be uploaded.`
+          : `Could not upload ${failed} photo(s). Please try again.`,
+      );
+      return;
+    }
+    showToast(`${uploaded} venue photo(s) added ✓`);
   };
 
   const handleRemovePhoto = (id) => {

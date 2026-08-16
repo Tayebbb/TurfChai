@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
+import { TableScroll } from '@/components/tables/TableScroll';
 import { Chip } from '@/components/ui/Chip';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import { api } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
+import { downloadCsv } from '@/utils/deviceActions';
 
 const FILTERS = [
   'All Activity',
@@ -92,7 +94,22 @@ export default function ActivityPage() {
         <button
           className="btn btn-secondary"
           type="button"
-          onClick={() => showToast('Exporting activity-log.csv 📄')}
+          disabled={rows.length === 0}
+          title={rows.length === 0 ? 'Nothing to export on this page' : undefined}
+          onClick={() => {
+            downloadCsv(
+              `activity-log-page-${page + 1}.csv`,
+              ['When', 'Admin', 'Action', 'Target', 'Details'],
+              rows.map((entry) => [
+                entry.createdAt ?? '',
+                entry.adminName ?? '',
+                entry.action ?? '',
+                entry.target ?? '',
+                entry.details ?? '',
+              ]),
+            );
+            showToast(`Exported ${rows.length} row${rows.length === 1 ? '' : 's'} ✓`);
+          }}
         >
           ⬇ Export CSV
         </button>
@@ -116,7 +133,7 @@ export default function ActivityPage() {
       </div>
 
       {/* Audit Log Table */}
-      <div className="card table-wrap" style={{ padding: 0, borderRadius: 16 }}>
+      <TableScroll label="Audit log" className="card" style={{ padding: 0, borderRadius: 16 }}>
         <table className="table">
           <thead>
             <tr>
@@ -156,7 +173,7 @@ export default function ActivityPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
 
       <div className="between small" style={{ marginTop: 14 }}>
         <span className="subtle">Showing {rows.length} of {totalElements} audit entries</span>

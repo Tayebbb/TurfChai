@@ -9,8 +9,9 @@ import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 
 import { useApi } from '@/hooks/useApi';
-import { getOwnerPromotions, createPromotion, deletePromotion } from '@/api/ownerPromotions';
+import { getOwnerPromotions, createPromotion, deletePromotion, updatePromotion } from '@/api/ownerPromotions';
 import { listMyVenues } from '@/api/ownerVenues';
+import { toUserMessage } from '@/utils/errorMessage';
 
 export default function PromotionsPage() {
   const { showToast } = useToast();
@@ -25,6 +26,9 @@ export default function PromotionsPage() {
   const [validUntil, setValidUntil] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /** Set while the drawer is editing an existing promotion rather than creating one. */
+  const [editingId, setEditingId] = useState(null);
+  const [busyId, setBusyId] = useState(null);
 
   const { data: venuesRes } = useApi(listMyVenues, []);
   const venues = Array.isArray(venuesRes) ? venuesRes : (Array.isArray(venuesRes?.data) ? venuesRes.data : []);
@@ -40,7 +44,7 @@ export default function PromotionsPage() {
 
   const handleLaunch = async () => {
     if (!activeVenueId) return;
-    
+
     if (!code || !label || !discountValue) {
       showToast('Please fill out all required fields');
       return;
@@ -48,34 +52,76 @@ export default function PromotionsPage() {
 
     try {
       setIsSubmitting(true);
-      await createPromotion(activeVenueId, {
-        code,
+      const payload = {
         label,
         discountType,
         discountValue: Number(discountValue),
         usageLimit: usageLimit ? Number(usageLimit) : null,
         validFrom: validFrom ? new Date(validFrom).toISOString() : null,
-        validUntil: validUntil ? new Date(validUntil).toISOString() : null
-      });
-      
-      showToast('Promotion live — discounted slots now shown to players ✓');
+        validUntil: validUntil ? new Date(validUntil).toISOString() : null,
+      };
+      if (editingId) {
+        // The code is printed on campaigns, so the server does not allow it to move.
+        await updatePromotion(activeVenueId, editingId, payload);
+        showToast('Promotion updated ✓');
+      } else {
+        await createPromotion(activeVenueId, { code, ...payload });
+        showToast('Promotion live — discounted slots now shown to players ✓');
+      }
       drawer.close();
-      
-      // Reset form
-      setCode('');
-      setLabel('');
-      setDiscountValue('');
-      setUsageLimit('');
-      setValidFrom('');
-      setValidUntil('');
-      
+      resetForm();
       reload();
     } catch (err) {
-      const msg = err.message || 'Failed to create promotion';
-      showToast(`Error: ${msg}`);
+      showToast(toUserMessage(err, editingId ? 'Failed to update promotion' : 'Failed to create promotion'));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setCode('');
+    setLabel('');
+    setDiscountType('PERCENT');
+    setDiscountValue('');
+    setUsageLimit('');
+    setValidFrom('');
+    setValidUntil('');
+  };
+
+  /** Datetime-local wants 'YYYY-MM-DDTHH:mm'; the API returns an ISO instant. */
+  const toLocalInput = (iso) => (iso ? new Date(iso).toISOString().slice(0, 16) : '');
+
+  const openCreate = () => {
+    resetForm();
+    drawer.open();
+  };
+
+  const openEdit = (promo) => {
+    setEditingId(promo.id);
+    setCode(promo.code ?? '');
+    setLabel(promo.label ?? '');
+    setDiscountType(promo.discountType ?? 'PERCENT');
+    setDiscountValue(String(promo.discountValue ?? ''));
+    setUsageLimit(promo.usageLimit != null ? String(promo.usageLimit) : '');
+    setValidFrom(toLocalInput(promo.validFrom));
+    setValidUntil(toLocalInput(promo.validUntil));
+    drawer.open();
+  };
+
+  const togglePaused = async (promo) => {
+    if (!activeVenueId || busyId) return;
+    setBusyId(promo.id);
+    try {
+      await updatePromotion(activeVenueId, promo.id, { active: !promo.active });
+    } catch (err) {
+      showToast(toUserMessage(err, 'Could not update this promotion.'));
+      return;
+    } finally {
+      setBusyId(null);
+    }
+    reload();
+    showToast(promo.active ? 'Promotion paused — the code no longer applies' : 'Promotion resumed ✓');
   };
 
   const handleDelete = async (promoId) => {
@@ -114,7 +160,7 @@ export default function PromotionsPage() {
           <h1>Promotions</h1>
           <span className="subtle small">Fill empty slots and reward loyal teams</span>
         </div>
-        <Button variant="primary" onClick={drawer.open}>
+        <Button variant="primary" onClick={openCreate}>
           + New promotion
         </Button>
       </div>
@@ -163,7 +209,18 @@ export default function PromotionsPage() {
                 </div>
               </div>
               
-              <div className="row" style={{ marginTop: 10 }}>
+              <div className="row" style={{ marginTop: 10, gap: 8 }}>
+                <Button size="sm" variant="secondary" onClick={() => openEdit(promo)}>
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant={promo.active ? 'secondary' : 'primary'}
+                  disabled={busyId === promo.id}
+                  onClick={() => togglePaused(promo)}
+                >
+                  {busyId === promo.id ? 'Saving…' : promo.active ? 'Pause' : 'Resume'}
+                </Button>
                 <Button
                   size="sm"
                   variant="tertiary"
@@ -187,27 +244,36 @@ export default function PromotionsPage() {
         </div>
 
         <div className="glass glass-card">
-          <h3>💡 Suggested for you</h3>
+          <h3>Quick starts</h3>
+          <p className="tiny muted" style={{ marginTop: 2 }}>
+            Templates you can edit before launching. TurfChai does not analyse your empty slots
+            yet, so these are starting points rather than recommendations.
+          </p>
           <div className="stack-sm" style={{ marginTop: 10 }}>
             <div className="panel">
-              <b className="small">Tue–Wed 2–4 PM is 71% empty</b>
+              <b className="small">Off-peak discount</b>
               <p className="tiny muted" style={{ margin: '2px 0 6px' }}>
-                A 25–35% off-peak discount typically fills 60% of these slots.
+                A percentage off to move quieter weekday hours.
               </p>
-              <Button size="sm" variant="primary" onClick={() => {
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  resetForm();
                   setLabel('Off-Peak Deal');
                   setCode('OFFPEAK30');
                   setDiscountType('PERCENT');
                   setDiscountValue('30');
                   drawer.open();
-              }}>
-                Create off-peak promo
+                }}
+              >
+                Start off-peak promo
               </Button>
             </div>
             <div className="panel">
-              <b className="small">3 regulars near loyalty milestone</b>
+              <b className="small">Your customers</b>
               <p className="tiny muted" style={{ margin: '2px 0 6px' }}>
-                Rafiul K. (9/10), Karim Traders (15 visits), Tanvir A. (8 visits).
+                See who books most often and how reliable they are.
               </p>
               <Button size="sm" to={paths.owner.customers}>
                 Review customers
@@ -217,14 +283,32 @@ export default function PromotionsPage() {
         </div>
       </div>
 
-      {/* New promotion drawer */}
-      <Overlay isOpen={drawer.isOpen} onClose={drawer.close} title="New promotion" mode="drawer">
+      {/* Promotion drawer — create or edit */}
+      <Overlay
+        isOpen={drawer.isOpen}
+        onClose={() => {
+          drawer.close();
+          resetForm();
+        }}
+        title={editingId ? 'Edit promotion' : 'New promotion'}
+        mode="drawer"
+      >
         <Field label="Label (e.g. Weekday Off-Peak)" htmlFor="npLabel">
           <Input id="npLabel" value={label} onChange={(event) => setLabel(event.target.value)} />
         </Field>
-        
-        <Field label="Promo Code (e.g. OFFPEAK30)" htmlFor="npCode">
-          <Input id="npCode" value={code} onChange={(event) => setCode(event.target.value)} style={{textTransform: 'uppercase'}} />
+
+        <Field
+          label="Promo Code (e.g. OFFPEAK30)"
+          htmlFor="npCode"
+          hint={editingId ? 'The code cannot be changed once players have it.' : undefined}
+        >
+          <Input
+            id="npCode"
+            value={code}
+            disabled={Boolean(editingId)}
+            onChange={(event) => setCode(event.target.value)}
+            style={{ textTransform: 'uppercase' }}
+          />
         </Field>
         
         <div className="grid2" style={{ gap: 10 }}>
@@ -285,7 +369,7 @@ export default function PromotionsPage() {
           onClick={handleLaunch}
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Launching...' : 'Launch promotion'}
+          {isSubmitting ? 'Saving…' : editingId ? 'Save changes' : 'Launch promotion'}
         </Button>
       </Overlay>
     </>

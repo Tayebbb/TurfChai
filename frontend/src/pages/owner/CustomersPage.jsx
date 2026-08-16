@@ -7,27 +7,48 @@ import { Chip } from '@/components/ui/Chip';
 import { Input } from '@/components/forms/Field';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
+import { TableScroll } from '@/components/tables/TableScroll';
 import { useFilterChips } from '@/hooks/useFilterChips';
-import { useToast } from '@/hooks/useToast';
 import { useApi } from '@/hooks/useApi';
 import { paths } from '@/routes/paths';
 import { getOwnerCustomers } from '@/api/ownerCustomers';
 
-const FILTERS = ['All', 'Regulars (4+ visits)', 'Venue loyalty members', 'Has no-shows'];
+const FILTERS = ['All', 'Regulars (4+ visits)', 'VIPs (10+ visits)', 'Has no-shows'];
 
+/** The chips used to be decorative — every one of them showed the same list. */
+function matchesFilters(row, chips) {
+  if (chips.isActive('All')) return true;
+  const visits = Number(row.confirmedVisits ?? 0);
+  const checks = [];
+  if (chips.isActive('Regulars (4+ visits)')) checks.push(visits >= 4);
+  if (chips.isActive('VIPs (10+ visits)')) checks.push(visits >= 10);
+  if (chips.isActive('Has no-shows')) checks.push(Number(row.noShows ?? 0) > 0);
+  return checks.length === 0 || checks.some(Boolean);
+}
 
 export default function CustomersPage() {
-  const { showToast } = useToast();
   const chips = useFilterChips(['All']);
   const [query, setQuery] = useState('');
+
+  // "All" is a reset, not another chip: leaving it selected alongside a real
+  // filter is what made the filters look like they did nothing.
+  const selectFilter = (filter) => {
+    if (filter === 'All') {
+      chips.clear();
+      chips.toggle('All');
+      return;
+    }
+    if (chips.isActive('All')) chips.toggle('All');
+    chips.toggle(filter);
+  };
 
   const { data: res, loading } = useApi(getOwnerCustomers, []);
   const customers = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
 
   const term = query.trim().toLowerCase();
-  const visible = term
-    ? customers.filter((row) => `${row.name} ${row.phone}`.toLowerCase().includes(term))
-    : customers;
+  const visible = customers
+    .filter((row) => (term ? `${row.name} ${row.phone}`.toLowerCase().includes(term) : true))
+    .filter((row) => matchesFilters(row, chips));
 
   return (
     <>
@@ -38,7 +59,11 @@ export default function CustomersPage() {
           <h1>Customers</h1>
           <span className="subtle small">Every player and team who has booked with you</span>
         </div>
-        <Button variant="primary" onClick={() => showToast('Add customer form opened')}>
+        <Button
+          variant="primary"
+          disabled
+          title="Customers are derived from real bookings, so there is nothing to add by hand."
+        >
           + Add customer
         </Button>
       </div>
@@ -52,13 +77,13 @@ export default function CustomersPage() {
           onChange={(event) => setQuery(event.target.value)}
         />
         {FILTERS.map((filter) => (
-          <Chip key={filter} active={chips.isActive(filter)} onToggle={() => chips.toggle(filter)}>
+          <Chip key={filter} active={chips.isActive(filter)} onToggle={() => selectFilter(filter)}>
             {filter}
           </Chip>
         ))}
       </div>
 
-      <div className="card table-wrap" style={{ padding: 0 }}>
+      <TableScroll label="Customers" className="card" style={{ padding: 0 }}>
         <table className="table">
           <thead>
             <tr>
@@ -67,7 +92,7 @@ export default function CustomersPage() {
               <th className="num">Bookings</th>
               <th className="num">Total spend</th>
               <th>Last visit</th>
-              <th>Venue loyalty</th>
+              <th>Standing at your venue</th>
               <th className="num">No-shows</th>
               <th>Notes</th>
             </tr>
@@ -97,7 +122,12 @@ export default function CustomersPage() {
                   {row.noShows}
                 </td>
                 <td>
-                  <Button size="sm" variant="tertiary" onClick={() => showToast(row.note)}>
+                  <Button
+                    size="sm"
+                    variant="tertiary"
+                    disabled
+                    title="Customer notes are not stored yet — this row has no note to show."
+                  >
                     📝
                   </Button>
                 </td>
@@ -119,7 +149,7 @@ export default function CustomersPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
       {visible.length > 0 && (
         <Alert tone="info" icon="🎁" title="Reward your regulars" style={{ marginTop: 14 }}>
           Send a venue-loyalty offer from <Link to={paths.owner.promotions}>Promotions</Link>.

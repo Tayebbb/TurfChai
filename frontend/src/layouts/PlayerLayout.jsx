@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { Icon } from '@/components/common/Icon';
@@ -15,12 +14,14 @@ import { Panel } from '@/components/ui/Panel';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PLAYER_BOTTOM_NAV, PLAYER_NAV_LINKS } from '@/constants/navigation';
-import { getMyProfile } from '@/api/players';
 import { getNotifications, getUnreadCount, markAllRead } from '@/api/notifications';
-import { clearSession, getUser } from '@/api/client';
+import { clearSession } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
 import { useBodyClass } from '@/hooks/useBodyClass';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSession } from '@/hooks/useSession';
+import { useToast } from '@/hooks/useToast';
+import { toUserMessage } from '@/utils/errorMessage';
 import { paths } from '@/routes/paths';
 
 /**
@@ -31,13 +32,27 @@ export function PlayerLayout({ withFooter = false }) {
   const notifications = useDisclosure(false);
   const profile = useDisclosure(false);
   const navigate = useNavigate();
+  const { showToast } = useToast();
   useBodyClass('has-bottomnav');
 
-  const { data: notifData, reload: reloadNotifs } = useApi(getNotifications, []);
-  const { data: unreadData, reload: reloadUnread } = useApi(getUnreadCount, []);
-  
-  const notificationsList = notifData || [];
-  const unreadCount = unreadData?.count || 0;
+  // The shell renders on public routes too. Anything that identifies the
+  // caller must stay unfetched until there is a real session, otherwise a
+  // signed-out visitor either sees somebody else's identity or gets bounced
+  // by the 401 handler while browsing a public page.
+  const { signedIn, user: player, loading: profileLoading, error: profileError, reload: reloadProfile } =
+    useSession();
+
+  const { data: notifData, reload: reloadNotifs } = useApi(
+    () => (signedIn ? getNotifications() : Promise.resolve([])),
+    [signedIn],
+  );
+  const { data: unreadData, reload: reloadUnread } = useApi(
+    () => (signedIn ? getUnreadCount() : Promise.resolve(null)),
+    [signedIn],
+  );
+
+  const notificationsList = Array.isArray(notifData) ? notifData : [];
+  const unreadCount = unreadData?.count ?? 0;
 
   const handleMarkAllRead = async () => {
     try {
@@ -45,23 +60,14 @@ export function PlayerLayout({ withFooter = false }) {
       reloadNotifs();
       reloadUnread();
     } catch (e) {
-      console.error(e);
+      showToast(toUserMessage(e, 'Could not mark your notifications as read.'));
     }
   };
 
-  const me = useApi(() => getMyProfile(), []);
-  const localUser = getUser();
-
-  useEffect(() => {
-    const handleSession = () => me.reload();
-    window.addEventListener('turfchai:session-change', handleSession);
-    return () => window.removeEventListener('turfchai:session-change', handleSession);
-  }, [me]);
-
-  const fullName = localUser?.fullName || me.data?.fullName || 'Player';
-  const player = me.data ? { ...me.data, fullName } : localUser;
-  const initials =
-    (fullName ?? '').split(/\s+/).filter(Boolean).length === 1
+  const fullName = signedIn ? player?.fullName || 'Player' : 'Guest';
+  const initials = !signedIn
+    ? '·'
+    : (fullName ?? '').split(/\s+/).filter(Boolean).length === 1
       ? (fullName ?? '').trim().slice(0, 2).toUpperCase()
       : (fullName ?? '')
           .split(/\s+/)
@@ -161,12 +167,14 @@ export function PlayerLayout({ withFooter = false }) {
         showGrabber
       >
         <div className="row" style={{ marginBottom: 16 }}>
-          <Avatar name={player?.fullName ?? 'Player'} initials={initials} size="lg" />
+          <Avatar name={player?.fullName ?? 'Guest'} initials={initials} size="lg" />
           <div style={{ minWidth: 0 }}>
-            <b>{player?.fullName ?? (me.loading ? 'Loading…' : 'Your profile')}</b>
+            <b>{!signedIn ? 'Not signed in' : (player?.fullName ?? (profileLoading ? 'Loading…' : 'Your profile'))}</b>
             <div className="subtle">
-              {[player?.phone, player?.area].filter(Boolean).join(' · ') ||
-                (me.error ? 'Profile unavailable — check your connection' : '\u00a0')}
+              {!signedIn
+                ? 'Sign in to see your bookings and profile'
+                : [player?.phone, player?.area].filter(Boolean).join(' · ') ||
+                  (profileError ? 'Profile unavailable — check your connection' : '\u00a0')}
             </div>
             {player ? (
               <div className="row-wrap" style={{ marginTop: 6 }}>
@@ -186,32 +194,45 @@ export function PlayerLayout({ withFooter = false }) {
           </div>
         </div>
 
-        {me.error ? (
-          <Button block variant="secondary" onClick={me.reload} style={{ marginBottom: 10 }}>
+        {signedIn && profileError ? (
+          <Button block variant="secondary" onClick={reloadProfile} style={{ marginBottom: 10 }}>
             Retry loading profile
           </Button>
         ) : null}
 
-        <div className="stack-sm">
-          <Button block to={paths.player.settings} onClick={profile.close}>
-            Profile dashboard
-          </Button>
-          <Button block variant="secondary" to={paths.player.bookings} onClick={profile.close}>
-            My bookings
-          </Button>
-          <Button block variant="secondary" to={paths.solo.alerts} onClick={profile.close}>
-            My LFG alerts
-          </Button>
-        </div>
-        <hr />
-        <div className="stack-sm">
-          <Button variant="danger" block onClick={signOut}>
-            Sign out
-          </Button>
-          <Button variant="tertiary" block onClick={profile.close}>
-            Close
-          </Button>
-        </div>
+        {signedIn ? (
+          <>
+            <div className="stack-sm">
+              <Button block to={paths.player.settings} onClick={profile.close}>
+                Profile dashboard
+              </Button>
+              <Button block variant="secondary" to={paths.player.bookings} onClick={profile.close}>
+                My bookings
+              </Button>
+              <Button block variant="secondary" to={paths.solo.alerts} onClick={profile.close}>
+                My LFG alerts
+              </Button>
+            </div>
+            <hr />
+            <div className="stack-sm">
+              <Button variant="danger" block onClick={signOut}>
+                Sign out
+              </Button>
+              <Button variant="tertiary" block onClick={profile.close}>
+                Close
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="stack-sm">
+            <Button block to={paths.auth} onClick={profile.close}>
+              Sign in
+            </Button>
+            <Button variant="tertiary" block onClick={profile.close}>
+              Close
+            </Button>
+          </div>
+        )}
       </Overlay>
 
       <ChatWidget />

@@ -20,12 +20,13 @@ import {
 } from '@/api/bookings';
 import { listLfgAlerts } from '@/api/lfgAlerts';
 import { formatGameDay, kickoffMs, searchOpenGames, skillLabel } from '@/api/openGames';
-import { getMyProfile, getSavedVenues } from '@/api/players';
+import { getSavedVenues } from '@/api/players';
 import { browseTournaments, registrationState } from '@/api/playerTournaments';
-import { getTournament, DEMO_TOURNAMENT_CODE, formatDate } from '@/api/tournaments';
+import { getMyHostedTournaments, formatDate } from '@/api/tournaments';
 import { searchVenues, toNearbyCard } from '@/api/venues';
 import { useApi } from '@/hooks/useApi';
 import { useQueryParam } from '@/hooks/useQueryParam';
+import { useSession } from '@/hooks/useSession';
 import { paths } from '@/routes/paths';
 import { formatBdt, formatNumber } from '@/utils/format';
 import './HomePage.css';
@@ -98,10 +99,10 @@ function toGameCardModel(game) {
 
 export default function HomePage() {
   const [mode, setMode] = useQueryParam('mode', 'player');
-  const me = useApi(() => getMyProfile(), []);
-  const localUser = getUser();
-  const fullName = localUser?.fullName || me.data?.fullName;
-  const player = me.data ? { ...me.data, fullName: fullName || me.data.fullName } : localUser;
+  // `/player` is a public browsing surface, so the profile call must wait for
+  // a real session — otherwise a signed-out visitor greets as somebody else.
+  const { user: player, signedIn } = useSession();
+  const fullName = player?.fullName;
   const firstName = fullName?.split(/\s+/)[0];
 
   return (
@@ -112,11 +113,19 @@ export default function HomePage() {
         <div className="between" style={{ marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h1 style={{ fontSize: 24, margin: 0 }}>
-              {firstName ? `Salam, ${firstName}` : 'Salam'}
+              {firstName ? `Salam, ${firstName}` : signedIn ? 'Salam' : 'Find your next game'}
             </h1>
             <span className="subtle">
-              {player?.area ? `${player.area} · ` : ''}
-              <Link to={paths.player.settings}>Edit profile</Link>
+              {signedIn ? (
+                <>
+                  {player?.area ? `${player.area} · ` : ''}
+                  <Link to={paths.player.settings}>Edit profile</Link>
+                </>
+              ) : (
+                <>
+                  Browse venues and open games · <Link to={paths.auth}>Sign in</Link> to book
+                </>
+              )}
             </span>
           </div>
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
@@ -199,7 +208,7 @@ function PlayerMode() {
 
 /** The caller's genuine next upcoming booking, or an honest empty/signed-out state. */
 function NextMatchSection() {
-  const signedIn = Boolean(getUser());
+  const { signedIn } = useSession();
   const bookingsApi = useApi(() => (signedIn ? listBookings() : Promise.resolve([])), [signedIn]);
   const booking = useMemo(
     () => nextUpcomingBooking(Array.isArray(bookingsApi.data) ? bookingsApi.data : []),
@@ -322,7 +331,7 @@ function OpenGamesSection({ title, limit = 4 }) {
 
 /** Replaces the invented "Recently viewed" rail with the player's real bookmarks. */
 function SavedVenuesSection() {
-  const signedIn = Boolean(getUser());
+  const { signedIn } = useSession();
   const savedApi = useApi(() => (signedIn ? getSavedVenues() : Promise.resolve([])), [signedIn]);
   const saved = Array.isArray(savedApi.data) ? savedApi.data : [];
 
@@ -358,11 +367,11 @@ function SavedVenuesSection() {
 
 /* ======== SOLO PLAYER MODE ======== */
 function SoloMode() {
-  const me = useApi(() => getMyProfile(), []);
+  const { user: me } = useSession();
 
   const soloRecord =
-    me.data?.reliabilityScore != null
-      ? `${me.data.gamesAttended ?? 0} games \u00b7 ${me.data.reliabilityScore}% show-up`
+    me?.reliabilityScore != null
+      ? `${me.gamesAttended ?? 0} games \u00b7 ${me.reliabilityScore}% show-up`
       : null;
 
   return (
@@ -443,8 +452,8 @@ function LfgAlertsCard() {
 
 /* ======== TOURNAMENT HOST MODE ======== */
 function HostMode() {
-  const tournamentApi = useApi(() => getTournament(DEMO_TOURNAMENT_CODE), []);
-  const tournament = tournamentApi.data;
+  const tournamentApi = useApi(() => getMyHostedTournaments(), []);
+  const tournament = tournamentApi.data?.[0] ?? null;
 
   return (
     <div className="tabpanel on">

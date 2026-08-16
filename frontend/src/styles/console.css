@@ -443,8 +443,8 @@
   from{opacity:0;transform:translateY(10px)}
   to{opacity:1;transform:none}
 }
-.alert-item.read{opacity:.5}
-.alert-item.read:hover{opacity:.9}
+.alert-item.read{background:var(--surface-2)}
+.alert-item.read:hover{background:var(--surface-3)}
 .alert-item-icon{
   flex:none;width:38px;height:38px;border-radius:12px;
   display:flex;align-items:center;justify-content:center;

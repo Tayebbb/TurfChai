@@ -17,6 +17,7 @@ import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { Chip } from '@/components/ui/Chip';
 import { formatBdt } from '@/utils/format';
 
 const SPORTS = [
@@ -262,14 +263,13 @@ export default function LfgAlertPage() {
                 <label>Sport</label>
                 <div className="row-wrap">
                   {SPORTS.map((option) => (
-                    <button
+                    <Chip
                       key={option.value}
-                      className={sport === option.value ? 'chip on' : 'chip'}
-                      type="button"
-                      onClick={() => setSport(option.value)}
+                      active={sport === option.value}
+                      onToggle={() => setSport(option.value)}
                     >
                       {option.label}
-                    </button>
+                    </Chip>
                   ))}
                 </div>
               </div>
@@ -322,14 +322,13 @@ export default function LfgAlertPage() {
                 <label>Skill level</label>
                 <div className="row-wrap">
                   {SKILLS.map((option) => (
-                    <button
+                    <Chip
                       key={option.value}
-                      className={skill === option.value ? 'chip on' : 'chip'}
-                      type="button"
-                      onClick={() => setSkill(option.value)}
+                      active={skill === option.value}
+                      onToggle={() => setSkill(option.value)}
                     >
                       {option.label}
-                    </button>
+                    </Chip>
                   ))}
                 </div>
               </div>

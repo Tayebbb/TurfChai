@@ -9,14 +9,16 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { useToast } from '@/hooks/useToast';
 import { useApi } from '@/hooks/useApi';
 import { paths } from '@/routes/paths';
-import { getOwnerReviews } from '@/api/ownerReviews';
+import { getOwnerReviews, publishReviewResponse } from '@/api/ownerReviews';
+import { toUserMessage } from '@/utils/errorMessage';
 
 export default function ReviewsPage() {
   const { showToast } = useToast();
   const [activeFilter, setActiveFilter] = useState('All');
-  const [reply, setReply] = useState('');
+  const [replies, setReplies] = useState({});
+  const [publishingId, setPublishingId] = useState(null);
 
-  const { data: res, loading } = useApi(getOwnerReviews, []);
+  const { data: res, loading, reload } = useApi(getOwnerReviews, []);
   const reviewsData = (res && typeof res === 'object' && !Array.isArray(res)) ? (res.data || res) : {};
   const reviews = useMemo(() => Array.isArray(reviewsData.items) ? reviewsData.items : [], [reviewsData.items]);
   const ratingBreakdown = Array.isArray(reviewsData.ratingBreakdown) ? reviewsData.ratingBreakdown : [];
@@ -45,6 +47,23 @@ export default function ReviewsPage() {
   }, [reviews, activeFilter]);
 
   const publicVenueLink = venueSlug ? paths.player.venue(venueSlug) : paths.player.explore;
+
+  const publishResponse = async (reviewId) => {
+    const text = (replies[reviewId] || '').trim();
+    if (!text || publishingId) return;
+    setPublishingId(reviewId);
+    try {
+      await publishReviewResponse(reviewId, text);
+    } catch (error) {
+      showToast(toUserMessage(error, 'Could not publish your response.'));
+      return;
+    } finally {
+      setPublishingId(null);
+    }
+    setReplies((current) => ({ ...current, [reviewId]: '' }));
+    reload();
+    showToast('Response published — shown under the review ✓');
+  };
 
   return (
     <>
@@ -100,16 +119,19 @@ export default function ReviewsPage() {
                     <Textarea
                       id={`r-${review.id}`}
                       placeholder="Thank the player, address feedback…"
-                      value={reply}
-                      onChange={(event) => setReply(event.target.value)}
+                      value={replies[review.id] || ''}
+                      onChange={(event) =>
+                        setReplies((current) => ({ ...current, [review.id]: event.target.value }))
+                      }
                     />
                   </div>
                   <Button
                     size="sm"
                     variant="primary"
-                    onClick={() => showToast('Response published — shown under the review ✓')}
+                    disabled={!(replies[review.id] || '').trim() || publishingId === review.id}
+                    onClick={() => publishResponse(review.id)}
                   >
-                    Publish response
+                    {publishingId === review.id ? 'Publishing…' : 'Publish response'}
                   </Button>
                 </>
               ) : review.response ? (
@@ -122,21 +144,6 @@ export default function ReviewsPage() {
                   </p>
                 </div>
               ) : null}
-
-              {review.actions && (
-                <div className="row" style={{ marginTop: 10 }}>
-                  {review.actions.map((action) => (
-                    <Button
-                      key={action.label}
-                      size="sm"
-                      variant={action.variant}
-                      onClick={() => showToast(action.toast)}
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
           {!loading && visibleReviews.length === 0 && (

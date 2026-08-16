@@ -15,6 +15,9 @@ import {
 } from '@/api/openGames';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSession } from '@/hooks/useSession';
+import { useToast } from '@/hooks/useToast';
+import { CreateGameDrawer } from './CreateGameDrawer';
 import { paths } from '@/routes/paths';
 import { formatBdt } from '@/utils/format';
 import './OpenGamesPage.css';
@@ -225,6 +228,9 @@ function GameCard({ game, query }) {
 
 export default function OpenGamesPage() {
   const filterModal = useDisclosure(false);
+  const createModal = useDisclosure(false);
+  const { signedIn } = useSession();
+  const { showToast } = useToast();
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -341,7 +347,15 @@ export default function OpenGamesPage() {
                 Discover nearby matches, jump into fast-moving slots, and find your next squad with zero friction.
               </p>
               <div className="og-hero-actions">
-                <Link className="btn btn-primary" to={paths.solo.alerts}>
+                <Button
+                  variant="primary"
+                  onClick={createModal.open}
+                  disabled={!signedIn}
+                  title={signedIn ? undefined : 'Sign in to post a game'}
+                >
+                  + Post a game
+                </Button>
+                <Link className="btn btn-secondary" to={paths.solo.alerts}>
                   🔔 Set LFG Alert
                 </Link>
                 <Link className="btn btn-secondary" to={paths.player.explore}>
@@ -578,6 +592,16 @@ export default function OpenGamesPage() {
             </>
           ) : null}
         </div>
+
+        <CreateGameDrawer
+          isOpen={createModal.isOpen}
+          onClose={createModal.close}
+          onCreated={(game) => {
+            createModal.close();
+            reload();
+            showToast(`“${game?.title ?? 'Your game'}” is live — players can join now ✓`);
+          }}
+        />
 
         {/* ═══ FILTER DRAWER ═══ */}
         <Overlay isOpen={filterModal.isOpen} onClose={filterModal.close} title="Filters" mode="drawer" hideHeader>

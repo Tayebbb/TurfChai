@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
@@ -7,9 +7,11 @@ import { Stepper } from '@/components/navigation/Stepper';
 import { Chip } from '@/components/ui/Chip';
 import { Card } from '@/components/cards/Card';
 import { getMyProfile, updateMyProfile } from '@/api/players';
-import { getUser } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 import { useFilterChips } from '@/hooks/useFilterChips';
+import { useSession } from '@/hooks/useSession';
 import { useToast } from '@/hooks/useToast';
+import { toUserMessage } from '@/utils/errorMessage';
 import { paths } from '@/routes/paths';
 import {
   PLAYER_AREAS,
@@ -30,48 +32,52 @@ const ROLES = [
 ];
 
 export default function OnboardingPage() {
+  const { signedIn } = useSession();
+  // Onboarding prefills preferences, which only live on the player profile.
+  const { data: profile, loading } = useApi(
+    () => (signedIn ? getMyProfile() : Promise.resolve(null)),
+    [signedIn],
+  );
+
+  if (loading) {
+    return (
+      <>
+        <PageTitle title="Set Up Your Player Profile" />
+        <main className="wrap-form" style={{ paddingTop: 32 }} id="main">
+          <h1 style={{ fontSize: 22 }}>Setting up your profile…</h1>
+          <p className="subtle" role="status">
+            Loading what we already know about you.
+          </p>
+        </main>
+      </>
+    );
+  }
+
+  // Remounting on identity change re-runs the state initialisers below. The
+  // prefill used to run in an effect, which overwrote whatever the user had
+  // already typed the moment the profile response landed.
+  return <OnboardingForm key={profile?.id ?? 'new'} profile={profile} />;
+}
+
+function OnboardingForm({ profile }) {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
   const [step, setStep] = useState('about');
 
   // Step 1: About you
-  const localUser = getUser();
-  const [name, setName] = useState(localUser?.fullName || '');
-  const [area, setArea] = useState('');
-  const sports = useFilterChips([]);
-  const times = useFilterChips([]);
-  const { toggle: toggleSport } = sports;
-  const { toggle: toggleTime } = times;
+  const [name, setName] = useState(profile?.fullName || '');
+  const [area, setArea] = useState(profile?.area ? profile.area.split(',')[0].trim() : '');
+  const sports = useFilterChips(profile?.preferredSports ?? []);
+  const times = useFilterChips(profile?.preferredTimes ?? []);
 
   // Step 2: Play style
-  const [role, setRole] = useState('');
-  const [position, setPosition] = useState('');
-  const skill = useFilterChips([]);
-  const { toggle: toggleSkillChip } = skill;
+  const [role, setRole] = useState(profile?.playerRole || '');
+  const [position, setPosition] = useState(profile?.position || '');
+  const skill = useFilterChips(profile?.playStyle ? [profile.playStyle] : []);
   const [bio, setBio] = useState('');
 
   const [saving, setSaving] = useState(false);
-
-  // Prefill profile from saved session or backend profile
-  useEffect(() => {
-    let cancelled = false;
-    getMyProfile()
-      .then((profile) => {
-        if (cancelled || !profile) return;
-        if (profile.fullName) setName(profile.fullName);
-        if (profile.area) setArea(profile.area.split(',')[0].trim());
-        if (profile.playerRole) setRole(profile.playerRole);
-        if (profile.position) setPosition(profile.position);
-        (profile.preferredSports ?? []).forEach((value) => toggleSport(value));
-        (profile.preferredTimes ?? []).forEach((value) => toggleTime(value));
-        if (profile.playStyle) toggleSkillChip(profile.playStyle);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [toggleSport, toggleTime, toggleSkillChip]);
 
   const toggleSkill = (value) => {
     if (skill.isActive(value)) {
@@ -104,7 +110,7 @@ export default function OnboardingPage() {
       showToast('Profile saved — Welcome to TurfChai!');
       navigate(paths.player.home);
     } catch (error) {
-      showToast(error?.message ?? 'Could not save profile — please try again');
+      showToast(toUserMessage(error, 'Could not save your profile. Please try again.'));
     } finally {
       setSaving(false);
     }

@@ -3,19 +3,14 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Overlay } from '@/components/modals/Overlay';
 import { getMe, updateMe } from '@/api/auth';
-import { getUser, setSession } from '@/api/client';
+import { api, getUser, setSession } from '@/api/client';
+import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import './ProfilePage.css';
 
 const TIMEZONES = ['Dhaka (GMT+6)', 'London (GMT+0)', 'New York (GMT-5)'];
-
-const RECENT_ACTIVITY = [
-  { id: 'act-1', title: 'Suspended user #38112', when: 'Today 4:02 PM' },
-  { id: 'act-2', title: 'Updated turf venue V-0044', when: 'Yesterday' },
-  { id: 'act-3', title: 'Approved TR-1033 · Mirpur Annex', when: '2 days ago' },
-];
 
 const fallbackInitials = (fullName) => {
   if (!fullName) return '??';
@@ -70,6 +65,21 @@ export default function ProfilePage() {
   const initials = user.avatarInitials || fallbackInitials(user.fullName);
   const role = user.role || 'ADMIN';
 
+  // The audit trail is the only record of what this admin actually did, so it
+  // is the only honest source for both the count and the recent list.
+  const auditApi = useApi(() => api('/admin/audit-log?page=0&size=100'), []);
+  const auditPage = auditApi.data?.data ?? auditApi.data;
+  const myEntries = (auditPage?.content ?? []).filter(
+    (entry) => user.fullName && entry.adminName === user.fullName,
+  );
+  const recentActivity = myEntries.slice(0, 3).map((entry) => ({
+    id: entry.id,
+    title: `${entry.action} · ${entry.target}`,
+    when: entry.createdAt ? new Date(entry.createdAt).toLocaleString('en-GB', {
+      day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+    }) : '',
+  }));
+
   const profileStats = [
     {
       id: 'since',
@@ -77,7 +87,12 @@ export default function ProfilePage() {
       value: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
       style: undefined,
     },
-    { id: 'actions', label: 'LOGGED ACTIONS', value: '1,204 Actions', style: undefined },
+    {
+      id: 'actions',
+      label: 'LOGGED ACTIONS',
+      value: auditApi.loading ? '…' : `${myEntries.length} Actions`,
+      style: undefined,
+    },
     { id: 'security', label: 'SECURITY LEVEL', value: 'High (2FA)', style: { color: 'var(--mint)' } },
   ];
 
@@ -221,13 +236,14 @@ export default function ProfilePage() {
                     Password
                   </b>
                   <div className="tiny subtle" style={{ marginTop: 2 }}>
-                    Last changed 42 days ago
+                    Password changes are not tracked yet
                   </div>
                 </div>
                 <button
                   className="btn btn-sm btn-secondary"
                   type="button"
-                  onClick={() => showToast('Password change flow initiated 🔒')}
+                  disabled
+                  title="Password changes are not available in this build — there is no change-password endpoint yet."
                 >
                   Change Password
                 </button>
@@ -267,13 +283,14 @@ export default function ProfilePage() {
                     Active Admin Sessions
                   </b>
                   <div className="tiny subtle" style={{ marginTop: 2 }}>
-                    2 Devices (Chrome Windows, Mobile App)
+                    Not tracked — sign-in issues stateless tokens
                   </div>
                 </div>
                 <button
                   className="btn btn-sm btn-ghost-danger"
                   type="button"
-                  onClick={() => showToast('Other sessions terminated')}
+                  disabled
+                  title="Sessions are stateless JWTs, so there is nothing on the server to revoke. Signing out clears this device only."
                 >
                   Revoke Others
                 </button>
@@ -294,20 +311,28 @@ export default function ProfilePage() {
               </Link>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {RECENT_ACTIVITY.map((item, index) => (
-                <div
-                  className="tline-item"
-                  key={item.id}
-                  style={index === RECENT_ACTIVITY.length - 1 ? { marginBottom: 0 } : undefined}
-                >
-                  <b className="small" style={{ color: 'var(--text)' }}>
-                    {item.title}
-                  </b>
-                  <p className="tiny muted" style={{ margin: '2px 0 0' }}>
-                    {item.when}
-                  </p>
-                </div>
-              ))}
+              {recentActivity.length === 0 ? (
+                <p className="tiny muted" style={{ margin: 0 }}>
+                  {auditApi.loading
+                    ? 'Loading your activity…'
+                    : 'Nothing recorded against your account yet.'}
+                </p>
+              ) : (
+                recentActivity.map((item, index) => (
+                  <div
+                    className="tline-item"
+                    key={item.id}
+                    style={index === recentActivity.length - 1 ? { marginBottom: 0 } : undefined}
+                  >
+                    <b className="small" style={{ color: 'var(--text)' }}>
+                      {item.title}
+                    </b>
+                    <p className="tiny muted" style={{ margin: '2px 0 0' }}>
+                      {item.when}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </div>

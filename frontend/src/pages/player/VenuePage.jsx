@@ -13,6 +13,10 @@ import { Verified } from '@/components/ui/Tags';
 import { getVenue, searchVenues, toSimilarCard } from '@/api/venues';
 import { getVenueSlots } from '@/api/bookings';
 import { getSavedVenues, toggleSavedVenue } from '@/api/players';
+import { getVenueReviews } from '@/api/venueReviews';
+import { getToken } from '@/api/client';
+import { shareOrCopy } from '@/utils/deviceActions';
+import { toUserMessage } from '@/utils/errorMessage';
 
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
@@ -31,16 +35,6 @@ const svgProps = {
   strokeLinejoin: 'round',
   'aria-hidden': 'true',
 };
-
-const DATES = [
-  { id: '4', weekday: 'Mon', day: '4' },
-  { id: '5', weekday: 'Tue', day: '5' },
-  { id: '6', weekday: 'Wed', day: '6' },
-  { id: '7', weekday: 'Thu', day: '7' },
-  { id: '8', weekday: 'Fri', day: '8' },
-  { id: '9', weekday: 'Sat', day: '9' },
-  { id: '10', weekday: 'Sun', day: '10' },
-];
 
 /** Next 7 real calendar days — availability per day still needs the booking service. */
 function nextSevenDays(from) {
@@ -67,13 +61,6 @@ const GALLERY = [
   { id: 'alt1', variant: 'alt1' },
   { id: 'alt2', variant: 'alt2' },
   { id: 'alt3', variant: 'alt3' },
-];
-
-const SPECS = [
-  { label: 'Surface', value: 'FIFA-grade Artificial Grass', sub: 'Relaid Jan 2026 · shock pad' },
-  { label: 'Lighting', value: '200-lux LED Floodlights', sub: 'Full night coverage' },
-  { label: 'Format', value: '7-a-side', sub: 'Max 16 players' },
-  { label: 'Booking', value: 'Instant Confirmation', sub: 'No approval needed' },
 ];
 
 const formatLabel = (format) => (format ? format.replaceAll('_', '-') : null);
@@ -125,9 +112,19 @@ const bdt = (value) =>
 /** Backend SlotResponse -> the { id, time, price, status } shape SlotGrid renders. */
 function toGridSlot(slot) {
   // Defensive: the live stream overlays this field, so never assume it is set.
-  const status = String(slot.status ?? 'available').toLowerCase();
-  const unavailableLabel =
-    status === 'held' ? 'Held' : status === 'blocked' ? 'Unavailable' : 'Booked';
+  const rawStatus = String(slot.status ?? 'available').toLowerCase();
+  // The server decides what is sellable. A slot can be AVAILABLE and still be
+  // unbookable because its start time has passed, so `bookable` wins over
+  // `status` — rendering it as open would offer a time the API will refuse.
+  const elapsed = slot.bookable === false && rawStatus === 'available';
+  const status = elapsed ? 'blocked' : rawStatus;
+  const unavailableLabel = elapsed
+    ? 'Started'
+    : status === 'held'
+      ? 'Held'
+      : status === 'blocked'
+        ? 'Unavailable'
+        : 'Booked';
   const price =
     status === 'available' ? (
       <>
@@ -201,49 +198,50 @@ const AMENITY_ICONS = {
   ),
 };
 
-const RULES = [
-  'Turf shoes or mouldies only — no metal studs',
-  'Max 16 players per booking · no outside food on pitch',
-  'Slots end strictly on time — plan accordingly',
-];
+const RULE_ICONS = {
+  ok: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+  partial: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  none: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  ),
+};
 
-const POLICY_TIERS = [
-  {
-    label: 'Cancel 24h+ before',
-    sub: 'Full refund',
-    icon: (
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="20 6 9 17 4 12" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Cancel 6 – 24h before',
-    sub: '50% refund',
-    icon: (
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Cancel under 6h before',
-    sub: 'No refund',
-    icon: (
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="15" y1="9" x2="9" y2="15" />
-        <line x1="9" y1="9" x2="15" y2="15" />
-      </svg>
-    ),
-  },
-];
-
-const REVIEW_FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'parents', label: 'Parents (18)' },
-];
+/**
+ * The refund ladder this venue actually runs, mirroring RefundCalculatorService.
+ * It used to be a fixed 24h/6h table shown on every venue regardless of the
+ * policy the refund engine would really apply.
+ */
+function policyTiersOf(cancelPolicy) {
+  switch (cancelPolicy) {
+    case 'STRICT_NO_REFUND':
+      return [{ label: 'Any cancellation', sub: 'No refund', icon: RULE_ICONS.none }];
+    case 'FLEXIBLE_6H':
+      return [
+        { label: 'Cancel 6h+ before', sub: 'Full refund', icon: RULE_ICONS.ok },
+        { label: 'Cancel under 6h before', sub: 'No refund', icon: RULE_ICONS.none },
+      ];
+    case 'FREE_24H_50_6H':
+    default:
+      return [
+        { label: 'Cancel 24h+ before', sub: 'Full refund', icon: RULE_ICONS.ok },
+        { label: 'Cancel 6 – 24h before', sub: '50% refund', icon: RULE_ICONS.partial },
+        { label: 'Cancel under 6h before', sub: 'No refund', icon: RULE_ICONS.none },
+      ];
+  }
+}
 
 export default function VenuePage() {
   const { venueId } = useParams();
@@ -351,12 +349,11 @@ export default function VenuePage() {
     if (venue?.rules && venue.rules.length > 0) {
       return Array.isArray(venue.rules) ? venue.rules : String(venue.rules).split(',').map((r) => r.trim());
     }
-    return [
-      'Turf shoes or mouldies only — no metal studs allowed',
-      'Please arrive 10 minutes before your booked time slot',
-      'Follow venue guidelines & respect on-site staff instructions',
-    ];
+    // No invented house rules: a venue that has not published any says so.
+    return [];
   }, [venue]);
+
+  const policyTiers = useMemo(() => policyTiersOf(venue?.cancelPolicy), [venue?.cancelPolicy]);
 
   const photoList = useMemo(() => {
     if (venue?.photos && venue.photos.length > 0) {
@@ -413,15 +410,36 @@ export default function VenuePage() {
     }
   };
 
-  // Saved state for this venue's heart button.
+  // Saved state for this venue's heart button. The venue page is public, so
+  // the caller-scoped bookmark list is only read once there is a session.
+  const signedIn = Boolean(getToken());
+
+  const [reviewPageSize, setReviewPageSize] = useState(10);
+  const reviewsApi = useApi(
+    () => (venueId ? getVenueReviews(venueId, { page: 0, size: reviewPageSize }) : Promise.resolve(null)),
+    [venueId, reviewPageSize],
+  );
+  const allReviews = Array.isArray(reviewsApi.data?.items) ? reviewsApi.data.items : [];
+  // The "Parents" tab carried a hardcoded count of 18 and filtered nothing.
+  const parentReviews = allReviews.filter((review) => review.tags?.includes('parent'));
+  const reviewItems = reviewFilter === 'parents' ? parentReviews : allReviews;
+  const reviewFilters = [
+    { id: 'all', label: `All (${allReviews.length})` },
+    { id: 'parents', label: `Parents (${parentReviews.length})` },
+  ];
   const [isSaved, setIsSaved] = useState(false);
   useEffect(() => {
+    if (!signedIn) return;
     getSavedVenues()
       .then((items) => setIsSaved(items.some((item) => item.slug === venueId)))
       .catch(() => {});
-  }, [venueId]);
+  }, [venueId, signedIn]);
 
   const onToggleSave = async () => {
+    if (!signedIn) {
+      showToast('Sign in to save venues');
+      return;
+    }
     try {
       const { saved } = await toggleSavedVenue(venueId);
       setIsSaved(saved);
@@ -473,7 +491,7 @@ export default function VenuePage() {
         )}
         {detail.error && detail.error.status !== 404 ? (
           <p className="subtle" role="status" style={{ marginBottom: 10 }}>
-            Live venue data unavailable — showing sample content.{' '}
+            Live venue data unavailable — nothing below is confirmed.{' '}
             <button type="button" onClick={detail.reload} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}>
               Retry
             </button>
@@ -528,7 +546,7 @@ export default function VenuePage() {
                 {metaLine}
               </span>
               <span className="rating">{rating}</span>
-              <span>({reviewCount} reviews)</span>
+              <span>({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
@@ -543,7 +561,20 @@ export default function VenuePage() {
             </IconButton>
             <IconButton
               label="Share venue"
-              onClick={() => showToast('Link copied — share with your team')}
+              onClick={async () => {
+                const result = await shareOrCopy({
+                  title: name,
+                  text: `Book ${name} on TurfChai`,
+                  url: window.location.href,
+                });
+                showToast(
+                  result === 'shared'
+                    ? 'Shared ✓'
+                    : result === 'copied'
+                      ? 'Link copied — share with your team'
+                      : 'Could not copy the link — copy it from the address bar',
+                );
+              }}
             >
               <svg width="17" height="17" viewBox="0 0 24 24" strokeWidth="2" {...svgProps}>
                 <circle cx="18" cy="5" r="3" />
@@ -675,10 +706,13 @@ export default function VenuePage() {
                       {rule}
                     </li>
                   ))}
+                  {venueRulesList.length === 0 ? (
+                    <li className="subtle">This venue has not published any house rules.</li>
+                  ) : null}
                 </ul>
 
                 <div className="policy-tiers">
-                  {POLICY_TIERS.map((tier) => (
+                  {policyTiers.map((tier) => (
                     <div key={tier.label} className="policy-tier">
                       {tier.icon}
                       <div>
@@ -718,7 +752,7 @@ export default function VenuePage() {
               <span className="rating" style={{ fontSize: 12.5 }}>
                 {rating}
               </span>
-              <span>· {reviewCount} reviews</span>
+              <span>· {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}</span>
             </div>
 
             <hr />
@@ -833,7 +867,7 @@ export default function VenuePage() {
               <span style={{ fontSize: 13, color: 'var(--text-3)' }}>({reviewCount})</span>
             </div>
             <Segmented
-              items={REVIEW_FILTERS}
+              items={reviewFilters}
               value={reviewFilter}
               onChange={setReviewFilter}
               label="Review filter"
@@ -846,36 +880,78 @@ export default function VenuePage() {
                 No player reviews submitted yet for {name}. Be the first to leave a review after your booking! ⚽
               </p>
             </div>
+          ) : reviewsApi.loading ? (
+            <div className="panel" style={{ marginTop: 12 }}>
+              <p className="subtle" role="status" style={{ margin: 0 }}>
+                Loading reviews…
+              </p>
+            </div>
+          ) : reviewsApi.error ? (
+            <div className="panel" style={{ marginTop: 12 }}>
+              <p className="subtle" style={{ margin: 0 }}>
+                {toUserMessage(reviewsApi.error, 'Could not load reviews.')}{' '}
+                <button type="button" className="btn btn-sm btn-tertiary" onClick={reviewsApi.reload}>
+                  Try again
+                </button>
+              </p>
+            </div>
+          ) : reviewItems.length === 0 ? (
+            <div className="panel" style={{ textAlign: 'center', padding: '24px 16px', background: 'var(--surface-2)', marginTop: 12 }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-3)' }}>
+                No published reviews to show yet.
+              </p>
+            </div>
           ) : (
             <>
               <div className="reviews-grid">
-                <div className="review-item">
-                  <div className="between" style={{ marginBottom: 12 }}>
-                    <div className="row" style={{ gap: 10 }}>
-                      <Avatar size="sm" name="Tanvir Ahmed" initials="TA" />
-                      <div>
-                        <b style={{ fontSize: 14, display: 'block' }}>Tanvir Ahmed</b>
-                        <Badge tone="blue" dot={false} style={{ fontSize: 11, padding: '1.5px 8px' }}>
-                          Verified booking
-                        </Badge>
+                {reviewItems.map((review) => (
+                  <div className="review-item" key={review.id}>
+                    <div className="between" style={{ marginBottom: 12 }}>
+                      <div className="row" style={{ gap: 10 }}>
+                        <Avatar size="sm" name={review.authorName} initials={review.authorInitials} />
+                        <div>
+                          <b style={{ fontSize: 14, display: 'block' }}>{review.authorName}</b>
+                          <Badge tone="blue" dot={false} style={{ fontSize: 11, padding: '1.5px 8px' }}>
+                            Verified booking
+                          </Badge>
+                        </div>
                       </div>
+                      <Stars value={review.overallRating ?? 0} />
                     </div>
-                    <Stars value={5} />
+                    {review.comment ? (
+                      <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 8px' }}>{review.comment}</p>
+                    ) : null}
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Verified player review'}
+                    </span>
+                    {review.ownerResponse ? (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          paddingLeft: 10,
+                          borderLeft: '3px solid var(--brand)',
+                        }}
+                      >
+                        <b style={{ fontSize: 11, color: 'var(--brand-600)' }}>RESPONSE FROM THE VENUE</b>
+                        <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '2px 0 0' }}>
+                          {review.ownerResponse}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
-                  <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 8px' }}>
-                    Great turf condition and clear lighting. Handover was punctual.
-                  </p>
-                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                    Verified Player Review
-                  </span>
-                </div>
+                ))}
               </div>
 
-              {reviewCount > 1 && (
-                <Button size="sm" style={{ marginTop: 12 }} onClick={() => showToast('Loading all reviews…')}>
-                  Show all {reviewCount} reviews
+              {reviewsApi.data?.hasMore ? (
+                <Button
+                  size="sm"
+                  style={{ marginTop: 12 }}
+                  disabled={reviewsApi.loading}
+                  onClick={() => setReviewPageSize((size) => size + 10)}
+                >
+                  Show more reviews
                 </Button>
-              )}
+              ) : null}
             </>
           )}
         </section>

@@ -8,20 +8,35 @@ import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
 import { getToken } from '@/api/client';
 import { paths } from '@/routes/paths';
-import { getMyPoints, getRewardActivity, getRewardProducts, redeemReward } from '@/api/rewards';
+import { getMyPoints, getRewardActivity, getRewardProducts, getRewardTiers, redeemReward } from '@/api/rewards';
 import './RewardsPage.css';
 
-// Static tier ladder mirroring the seeded `loyalty_tiers` rows (see
-// ai-knowledge/loyalty-rewards.md). Live data only supplies the caller's
-// current/next tier, so the fixed thresholds/perks for the other rungs are
-// kept here; which card is "current" vs "locked" is computed from /my-points.
-const TIER_LADDER = [
-  { name: 'BRONZE', label: 'Bronze', glyph: '🥉', points: '0 pts · Starter', perk: '0% off bookings' },
-  { name: 'SILVER', label: 'Silver', glyph: '🥈', points: '500 pts', perk: '5% off bookings' },
-  { name: 'GOLD', label: 'Gold', glyph: '🥇', points: '1,500 pts', perk: '10% off bookings' },
-  { name: 'PLATINUM', label: 'Platinum', glyph: '💎', points: '5,000 pts', perk: 'Priority booking · 15% off' },
-];
-const TIER_ORDER = { BRONZE: 0, SILVER: 1, GOLD: 2, PLATINUM: 3 };
+// Presentation only. Thresholds, discounts and perks come from the API; this
+// map just gives each named tier its glyph, because the database does not
+// store one. An unknown tier still renders, with a neutral medal.
+const TIER_GLYPH = { BRONZE: '\u{1F949}', SILVER: '\u{1F948}', GOLD: '\u{1F947}', PLATINUM: '\u{1F48E}' };
+
+const titleCase = (name) =>
+  String(name ?? '').charAt(0) + String(name ?? '').slice(1).toLowerCase();
+
+/** Turns a LoyaltyTier row into what the ladder cards need to render. */
+function toLadderEntry(tier) {
+  const perks = tier?.perks && typeof tier.perks === 'object' ? tier.perks : {};
+  const discount = Number(tier?.discountPercent ?? 0);
+  const perkText =
+    perks.description ??
+    perks.perk ??
+    (discount > 0 ? `${discount}% off bookings` : 'Standard booking rates');
+  return {
+    name: tier?.name ?? '',
+    label: titleCase(tier?.name),
+    glyph: TIER_GLYPH[tier?.name] ?? '\u{1F3C5}',
+    points: Number(tier?.minPoints ?? 0) === 0
+      ? '0 pts \u00b7 Starter'
+      : `${Number(tier.minPoints).toLocaleString('en-BD')} pts`,
+    perk: perkText,
+  };
+}
 
 const EARN_WAYS = [
   { id: 'book', glyph: '⚽', label: 'Book a turf', points: '৳1 = 1 pt' },
@@ -74,11 +89,13 @@ export default function RewardsPage() {
 
   const points = useApi(() => (signedIn ? getMyPoints() : Promise.resolve(null)), [signedIn]);
   const products = useApi(() => getRewardProducts(), []);
+  const tiers = useApi(() => getRewardTiers(), []);
   const activity = useApi(() => (signedIn ? getRewardActivity(30) : Promise.resolve([])), [signedIn]);
 
   const reloadAll = () => {
     points.reload();
     products.reload();
+    tiers.reload();
     activity.reload();
   };
 
@@ -96,7 +113,7 @@ export default function RewardsPage() {
     }
   };
 
-  const loading = points.loading || products.loading || activity.loading;
+  const loading = points.loading || products.loading || tiers.loading || activity.loading;
   // A rejected token just means the session lapsed mid-read: fall back to the
   // visitor view instead of blanking a page that is mostly public.
   const error = products.error ?? [points.error, activity.error].find((e) => e && e.status !== 401) ?? null;
@@ -134,8 +151,12 @@ export default function RewardsPage() {
   }
 
   const summary = points.data;
-  const currentTierMeta = TIER_LADDER.find((t) => t.name === summary?.currentTier?.name) ?? TIER_LADDER[0];
-  const currentOrder = TIER_ORDER[currentTierMeta.name] ?? 0;
+  const tierLadder = (Array.isArray(tiers.data) ? tiers.data : []).map(toLadderEntry);
+  const currentIndex = Math.max(
+    0,
+    tierLadder.findIndex((t) => t.name === summary?.currentTier?.name),
+  );
+  const currentTierMeta = tierLadder[currentIndex] ?? toLadderEntry(summary?.currentTier);
   const nextTier = summary?.nextTier;
   const atTopTier = Boolean(summary) && !nextTier;
   const progressPercent = atTopTier ? 100 : (summary?.progressPercent ?? 0);
@@ -212,7 +233,7 @@ export default function RewardsPage() {
                     </span>
                     {!atTopTier ? (
                       <span className="tp-mark" style={{ left: '100%' }} aria-hidden="true">
-                        {TIER_LADDER.find((t) => t.name === nextTier.name)?.glyph}
+                        {tierLadder.find((t) => t.name === nextTier.name)?.glyph}
                       </span>
                     ) : null}
                   </div>
@@ -250,10 +271,9 @@ export default function RewardsPage() {
             <span className="subtle small">Benefits grow as you climb</span>
           </SectionTitle>
           <div className="grid3" style={{ alignItems: 'start' }}>
-            {TIER_LADDER.map((tier) => {
-              const order = TIER_ORDER[tier.name];
-              const isCurrent = Boolean(summary) && order === currentOrder;
-              const isLocked = Boolean(summary) && order > currentOrder;
+            {tierLadder.map((tier, order) => {
+              const isCurrent = Boolean(summary) && order === currentIndex;
+              const isLocked = Boolean(summary) && order > currentIndex;
               const badge = isCurrent
                 ? { tone: 'green', label: 'Current tier' }
                 : isLocked
@@ -319,7 +339,7 @@ export default function RewardsPage() {
               <div className="glass glass-card redeem-card" key={product.id}>
                 <div className="rc-top">
                   <span className="rc-ico">{REWARD_KIND_GLYPH[product.kind] ?? '🎁'}</span>
-                  <h4>{product.name}</h4>
+                  <h3>{product.name}</h3>
                 </div>
                 <div className="rc-cost">
                   {formatNumber(product.costPoints)} <small>pts</small>

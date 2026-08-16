@@ -1,11 +1,10 @@
 import { Fragment } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
-import { pitchColumns, pitchSchedule } from '@/data/tournaments';
 import { useApi } from '@/hooks/useApi';
+import { useHostTournamentCode } from './useHostTournamentCode';
 import {
-  DEMO_TOURNAMENT_CODE,
   getTournament,
   reserveSlots,
   bdt,
@@ -38,9 +37,8 @@ const formatLabel = (format) => (format ? format.replaceAll('_', '-') : '');
 
 export default function MultiPitchPage() {
   const { showToast } = useToast();
-  const [params] = useSearchParams();
-  const code = params.get('code') ?? DEMO_TOURNAMENT_CODE;
-  const tournament = useApi(() => getTournament(code), [code]);
+  const { code } = useHostTournamentCode();
+  const tournament = useApi(() => (code ? getTournament(code) : Promise.resolve(null)), [code]);
   const live = tournament.data;
   const venueSlug = live?.venueSlug;
   const venue = useApi(
@@ -112,7 +110,7 @@ export default function MultiPitchPage() {
           <div className="alert warn" style={{ marginBottom: 12 }}>
             <span className="ico">⚠️</span>
             <div className="tiny">
-              Couldn’t load the live schedule — showing sample content.{' '}
+              Couldn’t load this tournament’s schedule.{' '}
               <button className="btn btn-sm btn-tertiary" type="button" onClick={tournament.reload}>
                 Retry
               </button>
@@ -123,7 +121,7 @@ export default function MultiPitchPage() {
         <div className="between" style={{ flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
           <div>
             <h1 style={{ fontSize: 22, marginBottom: 2 }}>
-              {live ? `${live.venueName} · ${formatDate(live.date)}` : 'Mirpur Sports City · Sat 23 Aug'}
+              {live ? `${live.venueName} · ${formatDate(live.date)}` : 'Multi-pitch booking'}
             </h1>
             <span className="subtle small">Select slots across pitches — or grab the full-day bundle</span>
           </div>
@@ -173,33 +171,10 @@ export default function MultiPitchPage() {
               ))}
             </div>
           ) : (
-            <div className="cal-grid p4" style={{ minWidth: 860 }}>
-              <div className="cal-head" />
-              {pitchColumns.map((column) => (
-                <div className="cal-head" key={column}>
-                  {column}
-                </div>
-              ))}
-              {pitchSchedule.map((row) => (
-                <Fragment key={row.time}>
-                  <div className="cal-time num">{row.time}</div>
-                  {row.cells.map((cell) => (
-                    <div className="cal-cell" key={cell.id}>
-                      {cell.kind === 'ev' ? (
-                        <div className={`cal-ev ${cell.tone}`}>{cell.label}</div>
-                      ) : (
-                        <button
-                          className={cell.kind === 'sel' ? 'selcell' : 'addcell'}
-                          type="button"
-                          onClick={() => showToast(cell.toast)}
-                        >
-                          {cell.label}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </Fragment>
-              ))}
+            <div className="center subtle" style={{ padding: '48px 16px' }}>
+              {tournament.loading || venue.loading
+                ? 'Loading the pitch timeline…'
+                : 'No pitch timeline to show for this tournament yet.'}
             </div>
           )}
         </div>

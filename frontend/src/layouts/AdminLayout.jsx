@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { Icon } from '@/components/common/Icon';
@@ -8,7 +8,9 @@ import { ThemeToggle } from '@/components/buttons/ThemeToggle';
 import { Topbar } from '@/components/navigation/Topbar';
 import { Overlay } from '@/components/modals/Overlay';
 import { Badge } from '@/components/ui/Badge';
-import { adminAlerts } from '@/data/admin';
+import { getNotifications, getUnreadCount, markAllRead as markAllNotificationsRead, markRead as markNotificationRead } from '@/api/notifications';
+import { useApi } from '@/hooks/useApi';
+import { useToast } from '@/hooks/useToast';
 import { clearSession, getUser } from '@/api/client';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { cn } from '@/utils/cn';
@@ -27,6 +29,7 @@ const fallbackInitials = (name) => {
 /** Super-admin console shell: full-bleed glass topbar + alert drawer. */
 export function AdminLayout() {
   const [, forceRender] = useReducer((x) => x + 1, 0);
+  const { showToast } = useToast();
   useEffect(() => {
     const handler = () => forceRender();
     window.addEventListener('turfchai:session-change', handler);
@@ -36,12 +39,28 @@ export function AdminLayout() {
   const adminInitials =
     sessionAdmin?.avatarInitials || fallbackInitials(sessionAdmin?.fullName);
   const alerts = useDisclosure(false);
-  const [readIds, setReadIds] = useState(() => new Set());
-  const unreadCount = adminAlerts.filter((alert) => !readIds.has(alert.id)).length;
-  const allRead = readIds.size >= adminAlerts.length;
+  const notificationsApi = useApi(getNotifications, []);
+  const unreadApi = useApi(getUnreadCount, []);
+  const adminAlerts = Array.isArray(notificationsApi.data) ? notificationsApi.data : [];
+  const unreadCount = unreadApi.data?.count ?? 0;
+  const allRead = adminAlerts.length === 0 || adminAlerts.every((alert) => alert.isRead);
 
-  const markRead = (id) => setReadIds((prev) => new Set(prev).add(id));
-  const markAllRead = () => setReadIds(new Set(adminAlerts.map((alert) => alert.id)));
+  const refreshAlerts = () => {
+    notificationsApi.reload();
+    unreadApi.reload();
+  };
+
+  const markRead = (id) => {
+    markNotificationRead(id)
+      .then(refreshAlerts)
+      .catch(() => showToast('Could not mark that alert as read.'));
+  };
+
+  const markAllRead = () => {
+    markAllNotificationsRead()
+      .then(refreshAlerts)
+      .catch(() => showToast('Could not mark the alerts as read.'));
+  };
 
   return (
     <>
@@ -109,22 +128,21 @@ export function AdminLayout() {
                 <button
                   key={alert.id}
                   type="button"
-                  className={cn('alert-item', `tone-${alert.tone}`, readIds.has(alert.id) && 'read')}
+                  className={cn('alert-item', 'tone-blue', alert.isRead && 'read')}
                   style={{ animationDelay: `${index * 55}ms` }}
                   onClick={() => markRead(alert.id)}
                 >
                   <span className="alert-item-icon">
-                    <Icon name={ALERT_ICONS[alert.tone] ?? 'alert'} />
+                    <Icon name="alert" />
                   </span>
                   <span className="alert-item-body">
                     <span className="alert-item-title">
                       <b>{alert.title}</b>
-                      <Badge tone={alert.tone}>{alert.label}</Badge>
                     </span>
                     <span className="alert-item-text">{alert.body}</span>
                     <span className="alert-item-meta">
-                      {!readIds.has(alert.id) && <span className="alert-item-dot" aria-hidden="true" />}
-                      {alert.when}
+                      {!alert.isRead && <span className="alert-item-dot" aria-hidden="true" />}
+                      {alert.createdAt ? new Date(alert.createdAt).toLocaleString() : ''}
                     </span>
                   </span>
                 </button>

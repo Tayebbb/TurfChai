@@ -13,7 +13,9 @@ import { getSavedVenues, toggleSavedVenue } from '@/api/players';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useFilterChips } from '@/hooks/useFilterChips';
+import { useSession } from '@/hooks/useSession';
 import { useToast } from '@/hooks/useToast';
+import { toUserMessage } from '@/utils/errorMessage';
 import { paths } from '@/routes/paths';
 import './ExplorePage.css';
 
@@ -179,7 +181,7 @@ export default function ExplorePage() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Live search; falls back to the sample list when the API is unreachable.
+  // Live search only; an unreachable API yields the empty state, not a stand-in list.
   const nearKey = near ? `${near.lat},${near.lng},${near.radiusKm}` : '';
   const search = useApi(
     () =>
@@ -193,13 +195,15 @@ export default function ExplorePage() {
       }),
     [debouncedQuery, page, JSON.stringify(filterParams), nearKey],
   );
-  const venues = search.data ? search.data.items.map(toExploreCard) : [];
+  // A response without an `items` array (an error envelope, a shape change)
+  // used to throw here rather than fall through to the empty state.
+  const venues = Array.isArray(search.data?.items) ? search.data.items.map(toExploreCard) : [];
   const totalPages = search.data?.totalPages ?? 1;
   const totalItems = search.data?.totalItems ?? venues.length;
 
   const mapMarkers = useMemo(
     () =>
-      (search.data?.items ?? [])
+      (Array.isArray(search.data?.items) ? search.data.items : [])
         .filter((venue) => venue.lat != null && venue.lng != null)
         .map((venue) => ({
           id: venue.slug,
@@ -264,17 +268,21 @@ export default function ExplorePage() {
   };
 
   // Saved-venue bookmarks (heart buttons); non-fatal if the API is down.
+  const { signedIn } = useSession();
   const [savedSlugs, setSavedSlugs] = useState(() => new Set());
   useEffect(() => {
+    // Bookmarks belong to a caller. Asking for them while signed out returned
+    // 401, and the client treats a 401 as "session over" and clears it.
+    if (!signedIn) return;
     getSavedVenues()
-      .then((items) => setSavedSlugs(new Set(items.map((item) => item.slug))))
+      .then((items) => setSavedSlugs(new Set((Array.isArray(items) ? items : []).map((item) => item.slug))))
       .catch(() => {});
-  }, []);
+  }, [signedIn]);
 
   const onToggleSave = async (event, venue) => {
     event.preventDefault(); // heart sits inside the venue card link
-    if (!search.data) {
-      showToast('Saving is unavailable while offline');
+    if (!signedIn) {
+      showToast('Sign in to save venues');
       return;
     }
     try {
@@ -286,8 +294,8 @@ export default function ExplorePage() {
         return next;
       });
       showToast(saved ? `❤️ Saved ${venue.name}` : `Removed ${venue.name} from saved`);
-    } catch {
-      showToast('Could not update saved venues — try again');
+    } catch (error) {
+      showToast(toUserMessage(error, 'Could not update saved venues.'));
     }
   };
 
@@ -295,6 +303,7 @@ export default function ExplorePage() {
     <>
       <PageTitle title="Explore Venues" />
       <main className="wrap" style={{ paddingTop: 24, paddingBottom: 24 }} id="main">
+        <h1 className="sr-only">Explore venues</h1>
         {/* ── Single-door search context + filters ── */}
         <div className="search-bar-row">
           <label className="search-context-pill" htmlFor="venue-search" aria-label="Search venues">
@@ -350,17 +359,30 @@ export default function ExplorePage() {
         <p className="results-meta" role="status">
           {search.loading
             ? 'Searching venues…'
-            : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by ${
-                near ? `distance from you (within ${near.radiusKm} km)` : 'rating'
-              }`}
-          {search.error ? ' · live results unavailable, showing samples' : ''}
+            : search.error
+              ? 'Could not load venues.'
+              : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by ${
+                  near ? `distance from you (within ${near.radiusKm} km)` : 'rating'
+                }`}
         </p>
 
         {/* ── Split: list + map ── */}
         <div className="split">
           <div className="stack">
             {search.loading ? <SkeletonList count={4} height={180} /> : null}
-            {!search.loading && venues.length === 0 ? (
+            {!search.loading && search.error ? (
+              // The old copy said "showing samples" while rendering nothing.
+              <div className="card" style={{ padding: 20 }}>
+                <b>Could not load venues</b>
+                <p className="subtle small" style={{ margin: '6px 0 12px' }}>
+                  {toUserMessage(search.error, 'Please try again.')}
+                </p>
+                <Button size="sm" variant="secondary" onClick={search.reload}>
+                  Try again
+                </Button>
+              </div>
+            ) : null}
+            {!search.loading && !search.error && venues.length === 0 ? (
               <div className="alert-nudge">
                 <p className="small" style={{ margin: 0, color: 'var(--text-2)' }}>
                   {near

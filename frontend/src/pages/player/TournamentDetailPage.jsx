@@ -14,6 +14,7 @@ import {
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
+import { getToken } from '@/api/client';
 import { paths } from '@/routes/paths';
 import { DashCard, DashEmpty, DashError, DashSkeleton } from './dashboard/DashboardKit';
 import './TournamentDetailPage.css';
@@ -47,7 +48,12 @@ export default function TournamentDetailPage() {
   const [withdrawing, setWithdrawing] = useState(false);
 
   const detail = useApi(() => getTournamentDetail(code), [code]);
-  const mine = useApi(() => getMyTournaments(), [code]);
+  // The bracket itself is public; "am I registered?" is not.
+  const signedIn = Boolean(getToken());
+  const mine = useApi(
+    () => (signedIn ? getMyTournaments() : Promise.resolve([])),
+    [code, signedIn],
+  );
 
   const tournament = detail.data;
   const myCard = mine.data?.find((card) => card.code === code) ?? null;

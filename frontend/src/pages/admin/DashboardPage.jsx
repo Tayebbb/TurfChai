@@ -6,56 +6,13 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
-import { listPayouts } from '@/api/payouts';
+import { getPayoutSummary } from '@/api/payouts';
 import { api, getUser } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
+import { downloadCsv } from '@/utils/deviceActions';
 import './DashboardPage.css';
 
 const GRID_COLOR = 'rgba(255,255,255,0.06)';
-
-/** GMV / booking series keyed by timeframe then by year, as in the prototype. */
-const EARNINGS_DATA = {
-  monthly: {
-    2026: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
-      gmv: [3820000, 4150000, 4400000, 4780000, 5100000, 5350000, 5600000, 5920000],
-      bookings: [14200, 15400, 16100, 17500, 18900, 19800, 20700, 21900],
-      growth: '+24.6%',
-    },
-    2025: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-      gmv: [2400000, 2650000, 2900000, 3100000, 3350000, 3500000, 3680000, 3800000, 3950000, 4100000, 4300000, 4600000],
-      bookings: [9100, 10200, 11000, 11800, 12600, 13100, 13800, 14200, 14900, 15500, 16300, 17400],
-      growth: '+31.2%',
-    },
-    2024: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-      gmv: [1200000, 1350000, 1500000, 1650000, 1800000, 1950000, 2100000, 2200000, 2300000, 2450000, 2600000, 2800000],
-      bookings: [4500, 5100, 5700, 6300, 6900, 7400, 8000, 8400, 8800, 9300, 9900, 10600],
-      growth: '+45.0%',
-    },
-  },
-  weekly: {
-    2026: {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      gmv: [680000, 720000, 790000, 840000, 1150000, 1420000, 1320000],
-      bookings: [2500, 2700, 2950, 3100, 4300, 5400, 4900],
-      growth: '+18.2%',
-    },
-    2025: {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      gmv: [480000, 520000, 590000, 640000, 850000, 1020000, 950000],
-      bookings: [1800, 1950, 2200, 2400, 3200, 3900, 3600],
-      growth: '+14.5%',
-    },
-    2024: {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      gmv: [280000, 310000, 340000, 380000, 510000, 650000, 600000],
-      bookings: [1100, 1200, 1300, 1450, 1900, 2400, 2250],
-      growth: '+22.0%',
-    },
-  },
-};
 
 const TIMEFRAMES = [
   { id: 'monthly', label: 'Monthly View' },
@@ -143,21 +100,26 @@ export default function DashboardPage() {
     [series],
   );
 
-  const { data: payoutsList } = useApi(() => listPayouts('SETTLED'), []);
+  // Totals only. Fetching every settled payout to add up one column pulled
+  // 175 KB into the dashboard on each visit.
+  const { data: payoutSummaryRes } = useApi(() => getPayoutSummary(), []);
+  const payoutSummary = payoutSummaryRes?.data ?? payoutSummaryRes;
 
   const totals = useMemo(() => {
     const gmv = series.totalGmv || 0;
     const bookings = series.totalBookings || 0;
-    const realPayouts = payoutsList?.reduce((sum, p) => sum + p.netAmount, 0) || Math.round(gmv * 0.9);
+    // Only settled payouts count. Falling back to a percentage of GMV used to
+    // display an invented figure as "disbursed payouts".
+    const settledPayouts = Number(payoutSummary?.settledAmount) || 0;
     return {
       gmv,
       bookings,
       fee: Math.round(gmv * 0.1),
-      payouts: realPayouts,
+      payouts: settledPayouts,
       aov: bookings > 0 ? Math.round(gmv / bookings) : 0,
       growth: series.growthPercent || '+0.0%'
     };
-  }, [series, payoutsList]);
+  }, [series, payoutSummary?.settledAmount]);
 
   const { data: growthRes } = useApi(() => api('/admin/analytics/growth'), []);
   const growthDto = growthRes?.data || growthRes;
@@ -270,7 +232,35 @@ export default function DashboardPage() {
           <button
             className="glass-pill"
             type="button"
-            onClick={() => showToast('Executive PDF Report exported 📊')}
+            onClick={() => {
+              downloadCsv(
+                `platform-overview-${year}-${timeframe}.csv`,
+                ['Section', 'Metric', 'Value'],
+                [
+                  ['Totals', 'GMV', totals.gmv],
+                  ['Totals', 'Bookings', totals.bookings],
+                  ['Totals', 'Platform fee', totals.fee],
+                  ['Totals', 'Payouts', totals.payouts],
+                  ['Totals', 'Average order value', totals.aov],
+                  ['Totals', 'Growth', totals.growth],
+                  ['Platform', 'Pending requests', pendingRequestsCount],
+                  ['Platform', 'Active turfs', activeTurfsCount],
+                  ['Platform', 'Registered users', registeredUsersCount],
+                  ['Platform', 'Admin accounts', adminAccountsCount],
+                  ...(series.labels || []).map((label, index) => [
+                    `GMV by ${timeframe}`,
+                    label,
+                    series.gmv?.[index] ?? '',
+                  ]),
+                  ...breakdownLegend.map((segment) => [
+                    'User segments',
+                    segment.name,
+                    `${segment.count} (${segment.share})`,
+                  ]),
+                ],
+              );
+              showToast('Platform report downloaded \u2713');
+            }}
           >
             <Icon name="download" />
             Export Report
@@ -314,8 +304,8 @@ export default function DashboardPage() {
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
               <CountUp to={activeTurfsCount} delay={120} />
             </b>
-            <span className="delta up" style={{ fontSize: 12 }}>
-              ▲ Venues on platform
+            <span className="delta" style={{ fontSize: 12 }}>
+              Venues on platform
             </span>
           </div>
           <Link className="btn btn-sm btn-secondary btn-link" to={paths.admin.turfs}>
@@ -334,8 +324,8 @@ export default function DashboardPage() {
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
               <CountUp to={registeredUsersCount} delay={240} />
             </b>
-            <span className="delta up" style={{ fontSize: 12 }}>
-              ▲ Cumulative user base
+            <span className="delta" style={{ fontSize: 12 }}>
+              Cumulative user base
             </span>
           </div>
           <Link className="btn btn-sm btn-secondary btn-link" to={paths.admin.users}>
@@ -445,8 +435,12 @@ export default function DashboardPage() {
               >
                 {formatBdtIn(totals.gmv)}
               </b>
-              <span className="tiny delta up" style={{ display: 'inline-block', marginTop: 4 }}>
-                ▲ {totals.growth} vs prev period
+              {/* The arrow used to be hardcoded up, so a decline still read as growth. */}
+              <span
+                className={`tiny delta ${String(totals.growth).trim().startsWith('-') ? 'down' : 'up'}`}
+                style={{ display: 'inline-block', marginTop: 4 }}
+              >
+                {String(totals.growth).trim().startsWith('-') ? '▼' : '▲'} {totals.growth} vs prev period
               </span>
             </div>
 

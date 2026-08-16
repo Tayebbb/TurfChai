@@ -4,19 +4,38 @@ import { Button } from '@/components/buttons/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Input } from '@/components/forms/Field';
 import { PageTitle } from '@/components/common/PageTitle';
+import { TableScroll } from '@/components/tables/TableScroll';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { useApi } from '@/hooks/useApi';
-import { getOwnerBookings } from '@/api/ownerBookings';
+import {
+  approveOwnerBooking,
+  cancelOwnerBooking,
+  getOwnerBookings,
+  refundOwnerBooking,
+} from '@/api/ownerBookings';
 import { listMyVenues } from '@/api/ownerVenues';
 import { getMyTurfRequests } from '@/api/turfRequests';
+import { paths } from '@/routes/paths';
+import { toUserMessage } from '@/utils/errorMessage';
+
+const PAGE_SIZE = 20;
+
+const ACTION_HANDLERS = {
+  approve: { run: approveOwnerBooking, done: 'Booking approved ✓' },
+  cancel: { run: cancelOwnerBooking, done: 'Booking cancelled — slot released' },
+  refund: { run: refundOwnerBooking, done: 'Refund recorded per your cancellation policy' },
+};
 
 export default function BookingsPage() {
   const { showToast } = useToast();
   const chips = useFilterChips(['Today']);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  // One in-flight action per row: a second click must not fire a second write.
+  const [busyId, setBusyId] = useState(null);
 
-  const { data: res, loading } = useApi(getOwnerBookings, []);
+  const { data: res, loading, reload } = useApi(getOwnerBookings, []);
   const bookings = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
 
   const { data: venuesRes } = useApi(listMyVenues, []);
@@ -40,11 +59,30 @@ export default function BookingsPage() {
   ];
 
   const term = query.trim().toLowerCase();
-  const visible = term
+  const matching = term
     ? bookings.filter((row) =>
         `${row.customer} ${row.sub} ${row.bookingCode} ${row.pitch}`.toLowerCase().includes(term),
       )
     : bookings;
+
+  const totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const visible = matching.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
+  const runAction = async (row, action) => {
+    const handler = ACTION_HANDLERS[action];
+    if (!handler || busyId != null) return;
+    setBusyId(row.id);
+    try {
+      await handler.run(row.id);
+      showToast(handler.done);
+      reload();
+    } catch (error) {
+      showToast(toUserMessage(error, 'Could not complete that action.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <>
@@ -55,7 +93,7 @@ export default function BookingsPage() {
           <h1>Bookings</h1>
           <span className="subtle small">All sources · searchable &amp; filterable ({pitchCount} Pitch{pitchCount > 1 ? 'es' : ''})</span>
         </div>
-        <Button variant="primary" onClick={() => showToast('Manual booking drawer — see Calendar page')}>
+        <Button variant="primary" to={paths.owner.calendar}>
           + Manual booking
         </Button>
       </div>
@@ -75,7 +113,7 @@ export default function BookingsPage() {
         ))}
       </div>
 
-      <div className="card table-wrap" style={{ padding: 0 }}>
+      <TableScroll label="Bookings" className="card" style={{ padding: 0 }}>
         <table className="table">
           <thead>
             <tr>
@@ -91,7 +129,7 @@ export default function BookingsPage() {
           </thead>
           <tbody>
             {visible.map((row) => (
-              <tr key={row.id} style={row.dim ? { opacity: 0.65 } : undefined}>
+              <tr key={row.id} style={row.dim ? { background: 'var(--surface-2)' } : undefined}>
                 <td className="num">{row.time}</td>
                 <td className="num">{row.bookingCode}</td>
                 <td>
@@ -110,30 +148,21 @@ export default function BookingsPage() {
                   <Badge tone={row.payment.tone}>{row.payment.text}</Badge>
                 </td>
                 <td>
-                  {row.actions?.length > 1 ? (
+                  {row.actions?.length ? (
                     <div className="row" style={{ gap: 6 }}>
                       {row.actions.map((action) => (
                         <Button
                           key={action.label}
                           size="sm"
                           variant={action.variant}
-                          onClick={() => showToast(action.toast)}
+                          disabled={busyId != null}
+                          onClick={() => runAction(row, action.action)}
                         >
-                          {action.label}
+                          {busyId === row.id ? 'Working…' : action.label}
                         </Button>
                       ))}
                     </div>
-                  ) : (
-                    row.actions?.length === 1 && (
-                      <Button
-                        size="sm"
-                        variant={row.actions[0].variant}
-                        onClick={() => showToast(row.actions[0].toast)}
-                      >
-                        {row.actions[0].label}
-                      </Button>
-                    )
-                  )}
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -153,14 +182,27 @@ export default function BookingsPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
       <div className="between small" style={{ marginTop: 10 }}>
-        <span className="subtle">Showing {visible.length} bookings today</span>
+        <span className="subtle">
+          Showing {visible.length} of {matching.length} booking{matching.length === 1 ? '' : 's'}
+          {totalPages > 1 ? ` · page ${safePage + 1} of ${totalPages}` : ''}
+        </span>
         <div className="row">
-          <Button size="sm" variant="tertiary" onClick={() => showToast('Previous page')}>
+          <Button
+            size="sm"
+            variant="tertiary"
+            disabled={safePage === 0}
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+          >
             ‹ Prev
           </Button>
-          <Button size="sm" variant="tertiary" onClick={() => showToast('Next page')}>
+          <Button
+            size="sm"
+            variant="tertiary"
+            disabled={safePage >= totalPages - 1}
+            onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+          >
             Next ›
           </Button>
         </div>

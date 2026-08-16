@@ -1,18 +1,25 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { getMyProfile } from '@/api/players';
-import { getUser } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
+import { useSession } from '@/hooks/useSession';
 import { paths } from '@/routes/paths';
 import { DASHBOARD_SECTIONS, profileCompletion } from './sections';
 import './DashboardLayout.css';
 
 export default function DashboardLayout() {
-  const me = useApi(() => getMyProfile(), []);
-  const localUser = getUser();
-  const fullName = localUser?.fullName || me.data?.fullName || 'Player';
-  const profile = me.data ? { ...me.data, fullName } : localUser;
+  const session = useSession();
+  // Preferences (skill level, sports, times) only exist on the player profile,
+  // and only this dashboard and onboarding read them — so it is fetched here
+  // rather than on every page in the app.
+  const playerApi = useApi(
+    () => (session.signedIn ? getMyProfile() : Promise.resolve(null)),
+    [session.signedIn],
+  );
+  const profile = playerApi.data ? { ...session.user, ...playerApi.data } : session.user;
+  const fullName = profile?.fullName || 'Player';
   const completion = profileCompletion(profile);
+  const profileState = { loading: playerApi.loading, error: playerApi.error, reload: playerApi.reload };
 
   const initials =
     (fullName ?? '').split(/\s+/).filter(Boolean).length === 1
@@ -34,7 +41,7 @@ export default function DashboardLayout() {
               {initials || '·'}
             </span>
             <div className="dash-me-text">
-              <b>{profile?.fullName ?? (me.loading ? 'Loading…' : 'Your profile')}</b>
+              <b>{profile?.fullName ?? (session.loading ? 'Loading…' : 'Your profile')}</b>
               <span>{profile?.area ?? ''}</span>
             </div>
           </div>
@@ -74,7 +81,7 @@ export default function DashboardLayout() {
         </aside>
 
         <main className="dash-main">
-          <Outlet context={{ profile, completion, profileState: me }} />
+          <Outlet context={{ profile, completion, profileState }} />
         </main>
       </div>
     </>

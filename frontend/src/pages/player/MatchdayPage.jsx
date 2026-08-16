@@ -29,6 +29,7 @@ function MatchdayShell({ children }) {
         id="main"
         style={{ paddingTop: 28, paddingBottom: 80 }}
       >
+        <h1 className="sr-only">Match day</h1>
         {children}
       </main>
     </>

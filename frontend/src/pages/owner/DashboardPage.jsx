@@ -4,36 +4,93 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/buttons/Button';
 import { KpiCard } from '@/components/cards/KpiCard';
 import { Card, GlassCard } from '@/components/cards/Card';
+import { Input } from '@/components/forms/Field';
 import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Progress } from '@/components/ui/Progress';
-import { getMyProfile } from '@/api/players';
 import { getOwnerAnalytics } from '@/api/ownerAnalytics';
+import { getOwnerBookings } from '@/api/ownerBookings';
+import { checkInBooking } from '@/api/bookings';
 import { listMyVenues } from '@/api/ownerVenues';
 import { getMyTurfRequests } from '@/api/turfRequests';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { useSession } from '@/hooks/useSession';
 import { useToast } from '@/hooks/useToast';
+import { toUserMessage } from '@/utils/errorMessage';
 import { paths } from '@/routes/paths';
 import { useState } from 'react';
 import './DashboardPage.css';
+
+/** The greeting was hardcoded to "Good evening" regardless of the clock. */
+function greeting(now = new Date()) {
+  const hour = now.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function DashboardPage() {
   const { showToast } = useToast();
   const scanner = useDisclosure(false);
   const [scanResult, setScanResult] = useState(null);
+  const [ticketRef, setTicketRef] = useState('');
+  const [checkingIn, setCheckingIn] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState(null);
 
-  /** Simulated gate scan: `ok` matches the current slot, `bad` is a slot mismatch. */
-  function simulateScan(result) {
-    setScanResult(result);
-    showToast(
-      result === 'ok' ? '✅ Checked in — attendance registered' : '⛔ QR does not match this slot',
+  const { data: bookingsRes, reload: reloadBookings } = useApi(getOwnerBookings, []);
+  const ownerBookings = Array.isArray(bookingsRes)
+    ? bookingsRes
+    : (Array.isArray(bookingsRes?.data) ? bookingsRes.data : []);
+
+  /**
+   * Real gate check-in. This used to be two "Simulate scan" buttons that
+   * toasted "attendance registered" without contacting the server, quoting
+   * booking references that do not exist.
+   */
+  async function checkInTicket(event) {
+    event.preventDefault();
+    const typed = ticketRef.trim();
+    if (!typed || checkingIn) return;
+
+    // The ticket QR encodes a booking-detail URL, so a pasted link works too.
+    const reference = typed.split('/').filter(Boolean).pop() ?? typed;
+    const match = ownerBookings.find(
+      (row) =>
+        String(row.bookingCode ?? '').toLowerCase() === reference.toLowerCase() ||
+        String(row.id) === reference,
     );
+
+    if (!match) {
+      setScanResult({ tone: 'danger', title: 'No such booking at your venue', body: `"${reference}" does not match any booking on your pitches.` });
+      return;
+    }
+
+    setCheckingIn(true);
+    try {
+      await checkInBooking(match.id);
+    } catch (error) {
+      setScanResult({
+        tone: 'danger',
+        title: 'Check-in refused',
+        body: toUserMessage(error, 'The server would not record this check-in.'),
+      });
+      return;
+    } finally {
+      setCheckingIn(false);
+    }
+
+    setScanResult({
+      tone: 'ok',
+      title: `Checked in — ${match.bookingCode ?? match.id}`,
+      body: `${match.customer ?? 'Player'} · ${match.pitch ?? 'Pitch'} · ${match.time ?? ''}`.trim(),
+    });
+    setTicketRef('');
+    reloadBookings();
+    showToast('Attendance registered');
   }
 
-  const profileApi = useApi(() => getMyProfile(), []);
-  const owner = profileApi.data;
+  const { user: owner } = useSession();
 
   const { data: venuesRes } = useApi(listMyVenues, [], { intervalMs: 30000 });
   const venues = venuesRes?.data || venuesRes || [];
@@ -63,6 +120,16 @@ export default function DashboardPage() {
   const NEXT_UP = Array.isArray(analyticsData.nextUp) ? analyticsData.nextUp : [];
   const ACTIVITY = Array.isArray(analyticsData.activity) ? analyticsData.activity : [];
   const ATTENTION = Array.isArray(analyticsData.attention) ? analyticsData.attention : [];
+  const WEEKLY = analyticsData.weekly ?? {};
+
+  const channelTotal = Number(WEEKLY.onlineBookings ?? 0) + Number(WEEKLY.manualBookings ?? 0);
+  const weekOnWeek = (() => {
+    const previous = Number(WEEKLY.previousRevenue ?? 0);
+    const current = Number(WEEKLY.revenue ?? 0);
+    if (previous === 0) return current === 0 ? 'No takings in either week' : 'No takings the week before';
+    const change = Math.round(((current - previous) / previous) * 100);
+    return `${change >= 0 ? '+' : ''}${change}% vs the previous 7 days`;
+  })();
 
   let requestPhotos = [];
   if (latestRequest?.photosJson) {
@@ -177,9 +244,11 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="main-header" style={isPendingVerification ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
+      <div className="main-header">
         <div>
-          <h1>Good evening, {owner?.name ?? 'Owner'} 🏟️</h1>
+          <h1>
+            {greeting()}, {owner?.fullName || 'there'} 🏟️
+          </h1>
           <span className="subtle small">
             {activeVenue ? `${activeVenue.name} · ${activeVenue.area} · ` : (latestRequest ? `${latestRequest.venueName} · ` : 'My Venue · ')}
             <Badge tone={isPendingVerification ? 'amber' : 'green'}>{isPendingVerification ? 'Pending Approval' : 'Live'}</Badge>
@@ -208,7 +277,7 @@ export default function DashboardPage() {
         <div className="stack">
           <section className="card">
             <div className="between" style={{ marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Next up on your pitches</h3>
+                <h2 style={{ margin: 0, fontSize: 16 }}>Next up on your pitches</h2>
               <Link className="btn btn-sm btn-tertiary" to={paths.owner.calendar}>
                 View schedule →
               </Link>
@@ -227,11 +296,7 @@ export default function DashboardPage() {
                       <Button size="sm" variant={row.action.variant} to={row.action.to}>
                         {row.action.label}
                       </Button>
-                    ) : (
-                      <Button size="sm" variant={row.action.variant} onClick={() => showToast(row.action.toast)}>
-                        {row.action.label}
-                      </Button>
-                    )}
+                    ) : null}
                   </div>
                 ))}
                 {!loading && NEXT_UP.length === 0 && <div className="tiny subtle center">No upcoming slots</div>}
@@ -264,7 +329,8 @@ export default function DashboardPage() {
           <section className="card">
             <div className="between" style={{ marginBottom: 12 }}>
               <h3 style={{ margin: 0 }}>Needs attention</h3>
-              <span className="countpill">3</span>
+              {/* The pill was a literal 3, sitting above an empty list. */}
+              {ATTENTION.length > 0 ? <span className="countpill">{ATTENTION.length}</span> : null}
             </div>
             <div className="stack-sm">
               {ATTENTION.map((item) => (
@@ -278,80 +344,86 @@ export default function DashboardPage() {
           </section>
 
           <section className="card">
-            <h3 style={{ marginBottom: 12 }}>Weekly performance</h3>
+            <h3 style={{ marginBottom: 12 }}>Last 7 days</h3>
             <div className="stack-sm">
               <div>
                 <div className="between small">
-                  <span className="muted">Revenue goal</span>
-                  <b className="num">৳96,700 / ৳110,000 (88%)</b>
+                  <span className="muted">Takings</span>
+                  <b className="num">৳{Number(WEEKLY.revenue ?? 0).toLocaleString('en-BD')}</b>
                 </div>
-                <Progress value={88} label="Revenue goal" />
+                <span className="tiny subtle">{weekOnWeek}</span>
               </div>
               <div>
                 <div className="between small">
-                  <span className="muted">Occupancy rate</span>
-                  <b className="num">68%</b>
+                  <span className="muted">Occupancy</span>
+                  <b className="num">
+                    {WEEKLY.occupancyPercent == null ? '—' : `${WEEKLY.occupancyPercent}%`}
+                  </b>
                 </div>
-                <Progress value={68} label="Occupancy rate" />
+                <Progress value={WEEKLY.occupancyPercent ?? 0} label="Occupancy over the last 7 days" />
+                <span className="tiny subtle">
+                  {WEEKLY.slotsPublished
+                    ? `${WEEKLY.slotsBooked} of ${WEEKLY.slotsPublished} slots booked`
+                    : 'No slots published for this week'}
+                </span>
               </div>
             </div>
             <div className="between small" style={{ marginTop: 14 }}>
-              <span className="muted">Booking channels</span>
+              <span className="muted">Booking source</span>
             </div>
             <div className="row-wrap" style={{ marginTop: 6 }}>
-              <Badge tone="green" dot={false}>
-                Online 61%
-              </Badge>
-              <Badge tone="amber" dot={false}>
-                Phone 22%
-              </Badge>
-              <Badge tone="blue" dot={false}>
-                Walk-in 17%
-              </Badge>
+              {channelTotal === 0 ? (
+                <span className="tiny subtle">No confirmed bookings in the last 7 days.</span>
+              ) : (
+                <>
+                  <Badge tone="green" dot={false}>
+                    Online {Math.round((100 * (WEEKLY.onlineBookings ?? 0)) / channelTotal)}%
+                  </Badge>
+                  <Badge tone="blue" dot={false}>
+                    Manual {Math.round((100 * (WEEKLY.manualBookings ?? 0)) / channelTotal)}%
+                  </Badge>
+                </>
+              )}
             </div>
           </section>
         </div>
       </div>
 
-      <Overlay isOpen={scanner.isOpen} onClose={scanner.close} title="Scan player QR" maxWidth={440}>
+      <Overlay isOpen={scanner.isOpen} onClose={scanner.close} title="Check in a player" maxWidth={440}>
         <p className="subtle small" style={{ margin: '4px 0 12px' }}>
-          Gate check-in · verifying against <b>Pitch 2 · 7:30–9:00 PM</b> (current slot)
+          Gate check-in · enter the reference on the player&apos;s match ticket, or paste the
+          link their QR opens.
         </p>
-        <div className="viewfinder" aria-hidden="true">
-          <i className="scanline" />
-          <span className="corner tl" />
-          <span className="corner tr" />
-          <span className="corner bl" />
-          <span className="corner br" />
-          <div className="vf-hint">Point the camera at the player&apos;s match ticket QR</div>
-        </div>
+        <form onSubmit={checkInTicket}>
+          <div className="field">
+            <label htmlFor="ticket-ref">Booking reference</label>
+            <Input
+              id="ticket-ref"
+              placeholder="e.g. TC-48291"
+              value={ticketRef}
+              onChange={(event) => setTicketRef(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <Button type="submit" variant="primary" block disabled={!ticketRef.trim() || checkingIn}>
+            {checkingIn ? 'Checking in…' : 'Check in'}
+          </Button>
+        </form>
         <div role="status" style={{ marginTop: 12 }}>
-          {scanResult === 'ok' ? (
-            <Alert tone="ok" icon="✅" title="Access granted — TC-48291" style={{ margin: 0 }}>
-              Player · 10 players · Pitch 2 · 7:30–9:00 PM
-              <br />
-              <span className="tiny">
-                Ticket matches this slot &amp; time · checked in 7:21 PM · attendance auto-registered
-              </span>
+          {scanResult ? (
+            <Alert
+              tone={scanResult.tone}
+              icon={scanResult.tone === 'ok' ? '✅' : '⛔'}
+              title={scanResult.title}
+              style={{ margin: 0 }}
+            >
+              {scanResult.body}
             </Alert>
           ) : null}
-          {scanResult === 'bad' ? (
-            <Alert tone="danger" icon="⛔" title="Access denied — slot mismatch" style={{ margin: 0 }}>
-              TC-47110 is for 9:00 PM · Pitch 3, not this gate’s current slot.
-              <br />
-              <span className="tiny">
-                Ask the player to wait for their slot, or open the booking to verify manually.
-              </span>
-            </Alert>
-          ) : null}
-        </div>
-        <div className="grid2" style={{ gap: 8, marginTop: 12 }}>
-          <Button onClick={() => simulateScan('ok')}>Simulate scan · valid</Button>
-          <Button onClick={() => simulateScan('bad')}>Simulate · wrong slot</Button>
         </div>
         <p className="tiny subtle" style={{ margin: '10px 0 0' }}>
-          A valid scan matches the ticket&apos;s booking to this pitch, date and time window, grants entry, and
-          auto-registers attendance — no manual entry needed.
+          Check-in is recorded against the real booking and shows up on the player&apos;s ticket.
+          Camera scanning is not built yet, so the reference is typed in for now.
         </p>
       </Overlay>
     </>

@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { Overlay } from '@/components/modals/Overlay';
 import { useApi } from '@/hooks/useApi';
+import { useHostTournamentCode } from './useHostTournamentCode';
 import {
-  DEMO_TOURNAMENT_CODE,
   getTournament,
   payDeposit,
   quoteReservation,
@@ -13,9 +13,10 @@ import {
   formatTime,
   formatDate,
 } from '@/api/tournaments';
-import { getMyProfile } from '@/api/players';
+import { useSession } from '@/hooks/useSession';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
+import { Chip } from '@/components/ui/Chip';
 import { paths } from '@/routes/paths';
 
 const FORMATS = ['Knockout · 16 teams', 'Group + knockout', 'League'];
@@ -47,9 +48,8 @@ const POLICY_POINTS = (summary) => [
 export default function ReservePage() {
   const { showToast } = useToast();
   const reserved = useDisclosure(false);
-  const [params] = useSearchParams();
-  const code = params.get('code') ?? DEMO_TOURNAMENT_CODE;
-  const tournament = useApi(() => getTournament(code), [code]);
+  const { code } = useHostTournamentCode();
+  const tournament = useApi(() => (code ? getTournament(code) : Promise.resolve(null)), [code]);
   const live = tournament.data;
 
   // Recurrence drives the price, so the quote is re-fetched on every change.
@@ -63,7 +63,10 @@ export default function ReservePage() {
     setRepeatWeeks(live.repeatWeeks ?? 1);
   }
 
-  const quote = useApi(() => quoteReservation(code, repeatWeeks), [code, repeatWeeks]);
+  const quote = useApi(
+    () => (code ? quoteReservation(code, repeatWeeks) : Promise.resolve(null)),
+    [code, repeatWeeks],
+  );
   const depositPaid = live?.deposit?.status === 'PAID';
   // Once settled the booking is fact, not a quote.
   const costs = (depositPaid ? live?.costs : quote.data?.costs) ?? live?.costs ?? null;
@@ -113,11 +116,11 @@ export default function ReservePage() {
   const teams = teamsOverride ?? (live ? String(live.teamCapacity) : '16');
   const setTeams = setTeamsOverride;
 
-  const me = useApi(() => getMyProfile(), []);
+  const me = useSession();
   const [organizerOverride, setOrganizerOverride] = useState(null);
   const organizer =
     organizerOverride ??
-    [me.data?.fullName, me.data?.phone].filter(Boolean).join(' · ') ??
+    [me.user?.fullName, me.user?.phone].filter(Boolean).join(' · ') ??
     '';
   const setOrganizer = setOrganizerOverride;
 
@@ -275,14 +278,9 @@ export default function ReservePage() {
               <h3>3 · Pay deposit</h3>
               <div className="row-wrap" style={{ marginTop: 8 }}>
                 {PAYMENT_METHODS.map((option) => (
-                  <button
-                    key={option}
-                    className={method === option ? 'chip on' : 'chip'}
-                    type="button"
-                    onClick={() => setMethod(option)}
-                  >
+                  <Chip key={option} active={method === option} onToggle={() => setMethod(option)}>
                     {option}
-                  </button>
+                  </Chip>
                 ))}
               </div>
               {walletMethod ? (
@@ -414,10 +412,8 @@ export default function ReservePage() {
           <button
             className="btn btn-tertiary btn-block"
             type="button"
-            onClick={() => {
-              reserved.close();
-              showToast('Receipt emailed & SMS sent 📩');
-            }}
+            disabled
+            title="Emailed and texted receipts are not sent by the platform yet — the reservation is recorded on your tournament page."
           >
             Send receipt
           </button>

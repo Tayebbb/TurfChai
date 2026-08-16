@@ -6,13 +6,15 @@ import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Chip } from '@/components/ui/Chip';
 import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
+import { TableScroll } from '@/components/tables/TableScroll';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/useToast';
 import { useApi } from '@/hooks/useApi';
-import { fetchOwnerPayments, closeOwnerShift, getInvoiceUrl, getCsvExportUrl } from '@/api/ownerPayments';
+import { fetchOwnerPayments } from '@/api/ownerPayments';
+import { downloadCsv } from '@/utils/deviceActions';
 import { paths } from '@/routes/paths';
 
 const TIMEFRAMES = [
@@ -59,20 +61,6 @@ export default function PaymentsPage() {
   const closePicker = useCallback(() => setPickerOpen(false), []);
   useClickOutside(pickerRef, closePicker, pickerOpen);
   useEscapeKey(closePicker, pickerOpen);
-
-  const handleExportCsv = () => {
-    window.open(getCsvExportUrl(), '_blank');
-    showToast('Exporting payments CSV... 📄');
-  };
-
-  const handleCloseShift = async () => {
-    try {
-      await closeOwnerShift();
-      showToast('Shift closed successfully. Ledger balanced ✓');
-    } catch {
-      showToast('Shift closed — see Staff & Shifts');
-    }
-  };
 
   // Dynamic configured sports list derived from backend API for this owner
   const configuredSports = useMemo(() => {
@@ -216,6 +204,40 @@ export default function PaymentsPage() {
     }));
   }, [LEDGER]);
 
+  const handleExportCsv = () => {
+    downloadCsv(
+      `payments-ledger-${timeframe}.csv`,
+      ['Time', 'Booking', 'Customer', 'Method', 'Txn', 'Gross', 'Fee', 'Net', 'Status', 'Shift'],
+      resolvedLedger.map((row) => [
+        row.time ?? '',
+        row.booking ?? '',
+        row.customer ?? '',
+        row.method ?? '',
+        row.txn ?? '',
+        row.gross ?? '',
+        row.fee ?? '',
+        row.net ?? '',
+        row.status?.text ?? '',
+        row.shift ?? '',
+      ]),
+    );
+    showToast(`Exported ${resolvedLedger.length} transaction${resolvedLedger.length === 1 ? '' : 's'} \u2713`);
+  };
+
+  const handleExportSummary = () => {
+    const rows = [
+      ...resolvedKpis.map((kpi) => ['KPI', kpi.label, kpi.value]),
+      ...methodSplit.map((method) => [
+        'Payment method',
+        method.label ?? method.method ?? '',
+        method.value ?? method.amount ?? '',
+      ]),
+      ...sportReport.map((card) => ['Sport', card.label ?? card.sport ?? '', card.revenue ?? card.value ?? '']),
+    ];
+    downloadCsv(`payments-summary-${timeframe}.csv`, ['Section', 'Label', 'Value'], rows);
+    showToast('Summary report downloaded \u2713');
+  };
+
   return (
     <>
       <PageTitle title="Payments & Reports" />
@@ -226,8 +248,18 @@ export default function PaymentsPage() {
           <span className="subtle small">Real-time owner financials &amp; settlement statement</span>
         </div>
         <div className="row">
-          <Button onClick={handleExportCsv}>⬇ Export CSV</Button>
-          <Button variant="primary" onClick={handleCloseShift}>
+          <Button
+            onClick={handleExportCsv}
+            disabled={resolvedLedger.length === 0}
+            title={resolvedLedger.length === 0 ? 'No transactions to export yet' : undefined}
+          >
+            ⬇ Export CSV
+          </Button>
+          <Button
+            variant="primary"
+            disabled
+            title="Shift and staff ledgers are not part of the platform yet — payments settle per booking."
+          >
             💵 Close shift
           </Button>
         </div>
@@ -237,7 +269,7 @@ export default function PaymentsPage() {
       <div className="card income-chart-card" style={{ marginBottom: 16, padding: '20px 24px 16px' }}>
         <div className="income-chart-header">
           <div className="income-chart-title-row">
-            <h3 style={{ margin: 0, fontSize: 18 }}>Net Income Over Time</h3>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Net Income Over Time</h2>
             <div
               className={`sport-picker${pickerOpen ? ' open' : ''}`}
               ref={pickerRef}
@@ -273,7 +305,7 @@ export default function PaymentsPage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {configuredSports.length === 0 ? (
-                    <span className="subtle small">No pitches configured</span>
+                    <span className="subtle small">No sports assigned to your pitches</span>
                   ) : (selectedSports.length === 0 ? configuredSports.map(s => s.name) : selectedSports).map((name) => {
                     const sport = configuredSports.find((item) => item.name === name) || { name, label: name, color: '#06B6D4' };
                     return (
@@ -476,7 +508,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* Ledger Table */}
-      <div className="card table-wrap" style={{ padding: 0, marginBottom: 16 }}>
+      <TableScroll label="Payment ledger" className="card" style={{ padding: 0, marginBottom: 16 }}>
         <table className="table">
           <thead>
             <tr>
@@ -523,7 +555,7 @@ export default function PaymentsPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
 
       {/* Reconciliation Summary & Monthly Report */}
       <div className="grid2" style={{ alignItems: 'start' }} id="reports">
@@ -584,14 +616,21 @@ export default function PaymentsPage() {
           <div className="row-wrap" style={{ marginTop: 10, gap: 8 }}>
             <Button
               size="sm"
-              onClick={() => showToast('Monthly report generated 📈')}
+              onClick={handleExportSummary}
+              disabled={resolvedKpis.length === 0 && methodSplit.length === 0 && sportReport.length === 0}
+              title={
+                resolvedKpis.length === 0 && methodSplit.length === 0 && sportReport.length === 0
+                  ? 'No figures to report yet'
+                  : undefined
+              }
             >
-              Generate monthly report
+              Download summary report
             </Button>
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => window.open(getInvoiceUrl(), '_blank')}
+              disabled
+              title="Digital invoices are not generated by the platform yet."
             >
               📄 Download digital invoice
             </Button>

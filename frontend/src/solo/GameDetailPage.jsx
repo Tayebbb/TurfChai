@@ -130,7 +130,7 @@ export default function GameDetailPage() {
     if (!currentUser) return;
     setJoining(true);
     try {
-      const result = await joinOpenGame(game.id, { userId: currentUser.id, paymentMethod: method });
+      const result = await joinOpenGame(game.id, { paymentMethod: method });
       payShare.close();
       showToast(result?.message ?? 'You are in — spot confirmed');
       reload();

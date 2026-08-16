@@ -6,8 +6,9 @@ import { Overlay } from '@/components/modals/Overlay';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
-import { getAdminVenue, updateVenueStatus } from '@/api/adminVenues';
+import { getAdminVenue, getAdminVenueAnalytics, updateVenueStatus } from '@/api/adminVenues';
 import { useApi } from '@/hooks/useApi';
+import { toUserMessage } from '@/utils/errorMessage';
 import './TurfDetailsPage.css';
 
 const DEMAND_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -27,11 +28,29 @@ const SUSPEND_REASONS = [
   'Policy violation',
 ];
 
-/** Mirrors the prototype's `setDocStatus` badge-tone mapping. */
-function docTone(value) {
-  if (value.includes('Verified')) return 'green';
-  if (value.includes('Pending') || value.includes('Anomaly')) return 'amber';
-  return 'red';
+/** Terminal state for the page: invalid id, load failure, or no such venue. */
+function AdminVenueNotice({ title, body, onRetry }) {
+  return (
+    <>
+      <PageTitle title="Turf Details & Analytics" />
+      <div className="wrap" style={{ paddingTop: 24 }}>
+        <Link className="btn btn-sm btn-tertiary" to={paths.admin.turfs}>
+          ← Back to turfs
+        </Link>
+        <div className="card" style={{ padding: 24, marginTop: 12 }}>
+          <h1 style={{ fontSize: 20, marginBottom: 6 }}>{title}</h1>
+          <p className="subtle" style={{ marginBottom: onRetry ? 14 : 0 }}>
+            {body}
+          </p>
+          {onRetry ? (
+            <button type="button" className="btn btn-secondary" onClick={onRetry}>
+              Try again
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
 }
 
 export default function TurfDetailsPage() {
@@ -43,66 +62,76 @@ export default function TurfDetailsPage() {
   const [suspendReason, setSuspendReason] = useState(SUSPEND_REASONS[0]);
   const [suspendNote, setSuspendNote] = useState('');
   const [overrideStatus, setOverrideStatus] = useState(null);
+  const [approving, setApproving] = useState(false);
 
-  const isNumericId = /^\d+$/.test(turfId);
-  const { data: apiVenueRes } = useApi(
+  const isNumericId = /^\d+$/.test(turfId ?? '');
+  const { data: apiVenueRes, loading, error, reload } = useApi(
     () => (isNumericId ? getAdminVenue(turfId) : Promise.resolve(null)),
     [turfId],
   );
 
-  const apiVenueData = apiVenueRes?.data || apiVenueRes;
+  const apiVenueData = apiVenueRes?.data ?? apiVenueRes ?? null;
 
+  const analyticsApi = useApi(
+    () => (isNumericId ? getAdminVenueAnalytics(turfId) : Promise.resolve(null)),
+    [turfId],
+  );
+  const analytics = analyticsApi.data?.data ?? analyticsApi.data ?? null;
+
+  /**
+   * The view model is only built once the venue has actually arrived. It used
+   * to be built unconditionally with a partial fallback object that omitted
+   * `bookings30d`, so the very first render — before any response — threw on
+   * `venue.bookings30d.toLocaleString()`. Nothing here invents a value the API
+   * did not send: unknown metrics render as "—" rather than a plausible number.
+   */
   const venue = useMemo(() => {
-    if (apiVenueData) {
-      return {
-        id: apiVenueData.venueCode || `V-${apiVenueData.id}`,
-        dbId: apiVenueData.id,
-        name: apiVenueData.name,
-        owner: apiVenueData.owner?.fullName || 'Owner',
-        phone: apiVenueData.contactPhone || apiVenueData.owner?.phone || '—',
-        email: apiVenueData.contactEmail || apiVenueData.owner?.email || '—',
-        area: apiVenueData.area || 'Dhaka',
-        pitches: apiVenueData.pitches?.length || 2,
-        rating: apiVenueData.ratingAvg ? `${apiVenueData.ratingAvg} ★` : '4.5 ★',
-        revenue30d: '৳1,50,000',
-        bookings30d: 142,
-        occupancy: '72%',
-        status: overrideStatus || apiVenueData.status || 'Live',
-        badgeClass: (overrideStatus || apiVenueData.status) === 'LIVE' ? 'green' : (overrideStatus || apiVenueData.status) === 'SUSPENDED' ? 'red' : 'amber',
-        dateAdded: apiVenueData.createdAt ? new Date(apiVenueData.createdAt).toLocaleDateString() : 'Mar 12, 2026',
-        documents: {
-          tradeLicense: 'Pending Verification',
-          ownerNid: 'Pending Verification',
-          utilityBill: 'Pending Verification',
-        },
-        pitchesList: apiVenueData.pitches?.length
-          ? apiVenueData.pitches.map((p) => ({ name: p.name, rate: `৳${p.hourlyRate}/hr`, type: p.surfaceType || 'Synthetic' }))
-          : [],
-        recentBookings: [],
-        chartData: [0, 0, 0, 0, 0, 0, 0],
-      };
-    }
-    return { 
-      status: overrideStatus,
-      name: 'Loading...',
-      documents: {
-        tradeLicense: 'Pending',
-        ownerNid: 'Pending',
-        utilityBill: 'Pending',
-      },
-      pitchesList: [],
+    if (!apiVenueData) return null;
+
+    const status = overrideStatus || apiVenueData.status || 'DRAFT';
+    const pitchList = Array.isArray(apiVenueData.pitches) ? apiVenueData.pitches : [];
+
+    return {
+      id: apiVenueData.venueCode || `V-${apiVenueData.id}`,
+      dbId: apiVenueData.id,
+      name: apiVenueData.name || 'Unnamed venue',
+      owner: apiVenueData.ownerName || apiVenueData.owner?.fullName || '—',
+      phone: apiVenueData.contactPhone || apiVenueData.owner?.phone || '—',
+      email: apiVenueData.contactEmail || apiVenueData.owner?.email || '—',
+      area: apiVenueData.area || '—',
+      pitches: pitchList.length,
+      rating: apiVenueData.ratingAvg != null ? `${apiVenueData.ratingAvg} ★` : '—',
+      reviewCount: apiVenueData.reviewCount ?? 0,
+      verified: Boolean(apiVenueData.verified),
+      // 30-day trade, from /admin/venues/{id}/analytics. Anything the window
+      // has no data for stays an em dash rather than becoming a zero that
+      // reads like a measured result.
+      revenue30d: analytics ? `৳${Number(analytics.revenue30d ?? 0).toLocaleString('en-IN')}` : null,
+      bookings30d: analytics ? Number(analytics.bookings30d ?? 0).toLocaleString('en-IN') : null,
+      occupancy: analytics?.occupancyPercent == null ? null : `${analytics.occupancyPercent}%`,
+      status,
+      badgeClass: status === 'LIVE' ? 'green' : status === 'SUSPENDED' ? 'red' : 'amber',
+      dateAdded: apiVenueData.createdAt
+        ? new Date(apiVenueData.createdAt).toLocaleDateString()
+        : '—',
+      pitchesList: pitchList.map((p) => ({
+        name: p?.name ?? 'Pitch',
+        rate: p?.hourlyRate != null ? `৳${p.hourlyRate}/hr` : '—',
+        type: p?.surfaceType || 'Synthetic',
+      })),
       recentBookings: [],
-      chartData: [0, 0, 0, 0, 0, 0, 0]
+      trendLabels: analytics?.trendLabels ?? null,
+      trendCounts: analytics?.trendCounts ?? null,
     };
-  }, [apiVenueData, overrideStatus]);
+  }, [apiVenueData, overrideStatus, analytics]);
 
   const demandData = useMemo(
     () => ({
-      labels: DEMAND_LABELS,
+      labels: venue?.trendLabels ?? DEMAND_LABELS,
       datasets: [
         {
           label: 'Bookings',
-          data: venue.chartData || [0, 0, 0, 0, 0, 0, 0],
+          data: venue?.trendCounts ?? [],
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.35)',
           borderWidth: 3,
@@ -115,49 +144,109 @@ export default function TurfDetailsPage() {
         },
       ],
     }),
-    [venue.chartData],
+    [venue?.trendLabels, venue?.trendCounts],
   );
 
-  const isSuspended = (venue.status || '').toUpperCase().includes('SUSPENDED');
-  const isPending = (venue.status || '').toUpperCase().includes('PENDING');
+  const isSuspended = (venue?.status ?? '').toUpperCase().includes('SUSPENDED');
+  // The backend stores a venue awaiting approval as DRAFT; PENDING is accepted
+  // too so the screen keeps working if that vocabulary is ever introduced.
+  const isPending = ['DRAFT', 'PENDING'].includes((venue?.status ?? '').toUpperCase());
 
   const deleteVenue = async () => {
-    if (venue.dbId) {
-      try {
-        await updateVenueStatus(venue.dbId, 'ARCHIVED');
-      } catch {
-        // ignore fallback
-      }
+    if (!venue?.dbId) return;
+    try {
+      await updateVenueStatus(venue.dbId, 'ARCHIVED');
+    } catch (e) {
+      // Reporting success after a failed write is worse than reporting nothing.
+      showToast(toUserMessage(e, 'Could not archive this venue.'));
+      return;
     }
-    showToast('Venue soft-deleted (archived) on backend ✓');
+    showToast('Venue archived ✓');
     navigate(paths.admin.turfs);
   };
 
   const confirmSuspend = async () => {
-    suspend.close();
-    if (venue.dbId) {
-      try {
-        await updateVenueStatus(venue.dbId, 'SUSPENDED');
-      } catch {
-        // ignore
-      }
+    if (!venue?.dbId) return;
+    try {
+      await updateVenueStatus(venue.dbId, 'SUSPENDED');
+    } catch (e) {
+      showToast(toUserMessage(e, 'Could not suspend this venue.'));
+      return;
     }
+    suspend.close();
     setOverrideStatus('SUSPENDED');
-    showToast('Venue suspended and status updated to audit trail ✓');
+    showToast('Venue suspended ✓');
   };
 
   const confirmReinstate = async () => {
+    if (!venue?.dbId) return;
+    try {
+      await updateVenueStatus(venue.dbId, 'LIVE');
+    } catch (e) {
+      showToast(toUserMessage(e, 'Could not reinstate this venue.'));
+      return;
+    }
     reinstate.close();
-    if (venue.dbId) {
-      try {
-        await updateVenueStatus(venue.dbId, 'LIVE');
-      } catch {
-        // ignore
-      }
+    setOverrideStatus('LIVE');
+    showToast('Venue reinstated ✓');
+  };
+
+  const approveVenue = async () => {
+    if (!venue?.dbId || approving) return;
+    setApproving(true);
+    try {
+      await updateVenueStatus(venue.dbId, 'LIVE');
+    } catch (e) {
+      showToast(toUserMessage(e, 'Could not approve this venue.'));
+      return;
+    } finally {
+      setApproving(false);
     }
     setOverrideStatus('LIVE');
-    showToast('Venue reinstated successfully! Live status restored ✓');
+    showToast('Venue approved and made live ✓');
   };
+
+  if (!isNumericId) {
+    return (
+      <AdminVenueNotice
+        title="That venue link is not valid"
+        body={`"${turfId}" is not a venue id.`}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <>
+        <PageTitle title="Turf Details & Analytics" />
+        <div className="wrap" style={{ paddingTop: 24 }}>
+          <h1 style={{ fontSize: 22 }}>Loading venue…</h1>
+          <p className="subtle" role="status">
+            Fetching venue {turfId}.
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminVenueNotice
+        title="Could not load this venue"
+        body={toUserMessage(error, 'Please try again.')}
+        onRetry={reload}
+      />
+    );
+  }
+
+  if (!venue) {
+    return (
+      <AdminVenueNotice
+        title="Venue not found"
+        body={`No venue matches id ${turfId}. It may have been archived.`}
+      />
+    );
+  }
 
   return (
     <>
@@ -196,9 +285,10 @@ export default function TurfDetailsPage() {
               <button
                 className="btn btn-primary"
                 type="button"
-                onClick={() => showToast('Venue approved! Now active on search index ✓')}
+                disabled={approving}
+                onClick={approveVenue}
               >
-                Approve &amp; Make Live
+                {approving ? 'Approving…' : 'Approve & Make Live'}
               </button>
               <button className="btn btn-ghost-danger" type="button" onClick={deleteVenue}>
                 Reject listing
@@ -254,7 +344,7 @@ export default function TurfDetailsPage() {
                 display: 'block',
               }}
             >
-              {venue.revenue30d}
+              {venue.revenue30d ?? '—'}
             </b>
             <span
               className="tiny subtle"
@@ -287,7 +377,7 @@ export default function TurfDetailsPage() {
                 display: 'block',
               }}
             >
-              {venue.occupancy}
+              {venue.occupancy ?? '—'}
             </b>
             <span
               className="tiny subtle"
@@ -320,7 +410,7 @@ export default function TurfDetailsPage() {
                 display: 'block',
               }}
             >
-              {venue.bookings30d.toLocaleString()}
+              {venue.bookings30d != null ? venue.bookings30d.toLocaleString() : '—'}
             </b>
             <span
               className="tiny subtle"
@@ -370,15 +460,23 @@ export default function TurfDetailsPage() {
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Booking Demand Trend</h3>
               <span className="subtle small">Daily slot booking counts over the past week</span>
             </div>
-            <span className="badge blue nodot">Active Analytics</span>
+            {venue.trendCounts ? <span className="badge blue nodot">Active Analytics</span> : null}
           </div>
-          <ChartCanvas
-            type="line"
-            data={demandData}
-            options={DEMAND_OPTIONS}
-            height={250}
-            label="Daily slot booking counts over the past week"
-          />
+          {venue.trendCounts ? (
+            <ChartCanvas
+              type="line"
+              data={demandData}
+              options={DEMAND_OPTIONS}
+              height={250}
+              label="Daily slot booking counts over the past week"
+            />
+          ) : (
+            <div className="center subtle small" style={{ padding: '96px 12px' }}>
+              {analyticsApi.loading
+                ? 'Loading demand trend…'
+                : 'No booking history available for this venue.'}
+            </div>
+          )}
         </div>
       </div>
 
@@ -429,33 +527,23 @@ export default function TurfDetailsPage() {
             <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 800 }}>
               Compliance &amp; Verification
             </h3>
+            {/* Only one verification flag is stored against a venue. Showing
+                three per-document rows meant hardcoding "Pending Verification"
+                on every venue, including approved ones. */}
             <div className="doc-row">
               <div>
-                <b style={{ fontSize: 13, display: 'block' }}>Trade License</b>
-                <span className="subtle tiny">Issued by City Corporation</span>
+                <b style={{ fontSize: 13, display: 'block' }}>Venue verification</b>
+                <span className="subtle tiny">Set when the listing request was approved</span>
               </div>
-              <span className={`badge ${docTone(venue.documents.tradeLicense)}`}>
-                {venue.documents.tradeLicense}
+              <span className={`badge ${venue.verified ? 'green' : 'amber'}`}>
+                {venue.verified ? 'Verified' : 'Not verified'}
               </span>
             </div>
-            <div className="doc-row">
-              <div>
-                <b style={{ fontSize: 13, display: 'block' }}>Owner NID / Passport</b>
-                <span className="subtle tiny">National ID biometric check</span>
-              </div>
-              <span className={`badge ${docTone(venue.documents.ownerNid)}`}>
-                {venue.documents.ownerNid}
-              </span>
-            </div>
-            <div className="doc-row">
-              <div>
-                <b style={{ fontSize: 13, display: 'block' }}>Commercial Utility Bill</b>
-                <span className="subtle tiny">Electricity/gas venue proof</span>
-              </div>
-              <span className={`badge ${docTone(venue.documents.utilityBill)}`}>
-                {venue.documents.utilityBill}
-              </span>
-            </div>
+            <p className="subtle tiny" style={{ margin: '10px 0 0' }}>
+              Trade licence, owner NID and utility-bill checks are recorded on the
+              original listing request, not on the venue.{' '}
+              <Link to={paths.admin.turfRequests}>Open the request queue</Link>
+            </p>
           </div>
         </div>
 

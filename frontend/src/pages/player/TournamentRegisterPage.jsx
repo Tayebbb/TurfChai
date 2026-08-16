@@ -4,7 +4,7 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { BackButton } from '@/components/buttons/BackButton';
 import { Button } from '@/components/buttons/Button';
 import { Badge } from '@/components/ui/Badge';
-import { getMyProfile } from '@/api/players';
+import { useSession } from '@/hooks/useSession';
 import { getTournamentDetail, registerForTournament } from '@/api/playerTournaments';
 import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
@@ -37,7 +37,7 @@ export default function TournamentRegisterPage() {
   const { showToast } = useToast();
 
   const detail = useApi(() => getTournamentDetail(code), [code]);
-  const me = useApi(() => getMyProfile(), []);
+  const me = useSession();
   const tournament = detail.data;
 
   const [form, setForm] = useState({

@@ -6,6 +6,7 @@ import { getBooking } from "@/api/bookings";
 import { getPaymentsForBooking } from "@/api/payments";
 import { useApi } from "@/hooks/useApi";
 import { useToast } from "@/hooks/useToast";
+import { addToCalendar, canCall, canGetDirections, callNumber, openDirections } from "@/utils/deviceActions";
 import { paths } from "@/routes/paths";
 
 const bdt = (value) =>
@@ -56,7 +57,22 @@ export default function BookingSuccessPage() {
     () => (bookingId ? getPaymentsForBooking(bookingId) : Promise.resolve([])),
     [bookingId],
   );
-  const successfulPayment = (paymentsApi.data ?? []).find((p) => p.status === "SUCCESS");
+  // A split payment writes two rows: the wallet credit that is already settled,
+  // and the balance the player still owes the venue. Quoting the first row found
+  // told the player ৳150 was due when ৳2,350 was.
+  const bookingPayments = (paymentsApi.data ?? []).filter(
+    (p) => p.status === "SUCCESS" && p.type === "BOOKING",
+  );
+  const dueAtVenue = bookingPayments.find((p) => !p.fromWallet);
+  const walletLeg = bookingPayments.find((p) => p.fromWallet);
+
+  const venueForActions = {
+    name: booking?.venueName,
+    address: booking?.venueAddress,
+    area: booking?.venueArea,
+    lat: booking?.venueLat,
+    lng: booking?.venueLng,
+  };
 
   if (!bookingId) {
     return (
@@ -133,9 +149,16 @@ export default function BookingSuccessPage() {
     booking?.startTime && booking?.endTime
       ? `${formatTime(booking.startTime)} – ${formatTime(booking.endTime)}`
       : "—";
-  const paymentSummary = successfulPayment
-    ? `Payment of ${bdt(successfulPayment.amount)} received via ${successfulPayment.method}.`
-    : "Payment received.";
+  // TurfChai records the amount and the chosen method; it does not collect the
+  // money, so the copy must not tell the player their payment was received.
+  const walletNote = walletLeg
+    ? ` ${bdt(walletLeg.amount)} was covered by your wallet credit.`
+    : "";
+  const paymentSummary = dueAtVenue
+    ? `${bdt(dueAtVenue.amount)} recorded against this booking, payable by ${dueAtVenue.method}. Settle with the venue.${walletNote}`
+    : walletLeg
+      ? `This booking was covered in full by your wallet credit (${bdt(walletLeg.amount)}). Nothing is due at the venue.`
+      : "Your slot is reserved. Settle the amount with the venue.";
 
   return (
     <>
@@ -160,12 +183,15 @@ export default function BookingSuccessPage() {
           <div className="head">
             <div className="between">
               <b style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>
-                Booking {code}
+                {booking?.venueName || `Booking ${code}`}
               </b>
             </div>
+            {booking?.venueArea ? (
+              <span className="tiny subtle">{booking.venueArea}</span>
+            ) : null}
           </div>
           <div style={{ padding: "18px 20px" }}>
-            <div className="grid3" style={{ gap: 12 }}>
+            <div className="grid4" style={{ gap: 12 }}>
               <div>
                 <span className="tiny subtle">DATE</span>
                 <br />
@@ -175,6 +201,11 @@ export default function BookingSuccessPage() {
                 <span className="tiny subtle">PLAY TIME</span>
                 <br />
                 <b className="num">{playTime}</b>
+              </div>
+              <div>
+                <span className="tiny subtle">PITCH</span>
+                <br />
+                <b>{booking?.pitchName || "—"}</b>
               </div>
               <div>
                 <span className="tiny subtle">ARRIVE BY</span>
@@ -195,7 +226,7 @@ export default function BookingSuccessPage() {
                 {code}
               </b>
               <div className="row-wrap" style={{ marginTop: 6 }}>
-                <span className="badge green">Paid in full</span>
+                <span className="badge amber">Due at venue</span>
               </div>
             </div>
             <QrCode
@@ -207,21 +238,34 @@ export default function BookingSuccessPage() {
         </div>
 
         <div className="grid2" style={{ marginTop: 16, gap: 10 }}>
-          <Button variant="primary" to={paths.player.splitPayment}>
-            👥 Split with team
-          </Button>
           <Button variant="secondary" to={paths.player.splitPayment}>
-            Invite teammates
+            👥 Splitting with your team?
           </Button>
           <Button
             variant="secondary"
-            onClick={() => showToast("Added to your calendar 📅")}
+            disabled={!booking?.bookingDate || !booking?.startTime}
+            onClick={() => {
+              const added = addToCalendar({
+                title: `Turf booking · ${booking?.venueName ?? 'TurfChai'}`,
+                description: `Booking ${booking?.bookingCode ?? ''}`.trim(),
+                location: [booking?.venueName, booking?.venueAddress, booking?.venueArea]
+                  .filter(Boolean)
+                  .join(', '),
+                date: booking?.bookingDate,
+                startTime: booking?.startTime,
+                endTime: booking?.endTime,
+                uid: booking?.bookingCode,
+                filename: booking?.bookingCode ?? 'turfchai-booking',
+              });
+              showToast(added ? 'Calendar file downloaded 📅' : 'This booking has no confirmed time yet');
+            }}
           >
             Add to calendar
           </Button>
           <Button
             variant="secondary"
-            onClick={() => showToast("Opening directions 🗺️")}
+            disabled={!canGetDirections(venueForActions)}
+            onClick={() => openDirections(venueForActions)}
           >
             Directions
           </Button>
@@ -242,7 +286,9 @@ export default function BookingSuccessPage() {
           </Button>
           <Button
             variant="tertiary"
-            onClick={() => showToast("Contact the venue from My Bookings 📞")}
+            disabled={!canCall(booking?.venueContactPhone)}
+            title={canCall(booking?.venueContactPhone) ? undefined : 'This venue has not published a phone number'}
+            onClick={() => callNumber(booking?.venueContactPhone)}
           >
             Contact venue
           </Button>

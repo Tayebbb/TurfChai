@@ -6,6 +6,7 @@ import { getSavedVenues, removeSavedVenue } from '@/api/players';
 import { useApi } from '@/hooks/useApi';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
+import { Chip } from '@/components/ui/Chip';
 import { DashCard, DashEmpty, DashError, DashHeader, DashSkeleton } from './DashboardKit';
 
 const SORTS = [
@@ -94,14 +95,9 @@ export default function SavedVenuesSection() {
             <div className="between" style={{ gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
               <div className="row-wrap" style={{ gap: 6 }}>
                 {SORTS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={sort === option.id ? 'chip on' : 'chip'}
-                    onClick={() => setSort(option.id)}
-                  >
+                  <Chip key={option.id} active={sort === option.id} onToggle={() => setSort(option.id)}>
                     {option.label}
-                  </button>
+                  </Chip>
                 ))}
               </div>
               {areas.length > 2 ? (

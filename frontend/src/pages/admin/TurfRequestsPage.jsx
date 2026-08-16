@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
+import { TableScroll } from '@/components/tables/TableScroll';
 import { Chip } from '@/components/ui/Chip';
 import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
@@ -86,7 +87,7 @@ export default function TurfRequestsPage() {
       </div>
 
       {/* Turf Request Queue Table */}
-      <div className="liquid-glass table-wrap" style={{ padding: 0, borderRadius: 16 }}>
+      <TableScroll label="Turf listing requests" className="liquid-glass" style={{ padding: 0, borderRadius: 16 }}>
         <table className="table">
           <thead>
             <tr>
@@ -152,7 +153,7 @@ export default function TurfRequestsPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </>
   );
 }
