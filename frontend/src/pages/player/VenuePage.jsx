@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
@@ -11,7 +11,7 @@ import { Photo } from '@/components/ui/Photo';
 import { Stars } from '@/components/ui/Stars';
 import { Verified } from '@/components/ui/Tags';
 import { getVenue, searchVenues, toSimilarCard } from '@/api/venues';
-import { getVenueSlots } from '@/api/bookings';
+import { getActiveHold, getVenueSlots } from '@/api/bookings';
 import { getSavedVenues, toggleSavedVenue } from '@/api/players';
 import { getVenueReviews } from '@/api/venueReviews';
 import { getToken } from '@/api/client';
@@ -118,10 +118,16 @@ function toGridSlot(slot) {
   // `status` — rendering it as open would offer a time the API will refuse.
   const elapsed = slot.bookable === false && rawStatus === 'available';
   const status = elapsed ? 'blocked' : rawStatus;
+  // A slot held by the current caller (e.g. they navigated away mid-checkout
+  // and came back) stays clickable so they can get back to checkout, instead
+  // of landing on a dead "Held" cell with no way back to the payment page.
+  const mine = status === 'held' && Boolean(slot.heldByMe);
   const unavailableLabel = elapsed
     ? 'Started'
     : status === 'held'
-      ? 'Held'
+      ? mine
+        ? 'Resume booking'
+        : 'Held'
       : status === 'blocked'
         ? 'Unavailable'
         : 'Booked';
@@ -134,7 +140,7 @@ function toGridSlot(slot) {
     ) : (
       <span className="slot-meta">{unavailableLabel}</span>
     );
-  return { id: slot.id, time: formatTime(slot.startTime), price, status };
+  return { id: slot.id, time: formatTime(slot.startTime), price, status, mine };
 }
 
 /** Backend amenity keys -> the labels rendered in the amenity grid. */
@@ -245,6 +251,7 @@ function policyTiersOf(cancelPolicy) {
 
 export default function VenuePage() {
   const { venueId } = useParams();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const rules = useDisclosure(false);
   // Captured once per mount so the strip doesn't shift while the page is open.
@@ -449,6 +456,7 @@ export default function VenuePage() {
   };
 
   const [slotWarn, setSlotWarn] = useState(false);
+  const [bookChecking, setBookChecking] = useState(false);
 
   const selectedSlot = slots.find((slot) => slot.id === slotId);
   // Checkout has no slot-by-id endpoint, so it re-reads the slot from this
@@ -457,10 +465,41 @@ export default function VenuePage() {
     ? `${paths.player.checkout}?slotId=${selectedSlot.id}&venue=${encodeURIComponent(venueId)}&date=${encodeURIComponent(dateId)}`
     : null;
 
-  const handleBookClick = (e) => {
+  // Checked here, before navigating, rather than letting checkout make the
+  // call and bounce back with a 409 — a player who already has a different
+  // slot on hold gets the "you already have one in progress" message right
+  // where they clicked "Book", not after a redirect that has to unwind.
+  // Skipped when resuming their own hold (`selectedSlot.mine`): that IS the
+  // active hold, so there is nothing to conflict with.
+  const handleBookClick = async (e) => {
+    e.preventDefault();
     if (!selectedSlot) {
-      e.preventDefault();
       setSlotWarn(true);
+      return;
+    }
+    if (selectedSlot.mine) {
+      navigate(checkoutHref);
+      return;
+    }
+    setBookChecking(true);
+    try {
+      const active = await getActiveHold();
+      if (active?.slotId && String(active.slotId) !== String(selectedSlot.id)) {
+        showToast(
+          active.pitchName
+            ? `You already have a slot on hold at ${active.pitchName} — finish or release it first`
+            : 'You already have a slot on hold elsewhere — finish or release it first',
+        );
+        return;
+      }
+      navigate(checkoutHref);
+    } catch {
+      // Fail open: an unreachable active-hold check must not block a
+      // legitimate booking attempt — checkout's own hold call still
+      // enforces the one-hold rule server-side.
+      navigate(checkoutHref);
+    } finally {
+      setBookChecking(false);
     }
   };
 
@@ -785,8 +824,8 @@ export default function VenuePage() {
             <Button
               variant={isOffline ? 'tertiary' : 'primary'}
               block
-              to={isOffline ? null : checkoutHref}
-              onClick={isOffline ? (e) => { e.preventDefault(); showToast('Turf is currently offline / unavailable.'); } : handleBookClick}
+              onClick={isOffline ? () => showToast('Turf is currently offline / unavailable.') : handleBookClick}
+              loading={!isOffline && bookChecking}
               style={{ minHeight: 44, fontSize: 14, opacity: isOffline ? 0.6 : 1 }}
             >
               {isOffline ? 'Turf Currently Offline' : 'Book this slot'}
@@ -996,7 +1035,7 @@ export default function VenuePage() {
               {selectedDateLabel} · <span>{selectedSlot ? selectedSlot.time : 'select a slot'}</span>
             </div>
           </div>
-          <Button variant="primary" to={checkoutHref} onClick={handleBookClick}>
+          <Button variant="primary" onClick={handleBookClick} loading={bookChecking}>
             Book slot
           </Button>
         </div>
