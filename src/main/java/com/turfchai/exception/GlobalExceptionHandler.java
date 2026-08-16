@@ -33,6 +33,12 @@ public class GlobalExceptionHandler {
                 .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
+    @ExceptionHandler(BookingNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleBookingNotFound(BookingNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleUserNotFound(UserNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -43,6 +49,29 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleVenueNotFound(VenueNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
+    }
+
+    @ExceptionHandler(TurfRequestNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleTurfRequestNotFound(TurfRequestNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReviewNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleReviewNotFound(ReviewNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
+    }
+
+    /**
+     * The request is well-formed but the target is in a state that forbids it —
+     * approving an already-approved listing, for instance. That is a conflict,
+     * not a server fault; it used to reach the catch-all and report a 500.
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage()));
     }
 
     @ExceptionHandler(GameFullException.class)
@@ -105,6 +134,16 @@ public class GlobalExceptionHandler {
                 .body(buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage()));
     }
 
+    /**
+     * A handler needed an identity and there was none. The filter chain is the
+     * primary control; this is the fail-closed backstop behind it.
+     */
+    @ExceptionHandler(UnauthenticatedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthenticated(UnauthenticatedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage()));
+    }
+
     @ExceptionHandler(AdminNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleAdminNotFound(AdminNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -158,8 +197,44 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrity(
             org.springframework.dao.DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation", ex);
+        // The one-active-booking-per-slot index is the last line of defence against
+        // double-selling. When it fires the caller lost a race, and telling them
+        // "database constraint error" is both meaningless and alarming.
+        String detail = ex.getMostSpecificCause().getMessage();
+        if (detail != null && detail.toLowerCase(java.util.Locale.ROOT).contains("uq_bookings_active_slot")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(buildErrorResponse(HttpStatus.CONFLICT,
+                            "Someone just took this slot. Please pick another time."));
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(buildErrorResponse(HttpStatus.CONFLICT, "Database constraint error: duplicate or invalid data"));
+    }
+
+    /**
+     * Two people acted on the same booking at once. Neither request was wrong, so
+     * the loser is asked to retry rather than shown a failure.
+     */
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleOptimisticLock(
+            org.springframework.orm.ObjectOptimisticLockingFailureException ex) {
+        log.warn("Optimistic locking failure", ex);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildErrorResponse(HttpStatus.CONFLICT,
+                        "This booking was updated at the same time somewhere else. Please refresh and try again."));
+    }
+
+    /**
+     * The pricing model is a dependency, not a contract: when it is down the
+     * caller should be told to retry later rather than that their request was
+     * malformed.
+     */
+    @ExceptionHandler(PricingUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handlePricingUnavailable(PricingUnavailableException ex) {
+        log.error("Pricing model unavailable", ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE,
+                        "Dynamic pricing is temporarily unavailable. Please try again shortly."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -174,6 +249,18 @@ public class GlobalExceptionHandler {
     }
 
 
+
+    /**
+     * Unparseable or wrongly-typed JSON is the caller's mistake. Only the
+     * package-scoped advices handled this, so every other endpoint answered a
+     * syntax error with a 500.
+     */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadableBody(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, "Request body is missing or malformed"));
+    }
 
     /**
      * A path/query value that cannot be coerced to the declared type is a client

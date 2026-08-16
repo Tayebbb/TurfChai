@@ -1,18 +1,23 @@
 package com.turfchai.controller;
 
 import com.turfchai.dto.ApiResponse;
+import com.turfchai.dto.response.AdminUserResponse;
 import com.turfchai.model.User;
+import com.turfchai.model.enums.RoleType;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.security.UserPrincipal;
 import com.turfchai.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -21,50 +26,60 @@ import java.util.Map;
 @CrossOrigin(originPatterns = "*")
 public class AdminUserRestController {
 
+    /** A caller asking for everything still gets a bounded response. */
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<List<User>>> listUsers(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> listUsers(
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String q) {
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
 
-        List<User> users = userRepository.findAll().stream()
-                .filter(u -> {
-                    if (role != null && !role.isBlank() && !"all".equalsIgnoreCase(role)) {
-                        if (u.getRole() == null || !u.getRole().name().equalsIgnoreCase(role)) {
-                            return false;
-                        }
-                    }
-                    if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
-                        if ("suspended".equalsIgnoreCase(status)) {
-                            if (!Boolean.TRUE.equals(u.getIsSuspended()) && !"SUSPENDED".equalsIgnoreCase(u.getStatus())) {
-                                return false;
-                            }
-                        } else if (u.getStatus() == null || !u.getStatus().equalsIgnoreCase(status)) {
-                            return false;
-                        }
-                    }
-                    if (q != null && !q.isBlank()) {
-                        String term = q.toLowerCase();
-                        boolean nameMatch = u.getFullName() != null && u.getFullName().toLowerCase().contains(term);
-                        boolean emailMatch = u.getEmail() != null && u.getEmail().toLowerCase().contains(term);
-                        boolean phoneMatch = u.getPhone() != null && u.getPhone().toLowerCase().contains(term);
-                        return nameMatch || emailMatch || phoneMatch;
-                    }
-                    return true;
-                })
-                .toList();
+        RoleType roleFilter = null;
+        if (role != null && !role.isBlank() && !"all".equalsIgnoreCase(role)) {
+            try {
+                roleFilter = RoleType.valueOf(role.toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // An unknown role matches nobody rather than everybody.
+                return ResponseEntity.ok(ApiResponse.ok(pageBody(Page.empty(), 0, size)));
+            }
+        }
 
-        return ResponseEntity.ok(ApiResponse.ok(users));
+        boolean suspendedOnly = "suspended".equalsIgnoreCase(status);
+        String statusFilter = (status == null || status.isBlank() || suspendedOnly || "all".equalsIgnoreCase(status))
+                ? null
+                : status;
+        String term = (q == null || q.isBlank()) ? null : "%" + q.toLowerCase() + "%";
+
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(page, 0);
+        Page<User> found = userRepository.searchForAdmin(
+                roleFilter, suspendedOnly, statusFilter, term,
+                PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+
+        return ResponseEntity.ok(ApiResponse.ok(pageBody(found, safePage, safeSize)));
+    }
+
+    private Map<String, Object> pageBody(Page<User> found, int page, int size) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("items", found.getContent().stream().map(AdminUserResponse::from).toList());
+        body.put("total", found.getTotalElements());
+        body.put("page", page);
+        body.put("size", size);
+        body.put("totalPages", found.getTotalPages());
+        return body;
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @Transactional
-    public ResponseEntity<ApiResponse<User>> updateStatus(
+    public ResponseEntity<ApiResponse<AdminUserResponse>> updateStatus(
             @PathVariable Long id,
             @RequestBody Map<String, Object> payload,
             Authentication authentication) {
@@ -92,13 +107,13 @@ public class AdminUserRestController {
                 "User " + user.getFullName() + " status set to " + user.getStatus() + " (suspended=" + user.getIsSuspended() + ")"
         );
 
-        return ResponseEntity.ok(ApiResponse.ok(saved));
+        return ResponseEntity.ok(ApiResponse.ok(AdminUserResponse.from(saved)));
     }
 
     @PostMapping("/{id}/reinstate")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @Transactional
-    public ResponseEntity<ApiResponse<User>> reinstate(
+    public ResponseEntity<ApiResponse<AdminUserResponse>> reinstate(
             @PathVariable Long id,
             Authentication authentication) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
@@ -119,6 +134,6 @@ public class AdminUserRestController {
                 "User " + user.getFullName() + " reinstated to ACTIVE status"
         );
 
-        return ResponseEntity.ok(ApiResponse.ok(saved));
+        return ResponseEntity.ok(ApiResponse.ok(AdminUserResponse.from(saved)));
     }
 }

@@ -1,5 +1,6 @@
 package com.turfchai.controller;
 
+import com.turfchai.dto.response.PayoutResponse;
 import com.turfchai.model.Payout;
 import com.turfchai.service.PayoutSettlementService;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +20,24 @@ public class AdminPayoutRestController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public List<Payout> listPayouts(@RequestParam(required = false) String status) {
-        return payoutSettlementService.listPayouts(status);
+    public List<PayoutResponse> listPayouts(@RequestParam(required = false) String status) {
+        return payoutSettlementService.listPayouts(status).stream().map(PayoutResponse::from).toList();
+    }
+
+    /**
+     * Totals only. The dashboard used to fetch every settled payout — 175 KB on
+     * a demo database — purely to add up one column in the browser.
+     */
+    @GetMapping("/summary")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public Map<String, Object> payoutSummary() {
+        return payoutSettlementService.summarise();
     }
 
     @GetMapping("/{code}")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public Payout getPayout(@PathVariable String code) {
-        return payoutSettlementService.getByCode(code);
+    public PayoutResponse getPayout(@PathVariable String code) {
+        return PayoutResponse.from(payoutSettlementService.getByCode(code));
     }
 
     @PostMapping("/{code}/settle")

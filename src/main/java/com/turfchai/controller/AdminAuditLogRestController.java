@@ -1,6 +1,7 @@
 package com.turfchai.controller;
 
 import com.turfchai.dto.ApiResponse;
+import com.turfchai.dto.response.AuditLogResponse;
 import com.turfchai.model.AuditLog;
 import com.turfchai.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +20,12 @@ public class AdminAuditLogRestController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<Page<AuditLog>>> getAuditLogs(
+    public ResponseEntity<ApiResponse<Page<AuditLogResponse>>> getAuditLogs(
             @RequestParam(required = false) String filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<AuditLog> logs = auditLogService.getAuditLogs(filter, page, size);
+        Page<AuditLogResponse> logs = auditLogService.getAuditLogs(filter, page, size)
+                .map(AuditLogResponse::from);
         return ResponseEntity.ok(ApiResponse.ok(logs));
     }
 }

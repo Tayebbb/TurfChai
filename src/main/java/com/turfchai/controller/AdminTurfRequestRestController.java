@@ -1,5 +1,6 @@
 package com.turfchai.controller;
 
+import com.turfchai.dto.response.TurfRequestResponse;
 import com.turfchai.model.TurfRequest;
 import com.turfchai.service.TurfApprovalService;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +20,14 @@ public class AdminTurfRequestRestController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public List<TurfRequest> listRequests(@RequestParam(required = false) String status) {
-        return turfApprovalService.listByStatus(status);
+    public List<TurfRequestResponse> listRequests(@RequestParam(required = false) String status) {
+        return turfApprovalService.listByStatus(status).stream().map(TurfRequestResponse::from).toList();
     }
 
     @GetMapping("/{code}")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public TurfRequest getRequest(@PathVariable String code) {
-        return turfApprovalService.getByCode(code);
+    public TurfRequestResponse getRequest(@PathVariable String code) {
+        return TurfRequestResponse.from(turfApprovalService.getByCode(code));
     }
 
     @PostMapping("/{code}/review")

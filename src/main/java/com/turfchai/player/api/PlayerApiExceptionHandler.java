@@ -1,5 +1,6 @@
 package com.turfchai.player.api;
 
+import com.turfchai.exception.ApiErrorBody;
 import com.turfchai.player.service.UserProfileService.UserNotFoundException;
 import com.turfchai.venue.service.VenueSearchService.VenueNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -10,33 +11,34 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 
-/** Scoped to player endpoints — the platform-wide advice is another dev's task. */
+/** Scoped to player endpoints; bodies use the platform error envelope. */
 @RestControllerAdvice(basePackages = "com.turfchai.player.api")
 @org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class PlayerApiExceptionHandler {
 
     @ExceptionHandler({UserNotFoundException.class, VenueNotFoundException.class})
-    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiErrorBody.of(HttpStatus.NOT_FOUND, e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException e) {
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
         String detail = e.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + " " + error.getDefaultMessage())
                 .findFirst()
                 .orElse("invalid request");
-        return ResponseEntity.badRequest().body(Map.of("error", detail));
+        return ResponseEntity.badRequest().body(ApiErrorBody.of(HttpStatus.BAD_REQUEST, detail));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(ApiErrorBody.of(HttpStatus.BAD_REQUEST, e.getMessage()));
     }
 
     /** Malformed JSON is a client error, not a 500. */
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, String>> handleUnreadable(Exception e) {
-        return ResponseEntity.badRequest().body(Map.of("error", "invalid request body"));
+    public ResponseEntity<Map<String, Object>> handleUnreadable(Exception e) {
+        return ResponseEntity.badRequest().body(ApiErrorBody.of(HttpStatus.BAD_REQUEST, "invalid request body"));
     }
 }

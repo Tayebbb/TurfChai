@@ -7,6 +7,8 @@ import com.turfchai.dto.analytics.RevenueDto;
 import com.turfchai.dto.analytics.SegmentsDto;
 import com.turfchai.service.AdminAnalyticsService;
 import com.turfchai.service.AdminDemoDataSeeder;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -23,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>{@code GET /api/v1/admin/analytics/growth}   — user growth KPIs + signup chart</li>
  *   <li>{@code GET /api/v1/admin/analytics/revenue}  — GMV + booking count time-series</li>
  *   <li>{@code GET /api/v1/admin/analytics/segments} — user segment breakdown</li>
- *   <li>{@code POST /api/v1/admin/analytics/seed}    — trigger demo data seeder</li>
+ *   <li>{@code POST /api/v1/admin/analytics/seed}    — trigger demo data seeder (dev/test only)</li>
  * </ul>
  */
 
@@ -34,16 +36,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminAnalyticsRestController {
 
     private final AdminAnalyticsService analyticsService;
-    private final AdminDemoDataSeeder seeder;
+    private final ObjectProvider<AdminDemoDataSeeder> seeder;
 
-    public AdminAnalyticsRestController(AdminAnalyticsService analyticsService, AdminDemoDataSeeder seeder) {
+    public AdminAnalyticsRestController(AdminAnalyticsService analyticsService,
+                                        ObjectProvider<AdminDemoDataSeeder> seeder) {
         this.analyticsService = analyticsService;
         this.seeder = seeder;
     }
 
+    /**
+     * Fabricates hundreds of users, venues and bookings. Only reachable where the
+     * demo seeder bean exists (dev/test/ci) — an admin must not be able to inject
+     * fake accounts and money into a real database.
+     */
     @PostMapping("/seed")
     public ResponseEntity<ApiResponse<String>> seedData(@RequestParam(required = false, defaultValue = "true") boolean force) {
-        seeder.seed(force);
+        AdminDemoDataSeeder demoSeeder = seeder.getIfAvailable();
+        if (demoSeeder == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.ok("Demo data seeding is not available on this environment."));
+        }
+        demoSeeder.seed(force);
         return ResponseEntity.ok(ApiResponse.ok("Demo data seeder completed successfully."));
     }
 
