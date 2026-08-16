@@ -104,7 +104,7 @@ function BookingCard({ booking, groupKey }) {
             </Button>
           ) : null}
           {groupKey === "completed" ? (
-            <Button size="sm" variant="secondary" to={paths.player.review}>
+            <Button size="sm" variant="secondary" to={paths.player.reviewFor(booking.id)}>
               Leave review
             </Button>
           ) : null}

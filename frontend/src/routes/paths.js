@@ -19,6 +19,7 @@ export const paths = {
     matchday: '/player/matchday',
     matchdayFor: (bookingId) => `/player/matchday?bookingId=${bookingId}`,
     review: '/player/review',
+    reviewFor: (bookingId) => `/player/review?bookingId=${bookingId}`,
     cancel: '/player/cancel',
     cancelFor: (bookingId) => `/player/cancel?bookingId=${bookingId}`,
     rewards: '/player/rewards',
