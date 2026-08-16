@@ -8,7 +8,7 @@ export function DataTable({ columns, rows, getRowKey, caption, minWidth, classNa
   if (!rows.length && empty) return empty;
 
   return (
-    <div className={cn('table-wrap', className)}>
+    <div className={cn('table-wrap', className)} tabIndex={0} role="region" aria-label={caption}>
       <table className="table" style={minWidth ? { minWidth } : undefined}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>

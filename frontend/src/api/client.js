@@ -5,6 +5,7 @@
  * In production (Vercel), points to https://turfchai.onrender.com
  * In local development, defaults to http://localhost:8080.
  */
+import { toUserMessage } from '@/utils/errorMessage';
 
 const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_ORIGIN || '';
 export const API_BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:8080' : '');
@@ -98,10 +99,6 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
   if (token) {
     const authToken = getToken();
     if (authToken) headers.Authorization = `Bearer ${authToken}`;
-    const user = getUser();
-    if (user?.publicId || user?.id) {
-      headers['X-User-Id'] = user.publicId || user.id;
-    }
   }
 
   const url = resolveUrl(path);
@@ -114,47 +111,42 @@ export async function api(path, { method = 'GET', body, token = true } = {}) {
       body: body != null ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error('Network error — is the backend running?');
+    const offline = new ApiError(0, 'Cannot reach TurfChai right now. Check your connection and try again.');
+    offline.isNetworkError = true;
+    throw offline;
   }
 
   if (!response.ok) {
     if (response.status === 401 && token) handleUnauthorized();
 
-    let message = `Request failed with status ${response.status}`;
+    // `detail` keeps whatever the server said for logging; `message` is the
+    // line a user may see, so it never carries transport or server internals.
+    let detail = '';
+    let validationErrors = null;
     try {
       const errorBody = await response.json();
-      if (errorBody?.validationErrors) {
-        const details = Object.entries(errorBody.validationErrors)
+      validationErrors = errorBody?.validationErrors ?? null;
+      if (validationErrors) {
+        detail = Object.entries(validationErrors)
           .map(([field, msg]) => `${field}: ${msg}`)
           .join(', ');
-        message = `${errorBody.message || 'Validation failed'}: ${details}`;
-      } else if (errorBody?.message) {
-        message = errorBody.message;
-      } else if (errorBody?.error) {
-        message = errorBody.error;
+      } else {
+        detail = errorBody?.message || errorBody?.error || '';
       }
     } catch {
-      // keep default message
+      // No JSON body — the status alone has to carry the meaning.
     }
-    const error = new Error(message);
-    error.status = response.status;
+
+    const error = new ApiError(response.status, detail);
+    error.detail = detail;
+    error.validationErrors = validationErrors;
+    error.message = toUserMessage(error);
     throw error;
   }
 
   if (response.status === 204) return null;
   const contentType = response.headers.get('content-type') ?? '';
   return contentType.includes('application/json') ? response.json() : response.text();
-}
-
-/**
- * Alias for apiFetch used by openGames and lfgAlerts modules.
- */
-export async function apiFetch(endpoint, options = {}) {
-  return api(endpoint, {
-    method: options.method || 'GET',
-    body: options.body ? JSON.parse(options.body) : undefined,
-    headers: options.headers,
-  });
 }
 
 export class ApiError extends Error {
@@ -174,23 +166,47 @@ function authHeaders(extra = {}) {
 async function throwApiError(response) {
   if (response.status === 401 && getToken()) handleUnauthorized();
 
-  let message = `Request failed (${response.status})`;
+  let detail = '';
+  let validationErrors = null;
   try {
     const body = await response.json();
-    if (body?.validationErrors) {
-      const details = Object.entries(body.validationErrors)
+    validationErrors = body?.validationErrors ?? null;
+    if (validationErrors) {
+      detail = Object.entries(validationErrors)
         .map(([field, msg]) => `${field}: ${msg}`)
         .join(', ');
-      message = `${body.message || 'Validation failed'}: ${details}`;
-    } else if (body?.error) {
-      message = body.error;
-    } else if (body?.message) {
-      message = body.message;
+    } else {
+      detail = body?.message || body?.error || '';
     }
   } catch {
     /* non-JSON error body */
   }
-  throw new ApiError(response.status, message);
+
+  const error = new ApiError(response.status, detail);
+  error.detail = detail;
+  error.validationErrors = validationErrors;
+  error.message = toUserMessage(error);
+  throw error;
+}
+
+/**
+ * Reads a successful response body without assuming it is JSON.
+ *
+ * Several endpoints answer 200 with an empty body (`ResponseEntity<Void>`), and
+ * `response.json()` on those throws a parser error that surfaces to the user as
+ * a failure even though the call succeeded.
+ */
+async function readBody(response) {
+  if (response.status === 204 || response.status === 205) return null;
+  const text = await response.text();
+  if (!text) return null;
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('json')) return text;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 /** GET with URL params against backend origin */
@@ -208,7 +224,7 @@ export async function apiGet(path, params = {}) {
 
   const response = await fetch(url.toString(), { headers: authHeaders() });
   if (!response.ok) await throwApiError(response);
-  return response.json();
+  return readBody(response);
 }
 
 /** Mutating request against backend origin */
@@ -220,7 +236,7 @@ export async function apiSend(method, path, body) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) await throwApiError(response);
-  return response.status === 204 ? null : response.json();
+  return readBody(response);
 }
 
 /** Multipart FormData upload request against backend origin */
@@ -233,5 +249,5 @@ export async function apiUpload(path, formData) {
     body: formData,
   });
   if (!response.ok) await throwApiError(response);
-  return response.json();
+  return readBody(response);
 }

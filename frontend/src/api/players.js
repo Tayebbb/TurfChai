@@ -1,34 +1,25 @@
 import { apiGet, apiSend, getUser, setSession } from './client';
 
 /**
- * Player profile + saved venues endpoints. Identity is the seeded demo
- * player until authentication lands (X-User-Id header slot reserved).
+ * Player profile + saved venues endpoints. Every call here is scoped to the
+ * JWT the client sends — the server derives the player from the token, so
+ * there is no caller-supplied identity to spoof.
  */
 
-/** GET /api/v1/players/me */
-export async function getMyProfile() {
-  const localUser = getUser();
-  try {
-    const remote = await apiGet('/api/v1/players/me');
-    if (localUser?.fullName && remote && (remote.fullName === 'Rafi A.' || !remote.fullName)) {
-      return {
-        ...remote,
-        fullName: localUser.fullName,
-        email: localUser.email || remote.email,
-      };
-    }
-    return remote;
-  } catch (err) {
-    if (localUser) {
-      return {
-        fullName: localUser.fullName || '',
-        email: localUser.email || '',
-        area: localUser.area || '',
-        playerRole: localUser.playerRole || '',
-      };
-    }
-    throw err;
-  }
+/**
+ * GET /api/v1/players/me
+ *
+ * Deliberately has no fallback: if the server will not tell us who the caller
+ * is, the caller has no profile. Synthesising one from `localStorage` used to
+ * hide 401s and let a signed-out visitor render as a real player.
+ */
+export function getMyProfile() {
+  return apiGet('/api/v1/players/me');
+}
+
+/** GET /api/v1/players/me/stats — activity summary derived from the caller's own records. */
+export function getMyStats() {
+  return apiGet('/api/v1/players/me/stats');
 }
 
 /** PATCH /api/v1/players/me — null/omitted fields stay unchanged. */

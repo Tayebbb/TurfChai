@@ -19,19 +19,9 @@ export function holdSlot(slotId) {
   return api('/bookings/hold-slot', { method: 'POST', body: { slotId } });
 }
 
-/** POST /api/v1/bookings — confirms the caller's hold into a booking. */
-export function createBooking(slotId) {
-  return api('/bookings', { method: 'POST', body: { slotId } });
-}
-
 /** GET /api/v1/bookings/{id} — booking detail for the owner/admin. */
 export function getBooking(id) {
   return api(`/bookings/${encodeURIComponent(id)}`);
-}
-
-/** POST /api/v1/bookings/{id}/cancel — cancels a booking the caller owns. */
-export function cancelBooking(id) {
-  return api(`/bookings/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
 }
 
 /** GET /api/v1/bookings — every booking belonging to the caller. */
@@ -113,17 +103,8 @@ export function formatTimeRange(startTime, endTime) {
     : `${from.label} ${from.suffix} – ${to.label} ${to.suffix}`;
 }
 
-/** ISO timestamp → `"Fri 8 Aug, 7:30 PM"` */
-export function formatTimestamp(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const day = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-  return `${day}, ${formatTimeOfDay(date)}`;
-}
-
 /** Which bookings tab a booking belongs to. */
-export function bookingGroup(booking, now = new Date()) {
+function bookingGroup(booking, now = new Date()) {
   const status = String(booking?.status ?? '').toUpperCase();
   if (status === 'CANCELLED') return 'cancelled';
   if (status === 'COMPLETED') return 'completed';

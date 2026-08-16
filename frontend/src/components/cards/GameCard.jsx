@@ -20,7 +20,9 @@ function GameCardBase({ game, className }) {
                 <Badge tone={statusTone}>{status}</Badge>
                 {skill ? <Skill>{skill}</Skill> : null}
             </div>
-            <h4 style={{ margin: 0 }}>{title}</h4>
+            {/* h3, not h4: this card is rendered directly under the section's
+                h2, and jumping a level breaks screen-reader navigation. */}
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>{title}</h3>
             <div className="between">
                 <span className="subtle">
                     {when}

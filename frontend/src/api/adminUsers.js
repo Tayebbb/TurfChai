@@ -1,12 +1,13 @@
 import { api } from '@/api/client';
 
-export function listAdminUsers(role, status, q) {
+export function listAdminUsers(role, status, q, page = 0, size = 25) {
   const params = new URLSearchParams();
   if (role) params.set('role', role);
   if (status) params.set('status', status);
   if (q) params.set('q', q);
-  const query = params.toString() ? `?${params.toString()}` : '';
-  return api(`/admin/users${query}`);
+  params.set('page', String(page));
+  params.set('size', String(size));
+  return api(`/admin/users?${params.toString()}`);
 }
 
 export function updateUserStatus(id, payload) {

@@ -44,5 +44,6 @@ export const ADMIN_NAV_LINKS = [
   { to: paths.admin.turfs, label: 'Turfs' },
   { to: paths.admin.users, label: 'Users' },
   { to: paths.admin.activity, label: 'Activity' },
+  { to: paths.admin.payouts, label: 'Payouts' },
   { to: paths.admin.admins, label: 'Admins' },
 ];

@@ -5,6 +5,11 @@ export function listPayouts(status) {
   return api(`/admin/payouts${query}`);
 }
 
+/** Settled/pending/flagged totals, so the dashboard need not fetch every row. */
+export function getPayoutSummary() {
+  return api('/admin/payouts/summary');
+}
+
 export function getPayout(code) {
   return api(`/admin/payouts/${encodeURIComponent(code)}`);
 }

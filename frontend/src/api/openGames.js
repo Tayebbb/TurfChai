@@ -5,9 +5,9 @@ import { apiGet, apiSend } from '@/api/client';
  *
  * Responses are the raw OpenGameResponse / OpenGameMemberResponse DTOs — this
  * controller does not use the ApiResponse envelope, so there is no `.data` to
- * unwrap. Reads are public; `joinOpenGame` and `createOpenGame` need a
- * signed-in role and take the acting user's id in the body (they do not read
- * it from the JWT).
+ * unwrap. Reads are public; `joinOpenGame` and `createOpenGame` require a
+ * session and the server takes the acting user from the JWT, never from the
+ * request body.
  */
 
 const BASE = '/api/v1/solo/open-games';
@@ -35,17 +35,17 @@ export function getOpenGameMembers(id) {
 }
 
 /**
- * POST /solo/open-games/{id}/join — claims a spot for `userId`.
+ * POST /solo/open-games/{id}/join — claims a spot for the signed-in caller.
  * Rejects with 4xx when the game is full, already joined, or the user's
  * reliability / skill level does not clear the game's bar; the thrown
  * ApiError carries the backend message.
  * @returns {Promise<object>} JoinOpenGameResponse
  */
-export function joinOpenGame(id, { userId, paymentMethod }) {
-  return apiSend('POST', `${BASE}/${encodeURIComponent(id)}/join`, { userId, paymentMethod });
+export function joinOpenGame(id, { paymentMethod } = {}) {
+  return apiSend('POST', `${BASE}/${encodeURIComponent(id)}/join`, { paymentMethod });
 }
 
-/** POST /solo/open-games — creates a game (201). `organizerUserId` is required. */
+/** POST /solo/open-games — creates a game (201) owned by the signed-in caller. */
 export function createOpenGame(request) {
   return apiSend('POST', BASE, request);
 }

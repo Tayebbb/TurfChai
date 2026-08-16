@@ -42,7 +42,12 @@ export function useApi(fetcher, deps = [], options = {}) {
 
   useEffect(() => {
     if (!intervalMs || intervalMs <= 0) return;
-    const id = setInterval(() => setReloadTick((tick) => tick + 1), intervalMs);
+    // A background tab still ran the timer, so a dashboard left open all day
+    // kept polling for a screen nobody was looking at.
+    const tick = () => {
+      if (document.visibilityState === 'visible') setReloadTick((n) => n + 1);
+    };
+    const id = setInterval(tick, intervalMs);
     return () => clearInterval(id);
   }, [key, intervalMs]);
 
