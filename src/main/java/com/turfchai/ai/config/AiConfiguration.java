@@ -1,6 +1,8 @@
 package com.turfchai.ai.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.turfchai.ai.agent.AgentPlanner;
 import com.turfchai.ai.agent.BookingAssistantAgent;
 import com.turfchai.ai.agent.IntentRouter;
@@ -49,10 +51,22 @@ public class AiConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(AiConfiguration.class);
 
-    /** Boot 4 no longer auto-configures a bare ObjectMapper bean. */
+    /**
+     * Boot 4 no longer auto-configures a bare ObjectMapper bean.
+     *
+     * <p>
+     * JSR-310 is registered because tool results carry {@code LocalDate} /
+     * {@code LocalTime} / {@code OffsetDateTime} - slot times, booking dates,
+     * tournament windows, payment timestamps. Without it every dated result
+     * reached the model as "internal serialization error" and the assistant
+     * told the user it could not fetch data it had already read. ISO strings
+     * rather than epoch arrays, because the model quotes these back to a human.
+     */
     @Bean
     ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        return new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @Bean

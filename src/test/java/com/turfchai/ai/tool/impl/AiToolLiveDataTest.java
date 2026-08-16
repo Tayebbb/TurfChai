@@ -50,6 +50,9 @@ class AiToolLiveDataTest {
 
     @Autowired
     private ToolRegistry registry;
+    /** The very bean {@code bookingAssistantAgent} is constructed with. */
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper toolObjectMapper;
     @Autowired
     private VenueRepository venues;
     @Autowired
@@ -213,6 +216,36 @@ class AiToolLiveDataTest {
     }
 
     @Test
+    @DisplayName("a signed-in user's own bookings come back from the database")
+    void listReturnsTheCallersBookings() {
+        Booking booking = persistBookingFor(owner);
+
+        Map<String, Object> result = body(run("manage_booking", Map.of("action", "list"), as(owner)));
+
+        assertThat(result.get("count")).isEqualTo(1);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("bookings");
+        assertThat(rows).singleElement()
+                .satisfies(row -> {
+                    assertThat(row.get("bookingCode")).isEqualTo(booking.getBookingCode());
+                    assertThat(row.get("venue")).isEqualTo(venue.getName());
+                });
+    }
+
+    @Test
+    @DisplayName("a venue named the way a person would type it still resolves")
+    void venueIsResolvableByNameNotJustSlug() {
+        // The model relays whatever the user said. Accepting only the slug made
+        // "check availability at Tejgaon Kick Zone" a dead end.
+        Map<String, Object> result = body(run("manage_booking",
+                Map.of("action", "check_availability", "venue", venue.getName(),
+                        "date", LocalDate.now().plusDays(1).toString()),
+                anonymous()));
+
+        assertThat(result.get("venue")).isEqualTo(venue.getName());
+    }
+
+    @Test
     @DisplayName("the payment ledger of another user's booking is not readable")
     void paymentLookupIsScopedToTheOwner() {
         Booking booking = persistBookingFor(owner);
@@ -270,5 +303,48 @@ class AiToolLiveDataTest {
             assertThat(tool.spec().name()).isEqualTo(name);
             assertThat(tool.spec().description()).isNotBlank();
         }
+    }
+
+    @Test
+    @DisplayName("every tool result survives the trip to the model as JSON")
+    void toolResultsAreSerialisable() throws Exception {
+        // The model never sees a ToolResult, only its JSON. Asserting on the
+        // object hid a mapper that could not write LocalDate/LocalTime, so
+        // every dated result reached the model as "internal serialization
+        // error" and the assistant denied holding data it had just read.
+        Booking booking = persistBookingFor(owner);
+        LocalDate date = LocalDate.now().plusDays(1);
+
+        List<ToolResult> results = List.of(
+                run("search_venues", Map.of("limit", 3), anonymous()),
+                run("manage_booking", Map.of("action", "check_availability",
+                        "venue", venue.getSlug(), "date", date.toString()), anonymous()),
+                run("manage_booking", Map.of("action", "list"), as(owner)),
+                run("manage_booking", Map.of("action", "get",
+                        "bookingCode", booking.getBookingCode()), as(owner)),
+                run("manage_booking", Map.of("action", "cancel_quote",
+                        "bookingCode", booking.getBookingCode()), as(owner)),
+                run("get_user_profile", Map.of(), as(owner)),
+                run("get_payment_status", Map.of("bookingCode", booking.getBookingCode()), as(owner)),
+                run("search_tournaments", Map.of(), as(owner)),
+                run("update_booking_context", Map.of("sport", "football"), as(owner)));
+
+        for (ToolResult result : results) {
+            assertThat(result.success()).as("tool failed: %s", result.error()).isTrue();
+            String json = toolObjectMapper.writeValueAsString(result);
+            assertThat(json).doesNotContain("serialization error");
+        }
+    }
+
+    @Test
+    @DisplayName("dates reach the model as ISO strings, not epoch arrays")
+    void datesSerialiseAsIsoStrings() throws Exception {
+        LocalDate date = LocalDate.now().plusDays(1);
+
+        ToolResult result = run("manage_booking", Map.of("action", "check_availability",
+                "venue", venue.getSlug(), "date", date.toString()), anonymous());
+
+        String json = toolObjectMapper.writeValueAsString(result);
+        assertThat(json).contains("\"date\":\"" + date + "\"");
     }
 }

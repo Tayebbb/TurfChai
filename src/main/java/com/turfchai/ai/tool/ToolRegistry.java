@@ -59,7 +59,11 @@ public class ToolRegistry {
             return ToolResult.fail("Unknown tool: " + name);
         }
         try {
-            return tool.execute(arguments == null ? Map.of() : arguments, context);
+            ToolResult result = tool.execute(arguments == null ? Map.of() : arguments, context);
+            // The model's arguments are the only record of why a tool refused;
+            // without them a live failure is unreproducible.
+            log.debug("tool '{}' args={} success={} error={}", name, arguments, result.success(), result.error());
+            return result;
         } catch (Exception e) {
             log.error("Tool '{}' threw unexpectedly", name, e);
             return ToolResult.fail("Tool execution failed: " + e.getMessage());
