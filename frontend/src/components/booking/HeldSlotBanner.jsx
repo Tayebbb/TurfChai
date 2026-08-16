@@ -34,10 +34,11 @@ export function HeldSlotBanner() {
   const signedIn = Boolean(getToken());
 
   useEffect(() => {
-    if (!signedIn) {
-      setHold(null);
-      return undefined;
-    }
+    // Signed out: nothing to poll. `hold` is left as-is rather than cleared
+    // here — setting state synchronously in an effect body just to reset it
+    // triggers an extra cascading render for no visible benefit, since the
+    // render below already gates on `signedIn` and won't show a stale hold.
+    if (!signedIn) return undefined;
     let cancelled = false;
     const poll = async () => {
       try {
@@ -65,7 +66,9 @@ export function HeldSlotBanner() {
     return () => clearInterval(id);
   }, [hold]);
 
-  if (!hold) return null;
+  // Guards against a stale hold rendering right after sign-out, since the
+  // effect above deliberately doesn't clear `hold` synchronously on sign-out.
+  if (!signedIn || !hold) return null;
 
   const secondsLeft = secondsUntil(hold.heldUntil);
   if (secondsLeft <= 0) return null;
