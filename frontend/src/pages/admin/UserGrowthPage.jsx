@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { PageTitle } from '@/components/common/PageTitle';
 import { apiGet } from '@/api/client';
-import { listAdminUsers } from '@/api/adminUsers';
+import { listAdminUsers, adminUserRows } from '@/api/adminUsers';
 import { useApi } from '@/hooks/useApi';
 import { paths } from '@/routes/paths';
 import './UserGrowthPage.css';
@@ -66,11 +66,7 @@ export default function UserGrowthPage() {
 
   const { data: usersRes } = useApi(() => listAdminUsers(), []);
   const stream = useMemo(() => {
-    const arr = Array.isArray(usersRes?.data)
-      ? usersRes.data
-      : Array.isArray(usersRes)
-        ? usersRes
-        : [];
+    const arr = adminUserRows(usersRes);
     return [...arr]
       .filter((u) => u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN')
       .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))

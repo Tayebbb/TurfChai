@@ -51,7 +51,7 @@
         "id":  "TC-009",
         "verdict":  "PASS",
         "what":  "no elapsed slot is advertised as bookable",
-        "evidence":  "2 elapsed slot(s), 0 wrongly bookable"
+        "evidence":  "3 elapsed slot(s), 0 wrongly bookable"
     },
     {
         "id":  "TC-009b",

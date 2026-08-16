@@ -6,7 +6,7 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
 import { paths } from '@/routes/paths';
 import { api } from '@/api/client';
-import { listAdminUsers } from '@/api/adminUsers';
+import { listAdminUsers, adminUserRows } from '@/api/adminUsers';
 import { useApi } from '@/hooks/useApi';
 
 const DONUT_OPTIONS = {
@@ -119,14 +119,9 @@ export default function UserSegmentsPage() {
 
   const centerTotal = totalUsers >= 1000 ? `${(totalUsers / 1000).toFixed(1)}K` : String(totalUsers || '—');
 
-  const { data: usersRes } = useApi(() => listAdminUsers(), []);
+  const { data: usersRes } = useApi(() => listAdminUsers(undefined, undefined, undefined, 0, 100), []);
   const regions = useMemo(() => {
-    const all = Array.isArray(usersRes?.data)
-      ? usersRes.data
-      : Array.isArray(usersRes)
-        ? usersRes
-        : [];
-    const arr = all.filter((u) => u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN');
+    const arr = adminUserRows(usersRes).filter((u) => u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN');
     const counts = {};
     arr.forEach((u) => {
       const area = u.area || 'Unknown';
@@ -392,6 +387,9 @@ export default function UserSegmentsPage() {
           <Icon name="pin" style={{ color: 'var(--mint)' }} />
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Regional Distribution</h3>
         </div>
+        <span className="subtle small" style={{ display: 'block', marginTop: -10, marginBottom: 14 }}>
+          Share of the 100 most recent accounts, not of the whole platform
+        </span>
         <div className="stack-sm">
           {regions.map((region) => (
             <div className="history-item between" key={region.id} style={REGION_ITEM_STYLE}>

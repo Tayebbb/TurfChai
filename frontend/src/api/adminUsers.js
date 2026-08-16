@@ -10,6 +10,16 @@ export function listAdminUsers(role, status, q, page = 0, size = 25) {
   return api(`/admin/users?${params.toString()}`);
 }
 
+/**
+ * The rows out of a `/admin/users` response. The endpoint answers with a paged
+ * object, so callers that only unwrapped an array silently rendered nothing.
+ */
+export function adminUserRows(response) {
+  const data = response?.data ?? response;
+  if (Array.isArray(data)) return data;
+  return Array.isArray(data?.items) ? data.items : [];
+}
+
 export function updateUserStatus(id, payload) {
   return api(`/admin/users/${encodeURIComponent(id)}/status`, {
     method: 'PATCH',

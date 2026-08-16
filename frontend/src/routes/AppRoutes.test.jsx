@@ -26,6 +26,9 @@ function stubEverything() {
 }
 
 describe('route table', () => {
+  // Every advertised path is walked in one test, and each one downloads a lazy
+  // chunk, so the default per-test budget is not enough when the whole suite is
+  // running in parallel.
   it('advertises only paths that resolve to a real screen', async () => {
     // A path helper pointing at a route that does not exist is dead
     // navigation: the link renders, the click lands on "page not found".
@@ -34,12 +37,19 @@ describe('route table', () => {
     for (const path of ALL_STATIC) {
       stubEverything();
       const { unmount } = renderApp(<AppRoutes />, { route: path });
-      await waitFor(() => {
-        expect(document.body.textContent).not.toMatch(/page you.re looking for/i);
-      });
+      // The Suspense skeleton carries none of the not-found wording, so
+      // asserting before it clears would pass without loading the screen.
+      await waitFor(
+        () => {
+          expect(document.querySelector('.route-fallback')).toBeNull();
+        },
+        { timeout: 5000 },
+      );
+      expect(document.body.textContent, `${path} resolves to the not-found screen`)
+        .not.toMatch(/page you.re looking for/i);
       unmount();
     }
-  });
+  }, 120_000);
 
   it('sends an anonymous visitor from a private route to sign-in, not to a crash', async () => {
     stubEverything();

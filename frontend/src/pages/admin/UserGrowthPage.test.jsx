@@ -27,6 +27,13 @@ const USERS = [
   },
 ];
 
+/**
+ * The real payload shape. `/admin/users` answers with a paged object, and a
+ * mock that returned a bare array let a page which only unwrapped arrays pass
+ * here while rendering an empty stream against the running server.
+ */
+const USERS_PAGE = { data: { items: USERS, total: 1, page: 0, size: 25, totalPages: 1 } };
+
 /** Values the page used to invent whenever the API was slow or unreachable. */
 const FABRICATIONS = ['41,270', '+248 Today', '89.4%', '84.2%'];
 
@@ -41,7 +48,7 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
     renderGrowth([
       ['/players/me', { body: {} }],
       ['/admin/analytics/growth', { body: { success: true, data: GROWTH } }],
-      ['/admin/users', { body: { data: USERS } }],
+      ['/admin/users', { body: USERS_PAGE }],
     ]);
 
     expect(await screen.findByText('842')).toBeInTheDocument();
@@ -57,7 +64,7 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
     renderGrowth([
       ['/players/me', { body: {} }],
       ['/admin/analytics/growth', { body: { success: true, data: { ...GROWTH, retentionRate: null } } }],
-      ['/admin/users', { body: { data: USERS } }],
+      ['/admin/users', { body: USERS_PAGE }],
     ]);
 
     await screen.findByText('842');
@@ -83,7 +90,7 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
     renderGrowth([
       ['/players/me', { body: {} }],
       ['/admin/analytics/growth', { body: { success: true, data: GROWTH } }],
-      ['/admin/users', { body: { data: USERS } }],
+      ['/admin/users', { body: USERS_PAGE }],
     ]);
 
     // The one channel the API returned is rendered with its own figures...
@@ -99,7 +106,7 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
     renderGrowth([
       ['/players/me', { body: {} }],
       ['/admin/analytics/growth', { body: { success: true, data: { ...GROWTH, channels: [] } } }],
-      ['/admin/users', { body: { data: USERS } }],
+      ['/admin/users', { body: USERS_PAGE }],
     ]);
 
     await screen.findByText('842');
@@ -112,7 +119,7 @@ describe('Admin UserGrowthPage — no invented growth figures', () => {
     renderGrowth([
       ['/players/me', { body: {} }],
       ['/admin/analytics/growth', { body: { success: true, data: GROWTH } }],
-      ['/admin/users', { body: { data: USERS } }],
+      ['/admin/users', { body: USERS_PAGE }],
     ]);
 
     expect(await screen.findByText('Rafi Karim')).toBeInTheDocument();
