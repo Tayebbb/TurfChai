@@ -1,5 +1,18 @@
 # TurfChai — Database Schema & Architecture (PostgreSQL)
 
+> **This is the original design-time schema, not a description of the running
+> system.** It was written up front from the front-end prototype and describes
+> the intended PostgreSQL model — native `ENUM` types, triggers, row-level
+> security — much of which the implementation does not use. It also covers
+> features that were built and later removed (team split payment, venue staff
+> and shifts), and tables that survive only because applied Flyway migrations
+> are never edited (`staff_members`, `shift_records`, `booking_members`,
+> `bank_accounts`) and which no entity maps today.
+>
+> **For the schema as implemented — the 30 entities, their relationships and the
+> 34 migrations that produce them — see [docs/database.md](docs/database.md).**
+> Keep this file as the reference for the raw SQL and the reasoning behind it.
+
 > **Version:** 1.0
 > **Target DBMS:** PostgreSQL 15+ (all features require ≥ 15)
 > **Scope:** Complete logical & physical schema for the TurfChai turf-booking platform, extracted from the front-end prototype (`player/*`, `host/*`, `owner/*`, `admin/*`, `solo/*`).
@@ -34,10 +47,10 @@ TurfChai is a sports-turf booking platform operating in Dhaka (BDT / ৳). The s
 
 | Workspace | Roles | Primary surfaces |
 |---|---|---|
-| Player | `player` | Book turfs, split payments, reviews, loyalty, saved venues |
+| Player | `player` | Book turfs, reviews, loyalty, saved venues (split payments were designed here but are **not implemented**) |
 | Solo Player | `solo_player` | Join open games, LFG alerts, reliability score |
 | Host | `host` | Run tournaments, multi-pitch reservations |
-| Owner | `owner`, venue `staff` | Venue setup, pricing, calendar, staff, shifts, payouts |
+| Owner | `owner`, venue `staff` | Venue setup, pricing, calendar, payouts (staff and shifts are **not implemented**) |
 | Admin | `admin`, `super_admin` | Turf vetting, user moderation, audit, payouts oversight |
 | System | `system` | Background jobs, alerts, audit of automated actions |
 

@@ -277,7 +277,7 @@ Decisions, trade-offs and roadmap: **[docs/decisions.md](docs/decisions.md)**
 | [docs/testing.md](docs/testing.md)               | Test layers, principles and verified counts                          |
 | [docs/decisions.md](docs/decisions.md)           | Engineering decisions, limitations, roadmap                          |
 | [TESTING.md](TESTING.md)                         | Per-layer commands and the gate's stage list                         |
-| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)         | Raw SQL schema reference                                             |
+| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)         | Original design-time SQL schema (superseded by docs/database.md)     |
 | [SWAGGER_E2E_TESTING.md](SWAGGER_E2E_TESTING.md) | Manual API walkthrough                                               |
 
 ## License
