@@ -253,15 +253,6 @@ export default function BookingDetailPage() {
                 >
                   Contact venue
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!booking}
-                  loading={downloadingPdf}
-                  onClick={handleDownloadPdf}
-                >
-                  Download PDF
-                </Button>
               </div>
             </section>
 
@@ -330,6 +321,24 @@ export default function BookingDetailPage() {
           </div>
 
           <aside className="stack">
+            <div className="pdf-cta">
+              <span className="pdf-cta-icon" aria-hidden="true">
+                📄
+              </span>
+              <span className="pdf-cta-text">
+                <b>Get your receipt</b>
+                <span>A full PDF copy of this booking, with a scannable ticket QR.</span>
+              </span>
+              <Button
+                className={`pdf-cta-btn${downloadingPdf ? " is-busy" : ""}`}
+                variant="primary"
+                disabled={!booking}
+                loading={downloadingPdf}
+                onClick={handleDownloadPdf}
+              >
+                Download PDF
+              </Button>
+            </div>
             <div className="glass glass-card">
               <h4>Payment summary</h4>
               <div className="pricerow">
