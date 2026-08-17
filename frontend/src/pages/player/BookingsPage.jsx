@@ -136,6 +136,7 @@ function BookingCard({ booking, groupKey }) {
           <Button
             size="sm"
             variant="secondary"
+            className={`btn-shine${downloadingPdf ? " is-busy" : ""}`}
             loading={downloadingPdf}
             onClick={handleDownloadPdf}
           >

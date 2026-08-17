@@ -158,3 +158,54 @@
 .icon-btn:active {
     transform: scale(.96)
 }
+
+/* ---------- Attention pulse ("shining") ----------
+   A soft, recurring ring — draws the eye to a specific CTA (a download
+   button, say) without reading as an error/urgent state. Shared so any
+   page can flag one button as "the" action, not just Booking Detail. */
+.btn-shine {
+    position: relative;
+    animation: btn-shine-pulse 2.6s ease-out infinite;
+}
+
+.btn-shine.is-busy {
+    animation: none;
+}
+
+@keyframes btn-shine-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(14, 122, 74, .45)
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(14, 122, 74, 0)
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(14, 122, 74, 0)
+    }
+}
+
+[data-theme="dark"] .btn-shine {
+    animation-name: btn-shine-pulse-dark
+}
+
+@keyframes btn-shine-pulse-dark {
+    0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, .5)
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0)
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0)
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-shine {
+        animation: none
+    }
+}

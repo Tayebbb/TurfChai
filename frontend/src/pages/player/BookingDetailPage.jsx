@@ -330,7 +330,7 @@ export default function BookingDetailPage() {
                 <span>A full PDF copy of this booking, with a scannable ticket QR.</span>
               </span>
               <Button
-                className={`pdf-cta-btn${downloadingPdf ? " is-busy" : ""}`}
+                className={`pdf-cta-btn btn-shine${downloadingPdf ? " is-busy" : ""}`}
                 variant="primary"
                 disabled={!booking}
                 loading={downloadingPdf}
