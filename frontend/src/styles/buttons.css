@@ -159,17 +159,51 @@
     transform: scale(.96)
 }
 
-/* ---------- Attention pulse ("shining") ----------
-   A soft, recurring ring — draws the eye to a specific CTA (a download
-   button, say) without reading as an error/urgent state. Shared so any
-   page can flag one button as "the" action, not just Booking Detail. */
+/* ---------- Attention shine ----------
+   A soft pulse ring plus a diagonal light sweep — draws the eye to a
+   specific CTA (a download button, say) without reading as an error/
+   urgent state. Shared so any page can flag one button as "the" action,
+   not just Booking Detail. */
 .btn-shine {
     position: relative;
+    overflow: hidden;
     animation: btn-shine-pulse 2.6s ease-out infinite;
+}
+
+/* The sweep: an angled highlight band that crosses the button left to
+   right on a continuous 3s loop. `overflow: hidden` above (the pill's
+   own border-radius) clips it to the button's shape; `pointer-events:
+   none` keeps it from ever intercepting the click. */
+.btn-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, .55) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    animation: btn-shine-sweep 3s linear infinite;
+    pointer-events: none;
 }
 
 .btn-shine.is-busy {
     animation: none;
+}
+
+.btn-shine.is-busy::after {
+    animation: none;
+    display: none;
+}
+
+@keyframes btn-shine-sweep {
+    from {
+        left: -60%
+    }
+
+    to {
+        left: 130%
+    }
 }
 
 @keyframes btn-shine-pulse {
@@ -207,5 +241,10 @@
 @media (prefers-reduced-motion: reduce) {
     .btn-shine {
         animation: none
+    }
+
+    .btn-shine::after {
+        animation: none;
+        display: none
     }
 }
