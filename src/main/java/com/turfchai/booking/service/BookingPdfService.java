@@ -14,6 +14,8 @@ import com.lowagie.text.FontFactory;
 import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -45,12 +47,33 @@ import java.util.Locale;
  * — the math here (paid / refunded / still due) mirrors what the frontend
  * already computes from those same DTOs, so the two must never see different
  * shapes of the same data.
+ *
+ * <p>
+ * The layout is a fixed, single-page "ticket stub" design — a colored header
+ * band, a stat-chip row, a two-column body (price + transactions on the
+ * left, a summary/QR stub on the right), and a footer. Every section has a
+ * hard-capped height (the transaction list truncates past a handful of
+ * rows) so the page count can never exceed one regardless of how much
+ * payment history a booking accumulates — there is no dynamic
+ * font-shrinking or overflow logic to keep correct.
  */
 @Service
 public class BookingPdfService {
 
-    private static final Color BRAND_GREEN = new Color(14, 122, 74);
-    private static final Color MUTED_GRAY = new Color(89, 108, 98);
+    /** Past this many rows, the transaction list truncates with a "+N more" note. */
+    private static final int MAX_TRANSACTION_ROWS = 5;
+
+    // ---- Palette: mirrors the frontend's design tokens (tokens.css light theme) ----
+    private static final Color BRAND = new Color(14, 122, 74);
+    private static final Color BRAND_DARK = new Color(9, 84, 52);
+    private static final Color INK = new Color(18, 32, 25);
+    private static final Color MUTED = new Color(89, 108, 98);
+    private static final Color FAINT = new Color(150, 165, 157);
+    private static final Color SURFACE = new Color(240, 244, 242);
+    private static final Color SURFACE_SOFT = new Color(247, 249, 248);
+    private static final Color BORDER = new Color(228, 234, 230);
+    private static final Color WHITE = Color.WHITE;
+
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH);
 
@@ -70,16 +93,21 @@ public class BookingPdfService {
     public byte[] generate(BookingResponse booking, List<PaymentResponse> payments) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            Document document = new Document(PageSize.A4, 36, 36, 54, 54);
+            // Tight, even margins — the header band and footer rule read as
+            // page-edge-to-edge, which is what makes a receipt feel designed
+            // rather than a generic document with default whitespace.
+            Document document = new Document(PageSize.A4, 0, 0, 0, 28);
             PdfWriter.getInstance(document, out);
             document.open();
 
-            addHeader(document, booking);
-            addMatchDetails(document, booking);
-            addPriceBreakdown(document, booking);
-            addTransactions(document, payments);
-            addSummary(document, booking, payments);
-            addQrCode(document, booking);
+            addHeaderBand(document, booking);
+
+            // Everything below the band sits inside the page's side margins;
+            // the band itself is full-bleed, so content resumes at x=40.
+            Paragraph spacer = new Paragraph(" ", FontFactory.getFont(FontFactory.HELVETICA, 4));
+            spacer.setSpacingAfter(0);
+
+            addBodyWrapper(document, booking, payments);
             addFooter(document);
 
             document.close();
@@ -89,110 +117,249 @@ public class BookingPdfService {
         }
     }
 
-    private void addHeader(Document document, BookingResponse booking) throws DocumentException {
-        Font brand = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, BRAND_GREEN);
-        Paragraph title = new Paragraph("TurfChai", brand);
-        title.add(new Chunk("  ·  Booking receipt",
-                FontFactory.getFont(FontFactory.HELVETICA, 12, MUTED_GRAY)));
-        document.add(title);
+    // ---------------------------------------------------------------------
+    // Header band
+    // ---------------------------------------------------------------------
 
-        Font codeFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15);
-        Paragraph code = new Paragraph("Booking " + safe(booking.getBookingCode()), codeFont);
-        code.setSpacingBefore(10);
-        document.add(code);
+    private void addHeaderBand(Document document, BookingResponse booking) throws DocumentException {
+        PdfPTable band = new PdfPTable(2);
+        band.setWidthPercentage(100);
+        band.setWidths(new float[] { 3f, 2f });
 
-        Font statusFont = FontFactory.getFont(FontFactory.HELVETICA, 11, MUTED_GRAY);
-        Paragraph status = new Paragraph("Status: " + safe(booking.getStatus()), statusFont);
-        status.setSpacingAfter(14);
-        document.add(status);
+        Paragraph brand = new Paragraph();
+        brand.add(new Chunk("TurfChai", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, WHITE)));
+        brand.add(new Chunk("  Booking receipt", FontFactory.getFont(FontFactory.HELVETICA, 11,
+                new Color(220, 236, 227))));
+        brand.setSpacingBefore(2);
+
+        Paragraph code = new Paragraph(safe(booking.getBookingCode()),
+                FontFactory.getFont(FontFactory.HELVETICA, 10, new Color(220, 236, 227)));
+        code.setSpacingBefore(4);
+
+        PdfPCell left = new PdfPCell();
+        left.setBorder(Rectangle.NO_BORDER);
+        left.setBackgroundColor(BRAND);
+        left.setPadding(0);
+        left.setPaddingLeft(40);
+        left.setPaddingTop(26);
+        left.setPaddingBottom(26);
+        left.addElement(brand);
+        left.addElement(code);
+        left.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        band.addCell(left);
+
+        PdfPCell right = new PdfPCell(new Phrase(statusPill(booking.getStatus())));
+        right.setBorder(Rectangle.NO_BORDER);
+        right.setBackgroundColor(BRAND);
+        right.setPaddingRight(40);
+        right.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        right.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        band.addCell(right);
+
+        document.add(band);
     }
 
-    private void addMatchDetails(Document document, BookingResponse booking) throws DocumentException {
-        addSectionTitle(document, "Match details");
+    private Phrase statusPill(String status) {
+        String label = safe(status);
+        Font font = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, WHITE);
+        return new Phrase("● " + label, font);
+    }
 
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        table.setSpacingAfter(16);
+    // ---------------------------------------------------------------------
+    // Body: stat chips + two-column (price/transactions | summary/QR)
+    // ---------------------------------------------------------------------
 
-        addFactRow(table, "Venue", safe(booking.getVenueName()));
-        addFactRow(table, "Address",
-                joinNonBlank(", ", booking.getVenueAddress(), booking.getVenueArea()));
-        addFactRow(table, "Pitch", safe(booking.getPitchName()));
-        addFactRow(table, "Date", formatDate(booking.getBookingDate()));
-        addFactRow(table, "Play time", formatTimeRange(booking.getStartTime(), booking.getEndTime()));
-        addFactRow(table, "Arrive by", "10 min early");
-        if (booking.getVenueContactPhone() != null && !booking.getVenueContactPhone().isBlank()) {
-            addFactRow(table, "Venue contact", booking.getVenueContactPhone());
+    private void addBodyWrapper(Document document, BookingResponse booking, List<PaymentResponse> payments)
+            throws DocumentException, WriterException, IOException {
+        // A single outer table with generous side padding stands in for page
+        // margins, so it lines up under the full-bleed header band above.
+        PdfPTable outer = new PdfPTable(1);
+        outer.setWidthPercentage(100);
+        PdfPCell wrap = new PdfPCell();
+        wrap.setBorder(Rectangle.NO_BORDER);
+        wrap.setPaddingLeft(40);
+        wrap.setPaddingRight(40);
+        wrap.setPaddingTop(20);
+
+        wrap.addElement(venueHeading(booking));
+        wrap.addElement(statChips(booking));
+        wrap.addElement(spacer(10));
+        wrap.addElement(twoColumnBody(booking, payments));
+
+        outer.addCell(wrap);
+        document.add(outer);
+    }
+
+    private Paragraph venueHeading(BookingResponse booking) {
+        Paragraph heading = new Paragraph();
+        heading.add(new Chunk(safe(booking.getVenueName()), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 17, INK)));
+        heading.setSpacingAfter(2);
+
+        String sub = joinNonBlank(" · ", booking.getVenueArea(), booking.getVenueAddress());
+        Paragraph wrapper = new Paragraph();
+        wrapper.add(heading);
+        Paragraph subLine = new Paragraph(sub, FontFactory.getFont(FontFactory.HELVETICA, 10, MUTED));
+        subLine.setSpacingAfter(14);
+        wrapper.add(subLine);
+        return wrapper;
+    }
+
+    /** Four compact info chips — Date / Play time / Pitch / Arrive by. */
+    private PdfPTable statChips(BookingResponse booking) {
+        String[] labels = { "DATE", "PLAY TIME", "PITCH", "ARRIVE BY" };
+        String[] values = {
+                formatDate(booking.getBookingDate()),
+                formatTimeRange(booking.getStartTime(), booking.getEndTime()),
+                safe(booking.getPitchName()),
+                "10 min early",
+        };
+
+        PdfPTable chips = new PdfPTable(4);
+        chips.setWidthPercentage(100);
+        chips.setSpacingAfter(6);
+        for (int i = 0; i < labels.length; i++) {
+            PdfPCell cell = new PdfPCell();
+            cell.setBackgroundColor(SURFACE_SOFT);
+            cell.setBorder(Rectangle.NO_BORDER);
+            cell.setPadding(10);
+            cell.setPaddingBottom(9);
+            if (i > 0) {
+                cell.setPaddingLeft(12);
+            }
+
+            Paragraph label = new Paragraph(labels[i], FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.5f, FAINT));
+            label.setSpacingAfter(3);
+            Paragraph value = new Paragraph(values[i], FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10.5f, INK));
+
+            cell.addElement(label);
+            cell.addElement(value);
+            chips.addCell(cell);
         }
-
-        document.add(table);
+        return chips;
     }
 
-    private void addPriceBreakdown(Document document, BookingResponse booking) throws DocumentException {
-        addSectionTitle(document, "Price breakdown");
+    private PdfPTable twoColumnBody(BookingResponse booking, List<PaymentResponse> payments)
+            throws WriterException, IOException {
+        PdfPTable columns = new PdfPTable(2);
+        columns.setWidthPercentage(100);
+        columns.setWidths(new float[] { 3f, 2f });
 
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        table.setSpacingAfter(16);
+        PdfPCell leftCell = new PdfPCell();
+        leftCell.setBorder(Rectangle.NO_BORDER);
+        leftCell.setPaddingRight(16);
+        leftCell.addElement(priceBreakdownCard(booking));
+        leftCell.addElement(spacer(10));
+        leftCell.addElement(transactionsCard(payments));
+        columns.addCell(leftCell);
 
-        addFactRow(table, "Slot price", bdt(booking.getAmount()));
+        PdfPCell rightCell = new PdfPCell();
+        rightCell.setBorder(Rectangle.NO_BORDER);
+        rightCell.addElement(summaryAndQrCard(booking, payments));
+        columns.addCell(rightCell);
+
+        return columns;
+    }
+
+    // ---------------------------------------------------------------------
+    // Cards
+    // ---------------------------------------------------------------------
+
+    private PdfPTable priceBreakdownCard(BookingResponse booking) {
+        PdfPTable card = cardShell("Price breakdown");
+
+        addFactRow(card, "Slot price", bdt(booking.getAmount()), false);
         if (booking.getDiscountAmount() != null && booking.getDiscountAmount().signum() > 0) {
             String promoLabel = booking.getPromoCode() != null && !booking.getPromoCode().isBlank()
-                    ? "Discount (" + booking.getPromoCode() + ")"
+                    ? "Discount · " + booking.getPromoCode()
                     : "Discount";
-            addFactRow(table, promoLabel, "-" + bdt(booking.getDiscountAmount()));
+            addFactRow(card, promoLabel, "−" + bdt(booking.getDiscountAmount()), false);
         }
-        addFactRow(table, "Net amount", bdt(booking.getNetAmount()));
+        addFactRow(card, "Net amount", bdt(booking.getNetAmount()), true);
 
-        document.add(table);
+        return card;
     }
 
-    private void addTransactions(Document document, List<PaymentResponse> payments) throws DocumentException {
-        addSectionTitle(document, "Transactions");
+    private PdfPTable transactionsCard(List<PaymentResponse> payments) {
+        PdfPTable card = cardShell("Transactions");
 
-        if (payments == null || payments.isEmpty()) {
-            document.add(new Paragraph("No payments recorded yet.",
-                    FontFactory.getFont(FontFactory.HELVETICA, 10, MUTED_GRAY)));
-            return;
+        List<PaymentResponse> safePayments = payments == null ? List.of() : payments;
+        if (safePayments.isEmpty()) {
+            PdfPCell empty = new PdfPCell(new Paragraph("No payments recorded yet.",
+                    FontFactory.getFont(FontFactory.HELVETICA, 9, MUTED)));
+            empty.setBorder(Rectangle.NO_BORDER);
+            empty.setPadding(4);
+            card.addCell(empty);
+            return card;
         }
 
-        PdfPTable table = new PdfPTable(new float[] { 2.2f, 2.4f, 1.6f, 1.6f, 1.6f });
-        table.setWidthPercentage(100);
-        table.setSpacingAfter(16);
+        // Hard cap: guarantees the page can never overflow no matter how many
+        // payment/refund rows a booking has accumulated.
+        List<PaymentResponse> shown = safePayments.size() > MAX_TRANSACTION_ROWS
+                ? safePayments.subList(0, MAX_TRANSACTION_ROWS)
+                : safePayments;
 
-        Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE);
-        for (String head : new String[] { "Date", "Detail", "Method", "Amount", "Status" }) {
-            PdfPCell cell = new PdfPCell(new Paragraph(head, headFont));
-            cell.setBackgroundColor(BRAND_GREEN);
-            cell.setPadding(6);
-            table.addCell(cell);
+        for (PaymentResponse payment : shown) {
+            addTransactionRow(card, payment);
+        }
+        if (safePayments.size() > shown.size()) {
+            PdfPCell more = new PdfPCell(new Paragraph(
+                    "+" + (safePayments.size() - shown.size()) + " more — see the full history in the app",
+                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, FAINT)));
+            more.setBorder(Rectangle.NO_BORDER);
+            more.setPaddingTop(6);
+            card.addCell(more);
         }
 
-        Font rowFont = FontFactory.getFont(FontFactory.HELVETICA, 9);
-        for (PaymentResponse payment : payments) {
-            boolean fromWallet = Boolean.TRUE.equals(payment.getFromWallet());
-            boolean isRefund = payment.getType() != null && payment.getType().name().equals("REFUND");
-            String detail = fromWallet
-                    ? (isRefund ? "Refund to wallet" : "Wallet credit")
-                    : (isRefund ? "Refund" : "Booking payment");
-            String method = fromWallet ? "Wallet" : String.valueOf(payment.getMethod());
-            String when = payment.getPaidAt() != null ? payment.getPaidAt().toLocalDate().toString()
-                    : payment.getCreatedAt() != null ? payment.getCreatedAt().toLocalDate().toString() : "—";
-
-            addBodyCell(table, when, rowFont);
-            addBodyCell(table, detail, rowFont);
-            addBodyCell(table, method, rowFont);
-            addBodyCell(table, bdt(payment.getAmount()), rowFont);
-            addBodyCell(table, String.valueOf(payment.getStatus()), rowFont);
-        }
-
-        document.add(table);
+        return card;
     }
 
-    private void addSummary(Document document, BookingResponse booking, List<PaymentResponse> payments)
-            throws DocumentException {
-        addSectionTitle(document, "Summary");
+    private void addTransactionRow(PdfPTable card, PaymentResponse payment) {
+        boolean fromWallet = Boolean.TRUE.equals(payment.getFromWallet());
+        boolean isRefund = payment.getType() != null && payment.getType().name().equals("REFUND");
+        String detail = fromWallet
+                ? (isRefund ? "Refund to wallet" : "Wallet credit")
+                : (isRefund ? "Refund" : "Booking payment");
+        String method = fromWallet ? "Wallet" : String.valueOf(payment.getMethod());
+        String when = payment.getPaidAt() != null ? payment.getPaidAt().toLocalDate().toString()
+                : payment.getCreatedAt() != null ? payment.getCreatedAt().toLocalDate().toString() : "—";
+        boolean success = payment.getStatus() != null && payment.getStatus().name().equals("SUCCESS");
 
+        PdfPTable row = new PdfPTable(2);
+        row.setWidthPercentage(100);
+        row.setWidths(new float[] { 3f, 2f });
+
+        // Two deliberate lines rather than one long line left to wrap on its
+        // own — at this column width a single wrapped line breaks mid-date
+        // unpredictably ("2026-\n08-17"); a fixed detail/meta split never does.
+        Paragraph leftText = new Paragraph();
+        Chunk detailLine = new Chunk(detail, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9.5f, INK));
+        leftText.add(detailLine);
+        leftText.add(Chunk.NEWLINE);
+        leftText.add(new Chunk(method + " · " + when, FontFactory.getFont(FontFactory.HELVETICA, 7.5f, MUTED)));
+        PdfPCell leftCell = new PdfPCell(leftText);
+        leftCell.setBorder(Rectangle.BOTTOM);
+        leftCell.setBorderColor(BORDER);
+        leftCell.setPadding(5);
+        row.addCell(leftCell);
+
+        Paragraph amount = new Paragraph((isRefund ? "−" : "") + bdt(payment.getAmount()),
+                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9.5f, success ? INK : FAINT));
+        PdfPCell rightCell = new PdfPCell(amount);
+        rightCell.setBorder(Rectangle.BOTTOM);
+        rightCell.setBorderColor(BORDER);
+        rightCell.setPadding(5);
+        rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        rightCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        row.addCell(rightCell);
+
+        PdfPCell wrapCell = new PdfPCell(row);
+        wrapCell.setBorder(Rectangle.NO_BORDER);
+        wrapCell.setPadding(0);
+        card.addCell(wrapCell);
+    }
+
+    private PdfPTable summaryAndQrCard(BookingResponse booking, List<PaymentResponse> payments)
+            throws WriterException, IOException {
         List<PaymentResponse> safePayments = payments == null ? List.of() : payments;
         BigDecimal settledTotal = safePayments.stream()
                 .filter(p -> p.getType() != null && p.getType().name().equals("BOOKING")
@@ -210,84 +377,162 @@ public class BookingPdfService {
         boolean cancelled = "CANCELLED".equals(booking.getStatus());
         BigDecimal netAmount = booking.getNetAmount() != null ? booking.getNetAmount() : BigDecimal.ZERO;
         BigDecimal stillDue = cancelled ? BigDecimal.ZERO : netAmount.subtract(netPaid).max(BigDecimal.ZERO);
+        String dueLabel = stillDue.signum() > 0 ? "Still due" : cancelled ? "Net charged" : "Settled";
+        BigDecimal dueValue = stillDue.signum() > 0 ? stillDue : netPaid;
 
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        table.setSpacingAfter(16);
+        // A single soft "stub" card housing both the running total and the QR,
+        // set off from the two-column price/transactions area on the left —
+        // the boarding-pass-style panel a player would actually keep.
+        PdfPTable stub = new PdfPTable(1);
+        stub.setWidthPercentage(100);
+        PdfPCell shell = new PdfPCell();
+        shell.setBackgroundColor(SURFACE);
+        shell.setBorder(Rectangle.NO_BORDER);
+        shell.setPadding(16);
+
+        Paragraph dueLine = new Paragraph(dueLabel.toUpperCase(Locale.ENGLISH),
+                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.5f, MUTED));
+        dueLine.setSpacingAfter(2);
+        Paragraph dueAmount = new Paragraph(bdt(dueValue),
+                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 19, stillDue.signum() > 0 ? BRAND_DARK : INK));
+        dueAmount.setSpacingAfter(12);
+        shell.addElement(dueLine);
+        shell.addElement(dueAmount);
 
         if (settledTotal.signum() > 0) {
-            addFactRow(table, "Paid", bdt(settledTotal));
+            addStubLine(shell, "Paid", bdt(settledTotal));
         }
         if (refundedTotal.signum() > 0) {
-            addFactRow(table, "Refunded", "-" + bdt(refundedTotal));
+            addStubLine(shell, "Refunded", "−" + bdt(refundedTotal));
         }
-        addFactRow(table, stillDue.signum() > 0 ? "Still due" : cancelled ? "Net charged" : "Settled",
-                bdt(stillDue.signum() > 0 ? stillDue : netPaid));
 
-        document.add(table);
+        shell.addElement(spacer(10));
+        shell.addElement(divider());
+        shell.addElement(spacer(10));
+
+        Image qr = buildQrImage(booking);
+        qr.setAlignment(Element.ALIGN_CENTER);
+        shell.addElement(qr);
+
+        Paragraph caption = new Paragraph("Scan to open this booking",
+                FontFactory.getFont(FontFactory.HELVETICA, 8, MUTED));
+        caption.setAlignment(Element.ALIGN_CENTER);
+        caption.setSpacingBefore(6);
+        shell.addElement(caption);
+
+        stub.addCell(shell);
+        return stub;
     }
 
-    private void addQrCode(Document document, BookingResponse booking)
-            throws WriterException, IOException, DocumentException {
+    private void addStubLine(PdfPCell shell, String label, String value) {
+        Paragraph line = new Paragraph();
+        line.add(new Chunk(label, FontFactory.getFont(FontFactory.HELVETICA, 9, MUTED)));
+        // Right-align the value with tab-like spacing; a nested table would be
+        // more precise but this stub is a narrow single column, so a simple
+        // two-line pairing reads cleanly without the extra table nesting.
+        Paragraph valueLine = new Paragraph(value, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, INK));
+        valueLine.setSpacingAfter(4);
+        shell.addElement(line);
+        shell.addElement(valueLine);
+    }
+
+    // ---------------------------------------------------------------------
+    // Shared building blocks
+    // ---------------------------------------------------------------------
+
+    /** A titled card shell — light border, generous internal padding, no fill. */
+    private PdfPTable cardShell(String title) {
+        PdfPTable card = new PdfPTable(1);
+        card.setWidthPercentage(100);
+        card.setSpacingAfter(0);
+
+        Paragraph heading = new Paragraph(title, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, INK));
+        heading.setSpacingAfter(8);
+        PdfPCell headCell = new PdfPCell(heading);
+        headCell.setBorder(Rectangle.NO_BORDER);
+        headCell.setPadding(0);
+        headCell.setPaddingBottom(2);
+        card.addCell(headCell);
+
+        return card;
+    }
+
+    private void addFactRow(PdfPTable card, String label, String value, boolean emphasize) {
+        PdfPTable row = new PdfPTable(2);
+        row.setWidthPercentage(100);
+
+        Font labelFont = FontFactory.getFont(FontFactory.HELVETICA, emphasize ? 10 : 9.5f, emphasize ? INK : MUTED);
+        Font valueFont = FontFactory.getFont(emphasize ? FontFactory.HELVETICA_BOLD : FontFactory.HELVETICA_BOLD,
+                emphasize ? 11 : 9.5f, INK);
+
+        PdfPCell labelCell = new PdfPCell(new Paragraph(label, labelFont));
+        labelCell.setBorder(emphasize ? Rectangle.TOP : Rectangle.NO_BORDER);
+        labelCell.setBorderColor(BORDER);
+        labelCell.setPaddingTop(emphasize ? 8 : 4);
+        labelCell.setPaddingBottom(4);
+        row.addCell(labelCell);
+
+        PdfPCell valueCell = new PdfPCell(new Paragraph(value, valueFont));
+        valueCell.setBorder(emphasize ? Rectangle.TOP : Rectangle.NO_BORDER);
+        valueCell.setBorderColor(BORDER);
+        valueCell.setPaddingTop(emphasize ? 8 : 4);
+        valueCell.setPaddingBottom(4);
+        valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        row.addCell(valueCell);
+
+        PdfPCell wrapCell = new PdfPCell(row);
+        wrapCell.setBorder(Rectangle.NO_BORDER);
+        wrapCell.setPadding(0);
+        card.addCell(wrapCell);
+    }
+
+    private Paragraph divider() {
+        Paragraph rule = new Paragraph(" ", FontFactory.getFont(FontFactory.HELVETICA, 2));
+        rule.setSpacingAfter(0);
+        return rule;
+    }
+
+    private Paragraph spacer(float height) {
+        Paragraph p = new Paragraph(" ", FontFactory.getFont(FontFactory.HELVETICA, height * 0.7f));
+        p.setLeading(height);
+        return p;
+    }
+
+    private void addFooter(Document document) throws DocumentException {
+        PdfPTable footer = new PdfPTable(1);
+        footer.setWidthPercentage(100);
+        footer.setSpacingBefore(6);
+
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(Rectangle.TOP);
+        cell.setBorderColor(BORDER);
+        cell.setPaddingTop(8);
+        cell.setPaddingLeft(40);
+        cell.setPaddingRight(40);
+
+        Paragraph line = new Paragraph(
+                "Generated " + OffsetDateTime.now().format(TIMESTAMP_FORMAT)
+                        + "  ·  TurfChai — book turfs, courts and pitches",
+                FontFactory.getFont(FontFactory.HELVETICA, 7.5f, FAINT));
+        line.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(line);
+
+        footer.addCell(cell);
+        document.add(footer);
+    }
+
+    private Image buildQrImage(BookingResponse booking) throws WriterException, IOException {
         String link = frontendUrl + "/player/bookings/" + booking.getId();
 
         QRCodeWriter writer = new QRCodeWriter();
-        BitMatrix matrix = writer.encode(link, BarcodeFormat.QR_CODE, 220, 220);
+        BitMatrix matrix = writer.encode(link, BarcodeFormat.QR_CODE, 200, 200);
         BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(matrix);
         ByteArrayOutputStream qrBytes = new ByteArrayOutputStream();
         javax.imageio.ImageIO.write(qrImage, "png", qrBytes);
 
         Image image = Image.getInstance(qrBytes.toByteArray());
-        image.setAlignment(Element.ALIGN_CENTER);
-        image.scaleToFit(120, 120);
-
-        Paragraph caption = new Paragraph("Scan to open this booking",
-                FontFactory.getFont(FontFactory.HELVETICA, 9, MUTED_GRAY));
-        caption.setAlignment(Element.ALIGN_CENTER);
-        caption.setSpacingBefore(8);
-
-        document.add(image);
-        document.add(caption);
-    }
-
-    private void addFooter(Document document) throws DocumentException {
-        Paragraph footer = new Paragraph(
-                "Generated " + OffsetDateTime.now().format(TIMESTAMP_FORMAT),
-                FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, MUTED_GRAY));
-        footer.setAlignment(Element.ALIGN_CENTER);
-        footer.setSpacingBefore(18);
-        document.add(footer);
-    }
-
-    private void addSectionTitle(Document document, String title) throws DocumentException {
-        Paragraph heading = new Paragraph(title, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-        heading.setSpacingBefore(6);
-        heading.setSpacingAfter(6);
-        document.add(heading);
-    }
-
-    private void addFactRow(PdfPTable table, String label, String value) {
-        Font labelFont = FontFactory.getFont(FontFactory.HELVETICA, 9, MUTED_GRAY);
-        Font valueFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10);
-
-        PdfPCell labelCell = new PdfPCell(new Paragraph(label, labelFont));
-        labelCell.setBorder(com.lowagie.text.Rectangle.BOTTOM);
-        labelCell.setBorderColor(new Color(228, 234, 230));
-        labelCell.setPadding(5);
-        table.addCell(labelCell);
-
-        PdfPCell valueCell = new PdfPCell(new Paragraph(value, valueFont));
-        valueCell.setBorder(com.lowagie.text.Rectangle.BOTTOM);
-        valueCell.setBorderColor(new Color(228, 234, 230));
-        valueCell.setPadding(5);
-        valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        table.addCell(valueCell);
-    }
-
-    private void addBodyCell(PdfPTable table, String text, Font font) {
-        PdfPCell cell = new PdfPCell(new Paragraph(text, font));
-        cell.setPadding(5);
-        table.addCell(cell);
+        image.scaleToFit(96, 96);
+        return image;
     }
 
     private String safe(Object value) {
