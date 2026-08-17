@@ -82,7 +82,11 @@ export function downloadBlob(filename, blob) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Some browsers write the download to disk asynchronously after the click
+  // returns — revoking the blob URL immediately can race that write and hand
+  // "Open" (from the browser's download prompt/bar) a truncated or empty
+  // file. A short delay lets the write finish first.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /** Triggers a download of any text payload. Used for .ics and .csv alike. */

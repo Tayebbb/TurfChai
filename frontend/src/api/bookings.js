@@ -39,15 +39,13 @@ export function listBookings() {
   return api('/bookings');
 }
 
-/** GET /api/v1/bookings/{id}/pdf — a downloadable PDF receipt/ticket for one booking. */
+/** GET /api/v1/bookings/{id}/pdf — a booking's PDF receipt/ticket. */
 export function getBookingPdf(id) {
   return apiDownload(`/bookings/${encodeURIComponent(id)}/pdf`);
 }
 
 /**
- * Fetches a booking's PDF and triggers the browser download in one call, so
- * every "Download PDF" button (Booking Detail, My Bookings list) shares the
- * same fetch-then-save behaviour instead of each re-implementing it.
+ * Fetches a booking's PDF and saves it to disk — the "Download PDF" action.
  */
 export async function downloadBookingPdf(booking) {
   const blob = await getBookingPdf(booking.id);

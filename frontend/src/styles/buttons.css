@@ -160,18 +160,17 @@
 }
 
 /* ---------- Attention shine ----------
-   A soft pulse ring plus a diagonal light sweep — draws the eye to a
-   specific CTA (a download button, say) without reading as an error/
-   urgent state. Shared so any page can flag one button as "the" action,
-   not just Booking Detail. */
+   A diagonal light sweep — draws the eye to a specific CTA (a download
+   button, say) without reading as an error/urgent state or spilling
+   outside the button's own edges. Shared so any page can flag one
+   button as "the" action, not just Booking Detail. */
 .btn-shine {
     position: relative;
     overflow: hidden;
-    animation: btn-shine-pulse 2.6s ease-out infinite;
 }
 
 /* The sweep: an angled highlight band that crosses the button left to
-   right on a continuous 3s loop. `overflow: hidden` above (the pill's
+   right on a continuous 1.4s loop. `overflow: hidden` above (the pill's
    own border-radius) clips it to the button's shape; `pointer-events:
    none` keeps it from ever intercepting the click. */
 .btn-shine::after {
@@ -183,12 +182,8 @@
     height: 100%;
     background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, .55) 50%, transparent 100%);
     transform: skewX(-20deg);
-    animation: btn-shine-sweep 3s linear infinite;
+    animation: btn-shine-sweep 1.4s linear infinite;
     pointer-events: none;
-}
-
-.btn-shine.is-busy {
-    animation: none;
 }
 
 .btn-shine.is-busy::after {
@@ -206,43 +201,7 @@
     }
 }
 
-@keyframes btn-shine-pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(14, 122, 74, .45)
-    }
-
-    70% {
-        box-shadow: 0 0 0 10px rgba(14, 122, 74, 0)
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(14, 122, 74, 0)
-    }
-}
-
-[data-theme="dark"] .btn-shine {
-    animation-name: btn-shine-pulse-dark
-}
-
-@keyframes btn-shine-pulse-dark {
-    0% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, .5)
-    }
-
-    70% {
-        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0)
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0)
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .btn-shine {
-        animation: none
-    }
-
     .btn-shine::after {
         animation: none;
         display: none

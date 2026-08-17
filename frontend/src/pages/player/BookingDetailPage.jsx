@@ -322,22 +322,26 @@ export default function BookingDetailPage() {
 
           <aside className="stack">
             <div className="pdf-cta">
-              <span className="pdf-cta-icon" aria-hidden="true">
-                📄
-              </span>
-              <span className="pdf-cta-text">
-                <b>Get your receipt</b>
-                <span>A full PDF copy of this booking, with a scannable ticket QR.</span>
-              </span>
-              <Button
-                className={`pdf-cta-btn btn-shine${downloadingPdf ? " is-busy" : ""}`}
-                variant="primary"
-                disabled={!booking}
-                loading={downloadingPdf}
-                onClick={handleDownloadPdf}
-              >
-                Download PDF
-              </Button>
+              <div className="pdf-cta-head">
+                <span className="pdf-cta-icon" aria-hidden="true">
+                  📄
+                </span>
+                <span className="pdf-cta-text">
+                  <b>Get your receipt</b>
+                  <span>A full PDF copy of this booking, with a scannable ticket QR.</span>
+                </span>
+              </div>
+              <div className="pdf-cta-actions">
+                <Button
+                  className={`pdf-cta-btn btn-shine${downloadingPdf ? " is-busy" : ""}`}
+                  variant="primary"
+                  disabled={!booking}
+                  loading={downloadingPdf}
+                  onClick={handleDownloadPdf}
+                >
+                  Download PDF
+                </Button>
+              </div>
             </div>
             <div className="glass glass-card">
               <h4>Payment summary</h4>
