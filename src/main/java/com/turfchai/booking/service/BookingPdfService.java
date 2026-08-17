@@ -181,27 +181,33 @@ public class BookingPdfService {
         wrap.setPaddingRight(40);
         wrap.setPaddingTop(20);
 
-        wrap.addElement(venueHeading(booking));
+        addVenueHeading(wrap, booking);
         wrap.addElement(statChips(booking));
-        wrap.addElement(spacer(10));
+        wrap.addElement(spacer(14));
         wrap.addElement(twoColumnBody(booking, payments));
 
         outer.addCell(wrap);
         document.add(outer);
     }
 
-    private Paragraph venueHeading(BookingResponse booking) {
-        Paragraph heading = new Paragraph();
-        heading.add(new Chunk(safe(booking.getVenueName()), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 17, INK)));
-        heading.setSpacingAfter(2);
+    /**
+     * Adds the venue name + area/address line directly to the cell as two
+     * sibling paragraphs — not one nested inside the other. A Paragraph
+     * added as an element *of* another Paragraph loses its own
+     * spacingBefore/After (only honoured when a paragraph is added directly
+     * to a cell/document), which is what made the venue name and the
+     * address line beneath it render with almost no gap.
+     */
+    private void addVenueHeading(PdfPCell wrap, BookingResponse booking) {
+        Paragraph heading = new Paragraph(safe(booking.getVenueName()),
+                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 17, INK));
+        heading.setSpacingAfter(4);
+        wrap.addElement(heading);
 
         String sub = joinNonBlank(" · ", booking.getVenueArea(), booking.getVenueAddress());
-        Paragraph wrapper = new Paragraph();
-        wrapper.add(heading);
         Paragraph subLine = new Paragraph(sub, FontFactory.getFont(FontFactory.HELVETICA, 10, MUTED));
-        subLine.setSpacingAfter(14);
-        wrapper.add(subLine);
-        return wrapper;
+        subLine.setSpacingAfter(16);
+        wrap.addElement(subLine);
     }
 
     /** Four compact info chips — Date / Play time / Pitch / Arrive by. */
@@ -330,16 +336,24 @@ public class BookingPdfService {
 
         // Two deliberate lines rather than one long line left to wrap on its
         // own — at this column width a single wrapped line breaks mid-date
-        // unpredictably ("2026-\n08-17"); a fixed detail/meta split never does.
-        Paragraph leftText = new Paragraph();
-        Chunk detailLine = new Chunk(detail, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9.5f, INK));
-        leftText.add(detailLine);
-        leftText.add(Chunk.NEWLINE);
-        leftText.add(new Chunk(method + " · " + when, FontFactory.getFont(FontFactory.HELVETICA, 7.5f, MUTED)));
-        PdfPCell leftCell = new PdfPCell(leftText);
+        // unpredictably ("2026-\n08-17"); a fixed detail/meta split never
+        // does. Two separate Paragraphs (not one Paragraph + Chunk.NEWLINE):
+        // a shared Paragraph's leading is computed once, from whichever font
+        // it saw first, so mixing the bold 9.5pt detail line with the
+        // smaller 7.5pt meta line left almost no visible gap between them —
+        // explicit spacingBefore on the second paragraph is what actually
+        // controls the gap.
+        Paragraph detailLine = new Paragraph(detail, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9.5f, INK));
+        Paragraph metaLine = new Paragraph(method + " · " + when, FontFactory.getFont(FontFactory.HELVETICA, 7.5f, MUTED));
+        metaLine.setSpacingBefore(3f);
+
+        PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.BOTTOM);
         leftCell.setBorderColor(BORDER);
-        leftCell.setPadding(5);
+        leftCell.setPadding(6);
+        leftCell.setPaddingBottom(7);
+        leftCell.addElement(detailLine);
+        leftCell.addElement(metaLine);
         row.addCell(leftCell);
 
         Paragraph amount = new Paragraph((isRefund ? "−" : "") + bdt(payment.getAmount()),
@@ -347,7 +361,7 @@ public class BookingPdfService {
         PdfPCell rightCell = new PdfPCell(amount);
         rightCell.setBorder(Rectangle.BOTTOM);
         rightCell.setBorderColor(BORDER);
-        rightCell.setPadding(5);
+        rightCell.setPadding(6);
         rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         rightCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
         row.addCell(rightCell);
