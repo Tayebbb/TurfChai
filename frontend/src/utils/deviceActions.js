@@ -73,9 +73,8 @@ export function buildIcs({ title, description, location, date, startTime, endTim
     .join('\r\n');
 }
 
-/** Triggers a download of any text payload. Used for .ics and .csv alike. */
-export function downloadTextFile(filename, contents, mime = 'text/plain;charset=utf-8') {
-  const blob = new Blob([contents], { type: mime });
+/** Triggers a browser download of an already-built Blob (a PDF, an image). */
+export function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -83,7 +82,16 @@ export function downloadTextFile(filename, contents, mime = 'text/plain;charset=
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Some browsers write the download to disk asynchronously after the click
+  // returns — revoking the blob URL immediately can race that write and hand
+  // "Open" (from the browser's download prompt/bar) a truncated or empty
+  // file. A short delay lets the write finish first.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+/** Triggers a download of any text payload. Used for .ics and .csv alike. */
+export function downloadTextFile(filename, contents, mime = 'text/plain;charset=utf-8') {
+  downloadBlob(filename, new Blob([contents], { type: mime }));
 }
 
 export function addToCalendar(event) {

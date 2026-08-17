@@ -10,3 +10,74 @@
         grid-template-columns: 1fr
     }
 }
+
+/* ---- Receipt CTA: the two PDF actions on the page — Download (the
+   prominent, animated one) and Open in browser (a lighter, secondary
+   option) ---- */
+.pdf-cta {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(135deg, var(--brand-soft), var(--surface));
+    border: 1px solid var(--brand-soft);
+}
+
+.pdf-cta-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.pdf-cta-icon {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: var(--brand);
+    color: #fff;
+}
+
+.pdf-cta-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.pdf-cta-text b {
+    display: block;
+    font-size: 14px;
+}
+
+.pdf-cta-text span {
+    display: block;
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 1px;
+}
+
+.pdf-cta-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* The pulse animation itself (.btn-shine) is shared — see styles/buttons.css
+   — so Booking Detail and My Bookings can both flag their download button
+   with the same effect instead of each defining their own keyframes. */
+.pdf-cta-btn {
+    flex: 1;
+}
+
+@media (max-width: 480px) {
+    .pdf-cta-actions {
+        flex-direction: column;
+    }
+    .pdf-cta-btn {
+        width: 100%;
+    }
+}

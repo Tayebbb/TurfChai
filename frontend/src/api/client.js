@@ -251,3 +251,16 @@ export async function apiUpload(path, formData) {
   if (!response.ok) await throwApiError(response);
   return readBody(response);
 }
+
+/**
+ * GET request against backend origin that returns a binary body (a PDF, an
+ * image) rather than JSON/text. `readBody` assumes a text/JSON payload, so a
+ * download needs its own reader — everything else (auth header, error
+ * handling) matches apiGet.
+ */
+export async function apiDownload(path) {
+  const url = resolveUrl(path);
+  const response = await fetch(url, { headers: authHeaders() });
+  if (!response.ok) await throwApiError(response);
+  return response.blob();
+}

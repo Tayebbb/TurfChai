@@ -158,3 +158,52 @@
 .icon-btn:active {
     transform: scale(.96)
 }
+
+/* ---------- Attention shine ----------
+   A diagonal light sweep — draws the eye to a specific CTA (a download
+   button, say) without reading as an error/urgent state or spilling
+   outside the button's own edges. Shared so any page can flag one
+   button as "the" action, not just Booking Detail. */
+.btn-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+/* The sweep: an angled highlight band that crosses the button left to
+   right on a continuous 1.4s loop. `overflow: hidden` above (the pill's
+   own border-radius) clips it to the button's shape; `pointer-events:
+   none` keeps it from ever intercepting the click. */
+.btn-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, .55) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    animation: btn-shine-sweep 1.4s linear infinite;
+    pointer-events: none;
+}
+
+.btn-shine.is-busy::after {
+    animation: none;
+    display: none;
+}
+
+@keyframes btn-shine-sweep {
+    from {
+        left: -60%
+    }
+
+    to {
+        left: 130%
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-shine::after {
+        animation: none;
+        display: none
+    }
+}

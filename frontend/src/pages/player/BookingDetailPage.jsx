@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
-import { getBooking } from "@/api/bookings";
+import { downloadBookingPdf, getBooking } from "@/api/bookings";
 import { getPaymentsForBooking, getRefundPreview } from "@/api/payments";
 import { getUser } from "@/api/client";
 import { useApi } from "@/hooks/useApi";
+import { useToast } from "@/hooks/useToast";
 import { canCall, canGetDirections, callNumber, openDirections } from "@/utils/deviceActions";
+import { toUserMessage } from "@/utils/errorMessage";
 import { paths } from "@/routes/paths";
 import "./BookingDetailPage.css";
 
@@ -48,11 +51,25 @@ function formatDateTime(iso) {
 
 export default function BookingDetailPage() {
   const { bookingId } = useParams();
+  const { showToast } = useToast();
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const { data: booking, loading, error } = useApi(
     () => getBooking(bookingId),
     [bookingId],
   );
+
+  const handleDownloadPdf = async () => {
+    if (!booking) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadBookingPdf(booking);
+    } catch (downloadError) {
+      showToast(toUserMessage(downloadError, "Could not download the PDF. Please try again."));
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const paymentsApi = useApi(
     () => (bookingId ? getPaymentsForBooking(bookingId) : Promise.resolve([])),
@@ -304,6 +321,28 @@ export default function BookingDetailPage() {
           </div>
 
           <aside className="stack">
+            <div className="pdf-cta">
+              <div className="pdf-cta-head">
+                <span className="pdf-cta-icon" aria-hidden="true">
+                  📄
+                </span>
+                <span className="pdf-cta-text">
+                  <b>Get your receipt</b>
+                  <span>A full PDF copy of this booking, with a scannable ticket QR.</span>
+                </span>
+              </div>
+              <div className="pdf-cta-actions">
+                <Button
+                  className={`pdf-cta-btn btn-shine${downloadingPdf ? " is-busy" : ""}`}
+                  variant="primary"
+                  disabled={!booking}
+                  loading={downloadingPdf}
+                  onClick={handleDownloadPdf}
+                >
+                  Download PDF
+                </Button>
+              </div>
+            </div>
             <div className="glass glass-card">
               <h4>Payment summary</h4>
               <div className="pricerow">

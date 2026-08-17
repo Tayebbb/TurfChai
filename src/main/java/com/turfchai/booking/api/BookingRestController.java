@@ -4,7 +4,9 @@ import com.turfchai.booking.dto.request.HoldSlotRequest;
 import com.turfchai.booking.dto.response.BookingResponse;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.repository.SlotRepository;
+import com.turfchai.booking.service.BookingPdfService;
 import com.turfchai.booking.service.BookingService;
+import com.turfchai.payment.service.PaymentService;
 import com.turfchai.security.UserPrincipal;
 import com.turfchai.venue.repository.VenueRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -46,6 +51,8 @@ public class BookingRestController {
     private final BookingService bookingService;
     private final SlotRepository slotRepository;
     private final VenueRepository venueRepository;
+    private final PaymentService paymentService;
+    private final BookingPdfService bookingPdfService;
 
     /**
      * Acquires a 5-minute hold on a slot. The response is enriched with the
@@ -165,6 +172,34 @@ public class BookingRestController {
     public ResponseEntity<BookingResponse> getBooking(Authentication authentication, @PathVariable Long id) {
         return ResponseEntity
                 .ok(bookingService.toResponse(bookingService.getBooking(currentUserId(authentication), id)));
+    }
+
+    /**
+     * A downloadable PDF receipt/ticket for one booking: match details, price
+     * breakdown, transaction history, and a QR that deep-links back to the
+     * booking — built from the same data {@link #getBooking} and the payments
+     * endpoint already return, so it can never show something the in-app
+     * pages don't already agree on.
+     */
+    @Operation(summary = "Download a booking as PDF", description = "Returns a PDF receipt/ticket for a booking owned by the caller, or accessible to an admin/owner role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "PDF file"),
+            @ApiResponse(responseCode = "400", description = "Invalid booking id in path"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+            @ApiResponse(responseCode = "409", description = "Booking not found or caller is not allowed to view it")
+    })
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadBookingPdf(Authentication authentication, @PathVariable Long id) {
+        Long userId = currentUserId(authentication);
+        BookingResponse booking = bookingService.toResponse(bookingService.getBooking(userId, id));
+        byte[] pdf = bookingPdfService.generate(booking, paymentService.getPaymentsForBooking(userId, id));
+
+        String filename = "turfchai-" + (booking.getBookingCode() != null ? booking.getBookingCode() : id) + ".pdf";
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(filename).build().toString())
+                .body(pdf);
     }
 
     @Operation(summary = "List the caller's bookings", description = "Returns all bookings belonging to the authenticated user.")

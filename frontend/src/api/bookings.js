@@ -1,4 +1,5 @@
-import { api } from './client';
+import { api, apiDownload } from './client';
+import { downloadBlob } from '@/utils/deviceActions';
 
 /**
  * Booking engine endpoints. All routes live under /api/v1/bookings/** and
@@ -36,6 +37,19 @@ export function getBooking(id) {
 /** GET /api/v1/bookings — every booking belonging to the caller. */
 export function listBookings() {
   return api('/bookings');
+}
+
+/** GET /api/v1/bookings/{id}/pdf — a booking's PDF receipt/ticket. */
+export function getBookingPdf(id) {
+  return apiDownload(`/bookings/${encodeURIComponent(id)}/pdf`);
+}
+
+/**
+ * Fetches a booking's PDF and saves it to disk — the "Download PDF" action.
+ */
+export async function downloadBookingPdf(booking) {
+  const blob = await getBookingPdf(booking.id);
+  downloadBlob(`turfchai-${booking.bookingCode || booking.id}.pdf`, blob);
 }
 
 /** POST /api/v1/matchday/checkin?bookingId={id} — records the gate check-in. */
