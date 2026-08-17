@@ -139,7 +139,7 @@ function GameCard({ game, query }) {
   const whenLabel = `${formatGameDay(game.gameDate)} ${formatTimeRange(game.startTime, game.endTime)}`.trim();
 
   return (
-    <Link className={cardClass} to={paths.solo.game(game.id)}>
+    <div className={cardClass}>
       {section === 'urgent' ? <div className="urgent-glow" /> : null}
       <div className="between" style={{ flexWrap: 'wrap', gap: 8 }}>
         <span className={`badge ${status.tone}`}>{status.text}</span>
@@ -178,7 +178,7 @@ function GameCard({ game, query }) {
         </div>
       </div>
       <div>
-        <div className="between" style={{ marginBottom: 5 }}>
+        <div className="between" style={{ marginBottom: 8 }}>
           <span className="host-tag">
             <span className="stars-mini">★</span>
             <b>{game.organizerName ?? 'TurfChai host'}</b>
@@ -218,11 +218,14 @@ function GameCard({ game, query }) {
             {spots === 1 ? 'Waiting for 1 more' : `${spots} spots remaining`}
           </span>
         </div>
-        <span className={`btn btn-sm btn-${spots === 1 ? 'primary' : 'secondary'}`}>
+        <Link
+          className={`btn btn-sm btn-${spots === 1 ? 'primary' : 'secondary'}`}
+          to={paths.solo.game(game.id)}
+        >
           {spots === 1 ? 'View & Join →' : 'View →'}
-        </span>
+        </Link>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -327,7 +330,7 @@ export default function OpenGamesPage() {
     <>
       <PageTitle title="Open Games" />
 
-      <main className="wrap" id="main" style={{ paddingTop: 20, maxWidth: 960 }}>
+      <main className="wrap" id="main" style={{ paddingTop: 20, paddingBottom: 48, maxWidth: 960 }}>
         {/* ═══ HERO ═══ */}
         <section className="og-hero" style={{ marginBottom: 0 }}>
           <div className="og-hero-layout">

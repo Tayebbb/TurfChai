@@ -22,7 +22,7 @@ public interface TournamentRepository extends JpaRepository<Tournament, Long> {
                         select t from Tournament t
                         where t.status in ('PUBLISHED', 'CONFIRMED')
                           and (:openOnly = false or t.privacy = 'OPEN')
-                          and (:fromDate is null or t.tournamentDate >= :fromDate)
+                          and (CAST(:fromDate AS date) is null or t.tournamentDate >= CAST(:fromDate AS date))
                         order by t.tournamentDate asc
                         """)
         Page<Tournament> browse(@Param("openOnly") boolean openOnly,

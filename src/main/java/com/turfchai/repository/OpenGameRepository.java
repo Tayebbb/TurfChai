@@ -26,7 +26,7 @@ public interface OpenGameRepository extends JpaRepository<OpenGame, Long> {
     @Query("SELECT g FROM OpenGame g JOIN g.venue v WHERE " +
            "(:skillLevel IS NULL OR g.skillLevel = :skillLevel) AND " +
            "(:gameDate IS NULL OR g.gameDate = :gameDate) AND " +
-           "(:query IS NULL OR LOWER(g.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(v.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(v.area) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+           "(:query IS NULL OR LOWER(g.title) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) OR LOWER(v.name) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) OR LOWER(v.area) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))) AND " +
            "g.status IN ('OPEN', 'ALMOST_FULL', 'FULL') " +
            "ORDER BY g.gameDate ASC, g.startTime ASC")
     List<OpenGame> searchOpenGames(
