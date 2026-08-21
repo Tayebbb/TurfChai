@@ -471,13 +471,14 @@ public class VenueManagementService {
         Sport sport = sportRepository.findBySlug(req.sportSlug())
                 .orElseThrow(() -> new IllegalArgumentException("Sport not found: " + req.sportSlug()));
 
+        final String windowType = req.windowType().toUpperCase();
         SportPricingRule rule = pricingRuleRepository
-                .findByVenueIdAndSportIdAndWindowType(venueId, sport.getId(), req.windowType())
+                .findByVenueIdAndSportIdAndWindowType(venueId, sport.getId(), windowType)
                 .orElseGet(() -> {
                     SportPricingRule r = new SportPricingRule();
                     r.setVenue(venue);
                     r.setSport(sport);
-                    r.setWindowType(req.windowType());
+                    r.setWindowType(windowType);
                     return r;
                 });
 

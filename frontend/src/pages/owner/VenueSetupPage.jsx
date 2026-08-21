@@ -1230,7 +1230,7 @@ export default function VenueSetupPage() {
       try {
         await upsertPricingRule(vId, {
           sportSlug: (slotDraft.sport || 'football').toLowerCase(),
-          windowType: 'full_day',
+          windowType: 'FULL_DAY',
           rate: basePrice,
           slotDurationMin: Number(slotDraft.duration) || 60,
           bufferMin: Number(slotDraft.buffer) || 10,
