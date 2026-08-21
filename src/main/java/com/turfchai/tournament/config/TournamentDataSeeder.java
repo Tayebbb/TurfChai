@@ -32,7 +32,7 @@ import java.util.List;
  * Seeds test tournament data (test profile only).
  */
 @Configuration
-@Profile({ "dev", "test" })
+@Profile({ "dev", "test", "ci", "docker" })
 public class TournamentDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(TournamentDataSeeder.class);

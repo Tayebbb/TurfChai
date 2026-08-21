@@ -33,7 +33,7 @@ import java.util.List;
  * slots and post real ids to {@code /api/v1/bookings/hold-slot}.
  */
 @Configuration
-@Profile({"dev", "test"})
+@Profile({"dev", "test", "ci", "docker"})
 public class SlotDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(SlotDataSeeder.class);

@@ -37,6 +37,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 /**
  * Part B of the demo dataset: bookings, payouts and audit logs.
@@ -58,7 +59,7 @@ import java.util.Random;
  */
 @Slf4j
 @Service
-@Profile({ "dev", "ci" })
+@Profile({ "dev", "ci", "docker" })
 @Order(11)
 @RequiredArgsConstructor
 public class AdminPartBDataSeeder implements CommandLineRunner {
@@ -80,12 +81,7 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
 
     @Transactional
     public void seed() {
-        if (bookingRepository.count() > 0) {
-            log.info("Part B data already seeded. Skipping.");
-            return;
-        }
-
-        log.info("Starting Admin Demo Data Seeder - Part B");
+        log.info("Checking Admin Demo Data Seeder - Part B");
 
         List<User> users = userRepository.findAll();
         List<Venue> venues = venueRepository.findAll();
@@ -100,10 +96,18 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                 .filter(u -> u.getRole() == RoleType.PLAYER || u.getRole() == RoleType.SOLO_PLAYER)
                 .toList();
 
-        seedBookingsAndSlots(players, venues, pitches);
-        seedReviews();
-        seedPayouts(venues);
-        seedAuditLogs(users);
+        if (bookingRepository.count() == 0) {
+            seedBookingsAndSlots(players, venues, pitches);
+        }
+        if (reviewRepository.count() == 0) {
+            seedReviews();
+        }
+        if (payoutRepository.count() == 0) {
+            seedPayouts(venues);
+        }
+        if (auditLogRepository.count() == 0) {
+            seedAuditLogs(users);
+        }
 
         log.info("Completed Admin Demo Data Seeder - Part B");
     }
@@ -178,8 +182,26 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
 
                 slotsToSave.add(slot);
 
-                String bookingCode = String.format("BK-%04d%02d-%04d", bookingDate.getYear(),
-                        bookingDate.getMonthValue(), bookingIndex++);
+                String source = "ONLINE";
+                String guestName = null;
+                String guestPhone = null;
+                String bookingCode;
+
+                int sourceRoll = random.nextInt(100);
+                if (sourceRoll < 15) {
+                    source = "PHONE";
+                    bookingCode = "MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                    guestName = player.getFullName();
+                    guestPhone = player.getPhone();
+                } else if (sourceRoll < 25) {
+                    source = "WALK_IN";
+                    bookingCode = "MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                    guestName = player.getFullName();
+                    guestPhone = player.getPhone();
+                } else {
+                    bookingCode = String.format("BK-%04d%02d-%04d", bookingDate.getYear(),
+                            bookingDate.getMonthValue(), bookingIndex++);
+                }
 
                 Booking booking = Booking.builder()
                         .bookingCode(bookingCode)
@@ -192,6 +214,9 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                         .endTime(endTime)
                         .grossAmount(grossAmount)
                         .netAmount(netAmount)
+                        .source(source)
+                        .guestName(guestName)
+                        .guestPhone(guestPhone)
                         .status(status)
                         .createdAt(createdAt)
                         .updatedAt(createdAt)
@@ -249,6 +274,8 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
             review.setUser(author);
             review.setVenue(venue);
             review.setOverallRating(rating);
+            review.setSubRatings(java.util.Map.of("surface", rating, "lighting", rating, "facilities", Math.max(1, rating - 1)));
+            review.setTags(java.util.List.of("good_surface", "clean"));
             review.setComment(REVIEW_COMMENTS[random.nextInt(REVIEW_COMMENTS.length)]);
             review.setStatus(ReviewStatus.PUBLISHED);
             review.setCreatedAt(booking.getBookingDate().plusDays(1).atStartOfDay(ZoneOffset.UTC));
@@ -291,11 +318,11 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                 String status = "SETTLED";
                 int statusRoll = random.nextInt(100);
                 if (statusRoll < 20)
-                    status = "PENDING";
+                    status = "SCHEDULED";
                 else if (statusRoll < 30)
-                    status = "FLAGGED";
+                    status = "IN_TRANSIT";
 
-                boolean anomalyFlag = "FLAGGED".equals(status);
+                boolean anomalyFlag = (statusRoll < 10);
                 String anomalyReason = anomalyFlag ? "Refund ratio spike > 4.2% threshold" : null;
                 OffsetDateTime settledAt = "SETTLED".equals(status)
                         ? periodEnd.plusDays(5).atStartOfDay().atOffset(ZoneOffset.UTC)
@@ -337,13 +364,18 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
         Random random = new Random(200);
         List<AuditLog> logsToSave = new ArrayList<>();
 
-        String[] adminNames = { "Admin Sakib", "Admin Ayesha", "Admin Rahman", "System" };
+        List<User> admins = users.stream()
+                .filter(u -> u.getRole() == RoleType.ADMIN || u.getRole() == RoleType.SUPER_ADMIN)
+                .toList();
+
         OffsetDateTime now = OffsetDateTime.now();
 
         // Target ~80 logs over 30 days
         for (int i = 0; i < 80; i++) {
             OffsetDateTime createdAt = now.minusDays(random.nextInt(30)).minusHours(random.nextInt(24));
-            String adminName = adminNames[random.nextInt(adminNames.length)];
+            User chosenAdmin = admins.isEmpty() ? (users.isEmpty() ? null : users.get(0)) : admins.get(random.nextInt(admins.size()));
+            String adminName = chosenAdmin != null ? chosenAdmin.getFullName() : "Admin";
+            Long adminId = chosenAdmin != null ? chosenAdmin.getId() : null;
 
             String action, target, details, tone;
             int typeRoll = random.nextInt(100);
@@ -382,7 +414,7 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
 
             AuditLog log = AuditLog.builder()
                     .adminName(adminName)
-                    .adminId(1L)
+                    .adminId(adminId)
                     .action(action)
                     .actionTone(tone)
                     .target(target)
