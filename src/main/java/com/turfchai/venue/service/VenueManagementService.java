@@ -498,7 +498,7 @@ public class VenueManagementService {
             venueRepository.save(venue);
         }
 
-        repriceUpcomingSlots(venue);
+        repriceUpcomingSlots(venue, venue.isMlPricingEnabled());
 
         return toPricingRuleDto(saved);
     }

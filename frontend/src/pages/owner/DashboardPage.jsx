@@ -97,19 +97,24 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!scanner.isOpen) {
-      stopCamera();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      queueMicrotask(() => {
+        setCameraActive(false);
+        setCameraError(null);
+      });
     }
-  }, [scanner.isOpen, stopCamera]);
+  }, [scanner.isOpen]);
 
   const { data: bookingsRes, reload: reloadBookings } = useApi(getOwnerBookings, []);
-  const ownerBookings = Array.isArray(bookingsRes)
-    ? bookingsRes
-    : (Array.isArray(bookingsRes?.data) ? bookingsRes.data : []);
+  const ownerBookings = useMemo(
+    () => (Array.isArray(bookingsRes) ? bookingsRes : (Array.isArray(bookingsRes?.data) ? bookingsRes.data : [])),
+    [bookingsRes],
+  );
 
-  /**
-   * Real gate check-in via typed reference or camera scan.
-   */
-  async function checkInTicket(event, directRef) {
+  const checkInTicket = useCallback(async (event, directRef) => {
     event?.preventDefault();
     const typed = (directRef || ticketRef).trim();
     if (!typed || checkingIn) return;
@@ -154,9 +159,14 @@ export default function DashboardPage() {
     setTicketRef('');
     reloadBookings();
     showToast('Attendance registered ✓');
-  }
+  }, [ticketRef, checkingIn, ownerBookings, reloadBookings, showToast]);
 
   // Auto-scan QR codes if BarcodeDetector is available
+  const checkInTicketRef = useRef(checkInTicket);
+  useEffect(() => {
+    checkInTicketRef.current = checkInTicket;
+  }, [checkInTicket]);
+
   useEffect(() => {
     if (!cameraActive || typeof window === 'undefined' || !window.BarcodeDetector) return;
     let cancelled = false;
@@ -175,7 +185,7 @@ export default function DashboardPage() {
           const rawValue = barcodes[0].rawValue;
           if (rawValue) {
             stopCamera();
-            checkInTicket(null, rawValue);
+            checkInTicketRef.current(null, rawValue);
           }
         }
       } catch {

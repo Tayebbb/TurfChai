@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Overlay } from '@/components/modals/Overlay';
 import { Field, Input, Select } from '@/components/forms/Field';
 import { Button } from '@/components/buttons/Button';
@@ -28,9 +28,7 @@ export function ManualBookingModal({
   const [venues, setVenues] = useState([]);
   const [selectedVenueId, setSelectedVenueId] = useState(initialVenueId || '');
   const [date, setDate] = useState(() => initialDate || formatDateIso(new Date()));
-  const [pitches, setPitches] = useState([]);
   const [selectedPitchId, setSelectedPitchId] = useState(initialPitchId ? String(initialPitchId) : '');
-  const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlotId, setSelectedSlotId] = useState(initialSlotId ? String(initialSlotId) : '');
 
   const [customerName, setCustomerName] = useState('');
@@ -47,10 +45,12 @@ export function ManualBookingModal({
   // Sync initial props when opened
   useEffect(() => {
     if (isOpen) {
-      if (initialVenueId) setSelectedVenueId(initialVenueId);
-      if (initialDate) setDate(initialDate);
-      if (initialPitchId) setSelectedPitchId(String(initialPitchId));
-      if (initialSlotId) setSelectedSlotId(String(initialSlotId));
+      queueMicrotask(() => {
+        if (initialVenueId) setSelectedVenueId(initialVenueId);
+        if (initialDate) setDate(initialDate);
+        if (initialPitchId) setSelectedPitchId(String(initialPitchId));
+        if (initialSlotId) setSelectedSlotId(String(initialSlotId));
+      });
     }
   }, [isOpen, initialVenueId, initialDate, initialPitchId, initialSlotId]);
 
@@ -76,8 +76,12 @@ export function ManualBookingModal({
     if (!isOpen || !selectedVenueId || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
 
     let unmounted = false;
-    setLoadingSlots(true);
-    setError(null);
+    queueMicrotask(() => {
+      if (!unmounted) {
+        setLoadingSlots(true);
+        setError(null);
+      }
+    });
 
     getOwnerCalendar(selectedVenueId, date)
       .then((data) => {
@@ -102,26 +106,15 @@ export function ManualBookingModal({
     };
   }, [isOpen, selectedVenueId, date]);
 
-  // Derive pitches and available slots from calendarData & selectedPitchId
-  useEffect(() => {
-    if (!calendarData) {
-      setPitches([]);
-      setAvailableSlots([]);
-      setSelectedSlotId('');
-      return;
-    }
+  // Derive pitches and available slots directly via useMemo
+  const pitches = useMemo(() => (Array.isArray(calendarData?.pitches) ? calendarData.pitches : []), [calendarData]);
 
-    const pitchList = Array.isArray(calendarData?.pitches) ? calendarData.pitches : [];
-    setPitches(pitchList);
+  const activePitchId = selectedPitchId && pitches.some((p) => String(p.id) === String(selectedPitchId))
+    ? selectedPitchId
+    : (pitches[0]?.id ? String(pitches[0].id) : '');
 
-    const currentPitchId = selectedPitchId && pitchList.some((p) => String(p.id) === String(selectedPitchId))
-      ? selectedPitchId
-      : (pitchList[0]?.id ? String(pitchList[0].id) : '');
-
-    if (currentPitchId !== selectedPitchId) {
-      setSelectedPitchId(currentPitchId);
-    }
-
+  const availableSlots = useMemo(() => {
+    if (!calendarData) return [];
     const rows = Array.isArray(calendarData?.rows) ? calendarData.rows : [];
     const slots = [];
     rows.forEach((row) => {
@@ -129,7 +122,7 @@ export function ManualBookingModal({
         if (
           cell?.slotId &&
           cell.status === 'AVAILABLE' &&
-          (!currentPitchId || String(cell.pitchId) === String(currentPitchId))
+          (!activePitchId || String(cell.pitchId) === String(activePitchId))
         ) {
           slots.push({
             slotId: cell.slotId,
@@ -140,13 +133,12 @@ export function ManualBookingModal({
         }
       });
     });
+    return slots;
+  }, [calendarData, activePitchId]);
 
-    setAvailableSlots(slots);
-    setSelectedSlotId((prev) => {
-      if (prev && slots.some((s) => String(s.slotId) === String(prev))) return prev;
-      return slots[0]?.slotId ? String(slots[0].slotId) : '';
-    });
-  }, [calendarData, selectedPitchId]);
+  const effectiveSlotId = selectedSlotId && availableSlots.some((s) => String(s.slotId) === String(selectedSlotId))
+    ? selectedSlotId
+    : (availableSlots[0]?.slotId ? String(availableSlots[0].slotId) : '');
 
   const resetForm = () => {
     setCustomerName('');
@@ -168,7 +160,8 @@ export function ManualBookingModal({
       setError('Please select a venue.');
       return;
     }
-    if (!selectedSlotId) {
+    const slotToBook = effectiveSlotId || selectedSlotId;
+    if (!slotToBook) {
       setError('Please select an available slot.');
       return;
     }
@@ -179,8 +172,8 @@ export function ManualBookingModal({
 
     try {
       await createManualBooking(selectedVenueId, {
-        slotId: Number(selectedSlotId),
-        pitchId: selectedPitchId ? Number(selectedPitchId) : undefined,
+        slotId: Number(slotToBook),
+        pitchId: activePitchId ? Number(activePitchId) : undefined,
         customerName: name,
         customerPhone: customerPhone.trim(),
         source,
@@ -245,7 +238,7 @@ export function ManualBookingModal({
           <Field label="Pitch" htmlFor="mbPitch">
             <Select
               id="mbPitch"
-              value={selectedPitchId}
+              value={activePitchId}
               onChange={(e) => setSelectedPitchId(e.target.value)}
               disabled={submitting || pitches.length === 0}
             >
@@ -264,7 +257,7 @@ export function ManualBookingModal({
           ) : (
             <Select
               id="mbSlot"
-              value={selectedSlotId}
+              value={effectiveSlotId}
               onChange={(e) => setSelectedSlotId(e.target.value)}
               disabled={submitting || availableSlots.length === 0}
             >

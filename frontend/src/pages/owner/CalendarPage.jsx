@@ -78,8 +78,10 @@ function CalendarPopover({ isOpen, onClose, selectedDate, onSelectDate, containe
   const popoverRef = useRef(null);
 
   useEffect(() => {
-    setViewYear(selectedDate.getFullYear());
-    setViewMonth(selectedDate.getMonth());
+    queueMicrotask(() => {
+      setViewYear(selectedDate.getFullYear());
+      setViewMonth(selectedDate.getMonth());
+    });
   }, [selectedDate, isOpen]);
 
   useEffect(() => {
@@ -291,7 +293,7 @@ function CalendarPopover({ isOpen, onClose, selectedDate, onSelectDate, containe
 }
 
 function FilterPillDropdown({
-  label,
+  label: _label,
   value,
   onChange,
   options,
@@ -549,8 +551,10 @@ export default function CalendarPage() {
   // Fetch Calendar Data (Day or Week)
   const refreshCalendar = useCallback(async () => {
     if (!selectedVenueId) return;
-    setLoading(true);
-    setCalendarError(null);
+    queueMicrotask(() => {
+      setLoading(true);
+      setCalendarError(null);
+    });
 
     try {
       if (viewMode === 'day') {
@@ -586,7 +590,15 @@ export default function CalendarPage() {
   }, [selectedVenueId, dateStr, viewMode, weekDays]);
 
   useEffect(() => {
-    refreshCalendar();
+    let unmounted = false;
+    queueMicrotask(() => {
+      if (!unmounted) {
+        refreshCalendar();
+      }
+    });
+    return () => {
+      unmounted = true;
+    };
   }, [refreshCalendar]);
 
   // Distinct sports extracted from pitches

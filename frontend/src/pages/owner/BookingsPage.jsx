@@ -19,7 +19,6 @@ import {
 } from '@/api/ownerBookings';
 import { listMyVenues } from '@/api/ownerVenues';
 import { getMyTurfRequests } from '@/api/turfRequests';
-import { paths } from '@/routes/paths';
 import { toUserMessage } from '@/utils/errorMessage';
 
 const PAGE_SIZE = 20;

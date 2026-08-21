@@ -153,7 +153,6 @@ describe('Owner DashboardPage — real figures and a real check-in', () => {
 
   it('opens the manual booking UI directly when manual booking button is clicked and creates booking', async () => {
     signIn({ role: 'OWNER', fullName: 'Jashim Uddin' });
-    const today = new Date().toISOString().slice(0, 10);
     const mockCalendarData = {
       pitches: [{ id: 10, name: 'Main Pitch', format: '7v7', sports: ['football'] }],
       rows: [

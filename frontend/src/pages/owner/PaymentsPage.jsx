@@ -45,7 +45,7 @@ function getSportEmoji(sport) {
 }
 
 function FilterPillDropdown({
-  label,
+  label: _label,
   value,
   onChange,
   options,

@@ -30,7 +30,6 @@ import {
 
 import { register, login } from '@/api/auth';
 import { setSession } from '@/api/client';
-import { toUserMessage } from '@/utils/errorMessage';
 import { useLocation } from 'react-router-dom';
 
 import {
@@ -132,41 +131,43 @@ export default function OwnerOnboardingPage() {
     if (hasHydrated || !myRequests?.length) return;
     const latest = myRequests[0];
     if (latest && latest.status === 'PENDING') {
-      if (latest.ownerName) setOwnerName(latest.ownerName);
-      if (latest.ownerPhone) setOwnerPhone(latest.ownerPhone);
-      if (latest.docOwnerNid) setNid(latest.docOwnerNid);
-      if (latest.venueName) setVenueName(latest.venueName);
-      if (latest.address || latest.area) {
-        setLocation({
-          address: latest.address || '',
-          area: latest.area || '',
-          lat: latest.lat != null ? Number(latest.lat) : null,
-          lng: latest.lng != null ? Number(latest.lng) : null,
-        });
-      }
-      if (latest.docTradeLicense) {
-        setDocuments((prev) => ({
-          ...prev,
-          tradeLicense: { name: 'Trade License', size: 'Attached', url: latest.docTradeLicense },
-        }));
-      }
-      if (latest.docUtilityBill) {
-        setDocuments((prev) => ({
-          ...prev,
-          leaseProof: { name: 'Utility / Lease Proof', size: 'Attached', url: latest.docUtilityBill },
-        }));
-      }
-      if (latest.photosJson) {
-        try {
-          const parsed = JSON.parse(latest.photosJson);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setPhotos(parsed.map((url, idx) => ({ id: `saved-${idx}`, name: `Photo ${idx + 1}`, url, preview: url })));
-          }
-        } catch {
-          // ignore
+      queueMicrotask(() => {
+        if (latest.ownerName) setOwnerName(latest.ownerName);
+        if (latest.ownerPhone) setOwnerPhone(latest.ownerPhone);
+        if (latest.docOwnerNid) setNid(latest.docOwnerNid);
+        if (latest.venueName) setVenueName(latest.venueName);
+        if (latest.address || latest.area) {
+          setLocation({
+            address: latest.address || '',
+            area: latest.area || '',
+            lat: latest.lat != null ? Number(latest.lat) : null,
+            lng: latest.lng != null ? Number(latest.lng) : null,
+          });
         }
-      }
-      setHasHydrated(true);
+        if (latest.docTradeLicense) {
+          setDocuments((prev) => ({
+            ...prev,
+            tradeLicense: { name: 'Trade License', size: 'Attached', url: latest.docTradeLicense },
+          }));
+        }
+        if (latest.docUtilityBill) {
+          setDocuments((prev) => ({
+            ...prev,
+            leaseProof: { name: 'Utility / Lease Proof', size: 'Attached', url: latest.docUtilityBill },
+          }));
+        }
+        if (latest.photosJson) {
+          try {
+            const parsed = JSON.parse(latest.photosJson);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setPhotos(parsed.map((url, idx) => ({ id: `saved-${idx}`, name: `Photo ${idx + 1}`, url, preview: url })));
+            }
+          } catch {
+            // ignore
+          }
+        }
+        setHasHydrated(true);
+      });
     }
   }, [myRequests, hasHydrated]);
 

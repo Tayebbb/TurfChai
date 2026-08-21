@@ -70,7 +70,7 @@ import { generateSlots as apiGenerateSlots } from '@/api/ownerSlots';
 import { getMyTurfRequests } from '@/api/turfRequests';
 
 function FilterPillDropdown({
-  label,
+  label: _label,
   value,
   onChange,
   options,
@@ -531,7 +531,7 @@ function hydrateSelection(catalogue, saved, matchOn, detectEmoji) {
   }));
   const extras = savedValues
     .filter((value) => !catalogue.some((item) => matchOn(item) === value))
-    .map((value, index) => {
+    .map((value) => {
       const emoji = detectEmoji ? detectEmoji(value) : '✨';
       const cleanLabel = value.replace(/^[^\w\s]+/, '').trim();
       const hasEmoji = /\p{Emoji}/u.test(value);
@@ -615,6 +615,9 @@ export default function VenueSetupPage() {
   const [photos, setPhotos] = useState([]);
   const [amenities, setAmenities] = useState(INITIAL_AMENITIES);
   const [rules, setRules] = useState(INITIAL_RULES);
+  const [hoursDraft, setHoursDraft] = useState({ openTime: '06:00', closeTime: '23:00' });
+  const [isEditingHours, setIsEditingHours] = useState(false);
+  const [savingHours, setSavingHours] = useState(false);
   const [customInputText, setCustomInputText] = useState('');
   const [addMode, setAddMode] = useState('amenity'); // 'amenity' | 'rule'
   const [savingAmenities, setSavingAmenities] = useState(false);
@@ -824,10 +827,6 @@ export default function VenueSetupPage() {
   const editFileInputRef = useRef(null);
   const [editingPhotoId, setEditingPhotoId] = useState(null);
   const [deactivatingPitchId, setDeactivatingPitchId] = useState(null);
-
-  const [isEditingHours, setIsEditingHours] = useState(false);
-  const [hoursDraft, setHoursDraft] = useState({ openTime: '06:00', closeTime: '23:00' });
-  const [savingHours, setSavingHours] = useState(false);
 
   async function handleSaveHours() {
     const vId = selectedVenueId || venueData?.id;
@@ -1161,7 +1160,7 @@ export default function VenueSetupPage() {
         );
         showToast('Pitch details updated ✓');
       } else {
-        const created = await addPitch(vId, {
+        const createdPitch = await addPitch(vId, {
           name,
           format: '7-a-side',
           surfaceType: 'ARTIFICIAL_TURF',
