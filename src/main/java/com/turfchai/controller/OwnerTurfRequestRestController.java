@@ -6,13 +6,16 @@ import com.turfchai.dto.CreateTurfRequestDto;
 import com.turfchai.dto.response.TurfRequestResponse;
 import com.turfchai.model.TurfRequest;
 import com.turfchai.repository.TurfRequestRepository;
+import com.turfchai.media.service.MediaUploadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +31,7 @@ public class OwnerTurfRequestRestController {
 
     private final TurfRequestRepository turfRequestRepository;
     private final ObjectMapper objectMapper;
+    private final MediaUploadService mediaUploadService;
 
     @PostMapping
     public ResponseEntity<TurfRequestResponse> createRequest(
@@ -105,22 +109,30 @@ public class OwnerTurfRequestRestController {
     }
 
     /**
-     * Records the name of a document the owner is submitting for verification.
-     *
-     * <p>
-     * TurfChai has no document store, so nothing is filed here. This used to
-     * answer {@code UPLOADED} with a {@code cdn.turfchai.com} URL that had never
-     * existed, which told the owner their trade licence was on file.
+     * Uploads verification document (Trade License, Lease Proof, etc.)
+     * and stores it to Cloudinary/storage.
      */
     @PostMapping("/upload")
     public ResponseEntity<Map<String, String>> uploadDocument(
-            @RequestParam(value = "file", required = false) MultipartFile file) {
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "type", required = false, defaultValue = "document") String docType) {
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "No file provided"));
         }
-        String filename = file.getOriginalFilename();
-        return ResponseEntity.ok(Map.of(
-                "status", "NAME_RECORDED",
-                "file", filename == null ? "" : filename));
+        try {
+            String url = mediaUploadService.uploadDocument(file, docType);
+            String filename = file.getOriginalFilename();
+            return ResponseEntity.ok(Map.of(
+                    "status", "UPLOADED",
+                    "url", url,
+                    "file", filename == null ? "" : filename));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(Map.of("message", ex.getMessage()));
+        } catch (IOException ex) {
+            log.error("Failed to upload document", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Document upload failed. Please try again."));
+        }
     }
 }

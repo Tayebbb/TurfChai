@@ -10,6 +10,7 @@ import com.turfchai.ai.evaluation.AiMetricsRecorder;
 import com.turfchai.ai.llm.FallbackLlmProvider;
 import com.turfchai.ai.llm.LlmProvider;
 import com.turfchai.ai.llm.OpenAiCompatibleLlmProvider;
+import com.turfchai.ai.llm.RotatingKeyLlmProvider;
 import com.turfchai.ai.llm.UnconfiguredLlmProvider;
 import com.turfchai.ai.memory.ConversationMemory;
 import com.turfchai.ai.memory.InMemoryConversationMemory;
@@ -70,19 +71,13 @@ public class AiConfiguration {
     }
 
     @Bean
-    RestClient openRouterRestClient(AiProperties properties) {
-        return buildRestClient(properties.getOpenrouter(), Map.of(
-                // OpenRouter attribution headers (optional but recommended)
-                "HTTP-Referer", "http://localhost:8080",
-                "X-Title", "TurfChai"));
-    }
-
-    @Bean
     RestClient huggingFaceRestClient(AiProperties properties) {
-        return buildRestClient(properties.getHuggingface(), Map.of());
+        return buildRestClient(properties.getHuggingface(), properties.getHuggingface().getApiKey(), Map.of());
     }
 
-    private RestClient buildRestClient(AiProperties.Endpoint endpoint, Map<String, String> extraHeaders) {
+    /** Builds a {@link RestClient} for a specific API key (not the endpoint's default). */
+    private RestClient buildRestClient(AiProperties.Endpoint endpoint, String apiKey,
+            Map<String, String> extraHeaders) {
         Duration timeout = Duration.ofSeconds(endpoint.getTimeoutSeconds());
         // JDK HttpClient: HTTP/2 + pooled keep-alive connections avoid a
         // fresh TLS handshake on every LLM round trip.
@@ -94,7 +89,7 @@ public class AiConfiguration {
         requestFactory.setReadTimeout(timeout);
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl(endpoint.getBaseUrl())
-                .defaultHeader("Authorization", "Bearer " + endpoint.getApiKey())
+                .defaultHeader("Authorization", "Bearer " + apiKey)
                 .requestFactory(requestFactory);
         extraHeaders.forEach(builder::defaultHeader);
         return builder.build();
@@ -103,17 +98,19 @@ public class AiConfiguration {
     /**
      * Provider chain ordered by {@code app.ai.primary-provider}, the other
      * key acting as fallback on retryable failures (quota/transport/5xx).
-     * Either can run alone; with neither key set the app still boots and
-     * chat returns 503.
+     *
+     * <p>
+     * When multiple OpenRouter keys are configured they are wrapped in a
+     * {@link RotatingKeyLlmProvider} that automatically cycles to the next key
+     * on HTTP 429/402 (daily quota exhaustion), transparently multiplying the
+     * free-tier limit by the number of keys. Either provider can run alone;
+     * with no keys at all the app still boots and chat returns 503.
      */
     @Bean
     LlmProvider llmProvider(AiProperties properties,
-            RestClient openRouterRestClient,
             RestClient huggingFaceRestClient,
             ObjectMapper objectMapper) {
-        LlmProvider openRouter = properties.getOpenrouter().getApiKey().isBlank() ? null
-                : new OpenAiCompatibleLlmProvider("openrouter", openRouterRestClient,
-                        objectMapper, properties.getOpenrouter());
+        LlmProvider openRouter = buildOpenRouterProvider(properties, objectMapper);
         LlmProvider huggingFace = properties.getHuggingface().getApiKey().isBlank() ? null
                 : new OpenAiCompatibleLlmProvider("huggingface", huggingFaceRestClient,
                         objectMapper, properties.getHuggingface());
@@ -128,15 +125,47 @@ public class AiConfiguration {
                     Clock.systemUTC());
         }
         if (openRouter != null) {
-            log.info("LLM provider: openrouter only (no fallback configured)");
+            log.info("LLM provider: {} (no HuggingFace fallback configured)", openRouter.name());
             return openRouter;
         }
         if (huggingFace != null) {
-            log.info("LLM provider: huggingface only (OpenRouter key not set)");
+            log.info("LLM provider: huggingface only (no OpenRouter keys set)");
             return huggingFace;
         }
         log.warn("No LLM API keys set — AI chat endpoints will return 503");
         return new UnconfiguredLlmProvider();
+    }
+
+    /**
+     * Builds the OpenRouter {@link LlmProvider}. When two or more keys are
+     * configured a {@link RotatingKeyLlmProvider} is returned so that quota
+     * exhaustion on one key is handled transparently by the next.
+     */
+    private LlmProvider buildOpenRouterProvider(AiProperties properties, ObjectMapper objectMapper) {
+        AiProperties.Endpoint cfg = properties.getOpenrouter();
+        List<String> keys = cfg.getEffectiveApiKeys();
+        if (keys.isEmpty()) {
+            return null;
+        }
+        Map<String, String> orHeaders = Map.of(
+                "HTTP-Referer", "http://localhost:8080",
+                "X-Title", "TurfChai");
+        if (keys.size() == 1) {
+            RestClient client = buildRestClient(cfg, keys.get(0), orHeaders);
+            return new OpenAiCompatibleLlmProvider("openrouter", client, objectMapper, cfg);
+        }
+        // Multiple keys → rotating pool
+        log.info("OpenRouter key pool: {} keys configured; will rotate on quota exhaustion.", keys.size());
+        List<LlmProvider> delegates = keys.stream()
+                .map(key -> {
+                    RestClient client = buildRestClient(cfg, key, orHeaders);
+                    // Label each with the last 6 chars of the key for log readability
+                    String label = "openrouter[..." + key.substring(Math.max(0, key.length() - 6)) + "]";
+                    return (LlmProvider) new OpenAiCompatibleLlmProvider(label, client, objectMapper, cfg);
+                })
+                .toList();
+        long cooldownMs = Duration.ofSeconds(properties.getAgent().getPrimaryCooldownSeconds()).toMillis();
+        return new RotatingKeyLlmProvider("openrouter", delegates, cooldownMs, Clock.systemUTC());
     }
 
     @Bean

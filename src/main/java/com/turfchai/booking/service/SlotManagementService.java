@@ -59,7 +59,7 @@ public class SlotManagementService {
                             .build();
                     generatedSlots.add(slot);
                 }
-                currentTime = slotEndTime;
+                currentTime = slotEndTime.plusMinutes(Math.max(0, req.getBufferMinutes()));
             }
             currentDate = currentDate.plusDays(1);
         }

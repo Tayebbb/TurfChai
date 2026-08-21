@@ -43,6 +43,10 @@ class VenueSearchServiceTest {
         private com.turfchai.booking.repository.BookingRepository bookings;
         @Autowired
         private com.turfchai.repository.ReviewRepository reviews;
+        @Autowired
+        private com.turfchai.repository.OpenGameRepository openGames;
+        @Autowired
+        private com.turfchai.repository.OpenGameMembershipRepository openGameMembers;
 
         private Sport football;
         private Sport badminton;
@@ -54,6 +58,8 @@ class VenueSearchServiceTest {
                 // the rows it points at.
                 reviews.deleteAll();
                 tournaments.deleteAll();
+                openGameMembers.deleteAll();
+                openGames.deleteAll();
                 bookings.deleteAll();
                 slots.deleteAll();
                 venues.deleteAll();

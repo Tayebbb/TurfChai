@@ -1,6 +1,7 @@
 .git
 .gitignore
-target
+target/*
+!target/turfchai-0.0.1-SNAPSHOT.jar
 .env
 *.log
 .idea

@@ -74,3 +74,49 @@ export function unblockOwnerSlot(venueId, slotId) {
 export function createManualBooking(venueId, bookingData) {
   return apiSend('POST', `/api/v1/owner/venues/${encodeURIComponent(venueId)}/manual-booking`, bookingData);
 }
+
+// ── Persistent Owner Venue Selection ──────────────────────────────────────────
+
+const SELECTED_VENUE_KEY = 'turfchai_owner_selected_venue_id';
+
+/** Get the currently selected venue ID from localStorage */
+export function getSavedSelectedVenueId() {
+  try {
+    const val = localStorage.getItem(SELECTED_VENUE_KEY);
+    if (!val || val === 'null' || val === 'undefined' || val === 'NaN') return null;
+    const num = Number(val);
+    return isNaN(num) ? null : num;
+  } catch {
+    return null;
+  }
+}
+
+/** Save the currently selected venue ID to localStorage and broadcast change */
+export function saveSelectedVenueId(venueId) {
+  try {
+    if (venueId != null && venueId !== 'null' && venueId !== 'undefined' && !isNaN(Number(venueId))) {
+      localStorage.setItem(SELECTED_VENUE_KEY, String(venueId));
+    } else {
+      localStorage.removeItem(SELECTED_VENUE_KEY);
+    }
+    window.dispatchEvent(new CustomEvent('turfchai:venue-change', { detail: venueId }));
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+/** Resolve the active venue ID from a venue list against saved preference */
+export function resolveActiveVenue(venueList) {
+  if (!Array.isArray(venueList) || venueList.length === 0) return null;
+  const savedId = getSavedSelectedVenueId();
+  if (savedId != null) {
+    const match = venueList.find((v) => Number(v.id) === Number(savedId) || String(v.id) === String(savedId));
+    if (match && match.id) return match.id;
+  }
+  const fallbackId = venueList[0]?.id;
+  if (fallbackId) {
+    saveSelectedVenueId(fallbackId);
+    return fallbackId;
+  }
+  return null;
+}

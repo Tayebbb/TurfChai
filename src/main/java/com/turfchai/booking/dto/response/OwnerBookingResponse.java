@@ -64,4 +64,7 @@ public class OwnerBookingResponse {
 
     @Schema(description = "Whether the row should render de-emphasised (cancelled)")
     private boolean dim;
+
+    @Schema(description = "Date of the booking slot", example = "2026-08-19")
+    private java.time.LocalDate bookingDate;
 }

@@ -46,19 +46,31 @@ public class VenueSearchTool implements Tool {
                         + "Pass the returned slug to manage_booking as `venue` to look up that venue's slots.",
                 List.of(
                         ToolParam.optional("area", "string",
-                                "Area of Dhaka, e.g. Dhanmondi, Banani, Mirpur, Uttara, Gulshan"),
+                                "Specific neighborhood of Dhaka (e.g. Dhanmondi, Banani, Mirpur, Uttara, Gulshan, Khilgaon, Bashundhara, Rampura, Mohammadpur, Tejgaon). Omit or leave blank to search all of Dhaka."),
                         ToolParam.optional("sport", "string",
                                 "Sport slug: football, cricket, futsal, badminton, basketball"),
-                        ToolParam.optional("query", "string", "Free text matched against venue name and area"),
+                        ToolParam.optional("query", "string", "Free text matched against venue name and area. Omit when searching generally."),
                         ToolParam.optional("maxPricePerHour", "number", "Maximum price per slot in BDT"),
+                        ToolParam.optional("sortBy", "string",
+                                "Sort order: 'price_asc' (for cheapest / lowest price), 'price_desc' (highest price), 'rating' (default / highest rated), 'newest', 'name'"),
                         ToolParam.optional("limit", "integer", "How many venues to return, 1-10 (default 5)")));
     }
 
     @Override
     public ToolResult execute(Map<String, Object> arguments, ToolContext context) {
+        String area = ToolArgs.string(arguments, "area");
+        if (area != null && (area.equalsIgnoreCase("dhaka") || area.equalsIgnoreCase("all") || area.equalsIgnoreCase("any"))) {
+            area = null;
+        }
+
+        String query = ToolArgs.string(arguments, "query");
+        if (query != null && (query.equalsIgnoreCase("dhaka") || query.equalsIgnoreCase("all") || query.equalsIgnoreCase("turf") || query.equalsIgnoreCase("turfs") || query.equalsIgnoreCase("venue") || query.equalsIgnoreCase("venues"))) {
+            query = null;
+        }
+
         VenueSearchCriteria criteria = new VenueSearchCriteria(
-                ToolArgs.string(arguments, "query"),
-                ToolArgs.string(arguments, "area"),
+                query,
+                area,
                 ToolArgs.string(arguments, "sport"),
                 null,
                 ToolArgs.decimal(arguments, "maxPricePerHour"),
@@ -70,7 +82,11 @@ public class VenueSearchTool implements Tool {
                 null);
 
         int limit = ToolArgs.bounded(ToolArgs.integer(arguments, "limit"), DEFAULT_LIMIT, 1, MAX_LIMIT);
-        PagedResponse<VenueSummaryDto> page = venueSearchService.search(criteria, 0, limit, "rating");
+        String sortBy = ToolArgs.string(arguments, "sortBy");
+        if (sortBy == null || sortBy.isBlank()) {
+            sortBy = "rating";
+        }
+        PagedResponse<VenueSummaryDto> page = venueSearchService.search(criteria, 0, limit, sortBy);
 
         List<Map<String, Object>> venues = page.items().stream().map(VenueSearchTool::toRow).toList();
 

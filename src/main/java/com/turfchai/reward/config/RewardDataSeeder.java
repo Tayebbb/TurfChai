@@ -33,7 +33,7 @@ import java.util.Map;
  * history so the rewards page has something to show on a fresh checkout.
  */
 @Configuration
-@Profile({ "dev", "test" })
+@Profile({ "dev", "test", "ci", "docker" })
 public class RewardDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(RewardDataSeeder.class);
@@ -117,27 +117,12 @@ public class RewardDataSeeder {
                         return;
                     }
 
-                    for (long bookingId = 101; bookingId < 111; bookingId++) {
-                        rewardService.awardBookingPoints(userId, bookingId, BigDecimal.valueOf(200)); // 10 x 200 =
-                                                                                                      // 2,000
-                    }
-                    for (long bookingId = 101; bookingId < 107; bookingId++) {
-                        rewardService.awardMatchAttendedPoints(userId, bookingId); // 6 x 30 = 180
-                    }
-                    for (long bookingId = 101; bookingId < 106; bookingId++) {
-                        rewardService.awardReviewPoints(userId, bookingId); // 5 x 20 = 100
-                    }
-                    for (long bookingId = 201; bookingId < 205; bookingId++) {
-                        rewardService.awardOffPeakBonusIfApplicable(userId, bookingId, LocalTime.of(9, 0)); // 4 x 10 =
-                                                                                                            // 40
-                    }
-                    for (long gameId = 301; gameId < 304; gameId++) {
-                        rewardService.awardOpenGameJoinedPoints(userId, gameId); // 3 x 15 = 45
-                    }
                     rewardService.awardProfileCompletionPointsOnce(userId); // 10
-                    rewardService.awardMonthlyActivityBonus(userId, 200, "Welcome bonus");
-                    rewardService.awardMonthlyActivityBonus(userId, 165, "5th booking this month");
-                    // Total: 2,000 + 180 + 100 + 40 + 45 + 10 + 200 + 165 = 2,740 pts
+                    rewardService.awardMonthlyActivityBonus(userId, 1000, "Early adopter loyalty reward");
+                    rewardService.awardMonthlyActivityBonus(userId, 800, "Frequent match player milestone");
+                    rewardService.awardMonthlyActivityBonus(userId, 500, "Welcome bonus");
+                    rewardService.awardMonthlyActivityBonus(userId, 430, "Monthly active leaderboard reward");
+                    // Total: 10 + 1000 + 800 + 500 + 430 = 2,740 pts (Gold tier, 35% to Platinum)
 
                     log.info("Seeded demo player point history: 2,740 pts for {}", demoUser.getEmail());
                 });

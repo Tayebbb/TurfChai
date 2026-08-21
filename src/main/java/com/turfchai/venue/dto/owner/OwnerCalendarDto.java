@@ -53,6 +53,10 @@ public class OwnerCalendarDto {
         private Boolean openable;
         private String status;
         private Double price;
+        private String startTime;
+        private String endTime;
+        private Integer durationMinutes;
+        private String sport;
         /**
          * The live booking on this slot, when there is one — drives the owner's slot
          * actions.

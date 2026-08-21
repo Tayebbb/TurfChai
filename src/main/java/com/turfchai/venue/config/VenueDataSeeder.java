@@ -27,7 +27,7 @@ import java.util.Map;
  * Test seed matching the sample venues (test profile only).
  */
 @Configuration
-@Profile({ "dev", "test" })
+@Profile({ "dev", "test", "ci", "docker" })
 public class VenueDataSeeder {
 
         private static final Logger log = LoggerFactory.getLogger(VenueDataSeeder.class);
@@ -43,9 +43,10 @@ public class VenueDataSeeder {
                 if (venues.count() > 0) {
                         return;
                 }
-                User owner = users.findByPublicId(
-                                com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString())
-                                .orElse(null);
+                User owner = users.findByEmail("mahmud@turfchai.com")
+                                .orElseGet(() -> users.findByPublicId(
+                                                com.turfchai.player.config.PlayerDataSeeder.DEMO_PLAYER_PUBLIC_ID.toString())
+                                                .orElse(null));
 
                 Sport football = sport(sports, "Football", "football");
                 Sport cricket = sport(sports, "Cricket", "cricket");

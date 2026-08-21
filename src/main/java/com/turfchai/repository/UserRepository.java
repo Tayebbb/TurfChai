@@ -42,11 +42,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
                         select u from User u
                         where (:role is null or u.role = :role)
                           and (:suspendedOnly = false or u.isSuspended = true or upper(u.status) = 'SUSPENDED')
-                          and (:status is null or upper(u.status) = upper(:status))
+                          and (:status is null or upper(u.status) = upper(cast(:status as string)))
                           and (:term is null
-                               or lower(u.fullName) like :term
-                               or lower(u.email) like :term
-                               or lower(u.phone) like :term)
+                               or lower(u.fullName) like cast(:term as string)
+                               or lower(u.email) like cast(:term as string)
+                               or lower(u.phone) like cast(:term as string))
                         """)
         Page<User> searchForAdmin(@Param("role") RoleType role,
                         @Param("suspendedOnly") boolean suspendedOnly,

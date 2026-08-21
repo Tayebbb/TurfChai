@@ -75,7 +75,7 @@ class UserProfileRestControllerTest {
                 mockMvc.perform(get("/api/v1/players/me"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.fullName").value("Rafiul Karim"))
-                                .andExpect(jsonPath("$.email").value("rafi@turfchai.dev"));
+                                .andExpect(jsonPath("$.email").value("rafi@turfchai.com"));
         }
 
         /** TC-001: every player route refuses an anonymous caller. */
@@ -116,11 +116,11 @@ class UserProfileRestControllerTest {
                 mockMvc.perform(get("/api/v1/players/me")
                                 .header("X-User-Id", UUID.randomUUID().toString()))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.email").value("rafi@turfchai.dev"));
+                                .andExpect(jsonPath("$.email").value("rafi@turfchai.com"));
 
                 mockMvc.perform(get("/api/v1/players/me").header("X-User-Id", "not-a-uuid"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.email").value("rafi@turfchai.dev"));
+                                .andExpect(jsonPath("$.email").value("rafi@turfchai.com"));
         }
 
         /** A second player sees only their own profile on the same route. */

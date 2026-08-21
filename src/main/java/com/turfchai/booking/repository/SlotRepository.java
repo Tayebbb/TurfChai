@@ -56,4 +56,7 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
     List<Slot> findByVenueIdIn(List<Long> venueIds);
 
     List<Slot> findByVenueIdInAndSlotDateBetween(List<Long> venueIds, LocalDate startDate, LocalDate endDate);
+
+    @Query("SELECT s FROM Slot s JOIN FETCH s.pitch WHERE s.venueId = :venueId AND (s.slotDate > :today OR (s.slotDate = :today AND s.startTime >= :now)) AND s.status = com.turfchai.booking.entity.SlotStatus.AVAILABLE")
+    List<Slot> findUpcomingAvailableSlots(@Param("venueId") Long venueId, @Param("today") LocalDate today, @Param("now") LocalTime now);
 }

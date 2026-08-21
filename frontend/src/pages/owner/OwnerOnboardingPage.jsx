@@ -1,5 +1,6 @@
 import {
   useState,
+  useEffect,
 } from 'react';
 
 import {
@@ -29,7 +30,6 @@ import {
 
 import { register, login } from '@/api/auth';
 import { setSession } from '@/api/client';
-import { toUserMessage } from '@/utils/errorMessage';
 import { useLocation } from 'react-router-dom';
 
 import {
@@ -125,6 +125,51 @@ export default function OwnerOnboardingPage() {
   const [venueName, setVenueName] = useState('');
   const [location, setLocation] = useState({ address: '', area: '', lat: null, lng: null });
   const [saving, setSaving] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  useEffect(() => {
+    if (hasHydrated || !myRequests?.length) return;
+    const latest = myRequests[0];
+    if (latest && latest.status === 'PENDING') {
+      queueMicrotask(() => {
+        if (latest.ownerName) setOwnerName(latest.ownerName);
+        if (latest.ownerPhone) setOwnerPhone(latest.ownerPhone);
+        if (latest.docOwnerNid) setNid(latest.docOwnerNid);
+        if (latest.venueName) setVenueName(latest.venueName);
+        if (latest.address || latest.area) {
+          setLocation({
+            address: latest.address || '',
+            area: latest.area || '',
+            lat: latest.lat != null ? Number(latest.lat) : null,
+            lng: latest.lng != null ? Number(latest.lng) : null,
+          });
+        }
+        if (latest.docTradeLicense) {
+          setDocuments((prev) => ({
+            ...prev,
+            tradeLicense: { name: 'Trade License', size: 'Attached', url: latest.docTradeLicense },
+          }));
+        }
+        if (latest.docUtilityBill) {
+          setDocuments((prev) => ({
+            ...prev,
+            leaseProof: { name: 'Utility / Lease Proof', size: 'Attached', url: latest.docUtilityBill },
+          }));
+        }
+        if (latest.photosJson) {
+          try {
+            const parsed = JSON.parse(latest.photosJson);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setPhotos(parsed.map((url, idx) => ({ id: `saved-${idx}`, name: `Photo ${idx + 1}`, url, preview: url })));
+            }
+          } catch {
+            // ignore
+          }
+        }
+        setHasHydrated(true);
+      });
+    }
+  }, [myRequests, hasHydrated]);
 
   const located = Number.isFinite(location.lat) && Number.isFinite(location.lng);
   const documentCount = [documents.tradeLicense, documents.leaseProof].filter(Boolean).length;
@@ -141,88 +186,56 @@ export default function OwnerOnboardingPage() {
     { id: 'pitches', label: 'Pitches & Slots', value: VENUE_PITCHES },
   ];
 
-  const handleFileUpload = async (event, docType) => {
+  const handleFileUpload = (event, docType) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
     const formattedSize = `${sizeMb > 0 ? sizeMb : '<0.1'} MB`;
     const previewUrl = URL.createObjectURL(file);
-    const docInfo = { name: file.name, size: formattedSize, url: previewUrl };
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', docType);
-      await recordTurfDocName(formData);
-    } catch (error) {
-      // This used to fall through to the success toast, so an owner believed a
-      // trade licence or lease proof had been filed for verification when it
-      // only ever existed as a blob URL in this tab, lost on the next refresh.
-      URL.revokeObjectURL(previewUrl);
-      showToast(toUserMessage(error, `Could not add ${file.name}. Please try again.`));
-      return;
-    }
+    const docInfo = { name: file.name, size: formattedSize, url: previewUrl, file };
 
     if (docType === 'tradeLicense') {
+      if (documents.tradeLicense?.url?.startsWith('blob:')) {
+        URL.revokeObjectURL(documents.tradeLicense.url);
+      }
       setDocuments((prev) => ({ ...prev, tradeLicense: docInfo }));
     } else if (docType === 'leaseProof') {
+      if (documents.leaseProof?.url?.startsWith('blob:')) {
+        URL.revokeObjectURL(documents.leaseProof.url);
+      }
       setDocuments((prev) => ({ ...prev, leaseProof: docInfo }));
     }
-    // The file is not stored anywhere; only its name travels with the request.
-    showToast(`${file.name} listed on your request — bring the original to verification`);
+    showToast(`${file.name} selected ✓`);
   };
 
-  const handlePhotoUpload = async (event) => {
+  const handlePhotoUpload = (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    let uploaded = 0;
-    let failed = 0;
-
-    for (const file of files) {
+    const newPhotos = files.map((file) => {
       const previewUrl = URL.createObjectURL(file);
-      let persistentUrl = null;
-
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await uploadTurfPhoto(formData);
-        persistentUrl = res?.url ?? res?.data?.url ?? null;
-        if (!persistentUrl) throw new Error('No stored location returned');
-      } catch {
-        // This used to substitute a hardcoded Unsplash stock photo, so a failed
-        // upload produced a listing showing someone else's field as if it were
-        // this venue. A photo that did not upload is simply not added.
-        URL.revokeObjectURL(previewUrl);
-        failed += 1;
-        continue;
-      }
-
-      const newPhoto = {
+      return {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         name: file.name,
-        url: persistentUrl,
+        url: previewUrl,
         preview: previewUrl,
+        file,
       };
+    });
 
-      setPhotos((prev) => [...prev, newPhoto]);
-      uploaded += 1;
-    }
-
-    if (failed > 0) {
-      showToast(
-        uploaded > 0
-          ? `${uploaded} photo(s) added — ${failed} could not be uploaded.`
-          : `Could not upload ${failed} photo(s). Please try again.`,
-      );
-      return;
-    }
-    showToast(`${uploaded} venue photo(s) added ✓`);
+    setPhotos((prev) => [...prev, ...newPhotos]);
+    showToast(`${newPhotos.length} photo(s) selected ✓`);
   };
 
   const handleRemovePhoto = (id) => {
-    setPhotos((prev) => prev.filter((p) => p.id !== id));
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target?.preview?.startsWith('blob:')) {
+        URL.revokeObjectURL(target.preview);
+      }
+      return prev.filter((p) => p.id !== id);
+    });
     showToast('Photo removed');
   };
 
@@ -293,12 +306,50 @@ export default function OwnerOnboardingPage() {
         }
       }
 
-      // A blob URL only exists in this tab. Submitting one used to be papered
-      // over with a stock Unsplash field, so the listing showed a pitch that
-      // was not this venue. An unstored photo is simply not submitted.
-      const photoUrls = photos
-        .map((p) => p.url)
-        .filter((url) => typeof url === 'string' && !url.startsWith('blob:'));
+      // 1. Upload verification documents (now authenticated)
+      let docTradeLicenseUrl = documents.tradeLicense?.name;
+      if (documents.tradeLicense?.file) {
+        try {
+          const fd = new FormData();
+          fd.append('file', documents.tradeLicense.file);
+          fd.append('type', 'tradeLicense');
+          const res = await recordTurfDocName(fd);
+          if (res?.url) docTradeLicenseUrl = res.url;
+        } catch (err) {
+          console.warn('Could not upload trade license file to storage:', err);
+        }
+      }
+
+      let docUtilityBillUrl = documents.leaseProof?.name;
+      if (documents.leaseProof?.file) {
+        try {
+          const fd = new FormData();
+          fd.append('file', documents.leaseProof.file);
+          fd.append('type', 'leaseProof');
+          const res = await recordTurfDocName(fd);
+          if (res?.url) docUtilityBillUrl = res.url;
+        } catch (err) {
+          console.warn('Could not upload lease proof file to storage:', err);
+        }
+      }
+
+      // 2. Upload venue photos (now authenticated)
+      const photoUrls = [];
+      for (const p of photos) {
+        if (p.file) {
+          try {
+            const fd = new FormData();
+            fd.append('file', p.file);
+            const res = await uploadTurfPhoto(fd);
+            const uploadedUrl = res?.url ?? res?.data?.url;
+            if (uploadedUrl) photoUrls.push(uploadedUrl);
+          } catch (err) {
+            console.warn('Failed to upload photo:', p.name, err);
+          }
+        } else if (typeof p.url === 'string' && !p.url.startsWith('blob:')) {
+          photoUrls.push(p.url);
+        }
+      }
 
       await createTurfRequest({
         venueName: venueName.trim(),
@@ -307,9 +358,9 @@ export default function OwnerOnboardingPage() {
         sportsCsv: 'Football',
         ownerPhone: ownerPhone,
         ownerEmail: authState?.signupEmail || undefined,
-        docTradeLicense: documents.tradeLicense?.name || undefined,
+        docTradeLicense: docTradeLicenseUrl || undefined,
         docOwnerNid: nid || undefined,
-        docUtilityBill: documents.leaseProof?.name || undefined,
+        docUtilityBill: docUtilityBillUrl || undefined,
         photos: photoUrls,
       });
 

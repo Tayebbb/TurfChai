@@ -150,4 +150,62 @@ describe('Owner DashboardPage — real figures and a real check-in', () => {
     );
     expect(posts).toHaveLength(0);
   });
+
+  it('opens the manual booking UI directly when manual booking button is clicked and creates booking', async () => {
+    signIn({ role: 'OWNER', fullName: 'Jashim Uddin' });
+    const mockCalendarData = {
+      pitches: [{ id: 10, name: 'Main Pitch', format: '7v7', sports: ['football'] }],
+      rows: [
+        {
+          time: '6:00 PM',
+          cells: [
+            {
+              slotId: 501,
+              pitchId: 10,
+              status: 'AVAILABLE',
+              price: 2500,
+            },
+          ],
+        },
+      ],
+    };
+
+    const fetchMock = mockApi([
+      ['/owner/venues/3/manual-booking', { body: null }],
+      ['/owner/venues/3/calendar', { body: mockCalendarData }],
+      ...LIVE_OWNER_API,
+    ]);
+
+    renderApp(<DashboardPage />);
+
+    await screen.findByText('৳8,400');
+    const manualBtn = screen.getByRole('button', { name: /\+ Manual booking/i });
+    expect(manualBtn).toBeInTheDocument();
+    // Ensure it's not a link to calendar page anymore
+    expect(manualBtn.closest('a')).toBeNull();
+
+    await userEvent.click(manualBtn);
+
+    // Modal is opened
+    expect(await screen.findByRole('dialog', { name: /Manual booking/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Customer name/i)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/Customer name/i), 'Rahim Khan');
+    await userEvent.type(screen.getByLabelText(/Phone number/i), '01711223344');
+
+    const submitBtn = screen.getByRole('button', { name: /^Confirm booking$/i });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls.filter(
+        ([url, init]) => init?.method === 'POST' && String(url).includes('/owner/venues/3/manual-booking'),
+      );
+      expect(calls.length).toBe(1);
+      const reqBody = JSON.parse(calls[0][1].body);
+      expect(reqBody.slotId).toBe(501);
+      expect(reqBody.customerName).toBe('Rahim Khan');
+      expect(reqBody.customerPhone).toBe('01711223344');
+    });
+  });
 });
+

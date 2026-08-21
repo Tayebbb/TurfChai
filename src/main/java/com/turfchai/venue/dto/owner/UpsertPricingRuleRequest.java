@@ -21,7 +21,7 @@ public record UpsertPricingRuleRequest(
 
         /** 'OFF_PEAK' | 'PEAK' | 'FULL_DAY' */
         @NotNull
-        @Pattern(regexp = "OFF_PEAK|PEAK|FULL_DAY")
+        @Pattern(regexp = "(?i)OFF_PEAK|PEAK|FULL_DAY", message = "windowType must be OFF_PEAK, PEAK, or FULL_DAY")
         String windowType,
 
         /** Slot rate in BDT */

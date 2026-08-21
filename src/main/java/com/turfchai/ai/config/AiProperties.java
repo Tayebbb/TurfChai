@@ -66,8 +66,22 @@ public class AiProperties {
 
     /** Settings for one OpenAI-compatible chat-completions endpoint. */
     public static class Endpoint {
-        /** API key; when blank the provider is not registered. */
+        /**
+         * Primary API key (single-key backward-compatible). When {@link #apiKeys} is
+         * also set, all keys are pooled and rotated automatically on quota exhaustion.
+         */
         private String apiKey = "";
+
+        /**
+         * Additional API keys for automatic rotation. When any key hits its daily
+         * quota (HTTP 429/402) the next key in the list is tried transparently.
+         * In .env, set as a comma-separated value:
+         * <pre>
+         *   OPENROUTER_API_KEYS=sk-or-v1-key1,sk-or-v1-key2,sk-or-v1-key3
+         * </pre>
+         */
+        private java.util.List<String> apiKeys = java.util.List.of();
+
         private String model = "";
         /**
          * Alternate models tried in order when the primary is rate-limited (OpenRouter
@@ -88,12 +102,47 @@ public class AiProperties {
         /** Reply length cap — keeps answers chat-sized and saves credits. */
         private int maxTokens = 450;
 
+        /**
+         * Returns all effective API keys: the {@code apiKey} singleton plus every
+         * entry from {@code apiKeys}, deduplicated and filtered for blank entries.
+         * This is the list the provider pool rotates through.
+         */
+        public java.util.List<String> getEffectiveApiKeys() {
+            java.util.LinkedHashSet<String> all = new java.util.LinkedHashSet<>();
+            if (!apiKey.isBlank()) {
+                for (String part : apiKey.split(",")) {
+                    String trimmed = part.trim();
+                    if (!trimmed.isBlank()) {
+                        all.add(trimmed);
+                    }
+                }
+            }
+            for (String k : apiKeys) {
+                // apiKeys may be a single comma-separated string if set via env var
+                for (String part : k.split(",")) {
+                    String trimmed = part.trim();
+                    if (!trimmed.isBlank()) {
+                        all.add(trimmed);
+                    }
+                }
+            }
+            return java.util.List.copyOf(all);
+        }
+
         public String getApiKey() {
             return apiKey;
         }
 
         public void setApiKey(String apiKey) {
             this.apiKey = apiKey;
+        }
+
+        public java.util.List<String> getApiKeys() {
+            return apiKeys;
+        }
+
+        public void setApiKeys(java.util.List<String> apiKeys) {
+            this.apiKeys = apiKeys;
         }
 
         public String getModel() {

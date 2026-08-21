@@ -33,6 +33,10 @@ public class MediaUploadService {
             "image/jpeg", "image/jpg", "image/png", "image/webp"
     );
 
+    private static final Set<String> ALLOWED_DOC_MIME_TYPES = Set.of(
+            "application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp"
+    );
+
     private final Cloudinary cloudinary;
     private final long maxFileSizeBytes;
     private final String uploadFolder;
@@ -54,9 +58,9 @@ public class MediaUploadService {
      * @return secure HTTPS URL of the uploaded image
      */
     public String uploadVenuePhoto(MultipartFile file, Long venueId) throws IOException {
-        validate(file);
+        validate(file, ALLOWED_MIME_TYPES);
         String folder = "%s/venues/%d".formatted(uploadFolder, venueId);
-        return doUpload(file, folder, "venue_" + venueId + "_" + System.currentTimeMillis());
+        return doUpload(file, folder, "venue_" + venueId + "_" + System.currentTimeMillis(), "image");
     }
 
     /**
@@ -67,9 +71,9 @@ public class MediaUploadService {
      * @return secure HTTPS URL of the uploaded image
      */
     public String uploadAvatar(MultipartFile file, Long userId) throws IOException {
-        validate(file);
+        validate(file, ALLOWED_MIME_TYPES);
         String folder = "%s/avatars".formatted(uploadFolder);
-        return doUpload(file, folder, "avatar_" + userId);
+        return doUpload(file, folder, "avatar_" + userId, "image");
     }
 
     /**
@@ -79,21 +83,37 @@ public class MediaUploadService {
      * @return secure HTTPS URL
      */
     public String uploadGeneric(MultipartFile file) throws IOException {
-        validate(file);
+        validate(file, ALLOWED_MIME_TYPES);
         String folder = "%s/general".formatted(uploadFolder);
-        return doUpload(file, folder, "upload_" + System.currentTimeMillis());
+        return doUpload(file, folder, "upload_" + System.currentTimeMillis(), "image");
+    }
+
+    /**
+     * Upload verification document (PDF, JPEG, PNG, WebP) — stored under {@code TurfChai/documents/}.
+     *
+     * @param file the multipart document file
+     * @param docType document type tag (e.g. tradeLicense, leaseProof)
+     * @return secure HTTPS URL
+     */
+    public String uploadDocument(MultipartFile file, String docType) throws IOException {
+        validate(file, ALLOWED_DOC_MIME_TYPES);
+        String folder = "%s/documents".formatted(uploadFolder);
+        String publicId = "doc_" + (docType != null && !docType.isBlank() ? docType.replaceAll("[^a-zA-Z0-9_-]", "") : "doc") + "_" + System.currentTimeMillis();
+        String contentType = file.getContentType() != null ? file.getContentType().toLowerCase() : "";
+        String resourceType = "application/pdf".equals(contentType) ? "raw" : "image";
+        return doUpload(file, folder, publicId, resourceType);
     }
 
     // ── Internal ───────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
-    private String doUpload(MultipartFile file, String folder, String publicId) throws IOException {
+    private String doUpload(MultipartFile file, String folder, String publicId, String resourceType) throws IOException {
         try {
             Map<String, Object> params = ObjectUtils.asMap(
                     "folder", folder,
                     "public_id", publicId,
                     "overwrite", true,
-                    "resource_type", "image",
+                    "resource_type", resourceType != null ? resourceType : "auto",
                     "quality", "auto",
                     "fetch_format", "auto"
             );
@@ -108,21 +128,21 @@ public class MediaUploadService {
             String base64 = java.util.Base64.getEncoder().encodeToString(bytes);
             String mime = (file.getContentType() != null && !file.getContentType().isBlank())
                     ? file.getContentType()
-                    : "image/jpeg";
+                    : "application/octet-stream";
             return "data:" + mime + ";base64," + base64;
         }
-        throw new IOException("Photo upload failed");
+        throw new IOException("Photo/document upload failed");
     }
 
-    private void validate(MultipartFile file) {
+    private void validate(MultipartFile file, Set<String> allowedTypes) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("No file provided");
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
+        if (contentType == null || !allowedTypes.contains(contentType.toLowerCase())) {
             throw new IllegalArgumentException(
-                    "Invalid file type '%s'. Allowed: JPEG, PNG, WebP".formatted(contentType));
+                    "Invalid file type '%s'. Allowed: %s".formatted(contentType, String.join(", ", allowedTypes)));
         }
 
         if (file.getSize() > maxFileSizeBytes) {
@@ -133,3 +153,4 @@ public class MediaUploadService {
         }
     }
 }
+

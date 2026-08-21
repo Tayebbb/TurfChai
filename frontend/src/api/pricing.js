@@ -10,11 +10,12 @@ import { apiSend } from './client';
  * @param {number}  params.daysBeforeBooking
  * @param {number}  params.occupancyRate   0.0 – 1.0
  */
-export function getPricingQuote({ venueId, bookingDateTime, daysBeforeBooking = 3, occupancyRate = 0.7 }) {
+export function getPricingQuote({ venueId, bookingDateTime, daysBeforeBooking = 3, occupancyRate = 0.7, sportSlug }) {
   return apiSend('POST', '/api/v1/pricing/quote', {
     venueId,
     bookingDateTime,
     daysBeforeBooking,
     occupancyRate,
+    sportSlug,
   });
 }

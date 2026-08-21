@@ -68,6 +68,18 @@ public class OwnerPaymentService {
                 && p.getMethod() != PaymentMethod.CASH);
     }
 
+    private static BigDecimal calculateBookingNet(Booking b, List<Payment> payments) {
+        if (b == null || b.getGrossAmount() == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal gross = b.getGrossAmount();
+        if (isPaidOnline(payments)) {
+            BigDecimal fee = gross.multiply(PLATFORM_FEE_RATE).setScale(2, RoundingMode.HALF_UP);
+            return gross.subtract(fee);
+        }
+        return gross;
+    }
+
     private static BigDecimal refundedTotal(Map<Long, List<Payment>> byBooking) {
         return byBooking.values().stream()
                 .flatMap(List::stream)
@@ -104,18 +116,26 @@ public class OwnerPaymentService {
         // 1. Dynamic Sports Extraction for this Owner
         List<Map<String, String>> configuredSports = new ArrayList<>();
         Set<String> sportNames = new LinkedHashSet<>();
+        Map<Long, List<String>> pitchSportsMap = new HashMap<>();
 
         for (Pitch pitch : pitches) {
+            List<String> pSports = new ArrayList<>();
             if (pitch.getSports() != null && !pitch.getSports().isEmpty()) {
                 for (Sport sport : pitch.getSports()) {
-                    if (sport.getName() != null && sportNames.add(sport.getName())) {
-                        configuredSports.add(Map.of(
-                                "key", sport.getName(),
-                                "name", sport.getName(),
-                                "label", getSportEmoji(sport.getName()) + " " + sport.getName()));
+                    if (sport.getName() != null && !sport.getName().isBlank()) {
+                        String sName = sport.getName().trim();
+                        pSports.add(sName);
+                        if (sportNames.add(sName)) {
+                            configuredSports.add(Map.of(
+                                    "key", sName,
+                                    "name", sName,
+                                    "label", getSportEmoji(sName) + " " + sName,
+                                    "color", getSportColor(sName)));
+                        }
                     }
                 }
             }
+            pitchSportsMap.put(pitch.getId(), pSports);
         }
 
         LocalDate today = LocalDate.now();
@@ -235,23 +255,81 @@ public class OwnerPaymentService {
                 "drawerStatus", cashCount > 0 ? "Ledger balanced ✓ (" + cashCount + " cash bookings logged)"
                         : "No cash transactions logged today");
 
-        // 5. Dynamic Net Income Chart Datasets (Grouped strictly by configured sports)
-        List<String> chartLabels = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
-        Map<String, List<Integer>> chartDatasets = new HashMap<>();
+        // 5. Dynamic Net Income Chart Datasets (Grouped strictly by configured sports over selected timeframe)
+        List<String> chartLabels = new ArrayList<>();
+        Map<String, List<Integer>> chartDatasets = new LinkedHashMap<>();
+        for (String sName : sportNames) {
+            chartDatasets.put(sName, new ArrayList<>());
+        }
 
-        for (String sportName : sportNames) {
-            List<Integer> values = new ArrayList<>();
-            for (int i = 0; i < 7; i++) {
-                LocalDate dateInWeek = today.minusDays(6 - i);
-                int dayTotal = 0;
+        record TimeBucket(String label, LocalDate start, LocalDate end) {}
+        List<TimeBucket> buckets = new ArrayList<>();
+        String normTimeframe = timeframe == null ? "daily" : timeframe.trim().toLowerCase();
+
+        if ("weekly".equals(normTimeframe)) {
+            // 14 Weeks ending this week
+            LocalDate currentWeekMonday = today.minusDays(today.getDayOfWeek().getValue() - 1);
+            for (int i = 13; i >= 0; i--) {
+                LocalDate wStart = currentWeekMonday.minusWeeks(i);
+                LocalDate wEnd = wStart.plusDays(6);
+                String label = wStart.format(DateTimeFormatter.ofPattern("d MMM"));
+                buckets.add(new TimeBucket(label, wStart, wEnd));
+            }
+        } else if ("monthly".equals(normTimeframe)) {
+            // 12 Months ending current month
+            for (int i = 11; i >= 0; i--) {
+                LocalDate mDate = today.minusMonths(i);
+                LocalDate mStart = mDate.withDayOfMonth(1);
+                LocalDate mEnd = mDate.withDayOfMonth(mDate.lengthOfMonth());
+                String label = mDate.format(DateTimeFormatter.ofPattern("MMM yyyy"));
+                buckets.add(new TimeBucket(label, mStart, mEnd));
+            }
+        } else if ("yearly".equals(normTimeframe)) {
+            // 5 Years ending current year
+            int currentYear = today.getYear();
+            for (int i = 4; i >= 0; i--) {
+                int y = currentYear - i;
+                LocalDate yStart = LocalDate.of(y, 1, 1);
+                LocalDate yEnd = LocalDate.of(y, 12, 31);
+                buckets.add(new TimeBucket(String.valueOf(y), yStart, yEnd));
+            }
+        } else {
+            // "daily" - 7 Days ending today
+            for (int i = 6; i >= 0; i--) {
+                LocalDate d = today.minusDays(i);
+                String label = d.format(DateTimeFormatter.ofPattern("EEE, d MMM"));
+                buckets.add(new TimeBucket(label, d, d));
+            }
+        }
+
+        for (TimeBucket bucket : buckets) {
+            chartLabels.add(bucket.label());
+        }
+
+        for (String sName : sportNames) {
+            List<Integer> sportSeries = new ArrayList<>();
+            for (TimeBucket bucket : buckets) {
+                BigDecimal bucketNetSum = BigDecimal.ZERO;
                 for (Booking b : allOwnerBookings) {
-                    if (b.getStatus() == BookingStatus.CONFIRMED && dateInWeek.equals(b.getBookingDate())) {
-                        dayTotal += b.getGrossAmount() != null ? b.getGrossAmount().intValue() : 0;
+                    if (b.getStatus() == BookingStatus.CONFIRMED && b.getGrossAmount() != null) {
+                        LocalDate bDate = b.getBookingDate() != null ? b.getBookingDate()
+                                : (b.getCreatedAt() != null ? b.getCreatedAt().toLocalDate() : null);
+                        if (bDate != null && !bDate.isBefore(bucket.start()) && !bDate.isAfter(bucket.end())) {
+                            List<String> bSports = pitchSportsMap.getOrDefault(b.getPitchId(), List.of());
+                            if (bSports.isEmpty()) {
+                                bSports = new ArrayList<>(sportNames);
+                            }
+                            if (bSports.contains(sName)) {
+                                BigDecimal bNet = calculateBookingNet(b, paymentsByBooking.get(b.getId()));
+                                BigDecimal share = bNet.divide(BigDecimal.valueOf(bSports.size()), 2, RoundingMode.HALF_UP);
+                                bucketNetSum = bucketNetSum.add(share);
+                            }
+                        }
                     }
                 }
-                values.add(sportNames.size() > 1 ? dayTotal / sportNames.size() : dayTotal);
+                sportSeries.add(bucketNetSum.setScale(0, RoundingMode.HALF_UP).intValue());
             }
-            chartDatasets.put(sportName, values);
+            chartDatasets.put(sName, sportSeries);
         }
 
         Map<String, Object> chartData = Map.of(

@@ -1,9 +1,9 @@
 import { cn } from '@/utils/cn';
 
 /** Zero-state block with an optional call to action. */
-export function EmptyState({ glyph = '🗓️', title, description, action, className }) {
+export function EmptyState({ glyph = '🗓️', title, description, action, className, style }) {
   return (
-    <div className={cn('empty', className)}>
+    <div className={cn('empty', className)} style={style}>
       <div className="glyph" aria-hidden="true">
         {glyph}
       </div>

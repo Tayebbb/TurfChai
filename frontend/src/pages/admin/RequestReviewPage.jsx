@@ -10,6 +10,28 @@ import './RequestReviewPage.css';
 import { getTurfRequest, reviewTurfRequest } from '@/api/turfRequests';
 import { useApi } from '@/hooks/useApi';
 
+function DocLink({ label, value, onPreview }) {
+  if (!value || value === 'PENDING') {
+    return <span className="badge nodot amber">PENDING</span>;
+  }
+  if (value === 'VERIFIED') {
+    return <span className="badge nodot green">VERIFIED</span>;
+  }
+  if (typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:'))) {
+    return (
+      <button
+        type="button"
+        className="btn btn-sm btn-secondary"
+        onClick={() => onPreview({ label, url: value })}
+        style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+      >
+        <span>View File</span> ↗
+      </button>
+    );
+  }
+  return <span className="badge nodot amber" title={value}>{value}</span>;
+}
+
 export default function RequestReviewPage() {
   const { requestId } = useParams();
   const navigate = useNavigate();
@@ -18,6 +40,7 @@ export default function RequestReviewPage() {
   const changesModal = useDisclosure(false);
   const [rejectReason, setRejectReason] = useState('');
   const [changesNote, setChangesNote] = useState('');
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const { data: request, loading, error } = useApi(() => getTurfRequest(requestId), [requestId]);
 
@@ -53,55 +76,44 @@ export default function RequestReviewPage() {
     }
   };
 
+
   return (
     <>
       <PageTitle title={`Review Request ${requestId}`} />
 
       {loading && <div style={{padding:40}} className="center">Loading request...</div>}
-      {error && <div style={{padding:40, color:'var(--danger)'}} className="center">{error.message || 'Error loading request'}</div>}
-      
-      {request && !loading && !error && (
-        <>
-      <div className="main-header" style={{ marginBottom: 24 }}>
+      {error && <div style={{padding:40, color:'var(--red)'}} className="center">Failed to load: {error.message}</div>}
+
+      {request && (
+      <>
+      {/* Top Action Bar */}
+      <div className="between" style={{ marginBottom: 24, alignItems: 'center' }}>
         <div>
-          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
-            <Link
-              className="btn btn-sm btn-tertiary"
-              to={paths.admin.turfRequests}
-              style={{ padding: '4px 10px', fontWeight: 700 }}
-            >
-              ← Back
-            </Link>
-            <h1>Review Submission: {request.venueName} ({request.requestCode})</h1>
+          <Link to={paths.admin.turfRequests} className="subtle small" style={{ display: 'inline-block', marginBottom: 6 }}>
+            &larr; Back to Requests
+          </Link>
+          <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+            <h1 style={{ margin: 0, fontSize: 24 }}>Review Submission: {request.venueName} ({request.requestCode})</h1>
           </div>
-          <span className="subtle small" style={{ marginTop: 4, display: 'block' }}>
-            Submitted on {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : ''}
-          </span>
+          <span className="subtle small">Submitted on {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'Unknown'}</span>
         </div>
+
         <div className="row" style={{ gap: 10 }}>
-          <button className="btn btn-primary" type="button" onClick={handleApprove}>
-            ✓ Approve Request
-          </button>
           <button className="btn btn-secondary" type="button" onClick={changesModal.open}>
             Request Changes
           </button>
-          <button className="btn btn-ghost-danger" type="button" onClick={rejectModal.open}>
+          <button className="btn btn-danger" type="button" onClick={rejectModal.open}>
             Reject Request
+          </button>
+          <button className="btn btn-primary" type="button" onClick={handleApprove}>
+            ✓ Approve Request
           </button>
         </div>
       </div>
 
-      <div
-        className="admin-stack-mobile"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 340px',
-          gap: 24,
-          marginBottom: 28,
-        }}
-      >
-        {/* Left Column - Submission Details */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="grid-2-1" style={{ gap: 24 }}>
+        {/* Left Column - Venue Details & Documents */}
+        <div className="stack" style={{ gap: 24 }}>
           <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800 }}>
               Venue Information
@@ -109,14 +121,18 @@ export default function RequestReviewPage() {
             <div className="stack-sm" style={{ gap: 12 }}>
               <div className="between">
                 <span className="subtle small">Venue Name</span>
-                <b>{request.venueName}</b>
+                <b style={{ fontSize: 14 }}>{request.venueName}</b>
               </div>
               <div className="between">
-                <span className="subtle small">Area / Location</span>
-                <span>{request.area}</span>
+                <span className="subtle small">Location / Address</span>
+                <span className="font-semibold">{request.area}</span>
               </div>
               <div className="between">
-                <span className="subtle small">Number of Pitches</span>
+                <span className="subtle small">Sports Supported</span>
+                <span className="font-semibold">{request.sportsCsv}</span>
+              </div>
+              <div className="between">
+                <span className="subtle small">Pitches Configured</span>
                 <span className="num font-semibold">{request.pitchCount} Pitches</span>
               </div>
               <div className="between">
@@ -130,27 +146,37 @@ export default function RequestReviewPage() {
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800 }}>
               Submitted Verification Documents
             </h3>
-            <div className="stack-sm" style={{ gap: 12 }}>
+            <div className="stack-sm" style={{ gap: 14 }}>
               <div className="between" style={{ alignItems: 'center' }}>
                 <div>
                   <b style={{ fontSize: 14, display: 'block' }}>Trade License</b>
                   <span className="subtle tiny">Registration proof</span>
                 </div>
-                <span className={`badge nodot ${request.docTradeLicense === 'VERIFIED' ? 'green' : 'amber'}`}>{request.docTradeLicense}</span>
+                <DocLink
+                  label="Trade License"
+                  value={request.docTradeLicense}
+                  onPreview={setPreviewDoc}
+                />
               </div>
               <div className="between" style={{ alignItems: 'center' }}>
                 <div>
                   <b style={{ fontSize: 14, display: 'block' }}>Owner National ID</b>
-                  <span className="subtle tiny">Identity verification</span>
+                  <span className="subtle tiny">Identity number</span>
                 </div>
-                <span className={`badge nodot ${request.docOwnerNid === 'VERIFIED' ? 'green' : 'amber'}`}>{request.docOwnerNid}</span>
+                <span className="badge nodot amber num font-semibold" style={{ fontSize: 13 }}>
+                  {request.docOwnerNid || 'Not provided'}
+                </span>
               </div>
               <div className="between" style={{ alignItems: 'center' }}>
                 <div>
-                  <b style={{ fontSize: 14, display: 'block' }}>Commercial Utility Bill</b>
-                  <span className="subtle tiny">Address verification</span>
+                  <b style={{ fontSize: 14, display: 'block' }}>Commercial Utility Bill / Lease Proof</b>
+                  <span className="subtle tiny">Address &amp; ownership verification</span>
                 </div>
-                <span className={`badge nodot ${request.docUtilityBill === 'VERIFIED' ? 'green' : 'amber'}`}>{request.docUtilityBill}</span>
+                <DocLink
+                  label="Lease Proof / Utility Bill"
+                  value={request.docUtilityBill}
+                  onPreview={setPreviewDoc}
+                />
               </div>
             </div>
           </div>
@@ -164,9 +190,9 @@ export default function RequestReviewPage() {
           <div className="stack-sm" style={{ gap: 12 }}>
             <div>
               <span className="subtle tiny" style={{ display: 'block' }}>
-                OWNER NAME
+                OWNER USER ID
               </span>
-              <b style={{ fontSize: 15 }}>{request.ownerUserId} (ID)</b>
+              <b style={{ fontSize: 15 }}>{request.ownerUserId}</b>
             </div>
             <div>
               <span className="subtle tiny" style={{ display: 'block' }}>
@@ -251,6 +277,49 @@ export default function RequestReviewPage() {
           <button className="btn btn-tertiary btn-block" type="button" onClick={changesModal.close}>
             Cancel
           </button>
+        </div>
+      </Overlay>
+
+      {/* Document Viewer Modal */}
+      <Overlay
+        isOpen={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        title={previewDoc?.label || 'Document Preview'}
+        maxWidth={850}
+      >
+        <div style={{ height: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          {previewDoc?.url?.toLowerCase().includes('.pdf') || previewDoc?.url?.startsWith('data:application/pdf') ? (
+            <iframe
+              src={previewDoc.url}
+              width="100%"
+              height="100%"
+              style={{ border: 'none', borderRadius: 8, background: '#fff' }}
+              title={previewDoc.label}
+            />
+          ) : (
+            <img
+              src={previewDoc?.url}
+              alt="Document preview"
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
+            />
+          )}
+          <div className="row" style={{ gap: 12, marginTop: 8 }}>
+            <a
+              href={previewDoc?.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm btn-secondary"
+            >
+              Open in New Window ↗
+            </a>
+            <button
+              type="button"
+              className="btn btn-sm btn-tertiary"
+              onClick={() => setPreviewDoc(null)}
+            >
+              Close Preview
+            </button>
+          </div>
         </div>
       </Overlay>
       </>

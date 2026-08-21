@@ -47,7 +47,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
-@Profile({ "dev", "test", "ci" })
+@Profile({ "dev", "test", "ci", "docker" })
 @Order(10)
 @RequiredArgsConstructor
 public class AdminDemoDataSeeder implements CommandLineRunner {
@@ -193,7 +193,7 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
 
     private List<User> seedUsers() {
         List<User> allUsers = new ArrayList<>();
-        String hash = passwordEncoder.encode("Demo@12345");
+        String hash = passwordEncoder.encode("TurfChai@123");
 
         // Monthly distribution: spread createdAt across past 6 months
         // month offsets (0 = current month), counts per month
@@ -243,7 +243,7 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
             allUsers.add(u);
         }
 
-        // 4 ADMINs + 1 SUPER_ADMIN
+        // 4 ADMINs (Super Admin is managed by AdminDataSeeder)
         String[] adminNames = { "Nadia Amin", "Farid Hasan", "Arman Habib", "Riya Sarkar" };
         for (int i = 0; i < 4; i++) {
             allUsers.add(User.builder()
@@ -257,23 +257,6 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
                     .avatarInitials(initials(adminNames[i]))
                     .reliabilityScore(100)
                     .createdAt(OffsetDateTime.now().minusMonths(6).minusDays(RNG.nextInt(10)))
-                    .updatedAt(OffsetDateTime.now())
-                    .build());
-        }
-        boolean hasSuperAdmin = allUsers.stream().anyMatch(u -> u.getRole() == RoleType.SUPER_ADMIN)
-                || userRepository.findAll().stream().anyMatch(u -> u.getRole() == RoleType.SUPER_ADMIN);
-        if (!hasSuperAdmin) {
-            allUsers.add(User.builder()
-                    .fullName("Super Admin")
-                    .email("superadmin@turfchai.com")
-                    .phone("+8801800000099")
-                    .passwordHash(hash)
-                    .role(RoleType.SUPER_ADMIN)
-                    .status("ACTIVE")
-                    .area("Dhaka")
-                    .avatarInitials("SA")
-                    .reliabilityScore(100)
-                    .createdAt(OffsetDateTime.now().minusMonths(7))
                     .updatedAt(OffsetDateTime.now())
                     .build());
         }
