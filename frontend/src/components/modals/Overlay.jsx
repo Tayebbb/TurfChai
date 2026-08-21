@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { IconButton } from '@/components/buttons/IconButton';
+import { Icon } from '@/components/common/Icon';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { cn } from '@/utils/cn';
@@ -73,10 +74,18 @@ export function Overlay({
       >
         {showGrabber ? <div className="grabber" /> : null}
         {!hideHeader ? (
-          <div className="between">
-            <h3 style={{ margin: 0 }}>{title}</h3>
-            <IconButton label="Close" onClick={onClose}>
-              ✕
+          <div
+            className="modal-header between"
+            style={{
+              marginBottom: 18,
+              paddingBottom: 12,
+              borderBottom: '1px solid var(--border)',
+              alignItems: 'center',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, letterSpacing: '-0.01em' }}>{title}</h3>
+            <IconButton label="Close" onClick={onClose} style={{ width: 34, height: 34, flexShrink: 0 }}>
+              <Icon name="x" size={16} />
             </IconButton>
           </div>
         ) : null}

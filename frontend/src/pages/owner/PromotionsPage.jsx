@@ -10,7 +10,7 @@ import { paths } from '@/routes/paths';
 
 import { useApi } from '@/hooks/useApi';
 import { getOwnerPromotions, createPromotion, deletePromotion, updatePromotion } from '@/api/ownerPromotions';
-import { listMyVenues } from '@/api/ownerVenues';
+import { listMyVenues, resolveActiveVenue } from '@/api/ownerVenues';
 import { toUserMessage } from '@/utils/errorMessage';
 
 export default function PromotionsPage() {
@@ -32,7 +32,7 @@ export default function PromotionsPage() {
 
   const { data: venuesRes } = useApi(listMyVenues, []);
   const venues = Array.isArray(venuesRes) ? venuesRes : (Array.isArray(venuesRes?.data) ? venuesRes.data : []);
-  const activeVenueId = Array.isArray(venues) && venues.length > 0 ? venues[0]?.id : null;
+  const activeVenueId = resolveActiveVenue(venues);
 
   const getPromosCb = useCallback(() => {
     if (!activeVenueId) return Promise.resolve([]);

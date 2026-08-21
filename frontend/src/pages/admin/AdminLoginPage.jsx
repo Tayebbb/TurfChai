@@ -287,6 +287,36 @@ export default function AdminLoginPage() {
                 >
                   {isSubmitting ? 'Checking…' : 'Continue →'}
                 </Button>
+
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--border-soft)' }}>
+                  <span className="tiny subtle" style={{ display: 'block', marginBottom: 8, fontWeight: 700 }}>
+                    DEMO ADMIN CREDENTIALS (Password: TurfChai@123)
+                  </span>
+                  <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      style={{ fontSize: 12, padding: '4px 10px' }}
+                      onClick={() => {
+                        setEmail('shahadat.cse.20230104008@aust.edu');
+                        setPassword('TurfChai@123');
+                      }}
+                    >
+                      🛡️ Super Admin (Shahadat)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      style={{ fontSize: 12, padding: '4px 10px' }}
+                      onClick={() => {
+                        setEmail('nadia@turfchai.com');
+                        setPassword('TurfChai@123');
+                      }}
+                    >
+                      🛡️ Admin (Nadia)
+                    </button>
+                  </div>
+                </div>
               </form>
             )}
 

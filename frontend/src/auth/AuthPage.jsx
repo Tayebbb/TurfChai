@@ -20,7 +20,7 @@ const EyeIcon = ({ off = false }) => (
   </svg>
 );
 
-const ROLE_TO_API = { player: 'PLAYER', owner: 'OWNER', admin: 'ADMIN' };
+const ROLE_TO_API = { player: 'PLAYER', owner: 'OWNER' };
 
 const ROLES = [
   {
@@ -34,12 +34,6 @@ const ROLES = [
     label: '🏟️ Turf Owner',
     subtext: 'Manage pitches & payouts',
     tone: '#F59E0B',
-  },
-  {
-    id: 'admin',
-    label: '🛡️ Admin',
-    subtext: 'Platform control & reviews',
-    tone: '#3B82F6',
   },
 ];
 
@@ -202,7 +196,6 @@ export default function AuthPage() {
       setSession(response);
       showToast(`Account created! Welcome to TurfChai ✓`);
       if (nextPath && nextPath.startsWith('/')) navigate(nextPath);
-      else if (role === 'admin') navigate(paths.admin.dashboard);
       else navigate(paths.player.onboarding);
     } catch (error) {
       handleApiError(error);
@@ -283,6 +276,36 @@ export default function AuthPage() {
                 {isSubmitting ? 'Working…' : 'Sign In →'}
               </Button>
             </form>
+
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed var(--border-soft)' }}>
+              <span className="tiny subtle" style={{ display: 'block', marginBottom: 8, fontWeight: 700 }}>
+                DEMO SIGN-IN ACCOUNTS (Password: TurfChai@123)
+              </span>
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  onClick={() => {
+                    setSigninEmail('rafi@turfchai.com');
+                    setSigninPassword('TurfChai@123');
+                  }}
+                >
+                  ⚽ Player (Rafi)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  onClick={() => {
+                    setSigninEmail('mahmud@turfchai.com');
+                    setSigninPassword('TurfChai@123');
+                  }}
+                >
+                  🏟️ Owner (Mahmud)
+                </button>
+              </div>
+            </div>
 
             <p className="subtle center tiny" style={{ marginTop: 16, marginBottom: 0 }}>
               Forgot your password?{' '}

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { TableScroll } from '@/components/tables/TableScroll';
 import { Chip } from '@/components/ui/Chip';
-import { useFilterChips } from '@/hooks/useFilterChips';
 import { paths } from '@/routes/paths';
 import { listAdminVenues } from '@/api/adminVenues';
 import { useApi } from '@/hooks/useApi';
@@ -16,13 +15,12 @@ const FILTERS = [
 ];
 
 export default function TurfsPage() {
-  const chips = useFilterChips(['all']);
+  const [activeFilter, setActiveFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const activeChip = chips.active[0] || 'all';
 
   const { data: res, loading } = useApi(
-    () => listAdminVenues(activeChip === 'all' ? null : activeChip),
-    [activeChip],
+    () => listAdminVenues(activeFilter === 'all' ? null : activeFilter),
+    [activeFilter],
   );
 
   const apiVenues = res?.data ?? res;
@@ -91,8 +89,8 @@ export default function TurfsPage() {
         {FILTERS.map((filter) => (
           <Chip
             key={filter.id}
-            active={chips.isActive(filter.id)}
-            onToggle={() => chips.toggle(filter.id)}
+            active={activeFilter === filter.id}
+            onToggle={() => setActiveFilter(filter.id)}
           >
             {filter.label}
           </Chip>

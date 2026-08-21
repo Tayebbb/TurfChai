@@ -19,6 +19,7 @@ import {
 
 import {
   Checkline,
+  Switch,
 } from '@/components/forms/Toggles';
 
 import {
@@ -59,11 +60,163 @@ import {
   useToast,
 } from '@/hooks/useToast';
 
-import { paths } from '@/routes/paths';
+import {
+  Icon,
+} from '@/components/common/Icon';
 
+import { paths } from '@/routes/paths';
 
 import { generateSlots as apiGenerateSlots } from '@/api/ownerSlots';
 import { getMyTurfRequests } from '@/api/turfRequests';
+
+function FilterPillDropdown({
+  label,
+  value,
+  onChange,
+  options,
+  icon,
+  getOptionEmoji,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedOpt = options.find((o) => o.value === value) || options[0];
+  const selectedLabel = selectedOpt?.label || value;
+  const currentEmoji = getOptionEmoji ? getOptionEmoji(value) : null;
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          background: isOpen ? 'var(--brand-soft)' : 'var(--surface-2)',
+          border: isOpen ? '1px solid var(--brand)' : '1px solid var(--border)',
+          borderRadius: 9999,
+          padding: '5px 12px 5px 10px',
+          cursor: 'pointer',
+          color: isOpen ? 'var(--brand-600)' : 'var(--text)',
+          fontSize: 12.5,
+          fontWeight: 700,
+          transition: 'all var(--dur) var(--ease)',
+          boxShadow: isOpen ? '0 0 0 2px var(--brand-soft)' : 'none',
+          userSelect: 'none',
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        {currentEmoji ? (
+          <span style={{ fontSize: 13, display: 'flex', alignItems: 'center' }}>
+            {currentEmoji}
+          </span>
+        ) : (
+          icon && <Icon name={icon} size={13} style={{ color: 'var(--text-3)' }} />
+        )}
+        <span>{selectedLabel}</span>
+        <Icon
+          name="chevronDown"
+          size={12}
+          style={{
+            color: 'var(--text-3)',
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+          }}
+        />
+      </button>
+
+      {/* Liquid-Glass Dropdown Menu with Pop Animation */}
+      {isOpen && (
+        <div
+          role="listbox"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: 0,
+            minWidth: 220,
+            zIndex: 100,
+            background: 'var(--surface)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--r-lg)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.24), 0 4px 12px rgba(0, 0, 0, 0.10)',
+            padding: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            animation: 'pop .18s var(--ease-out)',
+          }}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            const emoji = getOptionEmoji ? getOptionEmoji(opt.value) : null;
+
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  padding: '7px 10px',
+                  borderRadius: 8,
+                  background: isSelected ? 'var(--brand-soft)' : 'transparent',
+                  color: isSelected ? 'var(--brand-600)' : 'var(--text)',
+                  fontWeight: isSelected ? 800 : 600,
+                  fontSize: 12.5,
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'var(--surface-2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {emoji && <span>{emoji}</span>}
+                  <span>{opt.label}</span>
+                </span>
+                {isSelected && <Icon name="check" size={13} style={{ color: 'var(--brand)' }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CustomDatePicker({ value, onChange, id }) {
   const [textVal, setTextVal] = useState(() => {
@@ -182,6 +335,9 @@ import {
   updatePitch,
   deactivatePitch,
   upsertPricingRule,
+  getSavedSelectedVenueId,
+  saveSelectedVenueId,
+  resolveActiveVenue,
 } from '@/api/ownerVenues';
 import { toUserMessage } from '@/utils/errorMessage';
 
@@ -262,13 +418,30 @@ const INITIAL_AMENITIES = [
   { id: 'floodlights', label: '💡 Floodlights', on: false },
   { id: 'parking', label: '🅿️ Parking', on: false },
   { id: 'changing', label: '👕 Changing room', on: false },
-  { id: 'washroom', label: '🚿 Washroom', on: false },
+  { id: 'washroom', label: '🚿 Washroom & Shower', on: false },
   { id: 'water', label: '🚰 Drinking water', on: false },
   { id: 'kit', label: '⚽ Bibs & balls', on: false },
-  { id: 'cafeteria', label: '☕ Cafeteria', on: false },
+  { id: 'cafeteria', label: '☕ Cafeteria & Snacks', on: false },
   { id: 'firstaid', label: '🩹 First aid kit', on: false },
-  { id: 'seating', label: '🪑 Spectator seating', on: false },
+  { id: 'seating', label: '🪑 Dugout & Seating', on: false },
   { id: 'wifi', label: '📶 Free Wi-Fi', on: false },
+  { id: 'cctv', label: '📹 24/7 CCTV Security', on: false },
+  { id: 'prayer', label: '🕌 Prayer Space', on: false },
+  { id: 'generator', label: '⚡ Generator Backup', on: false },
+  { id: 'lockers', label: '🔒 Secure Lockers', on: false },
+];
+
+/** Popular suggested amenities for 1-click quick adding */
+const POPULAR_AMENITY_PRESETS = [
+  { label: '🕌 Prayer Space', id: 'prayer' },
+  { label: '📹 24/7 CCTV', id: 'cctv' },
+  { label: '🔒 Secure Lockers', id: 'lockers' },
+  { label: '⚡ Generator Backup', id: 'generator' },
+  { label: '❄️ AC Dugout / Lounge', id: 'ac_lounge' },
+  { label: '🔊 Sound System', id: 'sound' },
+  { label: '🔢 Scoreboard & Timer', id: 'scoreboard' },
+  { label: '🏋️ Warm-up Area', id: 'warmup' },
+  { label: '🔌 EV Charger', id: 'ev_charger' },
 ];
 
 /** Rules are stored as free text, so these are suggestions rather than keys. */
@@ -278,7 +451,63 @@ const INITIAL_RULES = [
   { id: 'arrival', label: '⏱️ Arrive 10 min before slot time', on: false },
   { id: 'trash', label: '🗑️ Keep venue clean - disposal in bins', on: false },
   { id: 'food', label: '🍕 No outside heavy food on pitch', on: false },
+  { id: 'id_check', label: '🪪 ID / Booking confirmation at gate', on: false },
 ];
+
+/** Popular suggested ground rules for 1-click quick adding */
+const POPULAR_RULE_PRESETS = [
+  '👟 Turf / Astro shoes only (no metal studs)',
+  '⏱️ Arrive 10 min before slot time',
+  '🚭 No smoking or vaping inside venue',
+  '🗑️ Keep venue clean - disposal in bins',
+  '🍕 No outside food on pitch',
+  '🪪 ID / Booking confirmation at gate',
+  '⏳ Overtime without booking incurs 2x rate',
+  '🤝 Respect referee & opposing players',
+];
+
+/** Emoji auto-detection for user-typed custom amenities */
+function detectAmenityEmoji(text) {
+  if (!text) return '✨';
+  const t = String(text).toLowerCase();
+  if (t.includes('pray') || t.includes('namaz') || t.includes('mosque')) return '🕌';
+  if (t.includes('cctv') || t.includes('camera') || t.includes('security') || t.includes('guard')) return '📹';
+  if (t.includes('locker') || t.includes('storage') || t.includes('vault')) return '🔒';
+  if (t.includes('shower') || t.includes('bath')) return '🚿';
+  if (t.includes('washroom') || t.includes('toilet') || t.includes('restroom')) return '🚽';
+  if (t.includes('light') || t.includes('led') || t.includes('flood')) return '💡';
+  if (t.includes('park') || t.includes('car') || t.includes('bike')) return '🅿️';
+  if (t.includes('ac') || t.includes('air') || t.includes('cool') || t.includes('lounge')) return '❄️';
+  if (t.includes('cafe') || t.includes('coffee') || t.includes('tea') || t.includes('snack') || t.includes('food') || t.includes('canteen')) return '☕';
+  if (t.includes('water') || t.includes('drink')) return '🚰';
+  if (t.includes('sound') || t.includes('music') || t.includes('speaker') || t.includes('audio')) return '🔊';
+  if (t.includes('ball') || t.includes('bib') || t.includes('kit') || t.includes('jersey')) return '⚽';
+  if (t.includes('medic') || t.includes('first') || t.includes('aid') || t.includes('doctor')) return '🩹';
+  if (t.includes('seat') || t.includes('dugout') || t.includes('bench') || t.includes('gallery')) return '🪑';
+  if (t.includes('wifi') || t.includes('internet') || t.includes('net')) return '📶';
+  if (t.includes('gen') || t.includes('power') || t.includes('electric') || t.includes('backup')) return '⚡';
+  if (t.includes('score') || t.includes('board') || t.includes('timer')) return '🔢';
+  if (t.includes('gym') || t.includes('fitness') || t.includes('warm')) return '🏋️';
+  if (t.includes('ev') || t.includes('charge')) return '🔌';
+  if (t.includes('shoe') || t.includes('boot') || t.includes('turf')) return '👟';
+  return '✨';
+}
+
+/** Emoji auto-detection for user-typed custom rules */
+function detectRuleEmoji(text) {
+  if (!text) return '📌';
+  const t = String(text).toLowerCase();
+  if (t.includes('shoe') || t.includes('stud') || t.includes('cleat') || t.includes('spike') || t.includes('boot')) return '👟';
+  if (t.includes('smok') || t.includes('vape') || t.includes('cigar')) return '🚭';
+  if (t.includes('time') || t.includes('arrive') || t.includes('early') || t.includes('punctual')) return '⏱️';
+  if (t.includes('clean') || t.includes('trash') || t.includes('bin') || t.includes('waste')) return '🗑️';
+  if (t.includes('food') || t.includes('eat') || t.includes('gum') || t.includes('drink')) return '🍕';
+  if (t.includes('id') || t.includes('nid') || t.includes('card')) return '🪪';
+  if (t.includes('overtime') || t.includes('late') || t.includes('penalty')) return '⏳';
+  if (t.includes('alcohol') || t.includes('liquor')) return '🚫';
+  if (t.includes('respect') || t.includes('fair') || t.includes('foul') || t.includes('fight')) return '🤝';
+  return '📌';
+}
 
 /** `"floodlights, parking"` -> `['floodlights','parking']`. */
 function parseCsv(value) {
@@ -294,7 +523,7 @@ function parseCsv(value) {
  * saved that the catalogue does not know about so a save cannot silently drop
  * amenities or rules entered elsewhere.
  */
-function hydrateSelection(catalogue, saved, matchOn) {
+function hydrateSelection(catalogue, saved, matchOn, detectEmoji) {
   const savedValues = parseCsv(saved);
   const known = catalogue.map((item) => ({
     ...item,
@@ -302,7 +531,17 @@ function hydrateSelection(catalogue, saved, matchOn) {
   }));
   const extras = savedValues
     .filter((value) => !catalogue.some((item) => matchOn(item) === value))
-    .map((value, index) => ({ id: `saved-${index}-${value}`, label: value, on: true }));
+    .map((value, index) => {
+      const emoji = detectEmoji ? detectEmoji(value) : '✨';
+      const cleanLabel = value.replace(/^[^\w\s]+/, '').trim();
+      const hasEmoji = /\p{Emoji}/u.test(value);
+      return {
+        id: value,
+        label: hasEmoji ? value : `${emoji} ${cleanLabel || value}`,
+        on: true,
+        custom: true,
+      };
+    });
   return [...known, ...extras];
 }
 
@@ -363,6 +602,7 @@ export default function VenueSetupPage() {
 
   const [deposit, setDeposit] = useState('THIRTY_PERCENT');
   const [policy, setPolicy] = useState('FREE_24H_50_6H');
+  const [mlPricing, setMlPricing] = useState(true);
   const [slotDraft, setSlotDraft] = useState({
     sport: 'football',
     duration: '90',
@@ -375,107 +615,61 @@ export default function VenueSetupPage() {
   const [photos, setPhotos] = useState([]);
   const [amenities, setAmenities] = useState(INITIAL_AMENITIES);
   const [rules, setRules] = useState(INITIAL_RULES);
-  const [customRuleText, setCustomRuleText] = useState('');
+  const [customInputText, setCustomInputText] = useState('');
+  const [addMode, setAddMode] = useState('amenity'); // 'amenity' | 'rule'
   const [savingAmenities, setSavingAmenities] = useState(false);
-
-  function toggleAmenity(id) {
-    setAmenities((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, on: !item.on } : item)),
-    );
-  }
-
-  function toggleRule(id) {
-    setRules((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, on: !item.on } : item)),
-    );
-  }
-
-  function handleAddCustomRule() {
-    if (!customRuleText.trim()) return;
-    const newRule = {
-      id: `rule-${Date.now()}`,
-      label: `📌 ${customRuleText.trim()}`,
-      on: true,
-    };
-    setRules((prev) => [...prev, newRule]);
-    setCustomRuleText('');
-  }
-
-  /** Writes the selected amenity keys and rule text to the venue. */
-  async function saveAmenitiesAndRules() {
-    const vId = selectedVenueId || venueData?.id;
-    if (!vId) {
-      showToast('Select a venue first');
-      return;
-    }
-    setSavingAmenities(true);
-    try {
-      await updateVenue(vId, {
-        amenities: amenities.filter((a) => a.on).map((a) => a.id).join(','),
-        rules: rules.filter((r) => r.on).map((r) => r.label).join(','),
-      });
-      showToast('Amenities & rules saved ✓');
-      refreshVenueDetails(vId);
-    } catch (error) {
-      showToast(toUserMessage(error, 'Could not save amenities and rules.'));
-    } finally {
-      setSavingAmenities(false);
-    }
-  }
-
-  const [generateDraft, setGenerateDraft] = useState({
-    pitchId: '',
-    startDate: '',
-    endDate: '',
-    startTime: '06:00',
-    endTime: '23:00',
-    slotDurationMinutes: 60,
-    basePrice: 2000
-  });
-
-  const [previewFile, setPreviewFile] = useState(null);
-  const editFileInputRef = useRef(null);
-  const [editingPhotoId, setEditingPhotoId] = useState(null);
-  const [deactivatingPitchId, setDeactivatingPitchId] = useState(null);
-
-  async function handleGenerateSlots() {
-    try {
-      const created = await apiGenerateSlots(generateDraft);
-      const count = Array.isArray(created) ? created.length : null;
-      showToast(count == null ? 'Slots generated ✓' : `${count} slot${count === 1 ? '' : 's'} generated ✓`);
-      generateSlotsModal.close();
-    } catch (error) {
-      showToast(toUserMessage(error, 'Failed to generate slots'));
-    }
-  }
-
   const refreshVenueDetails = useCallback((vId) => {
-    if (!vId) return;
+    if (!vId || vId === 'null' || vId === 'undefined') return;
     setLoading(true);
+    setLoadError(null);
     getOwnerVenue(vId)
       .then((res) => {
         if (res) {
+          setLoadError(null);
           setVenueData(res);
           setDeposit(res.depositPolicy || 'THIRTY_PERCENT');
           setPolicy(res.cancelPolicy || 'FREE_24H_50_6H');
-          setAmenities(hydrateSelection(INITIAL_AMENITIES, res.amenities, (item) => item.id));
-          setRules(hydrateSelection(INITIAL_RULES, res.rules, (item) => item.label));
-
-          if (Array.isArray(res.photos) && res.photos.length > 0) {
-            setPhotos(res.photos.map((url, idx) => ({ id: String(idx), url, name: `Photo ${idx + 1}` })));
-          } else {
-            setPhotos([]);
+          setMlPricing(res.mlPricingEnabled ?? true);
+          setAmenities(hydrateSelection(INITIAL_AMENITIES, res.amenities, (item) => item.id, detectAmenityEmoji));
+          setRules(hydrateSelection(INITIAL_RULES, res.rules, (item) => item.label, detectRuleEmoji));
+          if (res.openTime || res.closeTime) {
+            setHoursDraft({
+              openTime: res.openTime ? String(res.openTime).slice(0, 5) : '06:00',
+              closeTime: res.closeTime ? String(res.closeTime).slice(0, 5) : '23:00',
+            });
           }
 
+          let photosList = [];
+          if (Array.isArray(res.photos)) {
+            photosList = res.photos;
+          } else if (typeof res.photos === 'string' && res.photos.trim()) {
+            try {
+              const parsed = JSON.parse(res.photos);
+              photosList = Array.isArray(parsed) ? parsed : res.photos.split(',');
+            } catch {
+              photosList = res.photos.split(',');
+            }
+          }
+          setPhotos(photosList.filter(Boolean).map((url, idx) => ({
+            id: String(idx),
+            url: typeof url === 'string' ? url.trim() : (url?.url || String(url)),
+            name: `Photo ${idx + 1}`,
+          })));
+
           if (Array.isArray(res.pitches)) {
-            setPitches(res.pitches.map((p) => ({
-              id: p.id,
-              name: p.name,
-              desc: [p.surfaceType, p.dimensions].filter(Boolean).join(' · ') || 'No surface or size recorded',
-              sports: (p.sportSlugs && p.sportSlugs.length > 0)
-                ? p.sportSlugs.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-                : [],
-            })));
+            setPitches(res.pitches.map((p) => {
+              const sportsList = Array.isArray(p.sportSlugs)
+                ? p.sportSlugs
+                : typeof p.sportSlugs === 'string' && p.sportSlugs.trim()
+                ? p.sportSlugs.trim().split(/[\s,]+/)
+                : [];
+              return {
+                id: p.id,
+                name: p.name,
+                desc: [p.surfaceType, p.dimensions].filter(Boolean).join(' · ') || 'No surface or size recorded',
+                sports: sportsList.map((s) => s.charAt(0).toUpperCase() + s.slice(1)),
+              };
+            }));
           } else {
             setPitches([]);
           }
@@ -486,7 +680,7 @@ export default function VenueSetupPage() {
               title: `${rule.sportSlug ? rule.sportSlug.charAt(0).toUpperCase() + rule.sportSlug.slice(1) : 'Football'}`,
               tone: rule.sportSlug === 'cricket' ? 'amber' : rule.sportSlug === 'futsal' ? 'green' : 'blue',
               duration: String(rule.slotDurationMin || 60),
-              buffer: '10',
+              buffer: String(rule.bufferMin != null ? rule.bufferMin : 10),
               basePrice: Number(rule.rate || 2000),
             })));
           }
@@ -502,18 +696,185 @@ export default function VenueSetupPage() {
       });
   }, []);
 
+  const handleVenueChange = useCallback((val) => {
+    const numId = Number(val) || val;
+    setSelectedVenueId(numId);
+    saveSelectedVenueId(numId);
+    refreshVenueDetails(numId);
+  }, [refreshVenueDetails]);
+
+  function toggleAmenity(id) {
+    setAmenities((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, on: !item.on } : item)),
+    );
+  }
+
+  function handleAddCustomAmenity(textToAdd) {
+    const raw = (typeof textToAdd === 'string' ? textToAdd : customInputText).trim();
+    if (!raw) return;
+    const cleanText = raw.replace(/^[^\w\s]+/, '').trim();
+    const emoji = detectAmenityEmoji(cleanText);
+    const label = /\p{Emoji}/u.test(raw) ? raw : `${emoji} ${cleanText || raw}`;
+    const slug = cleanText.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `custom_${Date.now()}`;
+    
+    // Check if already in list
+    const existing = amenities.find((a) => a.id === slug || a.label.toLowerCase() === label.toLowerCase());
+    if (existing) {
+      setAmenities((prev) => prev.map((a) => (a.id === existing.id ? { ...a, on: true } : a)));
+      setCustomInputText('');
+      showToast(`Activated "${existing.label}" ✓`);
+      return;
+    }
+
+    const newAmenity = {
+      id: slug,
+      label,
+      on: true,
+      custom: true,
+    };
+    setAmenities((prev) => [...prev, newAmenity]);
+    setCustomInputText('');
+    showToast(`Added "${label}" ✓`);
+  }
+
+  function handleRemoveAmenity(id) {
+    setAmenities((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  function toggleRule(id) {
+    setRules((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, on: !item.on } : item)),
+    );
+  }
+
+  function handleAddCustomRule(textToAdd) {
+    const raw = (typeof textToAdd === 'string' ? textToAdd : customInputText).trim();
+    if (!raw) return;
+    const cleanText = raw.replace(/^[^\w\s]+/, '').trim();
+    const emoji = detectRuleEmoji(cleanText);
+    const label = /\p{Emoji}/u.test(raw) ? raw : `${emoji} ${cleanText || raw}`;
+
+    const existing = rules.find((r) => r.label.toLowerCase() === label.toLowerCase());
+    if (existing) {
+      setRules((prev) => prev.map((r) => (r.id === existing.id ? { ...r, on: true } : r)));
+      setCustomInputText('');
+      showToast(`Activated rule "${label}" ✓`);
+      return;
+    }
+
+    const newRule = {
+      id: `rule-${Date.now()}`,
+      label,
+      on: true,
+      custom: true,
+    };
+    setRules((prev) => [...prev, newRule]);
+    setCustomInputText('');
+    showToast(`Added rule "${label}" ✓`);
+  }
+
+  function handleAddNewItem() {
+    const raw = customInputText.trim();
+    if (!raw) return;
+    if (addMode === 'amenity') {
+      handleAddCustomAmenity(raw);
+    } else {
+      handleAddCustomRule(raw);
+    }
+  }
+
+  function handleRemoveRule(id) {
+    setRules((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  /** Writes the selected amenity keys and rule text to the venue. */
+  async function saveAmenitiesAndRules() {
+    const vId = selectedVenueId || venueData?.id;
+    if (!vId) {
+      showToast('Select a venue first');
+      return;
+    }
+    setSavingAmenities(true);
+    try {
+      await updateVenue(vId, {
+        amenities: amenities.filter((a) => a.on).map((a) => a.id).join(','),
+        rules: rules.filter((r) => r.on).map((r) => r.label).join(','),
+      });
+      showToast('Amenities & ground rules saved ✓');
+      refreshVenueDetails(vId);
+    } catch (error) {
+      showToast(toUserMessage(error, 'Could not save amenities and rules.'));
+    } finally {
+      setSavingAmenities(false);
+    }
+  }
+
+  const [generateDraft, setGenerateDraft] = useState({
+    pitchId: '',
+    startDate: '',
+    endDate: '',
+    startTime: '06:00',
+    endTime: '23:00',
+    slotDurationMinutes: 60,
+    bufferMinutes: 10,
+    basePrice: 2000
+  });
+
+  const [previewFile, setPreviewFile] = useState(null);
+  const editFileInputRef = useRef(null);
+  const [editingPhotoId, setEditingPhotoId] = useState(null);
+  const [deactivatingPitchId, setDeactivatingPitchId] = useState(null);
+
+  const [isEditingHours, setIsEditingHours] = useState(false);
+  const [hoursDraft, setHoursDraft] = useState({ openTime: '06:00', closeTime: '23:00' });
+  const [savingHours, setSavingHours] = useState(false);
+
+  async function handleSaveHours() {
+    const vId = selectedVenueId || venueData?.id;
+    if (!vId) {
+      showToast('Select a venue first');
+      return;
+    }
+    setSavingHours(true);
+    try {
+      await updateVenue(vId, {
+        openTime: hoursDraft.openTime,
+        closeTime: hoursDraft.closeTime,
+      });
+      showToast('Operating hours updated ✓');
+      setIsEditingHours(false);
+      refreshVenueDetails(vId);
+    } catch (error) {
+      showToast(toUserMessage(error, 'Failed to update operating hours'));
+    } finally {
+      setSavingHours(false);
+    }
+  }
+
+  async function handleGenerateSlots() {
+    try {
+      const created = await apiGenerateSlots(generateDraft);
+      const count = Array.isArray(created) ? created.length : null;
+      showToast(count == null ? 'Slots generated ✓' : `${count} slot${count === 1 ? '' : 's'} generated ✓`);
+      generateSlotsModal.close();
+    } catch (error) {
+      showToast(toUserMessage(error, 'Failed to generate slots'));
+    }
+  }
+
   const getActiveVenueId = useCallback(async () => {
     if (selectedVenueId) return selectedVenueId;
     if (venues.length > 0 && venues[0].id) {
-      setSelectedVenueId(venues[0].id);
-      return venues[0].id;
+      const activeId = resolveActiveVenue(venues);
+      setSelectedVenueId(activeId);
+      return activeId;
     }
     try {
       const res = await listMyVenues();
       const venueList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
       if (venueList.length > 0 && venueList[0].id) {
         setVenues(venueList);
-        const vId = venueList[0].id;
+        const vId = resolveActiveVenue(venueList);
         setSelectedVenueId(vId);
         refreshVenueDetails(vId);
         return vId;
@@ -532,6 +893,7 @@ export default function VenueSetupPage() {
         if (newV && newV.id) {
           setVenues([newV]);
           setSelectedVenueId(newV.id);
+          saveSelectedVenueId(newV.id);
           refreshVenueDetails(newV.id);
           return newV.id;
         }
@@ -648,9 +1010,9 @@ export default function VenueSetupPage() {
         const venueList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
         if (!unmounted && venueList.length > 0) {
           setVenues(venueList);
-          const initialId = venueList[0].id;
-          setSelectedVenueId(initialId);
-          refreshVenueDetails(initialId);
+          const activeId = resolveActiveVenue(venueList);
+          setSelectedVenueId(activeId);
+          refreshVenueDetails(activeId);
         } else if (!unmounted) {
           // If no venue in database yet, fall back to owner's submitted turf request info
           getMyTurfRequests()
@@ -671,6 +1033,8 @@ export default function VenueSetupPage() {
                 if (fallbackVenue.id) {
                   setSelectedVenueId(fallbackVenue.id);
                   refreshVenueDetails(fallbackVenue.id);
+                } else {
+                  setLoading(false);
                 }
                 setVenueData(fallbackVenue);
                 setPitches([]);
@@ -685,28 +1049,43 @@ export default function VenueSetupPage() {
                     // Ignore JSON parsing errors for photos
                   }
                 }
+              } else if (!unmounted) {
+                setLoading(false);
               }
             })
             .catch(() => {
-              // Ignore turf request fetch errors
+              if (!unmounted) setLoading(false);
             });
         }
       })
-      .catch(() => {
-        // Ignore venue list fetch errors
-      })
-      .finally(() => {
-        if (!unmounted) setLoading(false);
+      .catch((err) => {
+        if (!unmounted) {
+          setLoadError(toUserMessage(err, 'Could not load your venues.'));
+          setLoading(false);
+        }
       });
     return () => {
       unmounted = true;
     };
   }, [refreshVenueDetails]);
 
-  function handleVenueChange(id) {
-    setSelectedVenueId(id);
-    refreshVenueDetails(id);
-  }
+  // Sync when another page/tab switches active venue
+  useEffect(() => {
+    const handleSync = (e) => {
+      const newId = e?.detail ?? getSavedSelectedVenueId();
+      if (newId && String(newId) !== String(selectedVenueId)) {
+        const numId = Number(newId) || newId;
+        setSelectedVenueId(numId);
+        refreshVenueDetails(numId);
+      }
+    };
+    window.addEventListener('turfchai:venue-change', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('turfchai:venue-change', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, [selectedVenueId, refreshVenueDetails]);
 
   function openSlotSettings() {
     const current = sportPricing[0];
@@ -793,13 +1172,18 @@ export default function VenueSetupPage() {
           indoor: false,
           sportSlugs,
         });
-        const createdPitch = created?.data || created;
+        const rawSlugs = createdPitch?.sportSlugs;
+        const sportsList = Array.isArray(rawSlugs)
+          ? rawSlugs
+          : typeof rawSlugs === 'string' && rawSlugs.trim()
+          ? rawSlugs.trim().split(/[\s,]+/)
+          : [];
         const newPitchObj = {
           id: createdPitch?.id || Date.now(),
           name: createdPitch?.name || name,
           desc: [createdPitch?.surfaceType, createdPitch?.dimensions].filter(Boolean).join(' · ') || desc,
-          sports: (createdPitch?.sportSlugs && createdPitch.sportSlugs.length > 0)
-            ? createdPitch.sportSlugs.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+          sports: sportsList.length > 0
+            ? sportsList.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
             : pitchDraft.sports,
         };
         setPitches((prev) => [...prev.filter((p) => p.id !== newPitchObj.id), newPitchObj]);
@@ -823,6 +1207,7 @@ export default function VenueSetupPage() {
       await updateVenue(vId, {
         depositPolicy: deposit,
         cancelPolicy: policy,
+        mlPricingEnabled: mlPricing,
       });
     } catch (error) {
       // This used to swallow the failure and toast success anyway, so an
@@ -830,7 +1215,7 @@ export default function VenueSetupPage() {
       showToast(toUserMessage(error, 'Could not save the deposit & cancellation section.'));
       return;
     }
-    showToast('Deposit & cancellation section saved ✓');
+    showToast(mlPricing ? 'Deposit, cancellation & ML dynamic pricing saved (upcoming slots updated) ✓' : 'Deposit & cancellation settings saved ✓');
     refreshVenueDetails(vId);
   }
 
@@ -921,7 +1306,7 @@ export default function VenueSetupPage() {
     <>
       <PageTitle title="Venue setup" />
 
-      <div style={{ maxWidth: 1040 }}>
+      <div style={{ maxWidth: 1040, margin: '0 auto' }}>
         {loading ? (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
             Loading venue details...
@@ -933,23 +1318,128 @@ export default function VenueSetupPage() {
         ) : (
           <>
             {venueData?.status === 'PUBLISHED' || venueData?.status === 'LIVE' ? (
-              <Alert
-                tone="ok"
-                icon="🟢"
-                title={`${venueData?.name || 'Venue'} is LIVE & Bookable`}
-                style={{ marginBottom: 16, borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.08)' }}
+              <div
+                style={{
+                  marginBottom: 14,
+                  padding: '8px 14px',
+                  borderRadius: 'var(--r-md)',
+                  background: 'rgba(16, 185, 129, 0.07)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
               >
-                Your venue is live and visible to all players! Players can browse pitches and book slots in real time.
-              </Alert>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                  <span style={{ fontSize: 12 }}>🟢</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>
+                    {venueData?.name || 'Venue'} is LIVE
+                  </span>
+                  <span className="subtle small" style={{ display: 'inline-block' }}>
+                    · Accepting player bookings in real time
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={handleGoLive}
+                    style={{
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--r-sm)',
+                      padding: '3px 9px',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: 'var(--text-2)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Pause live bookings and set venue offline"
+                  >
+                    <span>⏸️</span>
+                    <span>Set Offline</span>
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    to={venueData?.slug ? paths.player.venue(venueData.slug) : undefined}
+                    state={{ returnTo: paths.owner.venueSetup }}
+                    disabled={!venueData?.slug}
+                    title={venueData?.slug ? undefined : 'Save venue first to preview'}
+                    style={{
+                      padding: '3px 9px',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      borderRadius: 'var(--r-sm)',
+                    }}
+                  >
+                    👀 Player View
+                  </Button>
+                </div>
+              </div>
             ) : venueData?.verified || venueData?.status === 'APPROVED' || venueData?.status === 'PENDING_LISTING' ? (
-              <Alert
-                tone="ok"
-                icon="✓"
-                title={`${venueData?.name || 'Venue'} is Verified & Approved`}
-                style={{ marginBottom: 16 }}
+              <div
+                style={{
+                  marginBottom: 14,
+                  padding: '8px 14px',
+                  borderRadius: 'var(--r-md)',
+                  background: 'rgba(59, 130, 246, 0.07)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
               >
-                Your venue has been verified and approved by admin! You can now toggle <b>Go Live</b> to start accepting player bookings.
-              </Alert>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                  <span style={{ fontSize: 12 }}>✓</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>
+                    {venueData?.name || 'Venue'} is Approved
+                  </span>
+                  <span className="subtle small">
+                    · Ready to go live for player bookings
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={handleGoLive}
+                    style={{
+                      padding: '3px 10px',
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      borderRadius: 'var(--r-sm)',
+                    }}
+                  >
+                    🚀 Go Live
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    to={venueData?.slug ? paths.player.venue(venueData.slug) : undefined}
+                    state={{ returnTo: paths.owner.venueSetup }}
+                    disabled={!venueData?.slug}
+                    title={venueData?.slug ? undefined : 'Save venue first to preview'}
+                    style={{
+                      padding: '3px 9px',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      borderRadius: 'var(--r-sm)',
+                    }}
+                  >
+                    👀 Player View
+                  </Button>
+                </div>
+              </div>
             ) : venueData?.status === 'REJECTED' ? (
               <Alert
                 tone="danger"
@@ -979,17 +1469,16 @@ export default function VenueSetupPage() {
 
                 <div className="row-wrap" style={{ gap: 8, alignItems: 'center' }}>
                   {venues.length > 1 && (
-                    <Select
-                      value={selectedVenueId || ''}
-                      onChange={(e) => handleVenueChange(Number(e.target.value))}
-                      style={{ marginRight: 8 }}
-                    >
-                      {venues.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name}
-                        </option>
-                      ))}
-                    </Select>
+                    <FilterPillDropdown
+                      label="Turf"
+                      value={selectedVenueId}
+                      onChange={handleVenueChange}
+                      options={venues.map((v) => ({
+                        value: v.id,
+                        label: `${v.name}${v.area ? ` · ${v.area}` : ''}`,
+                      }))}
+                      getOptionEmoji={() => '🏟️'}
+                    />
                   )}
                   <Badge tone={venueData?.status === 'PUBLISHED' || venueData?.status === 'LIVE' ? 'green' : (venueData?.status === 'APPROVED' || venueData?.status === 'PENDING_LISTING' || venueData?.verified) ? 'blue' : venueData?.status === 'REJECTED' ? 'red' : 'amber'}>
                     {venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED' ? '🟢 LIVE · Bookable by Players' : (venueData?.status === 'APPROVED' || venueData?.status === 'PENDING_LISTING' || venueData?.verified) ? '✓ Verified · Ready to Go Live' : venueData?.status === 'REJECTED' ? '✕ Rejected' : '⏳ Pending — not visible to players'}
@@ -1242,20 +1731,56 @@ export default function VenueSetupPage() {
                 <section className="card">
                   <div className="between">
                     <h3 style={{ margin: 0 }}>🕐 Operating hours &amp; buffer</h3>
-                    <Badge tone="green" dot={false}>
-                      Done
-                    </Badge>
+                    <div className="row" style={{ gap: 6 }}>
+                      {!isEditingHours ? (
+                        <Button size="sm" variant="tertiary" onClick={() => setIsEditingHours(true)}>
+                          ✏️ Edit hours
+                        </Button>
+                      ) : null}
+                      <Badge tone="green" dot={false}>
+                        Done
+                      </Badge>
+                    </div>
                   </div>
 
-                  <div className="grid3" style={{ marginTop: 10, gap: 10 }}>
-                    {hoursList.map((item) => (
-                      <div className="panel" key={item.id}>
-                        <span className="tiny subtle">{item.label}</span>
-                        <br />
-                        <b className="num">{item.value}</b>
+                  {!isEditingHours ? (
+                    <div className="grid3" style={{ marginTop: 10, gap: 10 }}>
+                      {hoursList.map((item) => (
+                        <div className="panel" key={item.id}>
+                          <span className="tiny subtle">{item.label}</span>
+                          <br />
+                          <b className="num">{item.value}</b>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 12 }}>
+                      <div className="grid2" style={{ gap: 10 }}>
+                        <Field label="Open Time (24h)" htmlFor="hoursOpen">
+                          <CustomTimePicker
+                            id="hoursOpen"
+                            value={hoursDraft.openTime}
+                            onChange={(e) => setHoursDraft((c) => ({ ...c, openTime: e.target.value }))}
+                          />
+                        </Field>
+                        <Field label="Close Time (24h)" htmlFor="hoursClose">
+                          <CustomTimePicker
+                            id="hoursClose"
+                            value={hoursDraft.closeTime}
+                            onChange={(e) => setHoursDraft((c) => ({ ...c, closeTime: e.target.value }))}
+                          />
+                        </Field>
                       </div>
-                    ))}
-                  </div>
+                      <div className="row" style={{ marginTop: 12, gap: 8 }}>
+                        <Button size="sm" variant="primary" loading={savingHours} disabled={savingHours} onClick={handleSaveHours}>
+                          Save hours ✓
+                        </Button>
+                        <Button size="sm" variant="tertiary" onClick={() => setIsEditingHours(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               </div>
 
@@ -1293,83 +1818,247 @@ export default function VenueSetupPage() {
                     </Select>
                   </Field>
 
-                  <Button size="sm" variant="primary" style={{ marginTop: 10 }} onClick={saveDepositSection}>
+                  <hr style={{ border: 0, borderTop: '1px solid var(--border-soft)', margin: '16px 0 14px' }} />
+
+                  <div className="between" style={{ alignItems: 'flex-start', gap: 14, background: 'var(--surface-1)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-soft)' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                        <b className="small" style={{ fontSize: 13.5 }}>🤖 ML Dynamic Pricing Model</b>
+                        <Badge tone={mlPricing ? 'green' : 'gray'} dot={false}>
+                          {mlPricing ? 'ON' : 'OFF'}
+                        </Badge>
+                      </div>
+                      <p className="tiny subtle" style={{ margin: 0, lineHeight: 1.4 }}>
+                        When enabled, AI dynamically calculates pricing for all <b>upcoming slots</b> using peak windows, weather, and live occupancy. Past and completed slots stay untouched.
+                      </p>
+                    </div>
+                    <Switch
+                      label="Toggle ML Dynamic Pricing for upcoming slots"
+                      checked={mlPricing}
+                      onChange={(e) => setMlPricing(e.target.checked)}
+                    />
+                  </div>
+
+                  <Button size="sm" variant="primary" style={{ marginTop: 14 }} onClick={saveDepositSection}>
                     Save section
                   </Button>
                 </section>
 
                 <section className="card">
                   <div className="between">
-                    <h3 style={{ margin: 0 }}>📋 Amenities &amp; Rules</h3>
-                    <Badge tone="green" dot={false}>
-                      {amenities.filter((a) => a.on).length} active
-                    </Badge>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 16 }}>📋</span>
+                      <h3 style={{ margin: 0, fontSize: 16 }}>Amenities &amp; Rules</h3>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <Badge tone="green" dot={false} style={{ fontSize: 11 }}>
+                        {amenities.filter((a) => a.on).length} Facilities
+                      </Badge>
+                      <Badge tone="blue" dot={false} style={{ fontSize: 11 }}>
+                        {rules.filter((r) => r.on).length} Rules
+                      </Badge>
+                    </div>
                   </div>
 
-                  <p className="subtle small" style={{ margin: '6px 0 10px' }}>
-                    Toggle what this venue offers, then save. Players see these on the venue page.
+                  <p className="subtle small" style={{ margin: '4px 0 12px' }}>
+                    Toggle facilities and ground rules displayed to players.
                   </p>
 
-                  <div className="row-wrap" style={{ gap: 8, marginTop: 10 }}>
-                    {amenities.map((amenity) => (
-                      <Chip
-                        key={amenity.id}
-                        active={amenity.on}
-                        onToggle={() => toggleAmenity(amenity.id)}
-                        style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-                      >
-                        {amenity.label}
-                      </Chip>
-                    ))}
+                  {/* Facilities Chips */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div className="tiny subtle" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                      Turf Facilities
+                    </div>
+                    <div className="row-wrap" style={{ gap: 6 }}>
+                      {amenities.map((amenity) => {
+                        const isActive = amenity.on;
+                        return (
+                          <div
+                            key={amenity.id}
+                            onClick={() => toggleAmenity(amenity.id)}
+                            style={{
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '5px 10px',
+                              borderRadius: 9999,
+                              background: isActive ? 'var(--brand-soft)' : 'var(--surface-2)',
+                              border: isActive ? '1px solid var(--brand)' : '1px solid var(--border)',
+                              color: isActive ? 'var(--brand-600)' : 'var(--text)',
+                              fontSize: 12,
+                              fontWeight: isActive ? 700 : 500,
+                              userSelect: 'none',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <span>{amenity.label}</span>
+                            {isActive ? <span style={{ fontSize: 11, fontWeight: 800 }}>✓</span> : null}
+                            {amenity.custom ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveAmenity(amenity.id);
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--text-3)',
+                                  cursor: 'pointer',
+                                  padding: '0 2px',
+                                  fontSize: 10,
+                                  lineHeight: 1,
+                                }}
+                                title="Remove"
+                              >
+                                ✕
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <hr style={{ border: 0, borderTop: '1px solid var(--border-soft)', margin: '16px 0 12px' }} />
-
-                  <div className="between">
-                    <b className="small">Venue Rules</b>
-                    <span className="tiny subtle">Click rule to enable / disable</span>
+                  {/* Rules Chips */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div className="tiny subtle" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                      Ground Rules
+                    </div>
+                    <div className="stack-sm" style={{ gap: 5 }}>
+                      {rules.map((rule) => {
+                        const isActive = rule.on;
+                        return (
+                          <div
+                            key={rule.id}
+                            onClick={() => toggleRule(rule.id)}
+                            style={{
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '6px 10px',
+                              borderRadius: 'var(--r-sm)',
+                              background: isActive ? 'var(--brand-soft)' : 'var(--surface-1)',
+                              border: isActive ? '1px solid var(--brand-soft)' : '1px solid var(--border-soft)',
+                              color: isActive ? 'var(--text-1)' : 'var(--text-3)',
+                              fontSize: 12.5,
+                              userSelect: 'none',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <span style={{ textDecoration: isActive ? 'none' : 'line-through' }}>
+                              {rule.label}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? 'var(--brand-600)' : 'var(--text-3)' }}>
+                                {isActive ? '✓ Active' : 'Off'}
+                              </span>
+                              {rule.custom ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveRule(rule.id);
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-3)',
+                                    cursor: 'pointer',
+                                    padding: '0 2px',
+                                    fontSize: 11,
+                                    lineHeight: 1,
+                                  }}
+                                  title="Delete"
+                                >
+                                  ✕
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="stack-sm" style={{ marginTop: 8 }}>
-                    {rules.map((rule) => (
+                  <hr style={{ border: 0, borderTop: '1px solid var(--border-soft)', margin: '12px 0' }} />
+
+                  {/* 1 Unified Add Bar with Toggle Switcher */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="between">
+                      <span className="tiny subtle" style={{ fontWeight: 700, textTransform: 'uppercase' }}>
+                        Add New Item
+                      </span>
+                      {/* Toggle Button for Mode */}
                       <div
-                        key={rule.id}
-                        onClick={() => toggleRule(rule.id)}
                         style={{
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '8px 12px',
-                          borderRadius: 8,
-                          background: rule.on ? 'rgba(16, 185, 129, 0.08)' : 'var(--surface-1)',
-                          border: rule.on ? '1px solid rgba(16, 185, 129, 0.3)' : '1px dashed var(--border-medium)',
-                          opacity: rule.on ? 1 : 0.65,
-                          transition: 'all 0.15s ease',
+                          display: 'inline-flex',
+                          background: 'var(--surface-2)',
+                          borderRadius: 9999,
+                          padding: 2,
+                          border: '1px solid var(--border-soft)',
                         }}
-                        title="Click to toggle rule state"
                       >
-                        <span className="small" style={{ textDecoration: rule.on ? 'none' : 'line-through' }}>
-                          {rule.label}
-                        </span>
-                        <Badge tone={rule.on ? 'green' : 'gray'} dot={false} style={{ fontSize: 11 }}>
-                          {rule.on ? 'Active' : 'Off'}
-                        </Badge>
+                        <button
+                          type="button"
+                          onClick={() => setAddMode('amenity')}
+                          style={{
+                            border: 'none',
+                            background: addMode === 'amenity' ? 'var(--brand)' : 'transparent',
+                            color: addMode === 'amenity' ? '#ffffff' : 'var(--text-2)',
+                            borderRadius: 9999,
+                            padding: '3px 10px',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          🌟 Facility
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAddMode('rule')}
+                          style={{
+                            border: 'none',
+                            background: addMode === 'rule' ? 'var(--brand)' : 'transparent',
+                            color: addMode === 'rule' ? '#ffffff' : 'var(--text-2)',
+                            borderRadius: 9999,
+                            padding: '3px 10px',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          📜 House Rule
+                        </button>
                       </div>
-                    ))}
-                  </div>
+                    </div>
 
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    <Input
-                      placeholder="Add custom rule..."
-                      value={customRuleText}
-                      onChange={(e) => setCustomRuleText(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomRule()}
-                      style={{ fontSize: 13 }}
-                    />
-                    <Button size="sm" variant="secondary" onClick={handleAddCustomRule} style={{ flexShrink: 0 }}>
-                      + Add
-                    </Button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Input
+                        placeholder={
+                          addMode === 'amenity'
+                            ? 'Type facility name (e.g. Prayer Room, Lockers)...'
+                            : 'Type house rule (e.g. Astro shoes only)...'
+                        }
+                        value={customInputText}
+                        onChange={(e) => setCustomInputText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddNewItem()}
+                        style={{ fontSize: 13 }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleAddNewItem}
+                        style={{ flexShrink: 0, fontWeight: 700 }}
+                      >
+                        + Add {addMode === 'amenity' ? 'Facility' : 'Rule'}
+                      </Button>
+                    </div>
                   </div>
 
                   <Button
@@ -1380,49 +2069,9 @@ export default function VenueSetupPage() {
                     disabled={savingAmenities}
                     onClick={saveAmenitiesAndRules}
                   >
-                    Save amenities &amp; rules
+                    Save amenities &amp; rules ✓
                   </Button>
                 </section>
-
-                <div className="glass glass-card center" style={{ border: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-soft)' }}>
-                  <h3>{(venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '🟢 Venue is LIVE & Bookable' : 'Ready to go live?'}</h3>
-                  <p className="subtle small" style={{ margin: '4px 0 12px' }}>
-                    {(venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED')
-                      ? 'Your turf is currently active and accepting player bookings in real-time.'
-                      : 'Publish your venue to make slots instantly bookable by all players on TurfChai.'}
-                  </p>
-
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    block
-                    onClick={handleGoLive}
-                    style={{
-                      background: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED')
-                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                        : 'var(--brand)',
-                      borderColor: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '#059669' : 'var(--brand)',
-                      fontWeight: 600,
-                      boxShadow: (venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED') ? '0 4px 14px rgba(16, 185, 129, 0.4)' : 'none',
-                    }}
-                  >
-                    {(venueData?.status === 'LIVE' || venueData?.status === 'PUBLISHED')
-                      ? '🟢 Venue is LIVE (Click to Pause / Offline)'
-                      : '🚀 Go Live (Publish Venue)'}
-                  </Button>
-
-                  {/* Without a slug this used to preview a different venue entirely. */}
-                  <Button
-                    variant="tertiary"
-                    block
-                    to={venueData?.slug ? paths.player.venue(venueData.slug) : undefined}
-                    disabled={!venueData?.slug}
-                    title={venueData?.slug ? undefined : 'Save your venue first to preview how players will see it.'}
-                    style={{ marginTop: 8 }}
-                  >
-                    Preview player view
-                  </Button>
-                </div>
               </div>
             </div>
           </>
@@ -1654,10 +2303,14 @@ export default function VenueSetupPage() {
           <Field label="Duration (mins)" htmlFor="genDur">
             <Input id="genDur" type="number" min="15" value={generateDraft.slotDurationMinutes} onChange={e => setGenerateDraft(c => ({...c, slotDurationMinutes: e.target.value}))} />
           </Field>
-          <Field label="Base Price (৳)" htmlFor="genPrice">
-            <Input id="genPrice" type="number" min="0" value={generateDraft.basePrice} onChange={e => setGenerateDraft(c => ({...c, basePrice: e.target.value}))} />
+          <Field label="Buffer (mins)" htmlFor="genBuffer">
+            <Input id="genBuffer" type="number" min="0" value={generateDraft.bufferMinutes} onChange={e => setGenerateDraft(c => ({...c, bufferMinutes: e.target.value}))} />
           </Field>
         </div>
+
+        <Field label="Base Price (৳)" htmlFor="genPrice">
+          <Input id="genPrice" type="number" min="0" value={generateDraft.basePrice} onChange={e => setGenerateDraft(c => ({...c, basePrice: e.target.value}))} />
+        </Field>
 
         <div className="stack-sm" style={{ marginTop: 16 }}>
           <Button variant="primary" block onClick={handleGenerateSlots}>Generate Slots</Button>

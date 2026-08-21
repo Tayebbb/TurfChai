@@ -1,15 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/buttons/Button';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Chip } from '@/components/ui/Chip';
+import { Icon } from '@/components/common/Icon';
 import { Overlay } from '@/components/modals/Overlay';
 import { PageTitle } from '@/components/common/PageTitle';
 import { TableScroll } from '@/components/tables/TableScroll';
-import { useClickOutside } from '@/hooks/useClickOutside';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { useFilterChips } from '@/hooks/useFilterChips';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/useToast';
 import { useApi } from '@/hooks/useApi';
@@ -33,6 +31,168 @@ const AXIS_TICK = (v) =>
   `৳${v >= 100000 ? `${(v / 100000).toFixed(1)}L` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}`;
 const FONT = { family: 'Inter, system-ui, sans-serif', size: 12, weight: 500 };
 
+function getSportEmoji(sport) {
+  if (!sport) return '⚽';
+  const s = String(sport).toLowerCase();
+  if (s.includes('cricket')) return '🏏';
+  if (s.includes('badminton')) return '🏸';
+  if (s.includes('tennis')) return '🎾';
+  if (s.includes('basketball')) return '🏀';
+  if (s.includes('volleyball')) return '🏐';
+  if (s.includes('padel')) return '🎾';
+  if (s.includes('futsal') || s.includes('football') || s.includes('soccer')) return '⚽';
+  return '🏆';
+}
+
+function FilterPillDropdown({
+  label,
+  value,
+  onChange,
+  options,
+  icon,
+  getOptionEmoji,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedOpt = options.find((o) => o.value === value) || options[0];
+  const selectedLabel = selectedOpt?.label || value;
+  const currentEmoji = getOptionEmoji ? getOptionEmoji(value) : null;
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          background: isOpen ? 'var(--brand-soft)' : 'var(--surface-2)',
+          border: isOpen ? '1px solid var(--brand)' : '1px solid var(--border)',
+          borderRadius: 9999,
+          padding: '5px 12px 5px 10px',
+          cursor: 'pointer',
+          color: isOpen ? 'var(--brand-600)' : 'var(--text)',
+          fontSize: 12.5,
+          fontWeight: 700,
+          transition: 'all var(--dur) var(--ease)',
+          boxShadow: isOpen ? '0 0 0 2px var(--brand-soft)' : 'none',
+          userSelect: 'none',
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        {currentEmoji ? (
+          <span style={{ fontSize: 13, display: 'flex', alignItems: 'center' }}>
+            {currentEmoji}
+          </span>
+        ) : (
+          icon && <Icon name={icon} size={13} style={{ color: 'var(--text-3)' }} />
+        )}
+        <span>{selectedLabel}</span>
+        <Icon
+          name="chevronDown"
+          size={12}
+          style={{
+            color: 'var(--text-3)',
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+          }}
+        />
+      </button>
+
+      {/* Liquid-Glass Dropdown Menu with Pop Animation */}
+      {isOpen && (
+        <div
+          role="listbox"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            right: 0,
+            minWidth: 175,
+            zIndex: 100,
+            background: 'var(--surface)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--r-lg)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.24), 0 4px 12px rgba(0, 0, 0, 0.10)',
+            padding: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            animation: 'pop .18s var(--ease-out)',
+          }}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            const emoji = getOptionEmoji ? getOptionEmoji(opt.value) : null;
+
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  padding: '7px 10px',
+                  borderRadius: 8,
+                  background: isSelected ? 'var(--brand-soft)' : 'transparent',
+                  color: isSelected ? 'var(--brand-600)' : 'var(--text)',
+                  fontWeight: isSelected ? 800 : 600,
+                  fontSize: 12.5,
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'var(--surface-2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {emoji && <span>{emoji}</span>}
+                  <span>{opt.label}</span>
+                </span>
+                {isSelected && <Icon name="check" size={13} style={{ color: 'var(--brand)' }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Vertical fade under each series line, resolved lazily so the chart area exists. */
 function makeGradient(context, color) {
   const { ctx, chartArea } = context.chart;
@@ -46,21 +206,15 @@ function makeGradient(context, color) {
 export default function PaymentsPage() {
   const { showToast } = useToast();
   const { theme } = useTheme();
-  const methodChips = useFilterChips(['Today']);
+  const [methodFilter, setMethodFilter] = useState('Today');
 
   const [timeframe, setTimeframe] = useState('daily');
   const fetchPaymentsFn = useCallback(() => fetchOwnerPayments(timeframe), [timeframe]);
   const { data: apiSummary } = useApi(fetchPaymentsFn, [timeframe]);
 
-  const [selectedSports, setSelectedSports] = useState([]);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedSport, setSelectedSport] = useState('ALL');
   const [sportFilter, setSportFilter] = useState('all');
   const [missed, setMissed] = useState(null);
-
-  const pickerRef = useRef(null);
-  const closePicker = useCallback(() => setPickerOpen(false), []);
-  useClickOutside(pickerRef, closePicker, pickerOpen);
-  useEscapeKey(closePicker, pickerOpen);
 
   // Dynamic configured sports list derived from backend API for this owner
   const configuredSports = useMemo(() => {
@@ -78,44 +232,53 @@ export default function PaymentsPage() {
   
   const dark = theme === 'dark';
 
-  // Dynamic sport filter options derived from configured sports
-  const sportFilters = useMemo(() => [
-    { id: 'all', label: 'All Sports' },
-    ...configuredSports.map((s) => ({ id: s.name, label: s.label || s.name }))
+  // Dynamic sport filter options matching CalendarPage
+  const sportOptions = useMemo(() => [
+    { value: 'ALL', label: 'All Sports' },
+    ...configuredSports.map((s) => ({ value: s.name, label: s.name })),
   ], [configuredSports]);
 
-  const chartData = useMemo(
-    () => {
-      const activeSports = selectedSports.length > 0 ? selectedSports : configuredSports.map(s => s.name);
-      return {
-        labels: chartDataApi.labels || [],
-        datasets: activeSports.map((name) => {
-          const sportObj = configuredSports.find((item) => item.name === name || item.key === name) || {
-            name,
-            label: name,
-            color: '#06B6D4'
-          };
-          const data = chartDataApi.datasets?.[name] || chartDataApi.datasets?.[sportObj.key] || [];
-          const color = sportObj.color || '#06B6D4';
-          return {
-            label: sportObj.label || sportObj.name,
-            data,
-            borderColor: color,
-            backgroundColor: (context) => makeGradient(context, color),
-            borderWidth: 2.5,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 3,
-            pointHoverRadius: 6,
-            pointBackgroundColor: color,
-            pointBorderColor: dark ? '#10170F' : '#FFFFFF',
-            pointBorderWidth: 2,
-          };
-        }),
-      };
-    },
-    [chartDataApi, selectedSports, configuredSports, dark],
-  );
+  const sportFilters = useMemo(() => [
+    { id: 'all', label: 'All Sports' },
+    ...configuredSports.map((s) => ({ id: s.name, label: s.label || s.name })),
+  ], [configuredSports]);
+
+  const chartData = useMemo(() => {
+    const allAvailable = configuredSports.length > 0
+      ? configuredSports.map(s => s.name)
+      : Object.keys(chartDataApi.datasets || {});
+
+    const activeSports = selectedSport === 'ALL'
+      ? allAvailable
+      : [selectedSport];
+
+    return {
+      labels: chartDataApi.labels || [],
+      datasets: activeSports.map((name) => {
+        const sportObj = configuredSports.find((item) => item.name === name || item.key === name) || {
+          name,
+          label: name,
+          color: '#10B981',
+        };
+        const data = chartDataApi.datasets?.[name] || chartDataApi.datasets?.[sportObj.key] || [];
+        const color = sportObj.color || '#10B981';
+        return {
+          label: sportObj.label || sportObj.name,
+          data,
+          borderColor: color,
+          backgroundColor: (context) => makeGradient(context, color),
+          borderWidth: 2.5,
+          tension: 0.35,
+          fill: true,
+          pointRadius: 3.5,
+          pointHoverRadius: 6,
+          pointBackgroundColor: color,
+          pointBorderColor: dark ? '#10170F' : '#FFFFFF',
+          pointBorderWidth: 2,
+        };
+      }),
+    };
+  }, [chartDataApi, selectedSport, configuredSports, dark]);
 
   const chartOptions = useMemo(() => {
     const gridLine = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
@@ -162,17 +325,6 @@ export default function PaymentsPage() {
     };
   }, [dark]);
 
-  function toggleSport(name) {
-    setSelectedSports((current) =>
-      current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
-    );
-  }
-
-  function toggleAllSports(checked) {
-    setSelectedSports(checked ? configuredSports.map((sport) => sport.name) : []);
-  }
-
-  const allSelected = configuredSports.length > 0 && selectedSports.length === configuredSports.length;
   const visibleSportCards =
     sportFilter === 'all' ? sportReport : sportReport.filter((card) => card.sport === sportFilter);
 
@@ -204,11 +356,26 @@ export default function PaymentsPage() {
     }));
   }, [LEDGER]);
 
+  const filteredLedger = useMemo(() => {
+    return resolvedLedger.filter((row) => {
+      if (methodFilter === 'Today') {
+        return true;
+      }
+      if (methodFilter === 'Refunds') {
+        return row.grossStyle != null || (row.status?.text || '').toLowerCase().includes('refund');
+      }
+      if (methodFilter === 'Unmatched') {
+        return (row.status?.text || '').toLowerCase().includes('unmatched') || (row.status?.tone === 'amber');
+      }
+      return (row.method || '').toLowerCase().includes(methodFilter.toLowerCase());
+    });
+  }, [resolvedLedger, methodFilter]);
+
   const handleExportCsv = () => {
     downloadCsv(
       `payments-ledger-${timeframe}.csv`,
       ['Time', 'Booking', 'Customer', 'Method', 'Txn', 'Gross', 'Fee', 'Net', 'Status', 'Shift'],
-      resolvedLedger.map((row) => [
+      filteredLedger.map((row) => [
         row.time ?? '',
         row.booking ?? '',
         row.customer ?? '',
@@ -221,7 +388,7 @@ export default function PaymentsPage() {
         row.shift ?? '',
       ]),
     );
-    showToast(`Exported ${resolvedLedger.length} transaction${resolvedLedger.length === 1 ? '' : 's'} \u2713`);
+    showToast(`Exported ${filteredLedger.length} transaction${filteredLedger.length === 1 ? '' : 's'} \u2713`);
   };
 
   const handleExportSummary = () => {
@@ -249,220 +416,41 @@ export default function PaymentsPage() {
         </div>
         <div className="row">
           <Button
+            variant="primary"
             onClick={handleExportCsv}
-            disabled={resolvedLedger.length === 0}
-            title={resolvedLedger.length === 0 ? 'No transactions to export yet' : undefined}
+            disabled={filteredLedger.length === 0}
+            title={filteredLedger.length === 0 ? 'No transactions to export yet' : undefined}
           >
             ⬇ Export CSV
-          </Button>
-          <Button
-            variant="primary"
-            disabled
-            title="Shift and staff ledgers are not part of the platform yet — payments settle per booking."
-          >
-            💵 Close shift
           </Button>
         </div>
       </div>
 
       {/* ═══════ Net Income Over Time Chart ═══════ */}
-      <div className="card income-chart-card" style={{ marginBottom: 16, padding: '20px 24px 16px' }}>
-        <div className="income-chart-header">
-          <div className="income-chart-title-row">
-            <h2 style={{ margin: 0, fontSize: 18 }}>Net Income Over Time</h2>
-            <div
-              className={`sport-picker${pickerOpen ? ' open' : ''}`}
-              ref={pickerRef}
-              style={{ position: 'relative', display: 'inline-block' }}
-            >
-              <div
-                className="sport-picker-trigger"
-                role="button"
-                tabIndex={0}
-                aria-haspopup="listbox"
-                aria-expanded={pickerOpen}
-                aria-label="Select sports to compare"
-                onClick={() => setPickerOpen((open) => !open)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setPickerOpen((open) => !open);
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 14px',
-                  borderRadius: 10,
-                  background: dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                  border: dark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.12)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  minHeight: 38,
-                  userSelect: 'none',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  {configuredSports.length === 0 ? (
-                    <span className="subtle small">No sports assigned to your pitches</span>
-                  ) : (selectedSports.length === 0 ? configuredSports.map(s => s.name) : selectedSports).map((name) => {
-                    const sport = configuredSports.find((item) => item.name === name) || { name, label: name, color: '#06B6D4' };
-                    return (
-                      <span
-                        className="sport-tag"
-                        key={name}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          padding: '2px 8px',
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          background: 'rgba(6,182,212,.15)',
-                          color: 'var(--text-1)',
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            background: sport.color || '#06B6D4',
-                          }}
-                        />
-                        {sport.name}
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Remove ${sport.name}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            toggleSport(name);
-                          }}
-                          style={{
-                            marginLeft: 2,
-                            cursor: 'pointer',
-                            opacity: 0.7,
-                            fontWeight: 700,
-                          }}
-                        >
-                          ×
-                        </span>
-                      </span>
-                    );
-                  })}
-                </div>
-                <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 4 }}>▾</span>
-              </div>
-
-              <div
-                className="sport-picker-dropdown"
-                role="listbox"
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  right: 0,
-                  zIndex: 99,
-                  minWidth: 220,
-                  padding: 8,
-                  borderRadius: 14,
-                  background: dark ? 'rgba(22, 34, 26, 0.96)' : 'rgba(255, 255, 255, 0.98)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: dark ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
-                  boxShadow: dark ? '0 12px 32px rgba(0,0,0,0.5)' : '0 12px 32px rgba(0,0,0,0.18)',
-                  display: pickerOpen ? 'flex' : 'none',
-                  flexDirection: 'column',
-                  gap: 4,
-                }}
-              >
-                <div
-                  onClick={() => toggleAllSports(!allSelected)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 12px',
-                    borderRadius: 10,
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    background: allSelected ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                    color: allSelected ? 'var(--brand-500, #10B981)' : 'var(--text-1)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 5,
-                      border: '2px solid',
-                      borderColor: allSelected ? 'var(--brand-500)' : 'var(--text-3)',
-                      background: allSelected ? 'var(--brand-500)' : 'transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      fontSize: 11,
-                      fontWeight: 900,
-                    }}
-                  >
-                    {allSelected ? '✓' : ''}
-                  </span>
-                  Select All Configured Sports
-                </div>
-
-                <div style={{ height: 1, background: 'var(--border-soft)', margin: '4px 0' }} />
-
-                {configuredSports.map((sport) => {
-                  const isSelected = selectedSports.includes(sport.name);
-                  return (
-                    <div
-                      key={sport.name}
-                      onClick={() => toggleSport(sport.name)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        background: isSelected ? (dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)') : 'transparent',
-                        color: 'var(--text-1)',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span
-                          style={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: 4,
-                            border: '2px solid',
-                            borderColor: isSelected ? (sport.color || '#06B6D4') : 'var(--text-3)',
-                            background: isSelected ? (sport.color || '#06B6D4') : 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontSize: 10,
-                            fontWeight: 900,
-                          }}
-                        >
-                          {isSelected ? '✓' : ''}
-                        </span>
-                        <span>{sport.label || sport.name}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      <div className="card income-chart-card" style={{ marginBottom: 20, padding: '20px 24px 20px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: '-0.01em' }}>
+              Net Income Over Time
+            </h2>
+            {configuredSports.length > 1 && (
+              <FilterPillDropdown
+                label="Sport"
+                value={selectedSport}
+                onChange={setSelectedSport}
+                getOptionEmoji={(val) => (val === 'ALL' ? '🏆' : getSportEmoji(val))}
+                options={sportOptions}
+              />
+            )}
           </div>
 
           <div className="row-wrap" style={{ gap: 6 }} role="group" aria-label="Time range">
@@ -477,6 +465,7 @@ export default function PaymentsPage() {
             ))}
           </div>
         </div>
+
         <ChartCanvas
           type="line"
           data={chartData}
@@ -501,7 +490,7 @@ export default function PaymentsPage() {
 
       <div className="row-wrap" style={{ marginBottom: 12 }}>
         {METHOD_FILTERS.map((filter) => (
-          <Chip key={filter} active={methodChips.isActive(filter)} onToggle={() => methodChips.toggle(filter)}>
+          <Chip key={filter} active={methodFilter === filter} onToggle={() => setMethodFilter(filter)}>
             {filter}
           </Chip>
         ))}
@@ -524,7 +513,7 @@ export default function PaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {resolvedLedger.map((row) => (
+            {filteredLedger.map((row) => (
               <tr key={row.id}>
                 <td className="num">{row.time}</td>
                 <td className="num">{row.booking}</td>
@@ -546,10 +535,10 @@ export default function PaymentsPage() {
                 <td>{row.shift}</td>
               </tr>
             ))}
-            {resolvedLedger.length === 0 && (
+            {filteredLedger.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ textAlign: 'center', padding: '24px 0' }}>
-                  No booking transactions logged yet
+                  No matching transactions found
                 </td>
               </tr>
             )}

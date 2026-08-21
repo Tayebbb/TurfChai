@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { Icon } from '@/components/common/Icon';
 import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
@@ -33,6 +33,7 @@ export function PlayerLayout({ withFooter = false }) {
   const notifications = useDisclosure(false);
   const profile = useDisclosure(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   useBodyClass('has-bottomnav');
 
@@ -40,8 +41,20 @@ export function PlayerLayout({ withFooter = false }) {
   // caller must stay unfetched until there is a real session, otherwise a
   // signed-out visitor either sees somebody else's identity or gets bounced
   // by the 401 handler while browsing a public page.
-  const { signedIn, user: player, loading: profileLoading, error: profileError, reload: reloadProfile } =
+  const { signedIn, role, user: player, loading: profileLoading, error: profileError, reload: reloadProfile } =
     useSession();
+
+  const isOwnerOrAdmin = signedIn && (role === 'OWNER' || role === 'ADMIN' || role === 'SUPER_ADMIN');
+
+  const handleExitPlayerView = () => {
+    if (location.state?.returnTo) {
+      navigate(location.state.returnTo);
+    } else if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      navigate(paths.admin.dashboard);
+    } else {
+      navigate(paths.owner.venueSetup);
+    }
+  };
 
   const { data: notifData, reload: reloadNotifs } = useApi(
     () => (signedIn ? getNotifications() : Promise.resolve([])),
@@ -105,46 +118,101 @@ export function PlayerLayout({ withFooter = false }) {
   return (
     <>
       <HeldSlotBanner />
-      <Topbar brand={<Brand to={paths.player.home} />} links={PLAYER_NAV_LINKS}>
-        <ThemeToggle />
-        <IconButton
-          label={`Notifications, ${unreadCount} unread`}
-          notify={unreadCount > 0}
-          onClick={notifications.open}
-        >
-          <span aria-hidden="true">🔔</span>
-        </IconButton>
-        <IconButton
-          label="Profile menu"
-          onClick={profile.open}
-          style={{
-            background: 'var(--brand-soft)',
-            color: 'var(--brand-600)',
-            fontWeight: 700,
-            border: 'none',
-          }}
-        >
-          {initials}
-        </IconButton>
+      <Topbar
+        brand={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Brand to={isOwnerOrAdmin ? paths.owner.venueSetup : paths.player.home} />
+            {isOwnerOrAdmin && (
+              <Badge tone="green" dot={false} style={{ fontSize: 11, fontWeight: 700 }}>
+                👀 Turf Preview Mode
+              </Badge>
+            )}
+          </div>
+        }
+        links={isOwnerOrAdmin ? [] : PLAYER_NAV_LINKS}
+      >
+        {isOwnerOrAdmin ? (
+          <>
+            <button
+              type="button"
+              onClick={handleExitPlayerView}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontWeight: 700,
+                background: 'rgba(239, 68, 68, 0.12)',
+                color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: 9999,
+                padding: '4px 10px',
+                fontSize: 11.5,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease',
+                marginRight: 4,
+                flexShrink: 0,
+              }}
+              title="Exit Player View and return to Owner portal"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.22)';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.35)';
+              }}
+            >
+              <span style={{ fontSize: 10, fontWeight: 900 }}>✕</span>
+              <span>Exit Player View</span>
+            </button>
+            <ThemeToggle />
+          </>
+        ) : (
+          <>
+            <ThemeToggle />
+            <IconButton
+              label={`Notifications, ${unreadCount} unread`}
+              notify={unreadCount > 0}
+              onClick={notifications.open}
+            >
+              <span aria-hidden="true">🔔</span>
+            </IconButton>
+            <IconButton
+              label="Profile menu"
+              onClick={profile.open}
+              style={{
+                background: 'var(--brand-soft)',
+                color: 'var(--brand-600)',
+                fontWeight: 700,
+                border: 'none',
+              }}
+            >
+              {initials}
+            </IconButton>
+          </>
+        )}
       </Topbar>
 
       <RouteErrorBoundary>
         <Outlet />
       </RouteErrorBoundary>
 
-      {withFooter ? <SiteFooter /> : null}
+      {withFooter && !isOwnerOrAdmin ? <SiteFooter /> : null}
 
-      <BottomNav
-        links={PLAYER_BOTTOM_NAV}
-        trailing={
-          <button type="button" onClick={profile.open}>
-            <span className="ico" aria-hidden="true">
-              <Icon name="profile" />
-            </span>
-            Profile
-          </button>
-        }
-      />
+      {!isOwnerOrAdmin && (
+        <BottomNav
+          links={PLAYER_BOTTOM_NAV}
+          trailing={
+            <button type="button" onClick={profile.open}>
+              <span className="ico" aria-hidden="true">
+                <Icon name="profile" />
+              </span>
+              Profile
+            </button>
+          }
+        />
+      )}
 
       <Overlay
         isOpen={notifications.isOpen}

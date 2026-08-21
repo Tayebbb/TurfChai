@@ -24,16 +24,16 @@ export const PUBLIC_NAV_LINKS = [
   { to: paths.host.hub, label: 'Tournaments' },
 ];
 
-/** Owner workspace sidebar. */
+/** Owner workspace topbar navigation. */
 export const OWNER_NAV_LINKS = [
-  { to: paths.owner.dashboard, label: 'Overview', icon: '📊', end: true },
-  { to: paths.owner.calendar, label: 'Calendar', icon: '🗓️' },
-  { to: paths.owner.bookings, label: 'Bookings', icon: '📅' },
-  { to: paths.owner.payments, label: 'Reports', icon: '📈' },
-  { to: paths.owner.venueSetup, label: 'Venues', icon: '🏟️' },
-  { to: paths.owner.customers, label: 'Customers', icon: '👥' },
-  { to: paths.owner.promotions, label: 'Promotions', icon: '🎁' },
-  { to: paths.owner.reviews, label: 'Reviews', icon: '⭐' },
+  { to: paths.owner.dashboard, label: 'Overview', end: true },
+  { to: paths.owner.calendar, label: 'Calendar' },
+  { to: paths.owner.bookings, label: 'Bookings' },
+  { to: paths.owner.payments, label: 'Reports' },
+  { to: paths.owner.venueSetup, label: 'Venues' },
+  { to: paths.owner.customers, label: 'Customers' },
+  { to: paths.owner.promotions, label: 'Promotions' },
+  { to: paths.owner.reviews, label: 'Reviews' },
 ];
 
 /** Admin console navigation. */

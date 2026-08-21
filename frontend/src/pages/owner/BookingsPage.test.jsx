@@ -6,8 +6,13 @@ import { mockApi, renderApp, signIn } from '@/test/testUtils';
 
 /** The owner bookings endpoint returns rows already shaped for the table. */
 function row(overrides = {}) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
   return {
     id: 4101,
+    bookingDate: todayStr,
     time: '19:00',
     bookingCode: 'BK-4101',
     customer: 'Nabil Ahmed',
@@ -72,7 +77,7 @@ describe('Owner BookingsPage — row actions', () => {
     expect(await screen.findByText(/booking approved/i)).toBeInTheDocument();
   });
 
-  it('refunding calls the refund endpoint, not cancel', async () => {
+  it('refunding prompts confirmation and calls the refund endpoint only after confirming', async () => {
     const fetchMock = renderOwnerBookings([
       ...BASE_ROUTES,
       ['/owner/bookings/4101/refund', { body: { refundAmount: 2500 } }],
@@ -92,10 +97,74 @@ describe('Owner BookingsPage — row actions', () => {
     await screen.findByText('BK-4101');
     await userEvent.click(screen.getByRole('button', { name: 'Refund' }));
 
+    // Confirmation modal is displayed
+    expect(await screen.findByText(/confirm refund/i)).toBeInTheDocument();
+    expect(screen.getByText(/yes, refund booking/i)).toBeInTheDocument();
+
+    // Confirm the refund
+    await userEvent.click(screen.getByRole('button', { name: 'Yes, refund booking' }));
+
     await waitFor(() =>
       expect(writes(fetchMock).some((u) => u.endsWith('/owner/bookings/4101/refund'))).toBe(true),
     );
     expect(writes(fetchMock).some((u) => u.includes('/cancel'))).toBe(false);
+  });
+
+  it('cancelling the refund modal leaves the booking untouched', async () => {
+    const fetchMock = renderOwnerBookings([
+      ...BASE_ROUTES,
+      [
+        '/owner/bookings',
+        {
+          body: [
+            row({
+              payment: { tone: 'green', text: 'Paid' },
+              actions: [{ label: 'Refund', variant: 'ghostDanger', action: 'refund' }],
+            }),
+          ],
+        },
+      ],
+    ]);
+
+    await screen.findByText('BK-4101');
+    await userEvent.click(screen.getByRole('button', { name: 'Refund' }));
+
+    expect(await screen.findByText(/confirm refund/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Keep booking' }));
+
+    expect(screen.queryByText(/confirm refund/i)).not.toBeInTheDocument();
+    expect(writes(fetchMock).length).toBe(0);
+  });
+
+  it('filters Phone and Walk-in sources independently', async () => {
+    renderOwnerBookings([
+      ...BASE_ROUTES,
+      [
+        '/owner/bookings',
+        {
+          body: [
+            row({ id: 101, bookingCode: 'MB-PHONE1', source: { tone: 'purple', text: 'Phone' } }),
+            row({ id: 102, bookingCode: 'MB-WALK1', source: { tone: 'amber', text: 'Walk-in' } }),
+            row({ id: 103, bookingCode: 'TC-ONLINE1', source: { tone: 'green', text: 'Online' } }),
+          ],
+        },
+      ],
+    ]);
+
+    await screen.findByText('MB-PHONE1');
+    const phoneFilter = screen.getByRole('button', { name: 'Phone' });
+    await userEvent.click(phoneFilter);
+
+    expect(screen.getByText('MB-PHONE1')).toBeInTheDocument();
+    expect(screen.queryByText('MB-WALK1')).not.toBeInTheDocument();
+    expect(screen.queryByText('TC-ONLINE1')).not.toBeInTheDocument();
+
+    const walkInFilter = screen.getByRole('button', { name: 'Walk-in' });
+    await userEvent.click(walkInFilter);
+
+    expect(screen.getByText('MB-WALK1')).toBeInTheDocument();
+    expect(screen.queryByText('MB-PHONE1')).not.toBeInTheDocument();
+    expect(screen.queryByText('TC-ONLINE1')).not.toBeInTheDocument();
   });
 
   it('reports the server\u2019s refusal instead of announcing a cancellation that never happened', async () => {
@@ -147,6 +216,51 @@ describe('Owner BookingsPage — row actions', () => {
 
     expect(approveCalls).toBe(1);
     release();
+  });
+
+  it('renders a friendly contextual empty state when filtering by Payment pending with no matching bookings', async () => {
+    renderOwnerBookings([
+      ...BASE_ROUTES,
+      [
+        '/owner/bookings',
+        {
+          body: [
+            row({
+              payment: { tone: 'green', text: 'Paid' },
+            }),
+          ],
+        },
+      ],
+    ]);
+
+    await screen.findByText('BK-4101');
+    const paymentPendingFilter = screen.getByRole('button', { name: 'Payment pending' });
+    await userEvent.click(paymentPendingFilter);
+
+    expect(screen.getByText('No pending payments')).toBeInTheDocument();
+    expect(screen.getByText(/all current bookings are settled or paid/i)).toBeInTheDocument();
+    
+    // Clicking "View all bookings" clears the filter and shows the bookings again
+    const viewAllBtn = screen.getByRole('button', { name: 'View all bookings' });
+    await userEvent.click(viewAllBtn);
+    expect(screen.getByText('BK-4101')).toBeInTheDocument();
+  });
+
+  it('renders a friendly search empty state and allows clearing the query', async () => {
+    renderOwnerBookings([
+      ...BASE_ROUTES,
+      ['/owner/bookings', { body: [row()] }],
+    ]);
+
+    await screen.findByText('BK-4101');
+    const searchInput = screen.getByRole('textbox', { name: /search bookings/i });
+    await userEvent.type(searchInput, 'NonExistentCustomer');
+
+    expect(screen.getByText(/no bookings matching "nonexistentcustomer"/i)).toBeInTheDocument();
+    const clearBtn = screen.getByRole('button', { name: 'Clear search' });
+    await userEvent.click(clearBtn);
+
+    expect(screen.getByText('BK-4101')).toBeInTheDocument();
   });
 });
 

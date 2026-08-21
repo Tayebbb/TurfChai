@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { TableScroll } from '@/components/tables/TableScroll';
 import { Chip } from '@/components/ui/Chip';
-import { useFilterChips } from '@/hooks/useFilterChips';
 import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import { listTurfRequests } from '@/api/turfRequests';
@@ -18,13 +17,10 @@ const FILTERS = [
 
 export default function TurfRequestsPage() {
   const { showToast } = useToast();
-  const chips = useFilterChips(['pending']);
+  const [activeFilter, setActiveFilter] = useState('pending');
   const [search, setSearch] = useState('');
   
-  const statusFilter = chips.isActive('pending') ? 'PENDING' : 
-                       chips.isActive('changes_requested') ? 'CHANGES_REQUESTED' : 
-                       chips.isActive('approved') ? 'APPROVED' : 
-                       chips.isActive('rejected') ? 'REJECTED' : null;
+  const statusFilter = activeFilter.toUpperCase();
 
   const { data: requestData, loading, error } = useApi(() => listTurfRequests(statusFilter), [statusFilter]);
 
@@ -70,8 +66,8 @@ export default function TurfRequestsPage() {
         {FILTERS.map((filter) => (
           <Chip
             key={filter.id}
-            active={chips.isActive(filter.id)}
-            onToggle={() => chips.toggle(filter.id)}
+            active={activeFilter === filter.id}
+            onToggle={() => setActiveFilter(filter.id)}
           >
             {filter.label}
           </Chip>
