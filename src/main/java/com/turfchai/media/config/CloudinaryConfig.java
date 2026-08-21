@@ -20,8 +20,8 @@ public class CloudinaryConfig {
 
     @Bean
     public Cloudinary cloudinary() {
-        return cloudinaryUrl == null || cloudinaryUrl.isBlank()
-                ? new Cloudinary()
-                : new Cloudinary(cloudinaryUrl);
+        return cloudinaryUrl != null && cloudinaryUrl.trim().startsWith("cloudinary://")
+                ? new Cloudinary(cloudinaryUrl.trim())
+                : new Cloudinary();
     }
 }

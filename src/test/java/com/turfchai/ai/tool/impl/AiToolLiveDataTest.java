@@ -124,8 +124,6 @@ class AiToolLiveDataTest {
                 .containsExactlyInAnyOrderElementsOf(EXPECTED_TOOLS);
     }
 
-    // ── public reads come from the catalogue ─────────────────────────────
-
     @Test
     @DisplayName("search_venues returns venues that exist in the database")
     void venueSearchIsBackedByTheCatalogue() {
@@ -139,6 +137,23 @@ class AiToolLiveDataTest {
             assertThat(venues.findBySlug(slug))
                     .as("venue '%s' quoted by the assistant must exist", slug)
                     .isPresent();
+        }
+    }
+
+    @Test
+    @DisplayName("search_venues with sortBy price_asc returns venues in ascending price order")
+    void venueSearchSortsByPriceAsc() {
+        Map<String, Object> result = body(run("search_venues", Map.of("sortBy", "price_asc", "limit", 5), anonymous()));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("venues");
+        assertThat(rows).hasSizeGreaterThanOrEqualTo(2);
+        for (int i = 0; i < rows.size() - 1; i++) {
+            BigDecimal p1 = (BigDecimal) rows.get(i).get("fromPriceBdt");
+            BigDecimal p2 = (BigDecimal) rows.get(i + 1).get("fromPriceBdt");
+            if (p1 != null && p2 != null) {
+                assertThat(p1).isLessThanOrEqualTo(p2);
+            }
         }
     }
 
