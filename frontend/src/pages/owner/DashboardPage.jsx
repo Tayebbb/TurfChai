@@ -22,7 +22,7 @@ import { useSession } from '@/hooks/useSession';
 import { useToast } from '@/hooks/useToast';
 import { toUserMessage } from '@/utils/errorMessage';
 import { paths } from '@/routes/paths';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import './DashboardPage.css';
 
 /** The greeting was hardcoded to "Good evening" regardless of the clock. */
