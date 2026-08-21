@@ -30,6 +30,9 @@ public class SlotGenerationRequest {
     @Min(15)
     private int slotDurationMinutes = 60;
 
+    @Min(0)
+    private int bufferMinutes = 0;
+
     @NotNull
     @Min(0)
     private BigDecimal basePrice;

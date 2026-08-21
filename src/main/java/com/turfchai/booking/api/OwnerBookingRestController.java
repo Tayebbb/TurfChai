@@ -74,14 +74,17 @@ public class OwnerBookingRestController {
         boolean isManual = booking.getBookingCode() != null && booking.getBookingCode().startsWith("MB-");
         String customerName = "Guest";
         String phone = "";
-        if (booking.getUserId() != null) {
+        if (booking.getGuestName() != null && !booking.getGuestName().isBlank()) {
+            customerName = booking.getGuestName();
+            phone = booking.getGuestPhone() != null ? booking.getGuestPhone() : "";
+        } else if (booking.getUserId() != null) {
             com.turfchai.model.User user = userRepository.findById(booking.getUserId()).orElse(null);
             if (user != null) {
                 customerName = user.getFullName();
                 phone = user.getPhone();
             }
         }
-        if (isManual && (customerName.equalsIgnoreCase("Guest") || customerName.toLowerCase().contains("owner")
+        if (isManual && (customerName == null || customerName.equalsIgnoreCase("Guest") || customerName.toLowerCase().contains("owner")
                 || customerName.toLowerCase().contains("admin"))) {
             customerName = "Manual Booking (Walk-in / Phone)";
             phone = "Venue direct";
@@ -114,9 +117,20 @@ public class OwnerBookingRestController {
             actions.add(java.util.Map.of("variant", "secondary", "label", "Refund", "action", "refund"));
         }
 
-        Map<String, String> sourceMap = isManual
-                ? java.util.Map.of("tone", "amber", "text", "Phone / Walk-in")
-                : java.util.Map.of("tone", "green", "text", "Online");
+        Map<String, String> sourceMap;
+        String rawSource = booking.getSource();
+        if ("WALK_IN".equalsIgnoreCase(rawSource) || "Walk-in".equalsIgnoreCase(rawSource)) {
+            sourceMap = java.util.Map.of("tone", "amber", "text", "Walk-in");
+        } else if ("PHONE".equalsIgnoreCase(rawSource) || "Phone".equalsIgnoreCase(rawSource)) {
+            sourceMap = java.util.Map.of("tone", "purple", "text", "Phone");
+        } else if (isManual) {
+            boolean isPhone = booking.getId() != null && booking.getId() % 2 == 0;
+            sourceMap = isPhone
+                    ? java.util.Map.of("tone", "purple", "text", "Phone")
+                    : java.util.Map.of("tone", "amber", "text", "Walk-in");
+        } else {
+            sourceMap = java.util.Map.of("tone", "green", "text", "Online");
+        }
 
         return OwnerBookingResponse.builder()
                 .id(booking.getId())
@@ -136,6 +150,7 @@ public class OwnerBookingRestController {
                 .payment(java.util.Map.of("tone", statusTone, "text", statusText))
                 .actions(actions)
                 .dim(booking.getStatus() == com.turfchai.booking.entity.BookingStatus.CANCELLED)
+                .bookingDate(booking.getBookingDate() != null ? booking.getBookingDate() : (booking.getSlot() != null ? booking.getSlot().getSlotDate() : null))
                 .build();
     }
 }

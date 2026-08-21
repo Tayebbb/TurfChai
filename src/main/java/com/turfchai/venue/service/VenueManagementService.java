@@ -67,6 +67,12 @@ public class VenueManagementService {
     private final BookingRepository bookingRepository;
     private final com.turfchai.booking.service.SlotTimePolicy slotTimePolicy;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.turfchai.pricing.service.PricingInferenceService pricingInferenceService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private SlotPricingRuleEngine pricingEngine;
+
     public VenueManagementService(VenueRepository venueRepository,
             PitchRepository pitchRepository,
             SportRepository sportRepository,
@@ -273,12 +279,96 @@ public class VenueManagementService {
             venue.setPromotionLabel(req.promotionLabel());
         if (req.photos() != null)
             venue.setPhotos(String.join(",", req.photos()));
-        if (req.mlPricingEnabled() != null)
-            venue.setMlPricingEnabled(req.mlPricingEnabled());
+        if (req.mlPricingEnabled() != null) {
+            boolean wasEnabled = venue.isMlPricingEnabled();
+            boolean isNowEnabled = req.mlPricingEnabled();
+            venue.setMlPricingEnabled(isNowEnabled);
+            if (wasEnabled != isNowEnabled) {
+                repriceUpcomingSlots(venue, isNowEnabled);
+            }
+        }
         if (req.basePrice() != null)
             venue.setBasePrice(req.basePrice());
 
         return toDto(venueRepository.save(venue));
+    }
+
+    /**
+     * Reprices all upcoming AVAILABLE slots for the venue according to ML model (if enabled)
+     * or standard pricing rules / base price (if disabled).
+     * Past slots and already booked / held slots stay completely untouched.
+     */
+    public void repriceUpcomingSlots(Venue venue, boolean enableMlPricing) {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+        List<Slot> upcomingSlots = slotRepository.findUpcomingAvailableSlots(venue.getId(), today, now);
+        if (upcomingSlots == null || upcomingSlots.isEmpty()) {
+            return;
+        }
+
+        for (Slot slot : upcomingSlots) {
+            try {
+                String sportSlug = "football";
+                if (slot.getPitch() != null && slot.getPitch().getSports() != null && !slot.getPitch().getSports().isEmpty()) {
+                    sportSlug = slot.getPitch().getSports().iterator().next().getSlug();
+                }
+
+                final String sportSlugFinal = sportSlug;
+                if (enableMlPricing && pricingInferenceService != null) {
+                    java.time.LocalDateTime dt = java.time.LocalDateTime.of(slot.getSlotDate(), slot.getStartTime());
+                    long daysBefore = java.time.temporal.ChronoUnit.DAYS.between(today, slot.getSlotDate());
+                    com.turfchai.pricing.dto.PricingQuoteRequest quoteReq = new com.turfchai.pricing.dto.PricingQuoteRequest();
+                    quoteReq.setVenueId(venue.getId());
+                    quoteReq.setSportSlug(sportSlugFinal);
+                    quoteReq.setBookingDateTime(dt);
+                    quoteReq.setDaysBeforeBooking((int) Math.max(0, daysBefore));
+                    quoteReq.setOccupancyRate(0.5f);
+
+                    com.turfchai.pricing.dto.PricingQuoteResponse quote = pricingInferenceService.getQuote(quoteReq);
+                    if (quote != null && quote.getSuggestedPrice() > 0) {
+                        BigDecimal roundedPrice = BigDecimal.valueOf(Math.round(quote.getSuggestedPrice() / 50.0) * 50.0)
+                                .setScale(2, java.math.RoundingMode.HALF_UP);
+                        slot.setPrice(roundedPrice);
+                    }
+                } else {
+                    boolean hasMatchingRule = venue.getPricingRules() != null && venue.getPricingRules().stream()
+                            .anyMatch(r -> r.isActive() && r.getSport() != null
+                                    && r.getSport().getSlug().equalsIgnoreCase(sportSlugFinal));
+
+                    if (hasMatchingRule && pricingEngine != null) {
+                        try {
+                            com.turfchai.venue.dto.owner.SlotPriceResponse priceRes = pricingEngine.calculate(
+                                    venue.getId(),
+                                    sportSlugFinal,
+                                    slot.getSlotDate(),
+                                    slot.getStartTime(),
+                                    slot.getEndTime()
+                            );
+                            if (priceRes != null && priceRes.totalPrice() != null) {
+                                slot.setPrice(priceRes.totalPrice());
+                            } else {
+                                setSlotFallbackPrice(slot, venue);
+                            }
+                        } catch (Exception ignored) {
+                            setSlotFallbackPrice(slot, venue);
+                        }
+                    } else {
+                        setSlotFallbackPrice(slot, venue);
+                    }
+                }
+            } catch (Exception e) {
+                // Continue to next slot
+            }
+        }
+        slotRepository.saveAll(upcomingSlots);
+    }
+
+    private void setSlotFallbackPrice(Slot slot, Venue venue) {
+        if (venue.getBasePrice() != null && venue.getBasePrice().compareTo(BigDecimal.ZERO) > 0) {
+            slot.setPrice(venue.getBasePrice());
+        } else if (slot.getPrice() == null || slot.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            slot.setPrice(BigDecimal.valueOf(2000.00).setScale(2, java.math.RoundingMode.HALF_UP));
+        }
     }
 
     // ── Pitches ────────────────────────────────────────────────────────────
@@ -399,7 +489,17 @@ public class VenueManagementService {
         rule.setDaysOfWeek(req.daysOfWeek() != null ? req.daysOfWeek() : List.of(1, 2, 3, 4, 5, 6, 7));
         rule.setActive(true);
 
-        return toPricingRuleDto(pricingRuleRepository.save(rule));
+        SportPricingRule saved = pricingRuleRepository.save(rule);
+
+        // Keep venue basePrice in sync
+        if ("football".equalsIgnoreCase(req.sportSlug()) || venue.getBasePrice() == null) {
+            venue.setBasePrice(req.rate());
+            venueRepository.save(venue);
+        }
+
+        repriceUpcomingSlots(venue);
+
+        return toPricingRuleDto(saved);
     }
 
     /** Permanently remove a pricing rule. */
@@ -702,10 +802,26 @@ public class VenueManagementService {
             throw new IllegalStateException("Slot " + slot.getId() + " has no pitch and cannot be booked");
         }
 
+        String bookingSource = "PHONE";
+        if (req.getSource() != null) {
+            String src = req.getSource().trim().toUpperCase();
+            if (src.contains("WALK")) {
+                bookingSource = "WALK_IN";
+            } else if (src.contains("PHONE")) {
+                bookingSource = "PHONE";
+            } else {
+                bookingSource = src;
+            }
+        }
+
         bookingRepository.save(Booking.builder()
                 .bookingCode("MB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .slot(slot)
                 .userId(ownerUserId)
+                .guestName(req.getCustomerName())
+                .guestPhone(req.getCustomerPhone())
+                .source(bookingSource)
+                .notes(req.getNotes())
                 .venueId(targetVenueId)
                 .pitchId(slot.getPitch().getId())
                 .bookingDate(slot.getSlotDate())
@@ -718,26 +834,62 @@ public class VenueManagementService {
     }
 
     private List<Slot> seedSlotsForDate(Long venueId, List<Pitch> pitches, LocalDate date) {
-        LocalTime[] startTimes = {
-                LocalTime.of(16, 0),
-                LocalTime.of(17, 45),
-                LocalTime.of(19, 30),
-                LocalTime.of(21, 0),
-                LocalTime.of(22, 30)
-        };
+        List<SportPricingRule> rules = pricingRuleRepository.findActiveByVenueId(venueId);
+        Venue venue = venueRepository.findById(venueId).orElse(null);
         List<Slot> createdSlots = new ArrayList<>();
+
         for (Pitch p : pitches) {
-            for (LocalTime start : startTimes) {
+            // Check if pitch has a matching sport rule
+            SportPricingRule matchingRule = null;
+            if (p.getSports() != null && !p.getSports().isEmpty()) {
+                for (Sport s : p.getSports()) {
+                    matchingRule = rules.stream()
+                            .filter(r -> r.getSport() != null && r.getSport().getId().equals(s.getId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (matchingRule != null) break;
+                }
+            }
+            if (matchingRule == null && !rules.isEmpty()) {
+                matchingRule = rules.get(0);
+            }
+
+            int durationMin = (matchingRule != null && matchingRule.getSlotDurationMin() > 0)
+                    ? matchingRule.getSlotDurationMin()
+                    : 90;
+            int bufferMin = (matchingRule != null && matchingRule.getBufferMin() >= 0)
+                    ? matchingRule.getBufferMin()
+                    : 10;
+            BigDecimal price = (matchingRule != null && matchingRule.getRate() != null)
+                    ? matchingRule.getRate()
+                    : (venue != null && venue.getBasePrice() != null ? venue.getBasePrice() : BigDecimal.valueOf(2000));
+
+            LocalTime startWindow = (matchingRule != null && matchingRule.getWindowStart() != null)
+                    ? matchingRule.getWindowStart()
+                    : (venue != null && venue.getOpenTime() != null ? venue.getOpenTime() : LocalTime.of(16, 0));
+            LocalTime endWindow = (matchingRule != null && matchingRule.getWindowEnd() != null)
+                    ? matchingRule.getWindowEnd()
+                    : (venue != null && venue.getCloseTime() != null ? venue.getCloseTime() : LocalTime.of(23, 30));
+
+            LocalTime cursor = startWindow;
+            while (cursor.isBefore(endWindow)) {
+                LocalTime slotEnd = cursor.plusMinutes(durationMin);
+                if (slotEnd.isAfter(endWindow) || slotEnd.isBefore(cursor)) {
+                    break;
+                }
                 Slot slot = Slot.builder()
                         .pitch(p)
                         .venueId(venueId)
                         .slotDate(date)
-                        .price(java.math.BigDecimal.valueOf(2000))
-                        .startTime(start)
-                        .endTime(start.plusMinutes(90))
+                        .price(price)
+                        .startTime(cursor)
+                        .endTime(slotEnd)
                         .status(SlotStatus.AVAILABLE)
                         .build();
                 createdSlots.add(slotRepository.save(slot));
+
+                // Advance by slot duration + buffer
+                cursor = slotEnd.plusMinutes(bufferMin);
             }
         }
         return createdSlots;
@@ -785,6 +937,10 @@ public class VenueManagementService {
                         .findFirst()
                         .orElse(null);
 
+                String headerSport = (header.getSports() != null && !header.getSports().isEmpty())
+                        ? header.getSports().get(0)
+                        : "Football";
+
                 if (pitchSlot != null) {
                     String variant = "online";
                     String label = "Available";
@@ -817,6 +973,20 @@ public class VenueManagementService {
                         openable = true;
                     }
 
+                    String custName = booking != null && booking.getGuestName() != null && !booking.getGuestName().isBlank()
+                            ? booking.getGuestName()
+                            : (customer != null ? customer.getFullName() : null);
+                    String custPhone = booking != null && booking.getGuestPhone() != null && !booking.getGuestPhone().isBlank()
+                            ? booking.getGuestPhone()
+                            : (customer != null ? customer.getPhone() : null);
+
+                    String startStr = pitchSlot.getStartTime() != null ? pitchSlot.getStartTime().format(timeFormatter) : timeLabel;
+                    String endStr = pitchSlot.getEndTime() != null ? pitchSlot.getEndTime().format(timeFormatter) : null;
+                    Integer durationMin = null;
+                    if (pitchSlot.getStartTime() != null && pitchSlot.getEndTime() != null) {
+                        durationMin = (int) java.time.Duration.between(pitchSlot.getStartTime(), pitchSlot.getEndTime()).toMinutes();
+                    }
+
                     cells.add(OwnerCalendarDto.CellDto.builder()
                             .slotId(pitchSlot.getId())
                             .pitchId(header.getId())
@@ -826,10 +996,14 @@ public class VenueManagementService {
                             .openable(openable)
                             .status(pitchSlot.getStatus().name())
                             .price(pitchSlot.getPrice() != null ? pitchSlot.getPrice().doubleValue() : 2000.0)
+                            .startTime(startStr)
+                            .endTime(endStr)
+                            .durationMinutes(durationMin)
+                            .sport(headerSport)
                             .bookingId(booking != null ? booking.getId() : null)
                             .bookingCode(booking != null ? booking.getBookingCode() : null)
-                            .customerName(customer != null ? customer.getFullName() : null)
-                            .customerPhone(customer != null ? customer.getPhone() : null)
+                            .customerName(custName)
+                            .customerPhone(custPhone)
                             .checkedIn(booking != null && booking.getCheckedInAt() != null)
                             .build());
                 } else {
@@ -842,6 +1016,10 @@ public class VenueManagementService {
                             .openable(true)
                             .status("AVAILABLE")
                             .price(2000.0)
+                            .startTime(timeLabel)
+                            .endTime(null)
+                            .durationMinutes(90)
+                            .sport(headerSport)
                             .build());
                 }
             }

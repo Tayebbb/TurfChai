@@ -8,7 +8,10 @@ import com.turfchai.venue.dto.owner.OwnerCalendarDto;
 import com.turfchai.venue.entity.Pitch;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.PitchRepository;
+import com.turfchai.venue.repository.SportPricingRuleRepository;
+import com.turfchai.venue.repository.SportRepository;
 import com.turfchai.venue.repository.VenueRepository;
+import com.turfchai.venue.dto.owner.UpdateVenueRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,6 +45,21 @@ class VenueManagementServiceTest {
 
     @Mock
     private com.turfchai.repository.UserRepository userRepository;
+
+    @Mock
+    private SportPricingRuleRepository pricingRuleRepository;
+
+    @Mock
+    private SportRepository sportRepository;
+
+    @Mock
+    private com.turfchai.booking.service.SlotTimePolicy slotTimePolicy;
+
+    @Mock
+    private com.turfchai.pricing.service.PricingInferenceService pricingInferenceService;
+
+    @Mock
+    private SlotPricingRuleEngine pricingEngine;
 
     @Mock
     private com.turfchai.repository.TurfRequestRepository turfRequestRepository;
@@ -298,5 +316,25 @@ class VenueManagementServiceTest {
 
         assertTrue(result.isEmpty(), "an owner who created nothing owns nothing");
         verify(venueRepository, never()).save(any(Venue.class));
+    }
+
+    @Test
+    @DisplayName("Toggling mlPricingEnabled updates venue and triggers upcoming slot repricing")
+    void testUpdateVenue_MlPricingEnabledToggle() {
+        when(venueRepository.findById(100L)).thenReturn(Optional.of(venue1));
+        when(venueRepository.save(any(Venue.class))).thenAnswer(i -> i.getArgument(0));
+        when(slotRepository.findUpcomingAvailableSlots(eq(100L), any(), any())).thenReturn(List.of());
+
+        var updateReq = new UpdateVenueRequest(
+                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, false, null
+        );
+
+        venue1.setMlPricingEnabled(true);
+        var res = venueManagementService.updateVenue(10L, 100L, updateReq);
+
+        assertFalse(venue1.isMlPricingEnabled());
+        assertFalse(res.mlPricingEnabled());
+        verify(slotRepository).findUpcomingAvailableSlots(eq(100L), any(), any());
     }
 }

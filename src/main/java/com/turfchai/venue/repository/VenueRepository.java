@@ -16,6 +16,7 @@ public interface VenueRepository extends JpaRepository<Venue, Long>, JpaSpecific
     List<Venue> findByArea(String area);
 
     // Owner-facing lookups
+    @org.springframework.data.jpa.repository.Query("SELECT v FROM Venue v WHERE v.owner.id = :ownerUserId ORDER BY v.id ASC")
     List<Venue> findByOwnerId(Long ownerUserId);
 
     // Weather sync
