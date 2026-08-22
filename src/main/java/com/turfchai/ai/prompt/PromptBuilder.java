@@ -21,8 +21,15 @@ public class PromptBuilder {
 
     /** {@code includeToolGuidance=false} saves tokens when no tools are exposed. */
     public String buildSystemPrompt(String stateSummary, boolean includeToolGuidance) {
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Dhaka"));
+        String dateStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd (EEEE) HH:mm 'Dhaka Time'"));
+
         StringBuilder prompt = new StringBuilder()
                 .append(loader.load("system")).append("\n\n")
+                .append("## Current Date & Time (Dhaka)\n")
+                .append("- **Current Time**: ").append(dateStr).append("\n")
+                .append("- When user says \"today\" or \"tonight\", the date is `").append(now.toLocalDate().toString()).append("`.\n")
+                .append("- When user says \"tomorrow\", the date is `").append(now.toLocalDate().plusDays(1).toString()).append("`.\n\n")
                 .append(loader.load("safety")).append("\n\n")
                 .append(loader.load("role-booking-assistant"));
         if (includeToolGuidance) {
