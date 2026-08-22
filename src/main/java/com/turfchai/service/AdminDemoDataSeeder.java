@@ -82,6 +82,19 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
             "Uttara", "Badda", "Rampura", "Wari", "Khilgaon"
     };
 
+    private static final String[] VENUE_PHOTO_URLS = {
+            "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80",
+            "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80",
+            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80",
+            "https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800&q=80",
+            "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=800&q=80",
+            "https://images.unsplash.com/photo-1518604667503-465ac943e86c?w=800&q=80",
+            "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&q=80",
+            "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+            "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?w=800&q=80",
+            "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=800&q=80"
+    };
+
     /**
      * Weighted acquisition-channel distribution (100 entries) assigned to users.
      */
@@ -342,6 +355,7 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
                     .tournamentReady(i % 5 == 0)
                     .hasPromotion(i % 7 == 0)
                     .promotionLabel(i % 7 == 0 ? "Buy 5 get 1 free" : null)
+                    .photos(VENUE_PHOTO_URLS[i % VENUE_PHOTO_URLS.length] + "," + VENUE_PHOTO_URLS[(i + 1) % VENUE_PHOTO_URLS.length])
                     .amenities("floodlights,parking,changing_room,water,first_aid")
                     .openTime(LocalTime.of(6, 0))
                     .closeTime(LocalTime.of(23, 0))
