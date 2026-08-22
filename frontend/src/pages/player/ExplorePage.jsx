@@ -175,6 +175,13 @@ export default function ExplorePage() {
   // Filters live in the URL so the home-page chips can deep-link straight into them.
   const filterParams = useMemo(() => readFilterParams(searchParams), [searchParams]);
 
+  // Sync state when URL search params change (e.g. from dashboard search bar)
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    setQuery(q);
+    setDebouncedQuery(q);
+  }, [searchParams.get('q')]);
+
   // Debounce keystrokes so we don't hit the API on every character.
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
@@ -307,16 +314,13 @@ export default function ExplorePage() {
         {/* ── Single-door search context + filters ── */}
         <div className="search-bar-row">
           <label className="search-context-pill" htmlFor="venue-search" aria-label="Search venues">
-            <div className="scp-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" strokeWidth="2.5" {...svgProps}>
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </div>
+            <span className="search-compact-icon" aria-hidden="true" style={{ fontSize: 16, flexShrink: 0 }}>
+              🔍
+            </span>
             <input
               id="venue-search"
               type="search"
-              placeholder="Location · Date · Time"
+              placeholder="Turf, sport, or area…"
               autoComplete="off"
               spellCheck="false"
               aria-label="Search venues"
@@ -394,7 +398,12 @@ export default function ExplorePage() {
             {!search.loading && venues.map((venue) => (
               <Link key={venue.id} className="vc" to={paths.player.venue(venue.id)} aria-label={venue.cardLabel}>
                 <div className="vc-photo">
-                  <Photo variant={venue.photoVariant} glyph={venue.glyph} />
+                  <Photo
+                    photos={venue.photos}
+                    imgUrl={venue.imgUrl || venue.photos?.[0]}
+                    variant={venue.photoVariant}
+                    glyph={venue.glyph}
+                  />
                   {venue.promo ? <span className="vc-promo">{venue.promo}</span> : null}
                   <button
                     className="vc-save"

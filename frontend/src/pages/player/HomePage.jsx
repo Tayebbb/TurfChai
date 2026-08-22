@@ -5,7 +5,6 @@ import { Button } from '@/components/buttons/Button';
 import { GameCard } from '@/components/cards/GameCard';
 import { VenueCard } from '@/components/cards/VenueCard';
 import { SearchCompact } from '@/components/forms/SearchBar';
-import { ViewAsMenu } from '@/components/navigation/ViewAsMenu';
 import { Badge } from '@/components/ui/Badge';
 import { Chip, ChipRow } from '@/components/ui/Chip';
 import { Photo } from '@/components/ui/Photo';
@@ -31,11 +30,6 @@ import { paths } from '@/routes/paths';
 import { formatBdt, formatNumber } from '@/utils/format';
 import './HomePage.css';
 
-const MODES = [
-  { id: 'player', label: 'Player', description: 'Book turfs & manage matches' },
-  { id: 'solo', label: 'Solo Player', description: 'Join open games near you' },
-  { id: 'host', label: 'Tournament Host', description: 'Run your own tournament' },
-];
 
 /**
  * Home chips deep-link into Explore. Every query below is a filter the venue
@@ -47,7 +41,6 @@ const PLAYER_CHIPS = [
   { label: '🏸 Badminton', query: 'sport=badminton' },
   { label: 'Open at 7 PM', query: 'openAt=19%3A00' },
   { label: 'Floodlit', query: 'amenity=floodlights' },
-  { label: 'Verified only', query: 'verified=true' },
 ];
 
 /** The open-games feed takes no deep-link filters, so these are plain destinations. */
@@ -98,7 +91,7 @@ function toGameCardModel(game) {
 }
 
 export default function HomePage() {
-  const [mode, setMode] = useQueryParam('mode', 'player');
+  const [mode] = useQueryParam('mode', 'player');
   // `/player` is a public browsing surface, so the profile call must wait for
   // a real session — otherwise a signed-out visitor greets as somebody else.
   const { user: player, signedIn } = useSession();
@@ -117,10 +110,7 @@ export default function HomePage() {
             </h1>
             <span className="subtle">
               {signedIn ? (
-                <>
-                  {player?.area ? `${player.area} · ` : ''}
-                  <Link to={paths.player.settings}>Edit profile</Link>
-                </>
+                player?.area || 'Browse venues and open games'
               ) : (
                 <>
                   Browse venues and open games · <Link to={paths.auth}>Sign in</Link> to book
@@ -128,15 +118,14 @@ export default function HomePage() {
               )}
             </span>
           </div>
-          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-            {player?.reliabilityScore != null ? (
+          {player?.reliabilityScore != null ? (
+            <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
               <Badge tone="green">
                 {player.reliabilityScore}% reliability
                 {player.gamesAttended ? ` · ${formatNumber(player.gamesAttended)} games` : ''}
               </Badge>
-            ) : null}
-            <ViewAsMenu options={MODES} value={mode} onChange={setMode} />
-          </div>
+            </div>
+          ) : null}
         </div>
 
         {mode === 'solo' ? <SoloMode /> : mode === 'host' ? <HostMode /> : <PlayerMode />}
@@ -158,7 +147,6 @@ function PlayerMode() {
       <SearchCompact
         to={paths.player.explore}
         placeholder="Turf, sport, or area…"
-        highlight="tonight?"
         label="Search venues"
       />
       <ChipRow style={{ marginTop: 12 }}>
@@ -379,7 +367,6 @@ function SoloMode() {
       <SearchCompact
         to={paths.solo.openGames}
         placeholder="Find an open game…"
-        highlight="football tonight?"
         label="Search open games"
       />
       <ChipRow style={{ marginTop: 12 }}>
