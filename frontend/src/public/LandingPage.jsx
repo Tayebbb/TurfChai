@@ -168,7 +168,7 @@ export default function LandingPage() {
                 to={paths.player.venue(venue.slug)}
                 style={{ textDecoration: 'none', color: 'var(--text)' }}
               >
-                <Photo glyph="⚽" />
+                <Photo photos={venue.photos} imgUrl={venue.photos?.[0] || venue.coverImageUrl} glyph="⚽" />
                 <div className="body">
                   <div className="name">
                     {venue.name}{' '}
