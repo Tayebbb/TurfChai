@@ -86,6 +86,21 @@ public class BookingResponse {
     @Schema(description = "When the player checked in at the gate")
     private OffsetDateTime checkedInAt;
 
+    @Schema(description = "Whether split payment is enabled for this booking")
+    private Boolean splitEnabled;
+
+    @Schema(description = "Split payment deadline")
+    private OffsetDateTime splitDeadline;
+
+    @Schema(description = "Total amount paid via split shares")
+    private BigDecimal splitTotalPaid;
+
+    @Schema(description = "Remaining amount unpaid via split shares")
+    private BigDecimal splitRemaining;
+
+    @Schema(description = "Linked open game ID if posted as open game")
+    private Long openGameId;
+
     @Schema(description = "When the booking was created", example = "2026-08-06T18:00:00+06:00")
     private OffsetDateTime createdAt;
 

@@ -15,7 +15,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Read-side slot availability with on-demand generation. Slots have no
@@ -77,22 +80,41 @@ public class SlotAvailabilityService {
         List<SportPricingRule> rules = pricingRuleRepository.findActiveByVenueId(venueId);
 
         List<Slot> created = new ArrayList<>();
+        Set<String> plannedKeys = new HashSet<>();
         for (Pitch pitch : pitches) {
-            created.addAll(generateForPitch(venueId, pitch, date, rules));
+            created.addAll(generateForPitch(venueId, pitch, date, rules, plannedKeys));
         }
         return created.isEmpty() ? created : slotRepository.saveAll(created);
     }
 
-    private List<Slot> generateForPitch(Long venueId, Pitch pitch, LocalDate date, List<SportPricingRule> rules) {
+    private List<Slot> generateForPitch(Long venueId, Pitch pitch, LocalDate date, List<SportPricingRule> rules, Set<String> plannedKeys) {
+        List<SportPricingRule> pitchRules = rules.stream()
+                .filter(r -> appliesToPitch(pitch, r))
+                .filter(r -> appliesOn(r, date))
+                .sorted(Comparator.comparing(SportPricingRule::getWindowStart, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+
+        if (pitchRules.isEmpty()) {
+            pitchRules = rules.stream()
+                    .filter(r -> appliesOn(r, date))
+                    .sorted(Comparator.comparing(SportPricingRule::getWindowStart, Comparator.nullsLast(Comparator.naturalOrder())))
+                    .toList();
+        }
+
         List<Slot> slots = new ArrayList<>();
-        for (SportPricingRule rule : rules) {
-            if (appliesOn(rule, date)) {
-                slots.addAll(generateWindow(venueId, pitch, date, rule));
-            }
+        for (SportPricingRule rule : pitchRules) {
+            slots.addAll(generateWindow(venueId, pitch, date, rule, plannedKeys));
         }
         // Rules that produce nothing (e.g. a window shorter than one slot) must
         // not leave the pitch with zero bookable times.
-        return slots.isEmpty() ? generateDefaults(venueId, pitch, date) : slots;
+        return slots.isEmpty() ? generateDefaults(venueId, pitch, date, plannedKeys) : slots;
+    }
+
+    private boolean appliesToPitch(Pitch pitch, SportPricingRule rule) {
+        if (pitch == null || pitch.getSports() == null || pitch.getSports().isEmpty() || rule.getSport() == null) {
+            return true;
+        }
+        return pitch.getSports().stream().anyMatch(s -> s.getId().equals(rule.getSport().getId()));
     }
 
     private boolean appliesOn(SportPricingRule rule, LocalDate date) {
@@ -101,32 +123,43 @@ public class SlotAvailabilityService {
                 || rule.getDaysOfWeek().contains(date.getDayOfWeek().getValue());
     }
 
-    private List<Slot> generateWindow(Long venueId, Pitch pitch, LocalDate date, SportPricingRule rule) {
+    private List<Slot> generateWindow(Long venueId, Pitch pitch, LocalDate date, SportPricingRule rule, Set<String> plannedKeys) {
         List<Slot> slots = new ArrayList<>();
         int duration = rule.getSlotDurationMin() > 0 ? rule.getSlotDurationMin() : DEFAULT_DURATION_MIN;
-        int step = duration + rule.getBufferMin();
-        LocalTime cursor = rule.getWindowStart();
-        while (cursor != null && !cursor.plusMinutes(duration).isAfter(rule.getWindowEnd())) {
-            if (!slotRepository.existsByPitchIdAndSlotDateAndStartTime(pitch.getId(), date, cursor)) {
+        int buffer = Math.max(0, rule.getBufferMin());
+        int step = duration + buffer;
+        LocalTime cursor = rule.getWindowStart() != null ? rule.getWindowStart() : LocalTime.of(6, 0);
+        LocalTime windowEnd = rule.getWindowEnd() != null ? rule.getWindowEnd() : LocalTime.of(23, 30);
+
+        while (cursor != null && !cursor.plusMinutes(duration).isAfter(windowEnd)) {
+            LocalTime end = cursor.plusMinutes(duration);
+            String key = pitch.getId() + "@" + cursor;
+            if (!plannedKeys.contains(key) && !slotRepository.existsByPitchIdAndSlotDateAndStartTime(pitch.getId(), date, cursor)) {
+                plannedKeys.add(key);
                 slots.add(Slot.builder()
                         .pitch(pitch)
                         .venueId(venueId)
                         .slotDate(date)
                         .price(rule.getRate())
                         .startTime(cursor)
-                        .endTime(cursor.plusMinutes(duration))
+                        .endTime(end)
                         .status(SlotStatus.AVAILABLE)
                         .build());
+            }
+            if (cursor.plusMinutes(step).isBefore(cursor)) {
+                break;
             }
             cursor = cursor.plusMinutes(step);
         }
         return slots;
     }
 
-    private List<Slot> generateDefaults(Long venueId, Pitch pitch, LocalDate date) {
+    private List<Slot> generateDefaults(Long venueId, Pitch pitch, LocalDate date, Set<String> plannedKeys) {
         List<Slot> slots = new ArrayList<>();
         for (LocalTime start : DEFAULT_START_TIMES) {
-            if (!slotRepository.existsByPitchIdAndSlotDateAndStartTime(pitch.getId(), date, start)) {
+            String key = pitch.getId() + "@" + start;
+            if (!plannedKeys.contains(key) && !slotRepository.existsByPitchIdAndSlotDateAndStartTime(pitch.getId(), date, start)) {
+                plannedKeys.add(key);
                 boolean offPeak = start.isBefore(PEAK_THRESHOLD);
                 slots.add(Slot.builder()
                         .pitch(pitch)

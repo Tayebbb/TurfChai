@@ -155,6 +155,28 @@ class BookingRestControllerTest {
         }
 
         @Test
+        void releaseHold_releasesActiveHold() throws Exception {
+                Slot slot = freshSlot();
+                String request = "{\"slotId\":" + slot.getId() + "}";
+
+                mockMvc.perform(post("/api/v1/bookings/hold-slot")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(request))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(post("/api/v1/bookings/release-hold")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(request))
+                                .andExpect(status().isOk());
+
+                Slot updated = slotRepository.findById(slot.getId()).orElseThrow();
+                org.junit.jupiter.api.Assertions.assertEquals(SlotStatus.AVAILABLE, updated.getStatus());
+                org.junit.jupiter.api.Assertions.assertNull(updated.getHeldByUserId());
+        }
+
+        @Test
         void createBooking_requiresAuthentication() throws Exception {
                 mockMvc.perform(post("/api/v1/bookings")
                                 .contentType(MediaType.APPLICATION_JSON)

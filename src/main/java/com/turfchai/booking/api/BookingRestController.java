@@ -1,11 +1,16 @@
 package com.turfchai.booking.api;
 
+import com.turfchai.booking.dto.request.BookingSplitRequest;
 import com.turfchai.booking.dto.request.HoldSlotRequest;
+import com.turfchai.booking.dto.request.SharePaymentRequest;
 import com.turfchai.booking.dto.response.BookingResponse;
+import com.turfchai.booking.dto.response.BookingSplitResponse;
+import com.turfchai.booking.dto.response.ShareDetailsResponse;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.repository.SlotRepository;
 import com.turfchai.booking.service.BookingPdfService;
 import com.turfchai.booking.service.BookingService;
+import com.turfchai.booking.service.BookingSplitService;
 import com.turfchai.payment.service.PaymentService;
 import com.turfchai.security.UserPrincipal;
 import com.turfchai.venue.repository.VenueRepository;
@@ -53,6 +58,7 @@ public class BookingRestController {
     private final VenueRepository venueRepository;
     private final PaymentService paymentService;
     private final BookingPdfService bookingPdfService;
+    private final BookingSplitService bookingSplitService;
 
     /**
      * Acquires a 5-minute hold on a slot. The response is enriched with the
@@ -118,6 +124,24 @@ public class BookingRestController {
             body.put("endTime", slot.getEndTime());
         });
         return ResponseEntity.ok(body);
+    }
+
+    /**
+     * Releases an active hold owned by the caller so the slot is immediately
+     * bookable again and no longer holds up the player's session.
+     */
+    @Operation(summary = "Release a slot hold", description = "Releases the caller's active hold on the given slot immediately.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Hold released"),
+            @ApiResponse(responseCode = "400", description = "Validation failed (missing slotId)"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    })
+    @PostMapping("/release-hold")
+    public ResponseEntity<Void> releaseHold(
+            Authentication authentication,
+            @Valid @RequestBody HoldSlotRequest request) {
+        bookingService.releaseHold(currentUserId(authentication), request.getSlotId());
+        return ResponseEntity.ok().build();
     }
 
     /**
@@ -214,6 +238,41 @@ public class BookingRestController {
                 .map(bookingService::toResponse)
                 .toList();
         return ResponseEntity.ok(bookings);
+    }
+
+    @Operation(summary = "Enable or reconfigure price split for a booking", description = "Divides the booking price equally among the given number of players and generates share tokens.")
+    @PostMapping("/{id}/split")
+    public ResponseEntity<BookingSplitResponse> enableSplit(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody BookingSplitRequest request) {
+        BookingSplitResponse response = bookingSplitService.enableSplit(id, request, currentUserId(authentication));
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get split payment status for a booking", description = "Returns the list of members, payment status, and share tokens for a split booking.")
+    @GetMapping("/{id}/split")
+    public ResponseEntity<BookingSplitResponse> getSplitStatus(
+            Authentication authentication,
+            @PathVariable Long id) {
+        BookingSplitResponse response = bookingSplitService.getSplitStatus(id, currentUserId(authentication));
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get share details by public share token", description = "Public endpoint to load booking and share summary for the pay-share QR/link landing page.")
+    @GetMapping("/share/{token}")
+    public ResponseEntity<ShareDetailsResponse> getShareDetails(@PathVariable String token) {
+        ShareDetailsResponse response = bookingSplitService.getShareDetails(token);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Complete payment for a single share", description = "Public endpoint to mark a friend's share as paid via the share token.")
+    @PostMapping("/share/{token}/pay")
+    public ResponseEntity<ShareDetailsResponse> completeSharePayment(
+            @PathVariable String token,
+            @Valid @RequestBody SharePaymentRequest request) {
+        ShareDetailsResponse response = bookingSplitService.completeSharePayment(token, request);
+        return ResponseEntity.ok(response);
     }
 
     private Long currentUserId(Authentication authentication) {

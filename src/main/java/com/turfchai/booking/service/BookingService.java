@@ -131,6 +131,34 @@ public class BookingService {
     }
 
     /**
+     * Releases an active hold owned by the caller so the slot returns to
+     * AVAILABLE immediately rather than tying up inventory for 5 minutes.
+     */
+    @Transactional
+    public void releaseHold(Long userId, Long slotId) {
+        if (slotId == null || userId == null) {
+            return;
+        }
+        Slot slot = slotRepository.findByIdForUpdate(slotId)
+                .orElseThrow(() -> new SlotUnavailableException("Slot not found with id: " + slotId));
+
+        if (slot.getStatus() == SlotStatus.HELD && userId.equals(slot.getHeldByUserId())) {
+            slot.setStatus(SlotStatus.AVAILABLE);
+            slot.setHeldByUserId(null);
+            slot.setHoldExpiresAt(null);
+            slotRepository.save(slot);
+            events.publishEvent(SlotStatusChangedEvent.of(
+                    slot.getId(), slot.getVenueId(), slot.getSlotDate(), SlotStatus.AVAILABLE));
+
+            bookingRepository.findBySlotIdAndUserIdAndStatus(slotId, userId, BookingStatus.PENDING)
+                    .ifPresent(booking -> {
+                        booking.setStatus(BookingStatus.CANCELLED);
+                        bookingRepository.save(booking);
+                    });
+        }
+    }
+
+    /**
      * Converts the caller's active hold into a confirmed booking. The slot is
      * re-locked to guarantee the hold is still valid (owned, not expired)
      * before committing the booking.
@@ -446,6 +474,11 @@ public class BookingService {
                 .promoCode(booking.getPromoCode())
                 .discountAmount(booking.getDiscountAmount())
                 .checkedInAt(booking.getCheckedInAt())
+                .splitEnabled(booking.getSplitEnabled())
+                .splitDeadline(booking.getSplitDeadline())
+                .splitTotalPaid(booking.getSplitTotalPaid())
+                .splitRemaining(booking.getSplitRemaining())
+                .openGameId(booking.getOpenGameId())
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())
                 .build();
