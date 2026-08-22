@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -27,17 +28,47 @@ public class OwnerReviewService {
     private final ReviewRepository reviewRepository;
 
     public Map<String, Object> getReviewsSummary(Long ownerUserId) {
+        return getReviewsSummary(ownerUserId, null);
+    }
+
+    public Map<String, Object> getReviewsSummary(Long ownerUserId, String venueFilter) {
         List<Venue> ownerVenues = venueRepository.findByOwnerId(ownerUserId);
         if (ownerVenues.isEmpty()) {
             return emptySummary();
         }
 
-        String venueSlug = ownerVenues.get(0).getSlug();
-        List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
+        List<Map<String, Object>> venueList = ownerVenues.stream().map(v -> {
+            Integer c = reviewRepository.getReviewCountForVenue(v.getId());
+            BigDecimal avg = reviewRepository.getAverageRatingForVenue(v.getId());
+            Map<String, Object> vm = new HashMap<>();
+            vm.put("id", v.getId());
+            vm.put("name", v.getName());
+            vm.put("slug", v.getSlug());
+            vm.put("reviewCount", c != null ? c : 0);
+            vm.put("averageRating", avg != null ? String.format("%.1f", avg) : "0.0");
+            return vm;
+        }).toList();
+
+        List<Venue> filteredVenues = ownerVenues;
+        if (venueFilter != null && !venueFilter.isBlank() && !venueFilter.equalsIgnoreCase("all")) {
+            filteredVenues = ownerVenues.stream()
+                    .filter(v -> venueFilter.equalsIgnoreCase(v.getSlug())
+                            || venueFilter.equalsIgnoreCase(String.valueOf(v.getId()))
+                            || venueFilter.equalsIgnoreCase(v.getName()))
+                    .toList();
+            if (filteredVenues.isEmpty()) {
+                filteredVenues = ownerVenues;
+            }
+        }
+
+        String venueSlug = filteredVenues.get(0).getSlug();
+        List<Long> venueIds = filteredVenues.stream().map(Venue::getId).toList();
         List<Review> reviews = reviewRepository.findByVenueIdInOrderByCreatedAtDesc(venueIds);
 
         if (reviews.isEmpty()) {
-            return emptySummaryWithSlug(venueSlug);
+            Map<String, Object> res = new HashMap<>(emptySummaryWithSlug(venueSlug));
+            res.put("venues", venueList);
+            return res;
         }
 
         List<Map<String, Object>> items = new ArrayList<>();
@@ -76,6 +107,9 @@ public class OwnerReviewService {
             item.put("initials", initials);
             item.put("avatarTone", "brand");
             item.put("rating", overall);
+            item.put("venueId", r.getVenue() != null ? r.getVenue().getId() : null);
+            item.put("venueName", r.getVenue() != null ? r.getVenue().getName() : "");
+            item.put("venueSlug", r.getVenue() != null ? r.getVenue().getSlug() : "");
             item.put("subtitle", (r.getVenue() != null ? r.getVenue().getName() : "")
                     + (r.getCreatedAt() != null ? " · " + r.getCreatedAt().format(formatter) : ""));
             item.put("date", r.getCreatedAt() != null ? r.getCreatedAt().format(formatter) : "N/A");
@@ -103,13 +137,15 @@ public class OwnerReviewService {
 
         String averageRating = reviews.size() > 0 ? String.format("%.1f", totalRating / reviews.size()) : "0.0";
 
-        return Map.of(
-                "venueSlug", venueSlug,
-                "items", items,
-                "ratingBreakdown", ratingBreakdown,
-                "categoryAverages", categoryAverages,
-                "averageRating", averageRating,
-                "totalReviews", reviews.size());
+        Map<String, Object> response = new HashMap<>();
+        response.put("venueSlug", venueSlug);
+        response.put("items", items);
+        response.put("ratingBreakdown", ratingBreakdown);
+        response.put("categoryAverages", categoryAverages);
+        response.put("averageRating", averageRating);
+        response.put("totalReviews", reviews.size());
+        response.put("venues", venueList);
+        return response;
     }
 
     /**
@@ -117,10 +153,8 @@ public class OwnerReviewService {
      *
      * @throws ReviewNotFoundException if the review does not exist, or belongs to a
      *                                 venue this owner does not own — the two cases
-     *                                 are
-     *                                 deliberately indistinguishable so review ids
-     *                                 of
-     *                                 other venues cannot be probed.
+     *                                 are deliberately indistinguishable so review ids
+     *                                 of other venues cannot be probed.
      */
     @Transactional
     public Map<String, Object> respond(Long ownerUserId, Long reviewId, String response) {
@@ -176,6 +210,7 @@ public class OwnerReviewService {
         res.put("categoryAverages", List.of());
         res.put("averageRating", "0.0");
         res.put("totalReviews", 0);
+        res.put("venues", List.of());
         return res;
     }
 }

@@ -30,9 +30,10 @@ public class OwnerReviewRestController {
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getOwnerReviews(
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserPrincipal principal,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String venue) {
 
-        return ResponseEntity.ok(ownerReviewService.getReviewsSummary(principal.getId()));
+        return ResponseEntity.ok(ownerReviewService.getReviewsSummary(principal.getId(), venue));
     }
 
     /**

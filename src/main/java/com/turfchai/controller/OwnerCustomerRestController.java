@@ -3,9 +3,14 @@ package com.turfchai.controller;
 import com.turfchai.booking.entity.Booking;
 import com.turfchai.booking.entity.BookingStatus;
 import com.turfchai.booking.repository.BookingRepository;
+import com.turfchai.model.OwnerCustomerNote;
 import com.turfchai.model.User;
+import com.turfchai.promotion.entity.Promotion;
+import com.turfchai.promotion.repository.PromotionRepository;
+import com.turfchai.repository.OwnerCustomerNoteRepository;
 import com.turfchai.repository.UserRepository;
 import com.turfchai.security.UserPrincipal;
+import com.turfchai.service.NotificationService;
 import com.turfchai.venue.entity.Venue;
 import com.turfchai.venue.repository.VenueRepository;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -13,12 +18,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,14 +35,17 @@ import java.util.stream.Collectors;
 @PreAuthorize("hasAnyRole('OWNER','ADMIN','SUPER_ADMIN')")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-@Transactional(readOnly = true)
 public class OwnerCustomerRestController {
 
     private final VenueRepository venueRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final OwnerCustomerNoteRepository ownerCustomerNoteRepository;
+    private final PromotionRepository promotionRepository;
+    private final NotificationService notificationService;
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getOwnerCustomers(
             @AuthenticationPrincipal UserPrincipal principal) {
 
@@ -48,6 +56,11 @@ public class OwnerCustomerRestController {
 
         List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
         List<Booking> allBookings = bookingRepository.findByVenueIdIn(venueIds);
+
+        // Group notes by customer
+        Map<Long, String> notesMap = ownerCustomerNoteRepository.findByOwnerId(principal.getId())
+                .stream()
+                .collect(Collectors.toMap(OwnerCustomerNote::getCustomerId, OwnerCustomerNote::getNote, (a, b) -> b));
 
         // Group by user
         Map<Long, List<Booking>> userBookings = allBookings.stream()
@@ -72,10 +85,6 @@ public class OwnerCustomerRestController {
                 if (b.getStatus() == BookingStatus.CONFIRMED && b.getGrossAmount() != null) {
                     totalSpend = totalSpend.add(b.getGrossAmount());
                 }
-                // A visit is a match that has actually been played. Counting every
-                // confirmed booking made this column credit people with visits
-                // they had not made yet, and "last visit" then showed a date in
-                // the future -- next to a loyalty badge built on the same count.
                 if (hasBeenPlayed(b)) {
                     confirmedVisits++;
                     if (lastVisit == null || b.getBookingDate().isAfter(lastVisit)) {
@@ -84,7 +93,7 @@ public class OwnerCustomerRestController {
                 }
             }
 
-            String initials = user.getFullName() != null && user.getFullName().length() > 0
+            String initials = user.getFullName() != null && !user.getFullName().isEmpty()
                     ? user.getFullName().substring(0, 1).toUpperCase()
                     : "?";
 
@@ -94,6 +103,7 @@ public class OwnerCustomerRestController {
             Map<String, Object> c = new HashMap<>();
             c.put("id", user.getId().toString());
             c.put("name", user.getFullName());
+            c.put("email", user.getEmail() != null ? user.getEmail() : "");
             c.put("phone", user.getPhone() != null ? user.getPhone() : "N/A");
             c.put("initials", initials);
             c.put("tone", "green");
@@ -104,6 +114,7 @@ public class OwnerCustomerRestController {
             c.put("loyalty", loyaltyBadge(confirmedVisits));
             c.put("noShows", noShows);
             c.put("noShowsDanger", noShows >= 3);
+            c.put("note", notesMap.getOrDefault(userId, ""));
 
             customers.add(c);
         }
@@ -111,10 +122,134 @@ public class OwnerCustomerRestController {
         return ResponseEntity.ok(customers);
     }
 
-    /**
-     * A confirmed booking whose kick-off has passed — the only thing that counts as
-     * a visit.
-     */
+    @PutMapping("/{customerId}/note")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> updateCustomerNote(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long customerId,
+            @RequestBody Map<String, String> body) {
+
+        String noteText = body.getOrDefault("note", "").trim();
+        OwnerCustomerNote note = ownerCustomerNoteRepository
+                .findByOwnerIdAndCustomerId(principal.getId(), customerId)
+                .orElse(OwnerCustomerNote.builder()
+                        .ownerId(principal.getId())
+                        .customerId(customerId)
+                        .note("")
+                        .build());
+
+        note.setNote(noteText);
+        ownerCustomerNoteRepository.save(note);
+
+        return ResponseEntity.ok(Map.of(
+                "customerId", customerId.toString(),
+                "note", noteText,
+                "success", true));
+    }
+
+    @PostMapping("/{customerId}/reward")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> rewardCustomer(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long customerId) {
+
+        List<Venue> ownerVenues = venueRepository.findByOwnerId(principal.getId());
+        if (ownerVenues.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No venues found for owner"));
+        }
+
+        User user = userRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + customerId));
+
+        Venue primaryVenue = ownerVenues.get(0);
+        Promotion promo = getOrCreateLoyaltyPromo(primaryVenue);
+
+        sendRewardEmailAndNotification(user, primaryVenue, promo);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "code", promo.getCode(),
+                "customerName", user.getFullName(),
+                "message", "10% off coupon (" + promo.getCode() + ") emailed to " + user.getFullName() + "!"));
+    }
+
+    @PostMapping("/reward-regulars")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> rewardAllRegulars(
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        List<Venue> ownerVenues = venueRepository.findByOwnerId(principal.getId());
+        if (ownerVenues.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No venues found for owner"));
+        }
+
+        List<Long> venueIds = ownerVenues.stream().map(Venue::getId).toList();
+        List<Booking> allBookings = bookingRepository.findByVenueIdIn(venueIds);
+
+        // Group by user and count played matches
+        Map<Long, Long> playedVisitsByUser = allBookings.stream()
+                .filter(this::hasBeenPlayed)
+                .collect(Collectors.groupingBy(Booking::getUserId, Collectors.counting()));
+
+        Venue primaryVenue = ownerVenues.get(0);
+        Promotion promo = getOrCreateLoyaltyPromo(primaryVenue);
+
+        int rewardedCount = 0;
+        for (Map.Entry<Long, Long> entry : playedVisitsByUser.entrySet()) {
+            if (entry.getValue() >= 4) { // Regulars have 4+ visits
+                User user = userRepository.findById(entry.getKey()).orElse(null);
+                if (user != null) {
+                    sendRewardEmailAndNotification(user, primaryVenue, promo);
+                    rewardedCount++;
+                }
+            }
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "code", promo.getCode(),
+                "rewardedCount", rewardedCount,
+                "message", "10% off coupon (" + promo.getCode() + ") emailed to " + rewardedCount
+                        + " regular customers!"));
+    }
+
+    private Promotion getOrCreateLoyaltyPromo(Venue venue) {
+        return promotionRepository.findByVenueIdAndCode(venue.getId(), "LOYAL10")
+                .orElseGet(() -> {
+                    Promotion p = new Promotion();
+                    p.setVenue(venue);
+                    p.setCode("LOYAL10");
+                    p.setLabel("Loyalty Reward - 10% Off");
+                    p.setDiscountType("PERCENT");
+                    p.setDiscountValue(new BigDecimal("10.00"));
+                    p.setMinOrderAmount(BigDecimal.ZERO);
+                    p.setValidFrom(Instant.now());
+                    p.setValidUntil(Instant.now().plus(60, ChronoUnit.DAYS));
+                    p.setActive(true);
+                    p.setUsageLimit(null);
+                    return promotionRepository.save(p);
+                });
+    }
+
+    private void sendRewardEmailAndNotification(User user, Venue venue, Promotion promo) {
+        String subject = "🎁 10% Off Loyalty Reward from " + venue.getName();
+        String body = "Hi " + user.getFullName() + ",\n\n"
+                + "Thank you for being a loyal player at " + venue.getName() + "! "
+                + "As a token of our appreciation, here is an exclusive 10% discount coupon for your next booking:\n\n"
+                + "🎫 Coupon Code: " + promo.getCode() + "\n"
+                + "💰 Discount: 10% off\n\n"
+                + "Apply this code at checkout on your next game at " + venue.getName() + ".\n\n"
+                + "See you on the pitch!\n"
+                + "— " + venue.getName();
+
+        notificationService.send(
+                user.getId(),
+                "PROMOTION",
+                subject,
+                body,
+                "/venues/" + venue.getId());
+    }
+
     private boolean hasBeenPlayed(Booking booking) {
         if (booking.getStatus() != BookingStatus.CONFIRMED || booking.getBookingDate() == null) {
             return false;
@@ -125,11 +260,6 @@ public class OwnerCustomerRestController {
         return booking.getBookingDate().atTime(start).isBefore(java.time.LocalDateTime.now());
     }
 
-    /**
-     * Standing at THIS owner's venues, counted from completed bookings. There is
-     * no venue-loyalty programme in the schema, so nothing here is invented: the
-     * badge is just a label on the visit count already shown in the next column.
-     */
     private Map<String, String> loyaltyBadge(int confirmedVisits) {
         if (confirmedVisits >= 10) {
             return Map.of("tone", "green", "text", "VIP · " + confirmedVisits + " visits");
