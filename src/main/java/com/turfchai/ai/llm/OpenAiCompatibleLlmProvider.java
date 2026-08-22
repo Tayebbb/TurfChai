@@ -61,9 +61,11 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
                     .body(String.class);
         } catch (RestClientResponseException e) {
             int status = e.getStatusCode().value();
-            // 429/402 = quota/credits, 5xx = outage - all retryable
-            boolean retryable = status == 429 || status == 402 || e.getStatusCode().is5xxServerError();
-            throw new LlmException(providerName + " request failed with HTTP " + status, e, retryable);
+            String errBody = e.getResponseBodyAsString();
+            log.error("{} request failed with HTTP {}: {}", providerName, status, errBody);
+            // 429/402 = quota/credits, 404 = model unavailable, 5xx = outage - all retryable
+            boolean retryable = status == 429 || status == 402 || status == 404 || e.getStatusCode().is5xxServerError();
+            throw new LlmException(providerName + " request failed with HTTP " + status + ": " + errBody, e, retryable);
         } catch (RestClientException e) {
             throw new LlmException(providerName + " request failed: " + e.getMessage(), e, true);
         }
@@ -117,10 +119,14 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
         body.put("model", config.getModel());
         if (!config.getFallbackModels().isEmpty()) {
             // OpenRouter routing: tried in order when the primary model is
-            // rate-limited or unavailable.
+            // rate-limited or unavailable. OpenRouter requires <= 3 items.
             List<String> routing = new ArrayList<>();
             routing.add(config.getModel());
-            routing.addAll(config.getFallbackModels());
+            for (String fallback : config.getFallbackModels()) {
+                if (routing.size() < 3 && !routing.contains(fallback)) {
+                    routing.add(fallback);
+                }
+            }
             body.put("models", routing);
         }
         body.put("messages", messages);
@@ -191,13 +197,33 @@ public class OpenAiCompatibleLlmProvider implements LlmProvider {
             log.debug("{} requested {} tool call(s)", providerName, toolCalls.size());
             return new LlmResponse(null, toolCalls, usage);
         }
-        String content = message.path("content").asText("");
+        String content = sanitizeContent(message.path("content").asText(""));
         if (content.isBlank()) {
             // Reasoning models sometimes emit answers outside `content`;
             // retryable so the fallback provider gets a chance.
             throw new LlmException(providerName + " returned an empty reply", null, true);
         }
         return new LlmResponse(content, List.of(), usage);
+    }
+
+    static String sanitizeContent(String content) {
+        if (content == null || content.isBlank()) {
+            return "";
+        }
+        String cleaned = content.replaceAll("(?s)<think>.*?</think>", "")
+                .replaceAll("(?s)<thought>.*?</thought>", "")
+                .replaceAll("(?s)<reasoning>.*?</reasoning>", "")
+                .trim();
+
+        // Strip accidental scratchpad leakage if model starts with monologue
+        if (cleaned.startsWith("We need to respond as") || cleaned.startsWith("Thinking Process:") || cleaned.startsWith("Thought:")) {
+            int idx = cleaned.indexOf("\n\n");
+            while (idx != -1 && (cleaned.startsWith("We need") || cleaned.startsWith("Thinking") || cleaned.startsWith("The user") || cleaned.startsWith("Let's") || cleaned.startsWith("I should") || cleaned.startsWith("User asks"))) {
+                cleaned = cleaned.substring(idx).trim();
+                idx = cleaned.indexOf("\n\n");
+            }
+        }
+        return cleaned;
     }
 
     private Map<String, Object> parseArguments(String json) {

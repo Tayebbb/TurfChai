@@ -1,9 +1,8 @@
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, useState, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Brand } from '@/components/common/Brand';
 import { Icon } from '@/components/common/Icon';
 import { RouteErrorBoundary } from '@/components/common/RouteErrorBoundary';
-import { Button } from '@/components/buttons/Button';
 import { IconButton } from '@/components/buttons/IconButton';
 import { ThemeToggle } from '@/components/buttons/ThemeToggle';
 import { Topbar } from '@/components/navigation/Topbar';
@@ -26,18 +25,37 @@ const fallbackInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-/** Owner console shell: full-bleed glass topbar + alerts drawer + account sheet. */
+/** Owner console shell: full-bleed glass topbar + alerts drawer + rollout sign out. */
 export function OwnerLayout() {
   const [, forceRender] = useReducer((x) => x + 1, 0);
   const { showToast } = useToast();
-  const account = useDisclosure(false);
   const alerts = useDisclosure(false);
+  const [showLogout, setShowLogout] = useState(false);
+  const profileRef = useRef(null);
 
   useEffect(() => {
     const handler = () => forceRender();
     window.addEventListener('turfchai:session-change', handler);
     return () => window.removeEventListener('turfchai:session-change', handler);
   }, []);
+
+  useEffect(() => {
+    if (!showLogout) return;
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowLogout(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowLogout(false);
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showLogout]);
 
   const session = getUser();
   const owner = {
@@ -86,28 +104,35 @@ export function OwnerLayout() {
         }
         links={OWNER_NAV_LINKS}
       >
-        <div className="admin-actions owner-actions">
+        <div className="admin-actions owner-actions" ref={profileRef}>
           <IconButton className="admin-ico" label="View alerts" onClick={alerts.open}>
             <Icon name="bell" />
             {unreadCount > 0 && <span className="admin-badge owner-badge">{unreadCount}</span>}
           </IconButton>
           <ThemeToggle className="admin-ico" />
-          <IconButton
-            className="admin-avatar owner-avatar"
-            label="Owner Account & Settings"
-            onClick={account.open}
-          >
-            {owner.initials}
-            <span className="admin-online owner-online" aria-hidden="true" />
-          </IconButton>
-          <IconButton
-            className="admin-ico admin-logout"
-            label="Sign Out"
-            to={paths.auth}
-            onClick={() => clearSession()}
-          >
-            <Icon name="logout" />
-          </IconButton>
+          
+          <div className={cn('owner-profile-cluster', showLogout && 'open')}>
+            <IconButton
+              className={cn('admin-ico admin-logout owner-rollout-logout', showLogout && 'visible')}
+              label="Sign Out"
+              to={paths.auth}
+              onClick={() => clearSession()}
+              tabIndex={showLogout ? 0 : -1}
+              aria-hidden={!showLogout}
+            >
+              <Icon name="logout" />
+            </IconButton>
+
+            <IconButton
+              className={cn('admin-avatar owner-avatar', showLogout && 'active')}
+              label={showLogout ? 'Hide sign out button' : `Owner account (${owner.name}) — Click to sign out`}
+              onClick={() => setShowLogout((prev) => !prev)}
+              aria-expanded={showLogout}
+            >
+              {owner.initials}
+              <span className="admin-online owner-online" aria-hidden="true" />
+            </IconButton>
+          </div>
         </div>
       </Topbar>
 
@@ -176,47 +201,6 @@ export function OwnerLayout() {
             </div>
           )}
         </div>
-      </Overlay>
-
-      {/* Owner Profile & Workspace Action Sheet */}
-      <Overlay isOpen={account.isOpen} onClose={account.close} title="Owner Account" mode="sheet" showGrabber hideHeader>
-        <div className="row" style={{ marginBottom: 16, alignItems: 'center', gap: 12 }}>
-          <span className="avatar lg b" style={{ background: 'linear-gradient(135deg, #15803d, #22c55e)', color: '#fff', fontSize: 18, fontWeight: 800 }}>
-            {owner.initials}
-          </span>
-          <div>
-            <b style={{ fontSize: 16, display: 'block' }}>{owner.name}</b>
-            <div className="subtle small">
-              {owner.area !== '—' ? `${owner.area} · ` : ''}{owner.email}
-            </div>
-          </div>
-        </div>
-        <div className="stack-sm">
-          <Button variant="secondary" block to={paths.owner.venueSetup} onClick={account.close}>
-            🏟️ Pitch & Venue Settings
-          </Button>
-          <Button variant="secondary" block to={paths.owner.payments} onClick={account.close}>
-            📈 Payouts & Financial Reports
-          </Button>
-          <Button variant="tertiary" block to={paths.player.home} onClick={account.close}>
-            ⚽ Switch to Player Workspace
-          </Button>
-          <Button
-            variant="danger"
-            block
-            to={paths.auth}
-            onClick={() => {
-              account.close();
-              clearSession();
-            }}
-            style={{ marginTop: 8 }}
-          >
-            🚪 Sign Out
-          </Button>
-        </div>
-        <Button variant="tertiary" block onClick={account.close} style={{ marginTop: 10 }}>
-          Close
-        </Button>
       </Overlay>
     </>
   );

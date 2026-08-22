@@ -15,11 +15,8 @@ export function PublicLayout() {
     <>
       <Topbar brand={<Brand />} links={PUBLIC_NAV_LINKS}>
         <ThemeToggle />
-        <Button variant="tertiary" to={paths.auth}>
-          Sign in
-        </Button>
         <Button variant="primary" to={paths.auth}>
-          Get started
+          Sign in
         </Button>
       </Topbar>
 

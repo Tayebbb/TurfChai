@@ -27,10 +27,21 @@ public final class VenueSpecifications {
 
             if (notBlank(criteria.query())) {
                 String like = "%" + criteria.query().toLowerCase(Locale.ROOT) + "%";
+                Subquery<Long> sportMatch = query.subquery(Long.class);
+                var pitch = sportMatch.from(Pitch.class);
+                Join<Pitch, Sport> sport = pitch.join("sports", JoinType.INNER);
+                sportMatch.select(pitch.get("id")).where(
+                        cb.equal(pitch.get("venue"), root),
+                        cb.isTrue(pitch.get("active")),
+                        cb.or(
+                                cb.like(cb.lower(sport.get("slug")), like),
+                                cb.like(cb.lower(sport.get("name")), like)));
+
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("name")), like),
                         cb.like(cb.lower(root.get("area")), like),
-                        cb.like(cb.lower(root.get("address")), like)));
+                        cb.like(cb.lower(root.get("address")), like),
+                        cb.exists(sportMatch)));
             }
             if (notBlank(criteria.area())) {
                 predicates.add(cb.equal(cb.lower(root.get("area")), criteria.area().toLowerCase(Locale.ROOT)));

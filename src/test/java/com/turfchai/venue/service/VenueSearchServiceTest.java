@@ -116,6 +116,19 @@ class VenueSearchServiceTest {
                                 "gamma", null, null, null, null, null, null, null, null, null, null);
                 assertThat(service.search(byName, 0, 10, "rating").items())
                                 .extracting(v -> v.slug()).containsExactly("gamma-court");
+
+                VenueSearchCriteria byArea = new VenueSearchCriteria(
+                                "Mirpur", null, null, null, null, null, null, null, null, null, null);
+                assertThat(service.search(byArea, 0, 10, "rating").items())
+                                .extracting(v -> v.slug()).containsExactly("beta-turf");
+        }
+
+        @Test
+        void freeTextQueryMatchesSportName() {
+                VenueSearchCriteria bySport = new VenueSearchCriteria(
+                                "badminton", null, null, null, null, null, null, null, null, null, null);
+                assertThat(service.search(bySport, 0, 10, "rating").items())
+                                .extracting(v -> v.slug()).containsExactly("gamma-court");
         }
 
         @Test

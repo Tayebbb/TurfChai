@@ -31,9 +31,12 @@ export async function getVenue(slug) {
 
 /** Backend summary -> home-page scroller card (nearbyVenues shape). */
 export function toNearbyCard(venue) {
+  const imgUrl = venue.photos?.[0] || venue.coverImageUrl || venue.photoUrl || undefined;
   return {
     id: venue.slug,
     name: venue.name,
+    imgUrl,
+    photos: venue.photos ?? [],
     glyph: SPORT_GLYPHS[venue.sports?.[0]] ?? '⚽',
     distanceKm: venue.distanceKm ?? undefined,
     rating: Number(venue.rating),
@@ -49,9 +52,12 @@ export function toExploreCard(venue) {
     .map((key) => AMENITY_LABELS[key])
     .filter(Boolean);
   const price = bdt(venue.fromPrice);
+  const imgUrl = venue.photos?.[0] || venue.coverImageUrl || venue.photoUrl || undefined;
   return {
     id: venue.slug,
     name: venue.name,
+    imgUrl,
+    photos: venue.photos ?? [],
     verified: venue.verified,
     promo: venue.promotionLabel ?? undefined,
     meta: `${venue.address}${venue.distanceKm != null ? ` \u00b7 ${venue.distanceKm} km` : ''}`,
@@ -68,9 +74,11 @@ export function toExploreCard(venue) {
 
 /** Backend summary -> "similar venues" strip item on the venue page. */
 export function toSimilarCard(venue) {
+  const imgUrl = venue.photos?.[0] || venue.coverImageUrl || venue.photoUrl || undefined;
   return {
     id: venue.slug,
     name: venue.name,
+    imgUrl,
     distance: venue.distanceKm != null ? `${venue.distanceKm} km` : venue.area,
     price: bdt(venue.fromPrice),
   };

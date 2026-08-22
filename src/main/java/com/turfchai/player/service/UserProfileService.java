@@ -159,7 +159,8 @@ public class UserProfileService {
                 fromCsv(venue.getAmenities()), sports,
                 cheapest == null ? null : cheapest.getRate(),
                 cheapest == null ? null : cheapest.getSlotDurationMin(),
-                null);
+                null,
+                fromCsv(venue.getPhotos()));
     }
 
     private static String initialsOf(String fullName) {

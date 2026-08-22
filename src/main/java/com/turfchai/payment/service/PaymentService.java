@@ -60,6 +60,8 @@ public class PaymentService {
     private final RefundCalculatorService refundCalculatorService;
     private final com.turfchai.promotion.service.PromotionService promotionService;
     private final com.turfchai.service.NotificationService notificationService;
+    private final com.turfchai.booking.service.BookingSplitService bookingSplitService;
+    private final com.turfchai.service.OpenGameService openGameService;
     /** Refund tiers are time-based, so the clock is injectable for tests. */
     private final Clock clock;
 
@@ -70,9 +72,12 @@ public class PaymentService {
             RewardService rewardService,
             RefundCalculatorService refundCalculatorService,
             com.turfchai.promotion.service.PromotionService promotionService,
-            com.turfchai.service.NotificationService notificationService) {
+            com.turfchai.service.NotificationService notificationService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.turfchai.booking.service.BookingSplitService bookingSplitService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.turfchai.service.OpenGameService openGameService) {
         this(paymentRepository, bookingService, venueRepository, rewardService,
-                refundCalculatorService, promotionService, notificationService, Clock.systemDefaultZone());
+                refundCalculatorService, promotionService, notificationService,
+                bookingSplitService, openGameService, Clock.systemDefaultZone());
     }
 
     PaymentService(PaymentRepository paymentRepository,
@@ -83,6 +88,20 @@ public class PaymentService {
             com.turfchai.promotion.service.PromotionService promotionService,
             com.turfchai.service.NotificationService notificationService,
             Clock clock) {
+        this(paymentRepository, bookingService, venueRepository, rewardService,
+                refundCalculatorService, promotionService, notificationService, null, null, clock);
+    }
+
+    PaymentService(PaymentRepository paymentRepository,
+            BookingService bookingService,
+            VenueRepository venueRepository,
+            RewardService rewardService,
+            RefundCalculatorService refundCalculatorService,
+            com.turfchai.promotion.service.PromotionService promotionService,
+            com.turfchai.service.NotificationService notificationService,
+            com.turfchai.booking.service.BookingSplitService bookingSplitService,
+            com.turfchai.service.OpenGameService openGameService,
+            Clock clock) {
         this.paymentRepository = paymentRepository;
         this.bookingService = bookingService;
         this.venueRepository = venueRepository;
@@ -90,18 +109,14 @@ public class PaymentService {
         this.refundCalculatorService = refundCalculatorService;
         this.promotionService = promotionService;
         this.notificationService = notificationService;
+        this.bookingSplitService = bookingSplitService;
+        this.openGameService = openGameService;
         this.clock = clock;
     }
 
     /**
      * Charges the caller for their currently held slot, applying wallet
      * balance first.
-     *
-     * <p>
-     * Every tender that funds the booking gets its own {@code payments} row,
-     * including wallet credit — otherwise a booking paid entirely from the wallet
-     * was CONFIRMED with no payment record at all, and the ledger disagreed with
-     * reality.
      */
     @Transactional
     public CheckoutResponse pay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount) {
@@ -111,12 +126,20 @@ public class PaymentService {
     @Transactional
     public CheckoutResponse pay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount,
             String promoCode) {
+        com.turfchai.payment.dto.request.CheckoutRequest req = new com.turfchai.payment.dto.request.CheckoutRequest();
+        req.setSlotId(slotId);
+        req.setMethod(method);
+        req.setApplyWalletAmount(applyWalletAmount);
+        req.setPromoCode(promoCode);
+        req.setBookingMode("FULL");
+        return pay(userId, req);
+    }
+
+    @Transactional
+    public CheckoutResponse pay(Long userId, com.turfchai.payment.dto.request.CheckoutRequest request) {
         try {
-            return doPay(userId, slotId, method, applyWalletAmount, promoCode);
+            return doPay(userId, request);
         } catch (com.turfchai.booking.exception.SlotUnavailableException e) {
-            // The player had committed to paying and the slot went away. Nothing
-            // was taken — this whole transaction rolls back — but they deserve a
-            // durable record saying so, not just a screen they may have left.
             notificationService.sendDetached(userId, "PAYMENT_FAILED",
                     "Payment could not be completed",
                     "That slot was no longer yours to book when the payment went through, so nothing was charged.",
@@ -125,17 +148,20 @@ public class PaymentService {
         }
     }
 
-    private CheckoutResponse doPay(Long userId, Long slotId, PaymentMethod method, BigDecimal applyWalletAmount,
-            String promoCode) {
+    private CheckoutResponse doPay(Long userId, com.turfchai.payment.dto.request.CheckoutRequest request) {
+        Long slotId = request.getSlotId();
+        PaymentMethod method = request.getMethod();
+        BigDecimal applyWalletAmount = request.getApplyWalletAmount();
+        String promoCode = request.getPromoCode();
+        String bookingMode = request.getBookingMode() != null ? request.getBookingMode().toUpperCase() : "FULL";
+
         Booking booking = bookingService.createPendingBooking(userId, slotId);
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new IllegalStateException("This booking has already been paid for");
         }
 
-        // The discount is priced here, from the slot price the server holds, and
-        // the redemption is taken under a row lock in the same transaction as the
-        // booking. The client sends a code, never an amount.
+        // The discount is priced here, from the slot price the server holds
         BigDecimal discount = BigDecimal.ZERO;
         String appliedCode = null;
         if (promoCode != null && !promoCode.isBlank()) {
@@ -156,10 +182,29 @@ public class PaymentService {
         booking.setPromoCode(appliedCode);
         booking.setNetAmount(netAmount);
 
+        // Determine host share due now
+        BigDecimal amountDueFromHost = netAmount;
+        int splitCount = 1;
+        if ("SPLIT".equals(bookingMode)) {
+            splitCount = request.getSplitPlayerCount() != null && request.getSplitPlayerCount() >= 2
+                    ? request.getSplitPlayerCount()
+                    : 2;
+            amountDueFromHost = netAmount.divide(BigDecimal.valueOf(splitCount), 2, RoundingMode.HALF_UP);
+        } else if ("OPEN_GAME".equals(bookingMode)) {
+            int capacity = request.getOpenGameCapacity() != null && request.getOpenGameCapacity() >= 2
+                    ? request.getOpenGameCapacity()
+                    : 10;
+            if (request.getOpenGamePricePerPlayer() != null && request.getOpenGamePricePerPlayer().compareTo(BigDecimal.ZERO) >= 0) {
+                amountDueFromHost = request.getOpenGamePricePerPlayer();
+            } else {
+                amountDueFromHost = netAmount.divide(BigDecimal.valueOf(capacity), 2, RoundingMode.HALF_UP);
+            }
+        }
+
         BigDecimal requestedWallet = applyWalletAmount != null ? applyWalletAmount : BigDecimal.ZERO;
         BigDecimal walletBalance = rewardService.getWalletBalance(userId);
-        BigDecimal walletApplied = requestedWallet.min(walletBalance).min(netAmount).max(BigDecimal.ZERO);
-        BigDecimal gatewayAmount = netAmount.subtract(walletApplied);
+        BigDecimal walletApplied = requestedWallet.min(walletBalance).min(amountDueFromHost).max(BigDecimal.ZERO);
+        BigDecimal gatewayAmount = amountDueFromHost.subtract(walletApplied);
 
         Payment gatewayPayment = null;
         if (gatewayAmount.signum() > 0) {
@@ -193,11 +238,53 @@ public class PaymentService {
         }
         bookingService.finalizeConfirmedBooking(booking);
 
+        // Handle Split setup
+        if ("SPLIT".equals(bookingMode) && bookingSplitService != null) {
+            bookingSplitService.enableSplit(booking.getId(),
+                    new com.turfchai.booking.dto.request.BookingSplitRequest(splitCount),
+                    userId, method);
+        }
+
+        // Handle Open Game setup
+        if ("OPEN_GAME".equals(bookingMode) && openGameService != null) {
+            int capacity = request.getOpenGameCapacity() != null && request.getOpenGameCapacity() >= 2 ? request.getOpenGameCapacity() : 10;
+            int reserved = request.getOpenGameReservedSpots() != null && request.getOpenGameReservedSpots() >= 1 ? request.getOpenGameReservedSpots() : 1;
+            com.turfchai.model.enums.SkillLevel skill = com.turfchai.model.enums.SkillLevel.ALL_LEVELS;
+            if (request.getOpenGameSkillLevel() != null) {
+                try {
+                    skill = com.turfchai.model.enums.SkillLevel.valueOf(request.getOpenGameSkillLevel());
+                } catch (Exception ignored) {}
+            }
+            String title = request.getOpenGameTitle() != null && !request.getOpenGameTitle().isBlank()
+                    ? request.getOpenGameTitle().trim()
+                    : "Match at " + booking.getVenueId();
+
+            com.turfchai.dto.request.CreateOpenGameRequest ogReq = com.turfchai.dto.request.CreateOpenGameRequest.builder()
+                    .bookingId(booking.getId())
+                    .title(title)
+                    .venueId(booking.getVenueId())
+                    .pitchId(booking.getPitchId())
+                    .gameDate(booking.getBookingDate())
+                    .startTime(booking.getStartTime() != null ? booking.getStartTime() : java.time.LocalTime.of(18, 0))
+                    .endTime(booking.getEndTime() != null ? booking.getEndTime() : java.time.LocalTime.of(19, 30))
+                    .skillLevel(skill)
+                    .capacity(capacity)
+                    .reservedSpots(reserved)
+                    .pricePerPlayer(amountDueFromHost)
+                    .build();
+            openGameService.createOpenGame(ogReq, userId);
+
+            // If friend spots are reserved, initialize split tracking for them
+            if (reserved > 1 && bookingSplitService != null) {
+                bookingSplitService.enableSplit(booking.getId(),
+                        new com.turfchai.booking.dto.request.BookingSplitRequest(reserved),
+                        userId, method, amountDueFromHost.multiply(BigDecimal.valueOf(reserved)));
+            }
+        }
+
         int pointsEarned = 0;
-        // A free slot earns no points; the reward service rejects a zero award,
-        // which used to roll the whole paid checkout back.
-        if (netAmount.signum() > 0) {
-            pointsEarned = rewardService.awardBookingPoints(userId, booking.getId(), netAmount).getDelta();
+        if (amountDueFromHost.signum() > 0) {
+            pointsEarned = rewardService.awardBookingPoints(userId, booking.getId(), amountDueFromHost).getDelta();
             Optional<PointLedgerEntry> offPeak = rewardService.awardOffPeakBonusIfApplicable(userId, booking.getId(),
                     booking.getStartTime());
             if (offPeak.isPresent()) {

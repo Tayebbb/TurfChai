@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Button } from '@/components/buttons/Button';
 import { Photo } from '@/components/ui/Photo';
-import { getVenueSlots, holdSlot, listBookings } from '@/api/bookings';
+import { getVenueSlots, holdSlot, listBookings, releaseHold } from '@/api/bookings';
 import { getToken } from '@/api/client';
 import { getVenue } from '@/api/venues';
 import { checkout, getAvailablePromoCodes, validatePromoCode } from '@/api/payments';
@@ -12,6 +12,8 @@ import { useApi } from '@/hooks/useApi';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useToast } from '@/hooks/useToast';
 import { toUserMessage } from '@/utils/errorMessage';
+import { Field, Input, Select } from '@/components/forms/Field';
+import { SKILL_LABELS } from '@/api/openGames';
 import { paths } from '@/routes/paths';
 import './CheckoutPage.css';
 
@@ -183,6 +185,16 @@ export default function CheckoutPage() {
   const [gatewayStep, setGatewayStep] = useState(null); // null | 'confirm' | 'processing'
   const [gatewayError, setGatewayError] = useState(null);
 
+  const [bookingMode, setBookingMode] = useState('FULL'); // 'FULL' | 'SPLIT' | 'OPEN_GAME'
+  const [splitPlayers, setSplitPlayers] = useState('5');
+  const [openGameForm, setOpenGameForm] = useState({
+    title: '',
+    capacity: '10',
+    reservedSpots: '4',
+    pricePerPlayer: '',
+    skillLevel: 'ALL_LEVELS',
+  });
+
   const wallet = useApi(() => (signedIn ? getMyPoints() : Promise.resolve(null)), [signedIn]);
   const walletBalance = wallet.data?.walletBalance ?? 0;
   const slotPrice = slotInfo?.price ?? null;
@@ -195,9 +207,29 @@ export default function CheckoutPage() {
   // The server prices the discount again at checkout; this is only the quote the
   // player is shown, so a tampered value cannot buy a cheaper booking.
   const discount = promo.applied ? Math.min(promo.applied.discountAmount, slotPrice ?? 0) : 0;
-  const payable = slotPrice != null ? Math.max(0, slotPrice - discount) : null;
-  const walletApplied = applyWallet && payable != null ? Math.min(walletBalance, payable) : 0;
-  const dueNow = payable != null ? Math.max(0, payable - walletApplied) : null;
+  const fullPayable = slotPrice != null ? Math.max(0, slotPrice - discount) : null;
+
+  // Split calculation
+  const splitCount = Math.max(2, Math.min(20, Number(splitPlayers) || 2));
+  const splitSharePerPlayer = fullPayable != null ? Math.round(fullPayable / splitCount) : null;
+  const splitHostDue = splitSharePerPlayer;
+
+  // Open Game calculation
+  const ogCapacity = Math.max(2, Math.min(20, Number(openGameForm.capacity) || 10));
+  const ogReserved = Math.max(1, Math.min(ogCapacity - 1, Number(openGameForm.reservedSpots) || 1));
+  const ogOpenSpots = Math.max(1, ogCapacity - ogReserved);
+  const ogPricePerPlayer = fullPayable != null ? Math.max(0, Math.round(fullPayable / ogCapacity)) : 250;
+  const ogHostDue = ogPricePerPlayer;
+
+  // Target amount due from host now based on active booking mode
+  const hostTotalDue = bookingMode === 'SPLIT'
+    ? splitHostDue
+    : bookingMode === 'OPEN_GAME'
+      ? ogHostDue
+      : fullPayable;
+
+  const walletApplied = applyWallet && hostTotalDue != null ? Math.min(walletBalance, hostTotalDue) : 0;
+  const dueNow = hostTotalDue != null ? Math.max(0, hostTotalDue - walletApplied) : null;
 
   const acquireHold = useCallback(async () => {
     try {
@@ -355,6 +387,26 @@ export default function CheckoutPage() {
     setGatewayStep('confirm');
   };
 
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancelProcess = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      if (signedIn && slotId) {
+        await releaseHold(slotId);
+      }
+    } catch {
+      // Best-effort release
+    } finally {
+      clearHold(slotId);
+      showToast('Booking process cancelled');
+      setCancelling(false);
+      const returnUrl = venueSlug ? paths.player.venue(venueSlug) : paths.player.explore;
+      navigate(returnUrl);
+    }
+  };
+
   const closeGateway = () => {
     setGatewayStep(null);
   };
@@ -392,7 +444,8 @@ export default function CheckoutPage() {
 
   const removePromo = () => setPromo({ input: '', applied: null, error: '', checking: false });
 
-  const confirmPayment = async () => {    setGatewayStep('processing');
+  const confirmPayment = async () => {
+    setGatewayStep('processing');
     setBusy(true);
     try {
       const result = await checkout({
@@ -400,11 +453,23 @@ export default function CheckoutPage() {
         method,
         applyWalletAmount: walletApplied > 0 ? walletApplied : undefined,
         promoCode: promo.applied?.code,
+        bookingMode,
+        splitPlayerCount: bookingMode === 'SPLIT' ? splitCount : undefined,
+        openGameTitle: bookingMode === 'OPEN_GAME' ? (openGameForm.title?.trim() || `${slotInfo?.pitchName || 'Turf'} Match`) : undefined,
+        openGameCapacity: bookingMode === 'OPEN_GAME' ? ogCapacity : undefined,
+        openGameReservedSpots: bookingMode === 'OPEN_GAME' ? ogReserved : undefined,
+        openGamePricePerPlayer: bookingMode === 'OPEN_GAME' ? ogPricePerPlayer : undefined,
+        openGameSkillLevel: bookingMode === 'OPEN_GAME' ? openGameForm.skillLevel : undefined,
       });
       if (result.status === 'SUCCESS') {
-        navigate(`${paths.player.bookingSuccess}?bookingId=${encodeURIComponent(result.bookingId)}`, {
-          state: { pointsEarned: result.pointsEarned },
-        });
+        if (bookingMode === 'SPLIT' || bookingMode === 'OPEN_GAME') {
+          showToast('Booking confirmed & your share is paid! Share the QR or link with your squad 🎉');
+          navigate(paths.player.bookingDetail(result.bookingId));
+        } else {
+          navigate(`${paths.player.bookingSuccess}?bookingId=${encodeURIComponent(result.bookingId)}`, {
+            state: { pointsEarned: result.pointsEarned },
+          });
+        }
       } else {
         setGatewayStep('confirm');
         setGatewayError(result.message || 'Payment could not be completed — try again');
@@ -556,7 +621,11 @@ export default function CheckoutPage() {
       <PageTitle title="Checkout" />
       <main className="wrap" id="main" style={{ paddingTop: 28, maxWidth: 1000, paddingBottom: 60 }}>
         <div className="between" style={{ marginBottom: 12 }}>
-          <Link className="btn btn-tertiary btn-sm" to={paths.player.explore} style={{ paddingLeft: 0 }}>
+          <Link
+            className="btn btn-tertiary btn-sm"
+            to={venueSlug ? paths.player.venue(venueSlug) : paths.player.explore}
+            style={{ paddingLeft: 0 }}
+          >
             <svg
               width="14"
               height="14"
@@ -570,24 +639,28 @@ export default function CheckoutPage() {
             >
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            Back to venues
+            Back to {venueSlug ? 'venue' : 'venues'}
           </Link>
-          <div className="lock-timer" role="timer" aria-label="Slot locked, time remaining">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            Slot locked &middot; <span>{lockText}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {hold.state === 'held' ? (
+              <div className="lock-timer" role="timer" aria-label="Slot locked, time remaining">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Slot locked &middot; <span>{lockText}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -666,11 +739,223 @@ export default function CheckoutPage() {
 
             <div className="co-grid">
           <div>
-            {/* Step 1: Payment method */}
+            {/* Step 1: Booking & Split Mode */}
+            <div className="co-step">
+              <div className="co-step-header">
+                <div className="co-step-num" aria-hidden="true">1</div>
+                <div className="co-step-title">How do you want to organize this booking?</div>
+              </div>
+
+              <div className="booking-mode-grid">
+                <button
+                  type="button"
+                  className={`booking-mode-card ${bookingMode === 'FULL' ? 'selected' : ''}`}
+                  onClick={() => setBookingMode('FULL')}
+                >
+                  <span className="booking-mode-icon" aria-hidden="true">🟢</span>
+                  <div className="booking-mode-title">
+                    <span>Pay in full</span>
+                    {bookingMode === 'FULL' && <span className="badge green nodot sel-badge">Selected</span>}
+                  </div>
+                  <span className="booking-mode-desc">
+                    Pay 100% upfront now as solo host.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`booking-mode-card ${bookingMode === 'SPLIT' ? 'selected' : ''}`}
+                  onClick={() => setBookingMode('SPLIT')}
+                >
+                  <span className="booking-mode-icon" aria-hidden="true">👥</span>
+                  <div className="booking-mode-title">
+                    <span>Split with friends</span>
+                    {bookingMode === 'SPLIT' && <span className="badge green nodot sel-badge">Selected</span>}
+                  </div>
+                  <span className="booking-mode-desc">
+                    Pay your 1 share now; squad pays via link/QR.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`booking-mode-card ${bookingMode === 'OPEN_GAME' ? 'selected' : ''}`}
+                  onClick={() => setBookingMode('OPEN_GAME')}
+                >
+                  <span className="booking-mode-icon" aria-hidden="true">📢</span>
+                  <div className="booking-mode-title">
+                    <span>Split &amp; Post Game</span>
+                    {bookingMode === 'OPEN_GAME' && <span className="badge green nodot sel-badge">Selected</span>}
+                  </div>
+                  <span className="booking-mode-desc">
+                    Reserve spots for friends &amp; open rest to public.
+                  </span>
+                </button>
+              </div>
+
+              {bookingMode === 'SPLIT' && (
+                <div className="booking-mode-config-box">
+                  <Field label="Total number of players to split with" htmlFor="co-split-players">
+                    <Input
+                      id="co-split-players"
+                      type="number"
+                      min="2"
+                      max="20"
+                      value={splitPlayers}
+                      onChange={(e) => setSplitPlayers(e.target.value)}
+                    />
+                  </Field>
+
+                  <div className="booking-mode-calc-badge" style={{ marginTop: 12 }}>
+                    <span>
+                      <b>{bdt(splitSharePerPlayer)}</b> per person ({splitCount} players)
+                    </span>
+                    <span style={{ color: 'var(--brand)', fontWeight: 700 }}>
+                      Your share due now: {bdt(splitHostDue)}
+                    </span>
+                  </div>
+                  <p className="subtle tiny" style={{ margin: '8px 0 0' }}>
+                    After paying your share ({bdt(splitHostDue)}), you will get the QR code &amp; payment link to share with the other {splitCount - 1} players.
+                  </p>
+                </div>
+              )}
+
+              {bookingMode === 'OPEN_GAME' && (
+                <div className="booking-mode-config-box">
+                  <Field label="Game title" htmlFor="co-og-title">
+                    <Input
+                      id="co-og-title"
+                      placeholder="e.g. Friday night 7-a-side friendly"
+                      value={openGameForm.title}
+                      onChange={(e) => setOpenGameForm((prev) => ({ ...prev, title: e.target.value }))}
+                    />
+                  </Field>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                    <Field
+                      label="Total match capacity (Players)"
+                      htmlFor="co-og-capacity"
+                    >
+                      <Input
+                        id="co-og-capacity"
+                        type="number"
+                        min="2"
+                        max="20"
+                        value={openGameForm.capacity}
+                        onChange={(e) => setOpenGameForm((prev) => ({ ...prev, capacity: e.target.value }))}
+                      />
+                    </Field>
+                    <Field
+                      label="Spots for your squad (You + Friends)"
+                      htmlFor="co-og-reserved"
+                    >
+                      <Input
+                        id="co-og-reserved"
+                        type="number"
+                        min="1"
+                        max={ogCapacity - 1}
+                        value={openGameForm.reservedSpots}
+                        onChange={(e) => setOpenGameForm((prev) => ({ ...prev, reservedSpots: e.target.value }))}
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Visual Allocation Bar & Clear Spot Breakdown */}
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600 }}>
+                      <span style={{ color: 'var(--brand)' }}>👥 Your Squad: {ogReserved} spots</span>
+                      <span style={{ color: '#3b82f6' }}>📢 Public Open Game: {ogOpenSpots} spots</span>
+                    </div>
+
+                    <div className="spot-allocation-bar" aria-hidden="true">
+                      <div className="spot-bar-group" style={{ width: `${(ogReserved / ogCapacity) * 100}%` }} />
+                      <div className="spot-bar-public" style={{ width: `${(ogOpenSpots / ogCapacity) * 100}%` }} />
+                    </div>
+
+                    <div className="spot-summary-grid">
+                      <div className="spot-summary-card group">
+                        <b style={{ display: 'block', color: 'var(--brand)', marginBottom: 4 }}>
+                          👥 Your Squad ({ogReserved} spots)
+                        </b>
+                        <div className="subtle small" style={{ fontSize: 12, lineHeight: 1.45 }}>
+                          • <b>You (Host)</b>: 1 spot (paying now)<br />
+                          • <b>{ogReserved - 1} friend{ogReserved - 1 === 1 ? '' : 's'}</b>: will pay via link/QR
+                        </div>
+                      </div>
+
+                      <div className="spot-summary-card public">
+                        <b style={{ display: 'block', color: '#3b82f6', marginBottom: 4 }}>
+                          📢 Public Open Game ({ogOpenSpots} spots)
+                        </b>
+                        <div className="subtle small" style={{ fontSize: 12, lineHeight: 1.45 }}>
+                          • <b>{ogOpenSpots} open spots</b> will be posted on Open Games for anyone to join
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 14 }}>
+                    <div
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        background: 'var(--surface-2, rgba(255,255,255,0.03))',
+                        border: '1px solid var(--border)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <span className="subtle tiny" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Price per player spot
+                      </span>
+                      <b style={{ fontSize: 15, color: 'var(--text)', marginTop: 2 }}>
+                        {bdt(ogPricePerPlayer)} <span className="subtle small" style={{ fontSize: 12, fontWeight: 400 }}>({bdt(fullPayable)} ÷ {ogCapacity} spots)</span>
+                      </b>
+                    </div>
+
+                    <Field label="Skill level" htmlFor="co-og-skill">
+                      <Select
+                        id="co-og-skill"
+                        value={openGameForm.skillLevel}
+                        onChange={(e) => setOpenGameForm((prev) => ({ ...prev, skillLevel: e.target.value }))}
+                      >
+                        {Object.entries(SKILL_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 14,
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      background: 'rgba(34, 197, 94, 0.08)',
+                      border: '1px solid rgba(34, 197, 94, 0.25)',
+                      fontSize: 13,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>
+                      <b>Host share due now (1 spot):</b>
+                    </span>
+                    <b style={{ color: 'var(--brand)', fontSize: 15 }}>{bdt(ogHostDue)}</b>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Step 2: Payment method */}
             <div className="co-step">
               <div className="co-step-header">
                 <div className="co-step-num" aria-hidden="true">
-                  1
+                  2
                 </div>
                 <div className="co-step-title">Payment method</div>
               </div>
@@ -694,11 +979,11 @@ export default function CheckoutPage() {
               <p className="method-hint">{METHOD_HINTS[method]}</p>
             </div>
 
-            {/* Step 2: Policy */}
+            {/* Step 3: Policy */}
             <div className="co-step">
               <div className="co-step-header">
                 <div className="co-step-num" aria-hidden="true">
-                  2
+                  3
                 </div>
                 <div className="co-step-title">Cancellation policy</div>
               </div>
@@ -876,7 +1161,7 @@ export default function CheckoutPage() {
 
             <div style={{ marginBottom: 8 }}>
               <div className="pricerow">
-                <span className="pr-label">Slot</span>
+                <span className="pr-label">Total Slot Price</span>
                 <span className="pr-val num">{bdt(slotPrice)}</span>
               </div>
               {discount > 0 ? (
@@ -887,6 +1172,26 @@ export default function CheckoutPage() {
                   <span className="pr-val neg num">−{bdt(discount)}</span>
                 </div>
               ) : null}
+              {bookingMode === 'SPLIT' && (
+                <div className="pricerow">
+                  <span className="pr-label" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+                    Squad Split ({splitCount} players)
+                  </span>
+                  <span className="pr-val num" style={{ color: 'var(--brand)' }}>
+                    {bdt(splitSharePerPlayer)} / player
+                  </span>
+                </div>
+              )}
+              {bookingMode === 'OPEN_GAME' && (
+                <div className="pricerow">
+                  <span className="pr-label" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+                    Open Game ({ogCapacity} spots, {ogOpenSpots} public)
+                  </span>
+                  <span className="pr-val num" style={{ color: 'var(--brand)' }}>
+                    {bdt(ogPricePerPlayer)} / spot
+                  </span>
+                </div>
+              )}
               {walletApplied > 0 ? (
                 <div className="pricerow">
                   <span className="pr-label neg" style={{ color: 'var(--brand-600)' }}>
@@ -898,7 +1203,9 @@ export default function CheckoutPage() {
             </div>
 
             <div className="pricerow total">
-              <span className="pr-label">Due now</span>
+              <span className="pr-label">
+                {bookingMode !== 'FULL' ? 'Your Share Due Now' : 'Due now'}
+              </span>
               <span className="pr-val num">{bdt(dueNow)}</span>
             </div>
 
@@ -912,8 +1219,24 @@ export default function CheckoutPage() {
               disabled={signedIn && (hold.state !== 'held' || !understood)}
               style={{ marginTop: 16 }}
             >
-              {signedIn ? `Pay ${bdt(dueNow)} with ${methodLabel}` : 'Sign in to confirm this booking'}
+              {signedIn
+                ? (bookingMode !== 'FULL'
+                  ? `Pay ${bdt(dueNow)} (Your share) with ${methodLabel}`
+                  : `Pay ${bdt(dueNow)} with ${methodLabel}`)
+                : 'Sign in to confirm this booking'}
             </Button>
+            {signedIn ? (
+              <Button
+                variant="tertiary"
+                size="md"
+                block
+                onClick={handleCancelProcess}
+                disabled={busy || cancelling}
+                style={{ marginTop: 8 }}
+              >
+                {cancelling ? 'Cancelling booking…' : 'Cancel process'}
+              </Button>
+            ) : null}
             {!signedIn ? (
               <p className="subtle small" style={{ margin: '8px 0 0', textAlign: 'center' }}>
                 Browsing is open to everyone — we only need an account to hold the slot in your name.

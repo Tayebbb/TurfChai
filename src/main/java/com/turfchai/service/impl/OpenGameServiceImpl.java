@@ -33,13 +33,13 @@ public class OpenGameServiceImpl implements OpenGameService {
     private final UserRepository userRepository;
     private final VenueRepository venueRepository;
     private final PitchRepository pitchRepository;
+    private final com.turfchai.booking.repository.BookingRepository bookingRepository;
 
     @Override
     @Transactional
     public OpenGameResponse createOpenGame(CreateOpenGameRequest request, Long organizerUserId) {
-        if (request.getEndTime().isBefore(request.getStartTime())
-                || request.getEndTime().equals(request.getStartTime())) {
-            throw new InvalidGameStateException("End time must be after start time");
+        if (request.getEndTime() == null || request.getStartTime() == null || request.getEndTime().equals(request.getStartTime())) {
+            throw new InvalidGameStateException("Start time and end time cannot be empty or equal");
         }
 
         Venue venue = venueRepository.findById(request.getVenueId())
@@ -56,6 +56,11 @@ public class OpenGameServiceImpl implements OpenGameService {
 
         SkillLevel skillLevel = request.getSkillLevel() != null ? request.getSkillLevel() : SkillLevel.ALL_LEVELS;
 
+        int initialFilled = 1;
+        if (request.getReservedSpots() != null && request.getReservedSpots() >= 1) {
+            initialFilled = Math.min(request.getReservedSpots(), request.getCapacity());
+        }
+
         OpenGame openGame = OpenGame.builder()
                 .title(request.getTitle())
                 .venue(venue)
@@ -65,7 +70,7 @@ public class OpenGameServiceImpl implements OpenGameService {
                 .endTime(request.getEndTime())
                 .skillLevel(skillLevel)
                 .capacity(request.getCapacity())
-                .filledCount(1)
+                .filledCount(initialFilled)
                 .pricePerPlayer(request.getPricePerPlayer())
                 .organizer(organizer)
                 .status(OpenGameStatus.OPEN)
@@ -82,6 +87,16 @@ public class OpenGameServiceImpl implements OpenGameService {
                 .build();
 
         membershipRepository.save(organizerMembership);
+
+        // If created from a booking, link the open game back to the booking
+        if (request.getBookingId() != null) {
+            bookingRepository.findById(request.getBookingId()).ifPresent(b -> {
+                if (b.getUserId().equals(organizerUserId)) {
+                    b.setOpenGameId(savedGame.getId());
+                    bookingRepository.save(b);
+                }
+            });
+        }
 
         return mapToOpenGameResponse(savedGame);
     }

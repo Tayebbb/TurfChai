@@ -38,6 +38,7 @@ const Review = lazy(() => import('@/pages/player/ReviewPage'));
 const Cancel = lazy(() => import('@/pages/player/CancelPage'));
 const Rewards = lazy(() => import('@/pages/player/RewardsPage'));
 const ProfileSettings = lazy(() => import('@/pages/player/ProfileSettingsPage'));
+const PayShare = lazy(() => import('@/pages/player/PaySharePage'));
 const DashboardLayout = lazy(() => import('@/pages/player/dashboard/DashboardLayout'));
 const DashboardOverview = lazy(() => import('@/pages/player/dashboard/OverviewSection'));
 const DashboardTournaments = lazy(() => import('@/pages/player/dashboard/TournamentsSection'));
@@ -103,6 +104,7 @@ export function AppRoutes() {
             <Route path="explore" element={<Explore />} />
             <Route path="venues/:venueId" element={<Venue />} />
             <Route path="checkout" element={<Checkout />} />
+            <Route path="pay-share" element={<PayShare />} />
 
             {/* Everything below identifies the caller and needs a session. */}
             <Route element={<RequireAuth><Outlet /></RequireAuth>}>

@@ -115,6 +115,24 @@ public class Booking {
     @Column(name = "guest_phone", length = 30)
     private String guestPhone;
 
+    @Column(name = "split_enabled", nullable = false)
+    @Builder.Default
+    private Boolean splitEnabled = false;
+
+    @Column(name = "split_deadline")
+    private OffsetDateTime splitDeadline;
+
+    @Column(name = "split_total_paid")
+    @Builder.Default
+    private BigDecimal splitTotalPaid = BigDecimal.ZERO;
+
+    @Column(name = "split_remaining")
+    @Builder.Default
+    private BigDecimal splitRemaining = BigDecimal.ZERO;
+
+    @Column(name = "open_game_id")
+    private Long openGameId;
+
     @Column(name = "notes")
     private String notes;
 

@@ -51,6 +51,8 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
 
     boolean existsByPitchIdAndSlotDateAndStartTime(Long pitchId, LocalDate slotDate, LocalTime startTime);
 
+    Optional<Slot> findByPitchIdAndSlotDateAndStartTime(Long pitchId, LocalDate slotDate, LocalTime startTime);
+
     List<Slot> findByVenueIdAndSlotDateBetweenOrderBySlotDateAscStartTimeAsc(Long venueId, LocalDate startDate, LocalDate endDate);
 
     List<Slot> findByVenueIdIn(List<Long> venueIds);

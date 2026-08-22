@@ -11,10 +11,10 @@ import { api } from './client';
  * POST /api/v1/payments/checkout — pays for the caller's currently held
  * slot (mock bKash/Nagad/Card/Cash).
  */
-export async function checkout({ slotId, method, applyWalletAmount, promoCode }) {
+export async function checkout(payload) {
   const res = await api('/payments/checkout', {
     method: 'POST',
-    body: { slotId, method, applyWalletAmount, promoCode },
+    body: payload,
   });
   return res.data;
 }

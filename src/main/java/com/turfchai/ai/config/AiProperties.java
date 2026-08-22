@@ -24,7 +24,7 @@ public class AiProperties {
         // without function calling answers "I don't have that information"
         // about data the tools hold, and a reasoning model leaks its thinking
         // into `content` instead of emitting a tool call.
-        e.setModel("openai/gpt-oss-20b:free");
+        e.setModel("meta-llama/llama-3.3-70b-instruct:free");
         e.setLatencyRouting(true);
         return e;
     }

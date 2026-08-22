@@ -17,6 +17,9 @@ function VenueCardBase({ venue, compact = false, className }) {
         id,
         name,
         photoVariant,
+        imgUrl,
+        photos,
+        photo,
         glyph = '⚽',
         area,
         distanceKm,
@@ -29,13 +32,21 @@ function VenueCardBase({ venue, compact = false, className }) {
         badges = [],
     } = venue;
 
+    const resolvedImgUrl = imgUrl || photos?.[0] || photo;
+
     return (
         <Link
             className={cn('venue-card', className)}
             to={paths.player.venue(id)}
             style={{ textDecoration: 'none', color: 'var(--text)' }}
         >
-            <Photo variant={photoVariant} glyph={glyph} height={compact ? 120 : undefined} />
+            <Photo
+                photos={photos}
+                imgUrl={resolvedImgUrl}
+                variant={photoVariant}
+                glyph={glyph}
+                height={compact ? 120 : undefined}
+            />
             <div className="body">
                 <div className="name">
                     {name}

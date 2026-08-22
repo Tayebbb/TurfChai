@@ -90,6 +90,6 @@ public class RotatingKeyLlmProvider implements LlmProvider {
         if (lastException != null) {
             throw lastException;
         }
-        throw new LlmException(providerName + ": all " + delegates.size() + " keys are exhausted");
+        throw new LlmException(providerName + ": all " + delegates.size() + " keys are exhausted", null, true);
     }
 }

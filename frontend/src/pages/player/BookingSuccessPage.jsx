@@ -291,7 +291,32 @@ export default function BookingSuccessPage() {
           </Button>
         </div>
 
-        <div className="card" style={{ marginTop: 16 }}>
+        {booking?.id ? (
+          <div className="card" style={{ marginTop: 14, background: "linear-gradient(135deg, rgba(34,197,94,0.08), var(--surface))" }}>
+            <h4 style={{ margin: "0 0 4px" }}>Squad &amp; Players</h4>
+            <p className="small subtle" style={{ margin: "0 0 12px" }}>
+              Split the bill equally with your teammates or post empty spots for other players to join.
+            </p>
+            <div className="grid2" style={{ gap: 8 }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                to={`${paths.player.bookingDetail(booking.id)}?action=split`}
+              >
+                💸 Split price with friends
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                to={`${paths.player.bookingDetail(booking.id)}?action=open-game`}
+              >
+                📢 Post open spots
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="card" style={{ marginTop: 14 }}>
           <h4>Arrival &amp; handover</h4>
           <p className="small muted" style={{ margin: "4px 0 0" }}>
             Show your QR or reference <b>{code}</b> at the gate. Arrive 10 minutes

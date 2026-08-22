@@ -238,49 +238,62 @@
   .owner-page-wrap .kpi-card .value{font-size:30px!important}
 }
 
-/* ---------- Admin & Owner micro-interactions: header + KPI polish ---------- */
+/* ---------- Admin, Owner & Player micro-interactions: topbar + navlinks polish ---------- */
 .admin-topbar,
-.owner-topbar{transition:box-shadow var(--dur) var(--ease)}
+.owner-topbar,
+.player-topbar{transition:box-shadow var(--dur) var(--ease)}
 .admin-topbar:hover,
-.owner-topbar:hover{box-shadow:0 4px 26px rgba(0,0,0,.3),0 0 0 1px rgba(34,197,94,.16)}
+.owner-topbar:hover,
+.player-topbar:hover{box-shadow:0 4px 26px rgba(0,0,0,.3),0 0 0 1px rgba(34,197,94,.16)}
 [data-theme="light"] .admin-topbar:hover,
-[data-theme="light"] .owner-topbar:hover{box-shadow:0 4px 26px rgba(10,30,20,.08),0 0 0 1px rgba(34,197,94,.2)}
+[data-theme="light"] .owner-topbar:hover,
+[data-theme="light"] .player-topbar:hover{box-shadow:0 4px 26px rgba(10,30,20,.08),0 0 0 1px rgba(34,197,94,.2)}
 
 .admin-topbar .brand,
-.owner-topbar .brand{
+.owner-topbar .brand,
+.player-topbar .brand{
   transition:transform 220ms var(--ease),filter 220ms var(--ease);
 }
 .admin-topbar .brand:hover,
-.owner-topbar .brand:hover{
+.owner-topbar .brand:hover,
+.player-topbar .brand:hover{
   transform:translateY(-1px);
   filter:drop-shadow(0 4px 10px rgba(34,197,94,.45));
 }
 
 .admin-topbar .navlinks a,
-.owner-topbar .navlinks a{
+.owner-topbar .navlinks a,
+.player-topbar .navlinks a{
   position:relative;overflow:hidden;
   transition:color 200ms var(--ease),background 200ms var(--ease),transform 200ms var(--ease),box-shadow 200ms var(--ease);
 }
 .admin-topbar .navlinks a::after,
-.owner-topbar .navlinks a::after{
+.owner-topbar .navlinks a::after,
+.player-topbar .navlinks a::after{
   content:'';position:absolute;top:0;bottom:0;left:-65%;width:40%;
   background:linear-gradient(105deg,transparent 0%,rgba(255,255,255,.4) 50%,transparent 100%);
   transform:skewX(-18deg);opacity:0;pointer-events:none;
 }
 .admin-topbar .navlinks a:hover,
-.owner-topbar .navlinks a:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(34,197,94,.28)}
+.owner-topbar .navlinks a:hover,
+.player-topbar .navlinks a:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(34,197,94,.28)}
 .admin-topbar .navlinks a:hover::after,
-.owner-topbar .navlinks a:hover::after{animation:adminSheen 620ms ease}
+.owner-topbar .navlinks a:hover::after,
+.player-topbar .navlinks a:hover::after{animation:adminSheen 620ms ease}
 [data-theme="light"] .admin-topbar .navlinks a:hover,
-[data-theme="light"] .owner-topbar .navlinks a:hover{background:rgba(34,197,94,.1)}
+[data-theme="light"] .owner-topbar .navlinks a:hover,
+[data-theme="light"] .player-topbar .navlinks a:hover{background:rgba(34,197,94,.1)}
 [data-theme="light"] .admin-topbar .navlinks a:hover::after,
-[data-theme="light"] .owner-topbar .navlinks a:hover::after{
+[data-theme="light"] .owner-topbar .navlinks a:hover::after,
+[data-theme="light"] .player-topbar .navlinks a:hover::after{
   background:linear-gradient(105deg,transparent 0%,rgba(255,255,255,.95) 50%,transparent 100%);
 }
 .admin-topbar .navlinks a.active,
-.owner-topbar .navlinks a.active{animation:adminActivePulse 2.6s ease-in-out infinite;transition:color 200ms var(--ease),background 200ms var(--ease),transform 200ms var(--ease)}
+.owner-topbar .navlinks a.active,
+.player-topbar .navlinks a.active{animation:adminActivePulse 2.6s ease-in-out infinite;transition:color 200ms var(--ease),background 200ms var(--ease),transform 200ms var(--ease)}
 [data-theme="light"] .admin-topbar .navlinks a.active,
-[data-theme="light"] .owner-topbar .navlinks a.active{animation:adminActivePulseLight 2.6s ease-in-out infinite}
+[data-theme="light"] .owner-topbar .navlinks a.active,
+[data-theme="light"] .player-topbar .navlinks a.active{animation:adminActivePulseLight 2.6s ease-in-out infinite}
 @keyframes adminSheen{
   from{left:-65%;opacity:0}
   20%{opacity:1}
@@ -343,12 +356,14 @@
 [data-theme="light"] .admin-page-wrap .kpi-card:hover .btn-link,
 [data-theme="light"] .owner-page-wrap .kpi-card:hover .btn-link{box-shadow:0 8px 18px rgba(10,30,20,.12)}
 
-/* ---------- Admin & Owner topbar action cluster: notif / theme / avatar / logout ---------- */
+/* ---------- Admin, Owner & Player topbar action cluster: notif / theme / avatar / logout ---------- */
 /* Mirrors the nav pill glass treatment for a consistent topbar bar */
 .admin-topbar .navlinks,
-.owner-topbar .navlinks{height:42px;box-sizing:border-box}
+.owner-topbar .navlinks,
+.player-topbar .navlinks{height:42px;box-sizing:border-box}
 .admin-actions,
-.owner-actions{
+.owner-actions,
+.player-actions{
   display:flex;align-items:center;gap:4px;
   padding:4px;border-radius:999px;
   height:42px;box-sizing:border-box;
@@ -358,12 +373,15 @@
   backdrop-filter:blur(18px) saturate(160%);
 }
 [data-theme="light"] .admin-actions,
-[data-theme="light"] .owner-actions{background:rgba(255,255,255,.72)}
+[data-theme="light"] .owner-actions,
+[data-theme="light"] .player-actions{background:rgba(255,255,255,.72)}
 
 .admin-topbar .admin-actions .icon-btn,
 .owner-topbar .owner-actions .icon-btn,
-.admin-topbar .owner-actions .icon-btn,
-.owner-topbar .admin-actions .icon-btn{
+.player-topbar .player-actions .icon-btn,
+.admin-topbar .icon-btn,
+.owner-topbar .icon-btn,
+.player-topbar .icon-btn{
   position:relative;
   width:34px;height:34px;border-radius:999px;
   background:transparent;border:1px solid transparent;
@@ -372,24 +390,35 @@
 }
 .admin-topbar .admin-actions .icon-btn:hover,
 .owner-topbar .owner-actions .icon-btn:hover,
-.admin-topbar .owner-actions .icon-btn:hover,
-.owner-topbar .admin-actions .icon-btn:hover{
+.player-topbar .player-actions .icon-btn:hover,
+.admin-topbar .icon-btn:hover,
+.owner-topbar .icon-btn:hover,
+.player-topbar .icon-btn:hover{
   transform:translateY(-1px);color:var(--text);
   background:rgba(255,255,255,.08);
   border-color:rgba(34,197,94,.45);
   box-shadow:0 6px 16px rgba(34,197,94,.22);
 }
 .admin-topbar .admin-actions .icon-btn:active,
-.owner-topbar .owner-actions .icon-btn:active{transform:scale(.92)}
+.owner-topbar .owner-actions .icon-btn:active,
+.player-topbar .player-actions .icon-btn:active,
+.player-topbar .icon-btn:active{transform:scale(.92)}
 .admin-topbar .admin-actions .icon-btn svg,
-.owner-topbar .owner-actions .icon-btn svg{transition:transform 320ms var(--ease)}
+.owner-topbar .owner-actions .icon-btn svg,
+.player-topbar .player-actions .icon-btn svg,
+.player-topbar .icon-btn svg{transition:transform 320ms var(--ease)}
 .admin-topbar .admin-actions .icon-btn:active svg,
-.owner-topbar .owner-actions .icon-btn:active svg{transform:rotate(180deg) scale(.85)}
+.owner-topbar .owner-actions .icon-btn:active svg,
+.player-topbar .player-actions .icon-btn:active svg,
+.player-topbar .icon-btn:active svg{transform:rotate(180deg) scale(.85)}
 [data-theme="light"] .admin-topbar .admin-actions .icon-btn:hover,
-[data-theme="light"] .owner-topbar .owner-actions .icon-btn:hover{background:rgba(34,197,94,.1)}
+[data-theme="light"] .owner-topbar .owner-actions .icon-btn:hover,
+[data-theme="light"] .player-topbar .player-actions .icon-btn:hover,
+[data-theme="light"] .player-topbar .icon-btn:hover{background:rgba(34,197,94,.1)}
 
 .admin-badge,
-.owner-badge{
+.owner-badge,
+.player-badge{
   position:absolute;top:2px;right:2px;
   min-width:17px;height:17px;padding:0 4px;
   border-radius:9px;
@@ -399,7 +428,8 @@
   animation:adminBadgeIn 420ms var(--ease) both;
 }
 .admin-badge::after,
-.owner-badge::after{
+.owner-badge::after,
+.player-badge::after{
   content:'';position:absolute;inset:-3px;border-radius:inherit;
   border:1px solid rgba(239,68,68,.55);
   animation:adminPing 1.9s cubic-bezier(0,0,.2,1) infinite;
@@ -415,20 +445,23 @@
 }
 
 .admin-topbar .admin-avatar,
-.owner-topbar .owner-avatar{
+.owner-topbar .owner-avatar,
+.player-topbar .player-avatar{
   width:34px;height:34px;border-radius:50%!important;color:#fff!important;
   background:linear-gradient(135deg,#15803d,#22c55e)!important;
   font-size:13px;font-weight:800;letter-spacing:.04em;
   box-shadow:0 2px 10px rgba(34,197,94,.32);
 }
 .admin-topbar .admin-avatar:hover,
-.owner-topbar .owner-avatar:hover{
+.owner-topbar .owner-avatar:hover,
+.player-topbar .player-avatar:hover{
   transform:translateY(-1px) scale(1.04);
   background:linear-gradient(135deg,#16a34a,#4ade80)!important;
   box-shadow:0 6px 18px rgba(34,197,94,.5);
 }
 .admin-online,
-.owner-online{
+.owner-online,
+.player-online{
   position:absolute;right:1px;bottom:1px;width:10px;height:10px;
   border-radius:50%;background:#22c55e;
   border:2px solid var(--glass-bg-strong);
@@ -439,6 +472,66 @@
   border-color:rgba(239,68,68,.45)!important;
   color:var(--danger)!important;
   box-shadow:0 6px 16px rgba(239,68,68,.22)!important;
+}
+
+/* ---------- Owner & Player Profile Rollout Sign Out Pill ---------- */
+.owner-profile-cluster,
+.player-profile-cluster{
+  display:inline-flex;
+  align-items:center;
+  position:relative;
+}
+
+.owner-rollout-logout,
+.player-rollout-logout{
+  width:0!important;
+  min-width:0!important;
+  max-width:0!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(16px) rotate(-180deg) scale(0.4);
+  transition:width 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              max-width 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 220ms ease,
+              transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              margin 300ms ease,
+              border 200ms ease,
+              background 200ms ease!important;
+  overflow:hidden;
+}
+
+.owner-rollout-logout.visible,
+.player-rollout-logout.visible{
+  width:34px!important;
+  min-width:34px!important;
+  max-width:34px!important;
+  height:34px!important;
+  opacity:1;
+  pointer-events:auto;
+  margin-right:6px!important;
+  margin-left:0!important;
+  border:1px solid rgba(239,68,68,.35)!important;
+  transform:translateX(0) rotate(0deg) scale(1);
+  color:#ef4444!important;
+  background:rgba(239,68,68,.12)!important;
+  box-shadow:0 4px 12px rgba(239,68,68,.25)!important;
+}
+
+.owner-rollout-logout.visible:hover,
+.player-rollout-logout.visible:hover{
+  transform:translateY(-1px) scale(1.08)!important;
+  background:rgba(239,68,68,.22)!important;
+  border-color:rgba(239,68,68,.65)!important;
+  box-shadow:0 6px 18px rgba(239,68,68,.4)!important;
+}
+
+.owner-topbar .owner-avatar.active,
+.player-topbar .player-avatar.active{
+  box-shadow:0 0 0 2px var(--brand),0 6px 20px rgba(34,197,94,.5)!important;
+  transform:scale(1.05);
 }
 
 /* ---------- Platform & Owner alerts drawer ---------- */

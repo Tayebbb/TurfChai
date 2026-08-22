@@ -35,4 +35,23 @@ public class CheckoutRequest {
      */
     @Size(max = 30, message = "promoCode must be at most 30 characters")
     private String promoCode;
+
+    /**
+     * Booking mode: "FULL" (default), "SPLIT" (split with squad), "OPEN_GAME" (split & post open spots).
+     */
+    private String bookingMode;
+
+    /**
+     * Number of players to split the bill among (e.g. 2 to 20).
+     */
+    private Integer splitPlayerCount;
+
+    /**
+     * Open game parameters if bookingMode is "OPEN_GAME".
+     */
+    private String openGameTitle;
+    private Integer openGameCapacity;
+    private Integer openGameReservedSpots;
+    private BigDecimal openGamePricePerPlayer;
+    private String openGameSkillLevel;
 }

@@ -1,16 +1,338 @@
-/* ── Gallery ── */
-  .vgallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:196px 196px;gap:8px;border-radius:24px;overflow:hidden}
-  .vgallery .photo:first-child{grid-row:1/3}
-  .vgallery .photo{border-radius:0}
-  .photo-more{position:relative;cursor:pointer}
-  .photo-more-overlay{
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    background:rgba(0,0,0,.42);color:#fff;font-size:14px;font-weight:700;
-    backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+/* ── Gallery & Carousel ── */
+.vgallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:196px 196px;gap:8px;border-radius:24px;overflow:hidden}
+.vgallery .photo:first-child{grid-row:1/3}
+.vgallery .photo{border-radius:0}
+.photo-more{position:relative;cursor:pointer}
+.photo-more-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.42);color:#fff;font-size:14px;font-weight:700;
+  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+}
+@media(max-width:700px){
+  .vgallery{grid-template-columns:2fr 1fr;grid-template-rows:140px 140px}
+}
+
+/* ── Venue Photos Carousel & Lightbox ── */
+.venue-carousel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.venue-carousel-main {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--glass-border);
+  background: var(--surface-2);
+}
+
+@media (max-width: 768px) {
+  .venue-carousel-main {
+    height: 260px;
+    border-radius: 18px;
   }
-  @media(max-width:700px){
-    .vgallery{grid-template-columns:2fr 1fr;grid-template-rows:140px 140px}
+}
+
+.venue-carousel-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.venue-carousel-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.venue-carousel-img {
+  width: 100%;
+  height: 100% !important;
+  border-radius: 0 !important;
+  background-size: cover !important;
+  background-position: center !important;
+  transition: transform 0.4s ease;
+}
+
+.venue-carousel-slide:hover .venue-carousel-img {
+  transform: scale(1.02);
+}
+
+.venue-carousel-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 35%, transparent 65%, rgba(0,0,0,0.55) 100%);
+  pointer-events: none;
+}
+
+.venue-carousel-topbar {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.venue-carousel-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.venue-carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.venue-carousel-nav-btn:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+  transform: translateY(-50%) scale(1.08);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.venue-carousel-prev {
+  left: 16px;
+}
+
+.venue-carousel-next {
+  right: 16px;
+}
+
+.venue-carousel-bottombar {
+  position: absolute;
+  bottom: 14px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 5;
+}
+
+.venue-carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+
+.venue-carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.venue-carousel-dot.active {
+  width: 22px;
+  background: var(--brand);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+
+.venue-carousel-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.venue-carousel-expand-btn:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* ── Thumbnail Strip ── */
+.venue-carousel-thumbs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.venue-carousel-thumb {
+  flex: 0 0 96px;
+  height: 64px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  padding: 0;
+  background: var(--surface-2);
+  cursor: pointer;
+  overflow: hidden;
+  opacity: 0.65;
+  transition: all 0.25s ease;
+}
+
+.venue-carousel-thumb:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.venue-carousel-thumb.active {
+  opacity: 1;
+  border-color: var(--brand);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ── Fullscreen Lightbox ── */
+.venue-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.venue-lightbox-content {
+  position: relative;
+  max-width: 1000px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.venue-lightbox-close {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.venue-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.venue-lightbox-view {
+  width: 100%;
+  height: 540px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  background: #000;
+}
+
+@media (max-width: 768px) {
+  .venue-lightbox-view {
+    height: 320px;
   }
+}
+
+.venue-lightbox-img {
+  width: 100%;
+  height: 100% !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+.venue-lightbox-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.venue-lightbox-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.venue-lightbox-btn:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+}
 
   /* ── Detail layout ── */
   .detail-grid{display:grid;grid-template-columns:1fr 368px;gap:28px;align-items:start}

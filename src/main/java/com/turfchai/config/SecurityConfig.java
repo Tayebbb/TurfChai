@@ -102,6 +102,9 @@ public class SecurityConfig {
                                                 // Checkout helper: validates a code against an order total.
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/promotions/validate-code")
                                                 .permitAll()
+                                                // Split share landing page & payment
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/bookings/share/*").permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/bookings/share/*/pay").permitAll()
 
                                                 // ── AI assistant ──────────────────────────────────────
                                                 // The chat widget is on public marketing pages, so the
