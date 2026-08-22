@@ -81,3 +81,79 @@
         width: 100%;
     }
 }
+
+/* Squad & Split Sharing Card */
+.squad-card {
+    background: var(--surface, #132219);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    border-radius: var(--r-lg, 16px);
+    padding: 18px;
+}
+
+.squad-progress-bar-bg {
+    height: 8px;
+    background: var(--surface-2, rgba(255, 255, 255, 0.08));
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 8px 0 12px;
+}
+
+.squad-progress-bar-fill {
+    height: 100%;
+    background: var(--brand, #22c55e);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.split-member-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--surface-2, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+    border-radius: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.split-member-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.split-member-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.share-mini-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text, #f9fafb);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.share-mini-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.share-mini-btn.whatsapp {
+    color: #25d366;
+    border-color: rgba(37, 211, 102, 0.3);
+    background: rgba(37, 211, 102, 0.1);
+}
+
+.share-mini-btn.whatsapp:hover {
+    background: rgba(37, 211, 102, 0.2);
+}

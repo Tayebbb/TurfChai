@@ -1,0 +1,172 @@
+.pay-share-wrap {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 32px 16px 80px;
+}
+
+.pay-share-card {
+  background: var(--surface, #132219);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+.pay-share-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.pay-share-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.pay-share-badge.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.pay-share-badge.paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.pay-share-badge.expired {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.pay-share-amount-box {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.03));
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.pay-share-amount-val {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--brand, #22c55e);
+  font-family: var(--font-display, inherit);
+  letter-spacing: -0.02em;
+}
+
+.pay-share-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 18px 0;
+}
+
+@media (max-width: 480px) {
+  .pay-share-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pay-share-cell {
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.pay-share-cell-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-3, #9ca3af);
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pay-share-cell-val {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #f9fafb);
+}
+
+.pay-share-method-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0 20px;
+}
+
+.pay-share-method-btn {
+  background: var(--surface-2, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  padding: 12px 8px;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--text, #f9fafb);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.pay-share-method-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pay-share-method-btn.selected {
+  border-color: var(--brand, #22c55e);
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--brand, #22c55e);
+}
+
+.share-action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.share-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  background: var(--surface-2, rgba(255, 255, 255, 0.05));
+  color: var(--text, #f9fafb);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.share-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.share-action-btn.whatsapp {
+  background: rgba(37, 211, 102, 0.15);
+  border-color: rgba(37, 211, 102, 0.3);
+  color: #25d366;
+}
+
+.share-action-btn.whatsapp:hover {
+  background: rgba(37, 211, 102, 0.25);
+}
