@@ -61,6 +61,14 @@ public class VenueSearchService {
 
     public VenueDetailDto getBySlug(String slug) {
         Venue venue = venueRepository.findBySlug(slug)
+                .or(() -> {
+                    try {
+                        return venueRepository.findById(Long.parseLong(slug));
+                    } catch (NumberFormatException e) {
+                        return java.util.Optional.empty();
+                    }
+                })
+                .or(() -> venueRepository.findByVenueCode(slug))
                 .orElseThrow(() -> new VenueNotFoundException(slug));
         return toDetail(venue);
     }
@@ -101,7 +109,8 @@ public class VenueSearchService {
                 sports,
                 cheapest == null ? null : cheapest.getRate(),
                 cheapest == null ? null : cheapest.getSlotDurationMin(),
-                distance);
+                distance,
+                amenityList(venue.getPhotos()));
     }
 
     private VenueDetailDto toDetail(Venue venue) {
