@@ -52,4 +52,9 @@ public class CreateOpenGameRequest {
     @Min(value = 0, message = "Minimum reliability cannot be negative")
     @Max(value = 100, message = "Minimum reliability cannot exceed 100")
     private Integer minimumReliability;
+
+    private Long bookingId;
+
+    @Min(value = 1, message = "Reserved spots must be at least 1")
+    private Integer reservedSpots;
 }
