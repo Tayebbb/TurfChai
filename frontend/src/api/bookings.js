@@ -20,6 +20,11 @@ export function holdSlot(slotId) {
   return api('/bookings/hold-slot', { method: 'POST', body: { slotId } });
 }
 
+/** POST /api/v1/bookings/release-hold — releases an active hold immediately. */
+export function releaseHold(slotId) {
+  return api('/bookings/release-hold', { method: 'POST', body: { slotId } });
+}
+
 /**
  * GET /api/v1/bookings/active-hold — the caller's currently held slot, if
  * any. Resolves to `{}` (no `slotId`) rather than rejecting when nothing is

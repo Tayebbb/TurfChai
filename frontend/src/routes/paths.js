@@ -26,6 +26,8 @@ export const paths = {
     settings: '/player/settings',
     tournament: (code = ':code') => `/player/tournaments/${code}`,
     tournamentRegister: (code = ':code') => `/player/tournaments/${code}/register`,
+    payShare: '/player/pay-share',
+    payShareFor: (token) => `/player/pay-share?token=${encodeURIComponent(token)}`,
 
     dashboard: {
       root: '/player/dashboard',
