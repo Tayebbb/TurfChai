@@ -345,7 +345,7 @@ export function ManualBookingModal({
             variant="primary"
             size="lg"
             block
-            disabled={submitting || !selectedSlotId || availableSlots.length === 0}
+            disabled={submitting || !effectiveSlotId || availableSlots.length === 0}
           >
             {submitting ? 'Confirming…' : 'Confirm booking'}
           </Button>

@@ -1,4 +1,4 @@
-﻿/* ---------- Landing hero (centered) ---------- */
+/* ---------- Landing hero (centered) ---------- */
 .hero.centered{text-align:center}
 .hero.centered h1,.hero.centered .lede{margin-left:auto;margin-right:auto}
 .hero.centered h1{max-width:780px;font-size:clamp(34px,5.6vw,56px)}
@@ -9,10 +9,56 @@
   box-shadow:var(--shadow-md);text-align:left;
 }
 .hs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.hs-cell{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:4px}
-.hs-cell label{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
-.hs-cell select{background:transparent;border:0;padding:0;height:auto;font-size:14px;font-weight:600;color:var(--text)}
-.hs-cell select:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:4px}
+.hs-cell{
+  background:var(--surface-2);
+  border:1px solid var(--border-strong);
+  border-radius:12px;
+  padding:10px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease);
+}
+.hs-cell:focus-within{
+  border-color:var(--brand);
+  box-shadow:0 0 0 3px var(--brand-soft);
+}
+.hs-cell label{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--text-3);
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.hs-cell select,
+.hs-cell .select{
+  appearance:none;
+  background:transparent;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 4px center;
+  border:0;
+  padding:4px 28px 4px 0;
+  height:auto;
+  min-height:unset;
+  font-size:14px;
+  font-weight:600;
+  color:var(--text);
+  cursor:pointer;
+  outline:none;
+  width:100%;
+}
+.hs-cell select option,
+.hs-cell .select option{
+  background-color:var(--surface);
+  color:var(--text);
+  font-size:14px;
+  font-weight:500;
+  padding:8px 12px;
+}
 .hero-links{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:20px;font-size:13.5px;font-weight:600}
 .statrow{display:flex;justify-content:center;gap:clamp(28px,6vw,64px);flex-wrap:wrap;margin-top:46px}
 .stat{text-align:center}

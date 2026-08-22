@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getActiveHold } from '@/api/bookings';
+import { getActiveHold, releaseHold } from '@/api/bookings';
 import { getToken } from '@/api/client';
 import { paths } from '@/routes/paths';
 import './HeldSlotBanner.css';
 
 const POLL_MS = 20000;
+const HOLD_KEY = (slotId) => `slot_hold_${slotId}`;
+const clearHold = (slotId) => sessionStorage.removeItem(HOLD_KEY(slotId));
 
 const secondsUntil = (heldUntil) =>
   Math.max(0, Math.round((new Date(heldUntil).getTime() - Date.now()) / 1000));
@@ -30,6 +32,7 @@ export function HeldSlotBanner() {
   const navigate = useNavigate();
   const [hold, setHold] = useState(null);
   const [now, setNow] = useState(() => Date.now());
+  const [cancelling, setCancelling] = useState(false);
 
   const signedIn = Boolean(getToken());
 
@@ -87,6 +90,20 @@ export function HeldSlotBanner() {
 
   void now; // triggers the 1s re-render for the countdown below
 
+  const handleCancel = async () => {
+    if (!hold?.slotId || cancelling) return;
+    setCancelling(true);
+    try {
+      await releaseHold(hold.slotId);
+    } catch {
+      // Best-effort release
+    } finally {
+      clearHold(hold.slotId);
+      setHold(null);
+      setCancelling(false);
+    }
+  };
+
   return (
     <div className="held-slot-banner" role="status">
       <span className="held-slot-banner-icon" aria-hidden="true">⏳</span>
@@ -96,13 +113,25 @@ export function HeldSlotBanner() {
           {hold.pitchName ?? 'A slot'} is on hold &middot; {formatCountdown(secondsLeft)} left
         </span>
       </div>
-      <button
-        type="button"
-        className="btn btn-primary btn-sm held-slot-banner-cta"
-        onClick={() => navigate(checkoutHref)}
-      >
-        Resume
-      </button>
+      <div className="held-slot-banner-actions">
+        <button
+          type="button"
+          className="btn btn-primary btn-sm held-slot-banner-cta"
+          onClick={() => navigate(checkoutHref)}
+        >
+          Resume
+        </button>
+        <button
+          type="button"
+          className="btn btn-tertiary btn-sm held-slot-banner-cancel"
+          onClick={handleCancel}
+          disabled={cancelling}
+          title="Cancel booking hold"
+          aria-label="Cancel booking process"
+        >
+          {cancelling ? '…' : 'Cancel'}
+        </button>
+      </div>
     </div>
   );
 }

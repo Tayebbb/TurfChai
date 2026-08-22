@@ -44,9 +44,28 @@
   text-overflow: ellipsis;
 }
 
+.held-slot-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .held-slot-banner-cta {
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+.held-slot-banner-cancel {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 5px 9px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.held-slot-banner-cancel:hover {
+  color: var(--danger);
 }
 
 @media (max-width: 480px) {
