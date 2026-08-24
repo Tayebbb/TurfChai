@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/utils/cn';
 
 /**
@@ -28,10 +28,14 @@ export function Photo({ variant, glyph, height, imgUrl, photos, className, style
   }, [photos, imgUrl]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [prevCandidates, setPrevCandidates] = useState(candidateList);
 
-  useEffect(() => {
+  // Reset the fallback index during render when the candidate list changes
+  // (recommended alternative to a state-resetting effect).
+  if (prevCandidates !== candidateList) {
+    setPrevCandidates(candidateList);
     setCurrentIndex(0);
-  }, [candidateList]);
+  }
 
   const activeUrl = candidateList[currentIndex] ?? null;
 

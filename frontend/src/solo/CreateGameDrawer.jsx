@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/buttons/Button';
 import { Field, Input, Select } from '@/components/forms/Field';
@@ -48,16 +48,6 @@ export function CreateGameDrawer({ isOpen, onClose, onCreated, defaultBookingId 
     });
   }, [bookingsApi.data]);
 
-  useEffect(() => {
-    if (defaultBookingId && isOpen) {
-      handleBookingChange(defaultBookingId);
-    }
-  }, [defaultBookingId, isOpen, eligibleBookings]);
-
-  const selectedBooking = useMemo(() => {
-    return eligibleBookings.find((b) => String(b.id) === String(form.bookingId)) ?? null;
-  }, [eligibleBookings, form.bookingId]);
-
   const handleBookingChange = (bookingId) => {
     const booking = eligibleBookings.find((b) => String(b.id) === String(bookingId));
     setForm((current) => {
@@ -75,6 +65,21 @@ export function CreateGameDrawer({ isOpen, onClose, onCreated, defaultBookingId 
     });
     setErrors((current) => ({ ...current, bookingId: undefined }));
   };
+
+  // Pre-select the booking we were opened for, and re-apply when the eligible
+  // list finishes loading — adjusted during render instead of in an effect.
+  const [lastSyncKey, setLastSyncKey] = useState(null);
+  const syncKey = `${isOpen}|${defaultBookingId ?? ''}|${eligibleBookings.length}`;
+  if (lastSyncKey !== syncKey) {
+    setLastSyncKey(syncKey);
+    if (defaultBookingId && isOpen) {
+      handleBookingChange(defaultBookingId);
+    }
+  }
+
+  const selectedBooking = useMemo(() => {
+    return eligibleBookings.find((b) => String(b.id) === String(form.bookingId)) ?? null;
+  }, [eligibleBookings, form.bookingId]);
 
   const set = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));

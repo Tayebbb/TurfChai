@@ -259,8 +259,6 @@ function detectRuleEmoji(text) {
   return '📌';
 }
 
-const amenSvg = { ...svgProps, width: 22, height: 22, viewBox: '0 0 24 24', strokeWidth: '1.8' };
-
 const RULE_ICONS = {
   ok: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -640,11 +638,12 @@ export default function VenuePage() {
   );
 
   const specs = useMemo(() => specsOf(venue), [venue]);
+  const venueAmenities = venue?.amenities;
   const amenities = useMemo(() => {
-    const rawList = venue?.amenities
-      ? Array.isArray(venue.amenities)
-        ? venue.amenities
-        : String(venue.amenities).split(',').map((a) => a.trim()).filter(Boolean)
+    const rawList = venueAmenities
+      ? Array.isArray(venueAmenities)
+        ? venueAmenities
+        : String(venueAmenities).split(',').map((a) => a.trim()).filter(Boolean)
       : [];
 
     return rawList.map((rawKey) => {
@@ -658,20 +657,23 @@ export default function VenuePage() {
         emoji,
       };
     });
-  }, [venue?.amenities]);
+  }, [venueAmenities]);
 
+  const venueRulesRaw = venue?.rules;
   const venueRulesList = useMemo(() => {
-    if (venue?.rules) {
-      const list = Array.isArray(venue.rules) ? venue.rules : String(venue.rules).split(',').map((r) => r.trim());
+    if (venueRulesRaw) {
+      const list = Array.isArray(venueRulesRaw) ? venueRulesRaw : String(venueRulesRaw).split(',').map((r) => r.trim());
       return list.filter(Boolean);
     }
     return [];
-  }, [venue?.rules]);
+  }, [venueRulesRaw]);
 
+  const venueAddress = venue?.address;
+  const venueArea = venue?.area;
   const locationAddress = useMemo(() => {
     if (!venue) return 'House 12, Road 27, Dhanmondi, Dhaka';
-    const addr = (venue.address || '').trim();
-    const area = (venue.area || '').trim();
+    const addr = (venueAddress || '').trim();
+    const area = (venueArea || '').trim();
 
     if (!addr && !area) return 'Dhaka, Bangladesh';
 
@@ -689,19 +691,22 @@ export default function VenuePage() {
     }
 
     return uniqueTokens.length > 0 ? uniqueTokens.join(', ') : 'Dhaka, Bangladesh';
-  }, [venue?.address, venue?.area]);
+  }, [venue, venueAddress, venueArea]);
 
-  const policyTiers = useMemo(() => policyTiersOf(venue?.cancelPolicy), [venue?.cancelPolicy]);
+  const cancelPolicy = venue?.cancelPolicy;
+  const policyTiers = useMemo(() => policyTiersOf(cancelPolicy), [cancelPolicy]);
 
+  const venuePhotos = venue?.photos;
+  const venueName = venue?.name;
   const photoList = useMemo(() => {
-    if (venue?.photos && venue.photos.length > 0) {
-      const list = Array.isArray(venue.photos) ? venue.photos : String(venue.photos).split(',').map((p) => p.trim());
+    if (venuePhotos && venuePhotos.length > 0) {
+      const list = Array.isArray(venuePhotos) ? venuePhotos : String(venuePhotos).split(',').map((p) => p.trim());
       const filtered = list.filter(Boolean);
       if (filtered.length > 0) {
         return filtered.map((url, idx) => ({
           id: `venue-photo-${idx}`,
           url,
-          title: `${venue?.name || 'Venue'} photo ${idx + 1}`,
+          title: `${venueName || 'Venue'} photo ${idx + 1}`,
           variant: idx === 0 ? undefined : `alt${(idx % 3) + 1}`,
         }));
       }
@@ -712,7 +717,7 @@ export default function VenuePage() {
       { id: 'default-alt2', variant: 'alt2', glyph: '🥅', title: 'Goal Area' },
       { id: 'default-alt3', variant: 'alt3', glyph: '🏃', title: 'Player Bench & Pitch' },
     ];
-  }, [venue?.photos, venue?.name]);
+  }, [venuePhotos, venueName]);
 
   const pitch = venue?.pitches?.[0];
   /** Cheapest active rule drives the headline "from" price. */
@@ -723,11 +728,6 @@ export default function VenuePage() {
       : null;
   }, [venue]);
   const offPeakRule = venue?.pricing?.find((rule) => rule.windowType === 'OFF_PEAK');
-  const headlinePrice = cheapestRule
-    ? bdt(cheapestRule.rate)
-    : venue?.basePrice
-    ? bdt(venue.basePrice)
-    : '৳0';
   const slotDuration = cheapestRule?.slotDurationMin ?? 90;
   const pitchLine = pitch
     ? [pitch.name, formatLabel(pitch.format), `${slotDuration}-min slots`].filter(Boolean).join(' · ')

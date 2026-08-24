@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { PageTitle } from "@/components/common/PageTitle";
 import { Button } from "@/components/buttons/Button";
@@ -62,12 +62,16 @@ export default function BookingDetailPage() {
   const { showToast } = useToast();
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-  // Split and open game states
-  const [splitModalOpen, setSplitModalOpen] = useState(false);
+  // Split and open game states — seeded from the ?action= URL param on mount
+  const [splitModalOpen, setSplitModalOpen] = useState(
+    searchParams.get("action") === "split",
+  );
   const [splitPlayerCount, setSplitPlayerCount] = useState("5");
   const [enablingSplit, setEnablingSplit] = useState(false);
   const [activeQrMember, setActiveQrMember] = useState(null);
-  const [openGameDrawerOpen, setOpenGameDrawerOpen] = useState(false);
+  const [openGameDrawerOpen, setOpenGameDrawerOpen] = useState(
+    searchParams.get("action") === "open-game",
+  );
 
   const { data: booking, loading, error, reload: reloadBooking } = useApi(
     () => getBooking(bookingId),
@@ -94,16 +98,6 @@ export default function BookingDetailPage() {
     [openGameId],
   );
   const openGameData = openGameApi.data;
-
-  // Check URL action on mount (e.g. ?action=split or ?action=open-game)
-  useEffect(() => {
-    const action = searchParams.get("action");
-    if (action === "split") {
-      setSplitModalOpen(true);
-    } else if (action === "open-game") {
-      setOpenGameDrawerOpen(true);
-    }
-  }, [searchParams]);
 
   const handleDownloadPdf = async () => {
     if (!booking) return;
@@ -767,7 +761,7 @@ export default function BookingDetailPage() {
         isOpen={openGameDrawerOpen}
         onClose={() => setOpenGameDrawerOpen(false)}
         defaultBookingId={bookingId}
-        onCreated={(newGame) => {
+        onCreated={() => {
           setOpenGameDrawerOpen(false);
           showToast("Open game posted successfully 📢");
           reloadBooking();
