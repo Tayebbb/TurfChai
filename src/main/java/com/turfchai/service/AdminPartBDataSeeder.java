@@ -27,8 +27,13 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -335,6 +340,26 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
         seedUpcomingWeekSchedule(players, venues, pitches);
     }
 
+    /**
+     * A booking decided by the schedule pass but not yet written — slots are
+     * persisted in bulk first so bookings can reference their generated ids.
+     */
+    private record PendingWeekBooking(
+        Slot slot,
+        String bookingCode,
+        String source,
+        String guestName,
+        String guestPhone,
+        Long userId,
+        Long venueId,
+        Long pitchId,
+        LocalDate bookingDate,
+        LocalTime start,
+        LocalTime end,
+        BigDecimal price,
+        OffsetDateTime createdAt
+    ) {}
+
     public void seedUpcomingWeekSchedule(
         List<User> players,
         List<Venue> venues,
@@ -355,8 +380,42 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
             LocalTime.of(20, 30),
         };
 
+        // Bulk-load the window's state up front. The per-slot lookups this
+        // replaces cost thousands of SELECTs plus individual saveAndFlush
+        // calls per boot, which dominated CI runtime.
+        LocalDate windowEnd = today.plusDays(7);
+        Map<String, Slot> existingSlots = new HashMap<>();
+        for (Slot s : slotRepository.findBySlotDateBetween(today, windowEnd)) {
+            if (s.getPitch() == null || s.getId() == null) continue;
+            existingSlots.putIfAbsent(
+                weekSlotKey(s.getPitch().getId(), s.getSlotDate(), s.getStartTime()),
+                s
+            );
+        }
+        Set<Long> windowSlotIds = new HashSet<>();
+        for (Slot s : existingSlots.values()) {
+            windowSlotIds.add(s.getId());
+        }
+        Set<Long> slotsWithActiveBooking = windowSlotIds.isEmpty()
+            ? Set.of()
+            : new HashSet<>(
+                  bookingRepository.findSlotIdsWithBookingStatusNot(
+                      windowSlotIds,
+                      BookingStatus.CANCELLED
+                  )
+              );
+        // Codes already taken; updated as new ones are minted below.
+        Set<String> usedCodes = new HashSet<>(
+            bookingRepository.findAllBookingCodes()
+        );
+
         int bookingCodeSeq = 7000;
-        int createdBookings = 0;
+
+        List<Slot> dirtySlots = new ArrayList<>();
+        // Insertion-ordered: values align with keySet iteration after saveAll,
+        // null for new slots that stay unbooked.
+        Map<Slot, PendingWeekBooking> plannedNewBookings = new LinkedHashMap<>();
+        List<PendingWeekBooking> pendingForExistingSlots = new ArrayList<>();
 
         for (int dayOffset = 0; dayOffset <= 7; dayOffset++) {
             LocalDate targetDate = today.plusDays(dayOffset);
@@ -408,17 +467,9 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                         .minusDays(2)
                         .atTime(start)
                         .atOffset(ZoneOffset.UTC);
-                    // SQL seed migrations may have created duplicate slots for the same
-                    // pitch/date/time; pick the first instead of failing on non-unique results.
-                    List<Slot> matchingSlots =
-                        slotRepository.findAllByPitchIdAndSlotDateAndStartTime(
-                            pitch.getId(),
-                            targetDate,
-                            start
-                        );
-                    Slot slot = matchingSlots.isEmpty()
-                        ? null
-                        : matchingSlots.get(0);
+                    Slot slot = existingSlots.get(
+                        weekSlotKey(pitch.getId(), targetDate, start)
+                    );
 
                     User player = players.get(random.nextInt(players.size()));
 
@@ -441,108 +492,145 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                             .updatedAt(createdAt)
                             .build();
 
-                        slot = slotRepository.saveAndFlush(slot);
+                        plannedNewBookings.put(slot, null);
                     } else {
                         if (isBooked && slot.getStatus() != SlotStatus.BOOKED) {
                             slot.setStatus(SlotStatus.BOOKED);
                             slot.setHeldByUserId(null);
                             slot.setHoldExpiresAt(null);
-                            slot = slotRepository.saveAndFlush(slot);
+                            dirtySlots.add(slot);
                         } else if (
                             !isBooked && slot.getStatus() == SlotStatus.HELD
                         ) {
                             slot.setStatus(SlotStatus.AVAILABLE);
                             slot.setHeldByUserId(null);
                             slot.setHoldExpiresAt(null);
-                            slot = slotRepository.saveAndFlush(slot);
+                            dirtySlots.add(slot);
                         }
                     }
 
                     // Ensure Booking exists if booked
-                    if (isBooked) {
-                        List<Booking> existingBookings =
-                            bookingRepository.findBySlotIdAndStatusNot(
-                                slot.getId(),
-                                BookingStatus.CANCELLED
-                            );
-                        if (existingBookings.isEmpty()) {
-                            String source =
-                                slotIdx % 3 == 0
-                                    ? "PHONE"
-                                    : slotIdx % 3 == 1
-                                      ? "ONLINE"
-                                      : "WALK_IN";
-                            String guestName = source.equals("ONLINE")
-                                ? null
-                                : player.getFullName();
-                            String guestPhone = source.equals("ONLINE")
-                                ? null
-                                : player.getPhone();
+                    if (!isBooked) continue;
+                    if (
+                        slot.getId() != null &&
+                        slotsWithActiveBooking.contains(slot.getId())
+                    ) {
+                        continue;
+                    }
 
-                            String bookingCode;
-                            if (source.equals("ONLINE")) {
-                                // The seq restarts on every boot while dev/ci H2
-                                // databases persist across restarts, so bump past
-                                // any code that already exists instead of failing
-                                // the unique constraint on bookings.booking_code.
-                                do {
-                                    bookingCode =
-                                        String.format(
-                                            "BK-%04d%02d-%04d",
-                                            targetDate.getYear(),
-                                            targetDate.getMonthValue(),
-                                            bookingCodeSeq++
-                                        );
-                                } while (
-                                    bookingRepository
-                                        .findByBookingCode(bookingCode)
-                                        .isPresent()
+                    String source =
+                        slotIdx % 3 == 0
+                            ? "PHONE"
+                            : slotIdx % 3 == 1
+                              ? "ONLINE"
+                              : "WALK_IN";
+                    String guestName = source.equals("ONLINE")
+                        ? null
+                        : player.getFullName();
+                    String guestPhone = source.equals("ONLINE")
+                        ? null
+                        : player.getPhone();
+
+                    String bookingCode;
+                    if (source.equals("ONLINE")) {
+                        // The seq restarts on every boot while dev/ci H2
+                        // databases persist across restarts, so skip codes
+                        // already taken instead of failing the unique key.
+                        do {
+                            bookingCode =
+                                String.format(
+                                    "BK-%04d%02d-%04d",
+                                    targetDate.getYear(),
+                                    targetDate.getMonthValue(),
+                                    bookingCodeSeq++
                                 );
-                            } else {
-                                bookingCode =
-                                    "MB-" +
-                                    UUID.randomUUID()
-                                        .toString()
-                                        .substring(0, 8)
-                                        .toUpperCase();
-                            }
+                        } while (!usedCodes.add(bookingCode));
+                    } else {
+                        bookingCode =
+                            "MB-" +
+                            UUID.randomUUID()
+                                .toString()
+                                .substring(0, 8)
+                                .toUpperCase();
+                    }
 
-                            Booking booking = Booking.builder()
-                                .bookingCode(bookingCode)
-                                .slot(slot)
-                                .userId(player.getId())
-                                .venueId(venue.getId())
-                                .pitchId(pitch.getId())
-                                .bookingDate(targetDate)
-                                .startTime(start)
-                                .endTime(end)
-                                .grossAmount(price)
-                                .netAmount(
-                                    price.multiply(BigDecimal.valueOf(0.9))
-                                )
-                                .source(source)
-                                .guestName(guestName)
-                                .guestPhone(guestPhone)
-                                .status(
-                                    isBooked
-                                        ? BookingStatus.CONFIRMED
-                                        : BookingStatus.PENDING
-                                )
-                                .createdAt(createdAt)
-                                .updatedAt(createdAt)
-                                .build();
+                    PendingWeekBooking pending = new PendingWeekBooking(
+                        slot,
+                        bookingCode,
+                        source,
+                        guestName,
+                        guestPhone,
+                        player.getId(),
+                        venue.getId(),
+                        pitch.getId(),
+                        targetDate,
+                        start,
+                        end,
+                        price,
+                        createdAt
+                    );
 
-                            bookingRepository.saveAndFlush(booking);
-                            createdBookings++;
-                        }
+                    if (slot.getId() == null) {
+                        plannedNewBookings.put(slot, pending);
+                    } else {
+                        pendingForExistingSlots.add(pending);
                     }
                 }
             }
         }
+
+        slotRepository.saveAll(dirtySlots);
+        List<Slot> savedNewSlots = slotRepository.saveAll(
+            new ArrayList<>(plannedNewBookings.keySet())
+        );
+
+        List<Booking> createdBookings = new ArrayList<>();
+        java.util.Iterator<PendingWeekBooking> specIterator =
+            plannedNewBookings.values().iterator();
+        for (Slot savedSlot : savedNewSlots) {
+            PendingWeekBooking pending = specIterator.next();
+            if (pending != null) {
+                createdBookings.add(toWeekBooking(pending, savedSlot));
+            }
+        }
+        for (PendingWeekBooking pending : pendingForExistingSlots) {
+            createdBookings.add(toWeekBooking(pending, pending.slot()));
+        }
+        bookingRepository.saveAll(createdBookings);
+
         log.info(
             "Ensured upcoming 7-day schedule with {} new bookings.",
-            createdBookings
+            createdBookings.size()
         );
+    }
+
+    private static String weekSlotKey(
+        Long pitchId,
+        LocalDate date,
+        LocalTime start
+    ) {
+        return pitchId + "_" + date + "_" + start;
+    }
+
+    private Booking toWeekBooking(PendingWeekBooking p, Slot savedSlot) {
+        return Booking.builder()
+            .bookingCode(p.bookingCode())
+            .slot(savedSlot)
+            .userId(p.userId())
+            .venueId(p.venueId())
+            .pitchId(p.pitchId())
+            .bookingDate(p.bookingDate())
+            .startTime(p.start())
+            .endTime(p.end())
+            .grossAmount(p.price())
+            .netAmount(p.price().multiply(BigDecimal.valueOf(0.9)))
+            .source(p.source())
+            .guestName(p.guestName())
+            .guestPhone(p.guestPhone())
+            .status(BookingStatus.CONFIRMED)
+            .createdAt(p.createdAt())
+            .updatedAt(p.createdAt())
+            .build();
     }
 
     public void seedDemoPlayerUpcomingBookings(

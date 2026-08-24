@@ -66,6 +66,9 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
         LocalTime startTime
     );
 
+    /** All slots across every venue inside an inclusive date range — bulk seeding/lookups. */
+    List<Slot> findBySlotDateBetween(LocalDate startDate, LocalDate endDate);
+
     List<Slot> findAllByPitchIdAndSlotDateAndStartTime(
         Long pitchId,
         LocalDate slotDate,
