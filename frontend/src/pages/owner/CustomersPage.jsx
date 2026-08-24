@@ -45,7 +45,7 @@ export default function CustomersPage() {
   const [showRewardAllModal, setShowRewardAllModal] = useState(false);
   const [rewarding, setRewarding] = useState(false);
 
-  const { data: res, loading, reload } = useApi(getOwnerCustomers, []);
+  const { data: res, loading } = useApi(getOwnerCustomers, []);
   const [localCustomers, setLocalCustomers] = useState(null);
 
   const customers = useMemo(() => {

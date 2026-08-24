@@ -45,4 +45,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      */
     @Query("SELECT DISTINCT b.userId FROM Booking b WHERE b.bookingDate >= :since")
     List<Long> findDistinctUserIdsBookingSince(@Param("since") java.time.LocalDate since);
+
+    /** Booking codes only, for bulk uniqueness checks in the demo seeders. */
+    @Query("SELECT b.bookingCode FROM Booking b")
+    List<String> findAllBookingCodes();
+
+    /** Slot ids that have at least one booking excluding {@code status} — bulk seeding checks. */
+    @Query(
+        "SELECT DISTINCT b.slot.id FROM Booking b WHERE b.slot.id IN :slotIds AND b.status <> :status"
+    )
+    List<Long> findSlotIdsWithBookingStatusNot(
+        @Param("slotIds") java.util.Collection<Long> slotIds,
+        @Param("status") BookingStatus status
+    );
 }

@@ -45,15 +45,17 @@ export function PlayerLayout({ withFooter = false }) {
     location.pathname.includes('/settings');
 
   const [manuallyToggled, setManuallyToggled] = useState(null);
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
   const profileRef = useRef(null);
 
   // Automatically roll out when on profile/dashboard page unless manually toggled
   const isRolloutVisible = manuallyToggled !== null ? manuallyToggled : isProfilePage;
 
-  useEffect(() => {
-    // Reset manual toggle on route changes so entering dashboard always auto rolls out
+  // Reset manual toggle on route changes so entering dashboard always auto rolls out
+  if (prevPathname !== location.pathname) {
+    setPrevPathname(location.pathname);
     setManuallyToggled(null);
-  }, [location.pathname]);
+  }
 
   useEffect(() => {
     if (!isRolloutVisible) return;
@@ -140,7 +142,7 @@ export function PlayerLayout({ withFooter = false }) {
 
   const handleProfileClick = () => {
     if (isProfilePage) {
-      setShowLogout((prev) => !prev);
+      setManuallyToggled(!isRolloutVisible);
     } else {
       navigate(paths.player.dashboard.settings);
     }

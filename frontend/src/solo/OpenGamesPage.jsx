@@ -247,11 +247,14 @@ export default function OpenGamesPage() {
   const [sort, setSort] = useState('urgency');
   const [filters, setFilters] = useState({});
 
-  useEffect(() => {
-    const q = searchParams.get('q') ?? '';
-    setQuery(q);
-    setDebouncedQuery(q);
-  }, [searchParams.get('q')]);
+  // Sync state when the URL's q param changes while mounted — adjusted during render.
+  const qParam = searchParams.get('q') ?? '';
+  const [prevQParam, setPrevQParam] = useState(qParam);
+  if (prevQParam !== qParam) {
+    setPrevQParam(qParam);
+    setQuery(qParam);
+    setDebouncedQuery(qParam);
+  }
 
   // Debounced so the search box does not fire a request per keystroke.
   useEffect(() => {

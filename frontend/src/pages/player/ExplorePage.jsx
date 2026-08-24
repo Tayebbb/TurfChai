@@ -175,12 +175,15 @@ export default function ExplorePage() {
   // Filters live in the URL so the home-page chips can deep-link straight into them.
   const filterParams = useMemo(() => readFilterParams(searchParams), [searchParams]);
 
-  // Sync state when URL search params change (e.g. from dashboard search bar)
-  useEffect(() => {
-    const q = searchParams.get('q') ?? '';
-    setQuery(q);
-    setDebouncedQuery(q);
-  }, [searchParams.get('q')]);
+  // Sync state when the URL's q param changes while mounted
+  // (e.g. from dashboard search bar) — adjusted during render.
+  const qParam = searchParams.get('q') ?? '';
+  const [prevQParam, setPrevQParam] = useState(qParam);
+  if (prevQParam !== qParam) {
+    setPrevQParam(qParam);
+    setQuery(qParam);
+    setDebouncedQuery(qParam);
+  }
 
   // Debounce keystrokes so we don't hit the API on every character.
   useEffect(() => {
