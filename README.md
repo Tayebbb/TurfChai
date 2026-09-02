@@ -198,10 +198,14 @@ Details and the role matrix:
 
 ## Deployment
 
-`render.yaml` deploys the backend to Render as a Docker container, running
-Flyway against a managed PostgreSQL instance; the frontend is built with
-`npm run build` and served from Vercel. `.github/workflows/ci.yml` runs the
-backend and frontend builds against a PostgreSQL 16 service container.
+TurfChai deploys as a **single service**: the Dockerfile builds the React
+bundle and bakes it into the Spring Boot jar, and `SpaConfig` serves it — so
+one origin handles the API, the SPA and deep links like `/admin` (the split
+Vercel + Render setup was retired; see [DEPLOYMENT.md](DEPLOYMENT.md) for the
+free Render + Neon + student-pack-domain walkthrough). `render.yaml` is the
+Render blueprint; `.github/workflows/ci.yml` runs the backend and frontend
+builds against a PostgreSQL 16 service container and pings the Render deploy
+hook on merges to main.
 
 Production requires `JWT_SECRET`, a real datasource, and
 `OTP_EXPOSE_DEV_CODE=false`.

@@ -1,6 +1,22 @@
+# Single-service deployment: one web service runs the jar, which serves BOTH
+# the REST API and the built React SPA (see Dockerfile stage 2). This is the
+# fix for the Vercel + Render split setup where /admin 404'd — there is no
+# second origin, no CORS, and no SPA rewrite to get wrong.
+#
+# The database is intentionally NOT a Render Postgres: Render's free Postgres
+# expires after 30 days. Point DATABASE_URL at a free Neon (or Supabase)
+# instance instead — set these in the Render dashboard:
+#
+#   SPRING_DATASOURCE_URL     jdbc:postgresql://<neon-host>/<db>?sslmode=require
+#   SPRING_DATASOURCE_USERNAME  <neon user>
+#   SPRING_DATASOURCE_PASSWORD  <neon password>
+#   JWT_SECRET                <long random string>
+#   OTP_EXPOSE_DEV_CODE       false   (unless demo)
+#   SPRING_JPA_HIBERNATE_DDL_AUTO  validate
+#   SPRING_FLYWAY_ENABLED    true
 services:
   - type: web
-    name: turfchai-backend
+    name: turfchai
     runtime: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/health
@@ -9,35 +25,17 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-
       - key: SPRING_DATASOURCE_URL
-        fromDatabase:
-          name: turfchai-db
-          property: connectionString
-
+        sync: false
       - key: SPRING_DATASOURCE_USERNAME
-        fromDatabase:
-          name: turfchai-db
-          property: user
-
+        sync: false
       - key: SPRING_DATASOURCE_PASSWORD
-        fromDatabase:
-          name: turfchai-db
-          property: password
-
+        sync: false
       - key: JWT_SECRET
         generateValue: true
-
-      - key: FRONTEND_URL
-        value: https://turf-chai.vercel.app
-
+      - key: OTP_EXPOSE_DEV_CODE
+        value: "true"
       - key: OPENROUTER_API_KEY
         sync: false
-
       - key: HF_API_KEY
         sync: false
-
-databases:
-  - name: turfchai-db
-    databaseName: turfchai
-    user: turfchai_user
