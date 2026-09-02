@@ -63,6 +63,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@Profile({ "dev", "test", "ci", "docker" })
 @Order(11)
 @RequiredArgsConstructor
 public class AdminPartBDataSeeder implements CommandLineRunner {
