@@ -62,6 +62,8 @@ AUDIT_REPORT.md
 
 ### Runtime logs ###
 boot.log
+hs_err_pid*.log
+replay_pid*.log
 
 ### SPA bundle baked into the jar by the Docker build — never commit it.
 ### The only checked-in static page is src/main/resources/static/ai-chat.html.
@@ -76,3 +78,4 @@ qa/.*.log
 frontend/e2e/.artifacts/
 frontend/e2e/.state/
 frontend/qa/*.log
+.neon
