@@ -47,11 +47,9 @@ import org.springframework.transaction.annotation.Transactional;
  * Part B of the demo dataset: bookings, payouts and audit logs.
  *
  * <p>
- * <b>Demo data only</b> — dev/ci profiles. This writes fabricated bookings
- * and payouts carrying money amounts, which must never reach a real database.
- * It is deliberately excluded from the {@code test} profile: over a thousand
- * synthetic bookings with no payment rows would break the money-invariant and
- * venue-cleanup suites.
+ * <b>Demo data only</b> — dev/test/ci/docker profiles (see {@code @Profile});
+ * never {@code prod}. This writes fabricated bookings and payouts carrying
+ * money amounts, which must never reach a real database.
  *
  * <p>
  * Runs as an ordered {@link CommandLineRunner} after Part A. It used to run
@@ -63,6 +61,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@Profile({ "dev", "test", "ci", "docker" })
 @Order(11)
 @RequiredArgsConstructor
 public class AdminPartBDataSeeder implements CommandLineRunner {
@@ -720,6 +719,14 @@ public class AdminPartBDataSeeder implements CommandLineRunner {
                         .updatedAt(createdAt)
                         .build();
                     slot = slotRepository.saveAndFlush(slot);
+                } else if (
+                    !bookingRepository
+                        .findBySlotIdAndStatusNot(slot.getId(), BookingStatus.CANCELLED)
+                        .isEmpty()
+                ) {
+                    // Another live booking already holds this slot (any user);
+                    // inserting ours would violate uq_bookings_active_slot.
+                    continue;
                 } else {
                     slot.setStatus(SlotStatus.BOOKED);
                     slot.setHeldByUserId(null);
