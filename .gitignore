@@ -57,8 +57,18 @@ build/
 ### Local-only (Mugdho's personal journal/notes) ###
 Mugdho/
 
+### Local-only reports ###
+AUDIT_REPORT.md
+
 ### Runtime logs ###
 boot.log
+
+### SPA bundle baked into the jar by the Docker build — never commit it.
+### The only checked-in static page is src/main/resources/static/ai-chat.html.
+src/main/resources/static/index.html
+src/main/resources/static/favicon.svg
+src/main/resources/static/icons.svg
+src/main/resources/static/assets/
 
 ### QA run artefacts (regenerated on every gate run) ###
 qa/*.log
