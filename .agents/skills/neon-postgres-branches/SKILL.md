@@ -81,7 +81,7 @@ Link: https://neon.com/docs/introduction/branching.md
    neon branches create \
      --name <branch-name> \
      --parent <parent-branch-id-or-name> \
-     --expires-at 2026-12-15T18:02:16Z
+      --expires-at <expiry-timestamp>
    ```
 
 4. Optionally fetch a connection string for the new branch:
@@ -106,7 +106,7 @@ Link: https://neon.com/docs/guides/branching-schema-only.md
      --name <schema-only-branch-name> \
      --parent <parent-branch-id-or-name> \
      --schema-only \
-     --expires-at 2026-12-15T18:02:16Z
+      --expires-at <expiry-timestamp>
    ```
 
    If multiple projects exist, include `--project-id`:
@@ -117,7 +117,7 @@ Link: https://neon.com/docs/guides/branching-schema-only.md
      --parent <parent-branch-id-or-name> \
      --schema-only \
      --project-id <your-project-id> \
-     --expires-at 2026-12-15T18:02:16Z
+      --expires-at <expiry-timestamp>
    ```
 
 ### Beta Support Guidance (Mandatory)
@@ -266,7 +266,7 @@ Common CI/CD use cases for Neon branches:
 2. Share docs link: https://neon.com/docs/introduction/branching
 3. Check the tool path first (CLI with `neon --version`; MCP only if the CLI isn't usable).
 4. Provide commands:
-   - `neon branches create --name migration-test --parent main --expires-at 2026-12-15T18:02:16Z`
+   - `neon branches create --name migration-test --parent main --expires-at <expiry-timestamp>`
    - `neon connection-string migration-test`
 
 ### Example 2: Sensitive data development workflow
@@ -279,7 +279,7 @@ Common CI/CD use cases for Neon branches:
 2. Share docs link: https://neon.com/docs/guides/branching-schema-only
 3. Check the tool path first (CLI with `neon --version`; MCP only if the CLI isn't usable).
 4. Provide command:
-   - `neon branches create --name compliance-dev --parent main --schema-only --project-id <your-project-id> --expires-at 2026-12-15T18:02:16Z`
+   - `neon branches create --name compliance-dev --parent main --schema-only --project-id <your-project-id> --expires-at <expiry-timestamp>`
 5. Mention Beta support path:
    - https://console.neon.tech/app/projects?modal=feedback
    - https://discord.gg/92vNTzKDGp
