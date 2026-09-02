@@ -85,10 +85,10 @@ public class AdminDemoDataSeeder implements CommandLineRunner {
     private static final String[] VENUE_PHOTO_URLS = {
             "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80",
             "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80",
-            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80",
+            "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=800&q=80",
             "https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800&q=80",
             "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=800&q=80",
-            "https://images.unsplash.com/photo-1518604667503-465ac943e86c?w=800&q=80",
+            "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80",
             "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&q=80",
             "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
             "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?w=800&q=80",
