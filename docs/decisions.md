@@ -184,7 +184,7 @@ Stated plainly. Nothing here is presented as working.
 
 | Area                                    | Detail                                                                                                                                                                                    |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Email delivery                          | Wired through `JavaMailSender`, but skipped entirely when `SPRING_MAIL_HOST` is unset — which is the default. Admin codes are then available as `devCode` in the response (dev/demo only) |
+| Email delivery                          | **Removed.** Admin 2FA runs in demo mode — the code is shown on screen (`devCode`). Notifications are in-app only, never emailed |
 | Image upload                            | Real Cloudinary integration, but inert without `CLOUDINARY_URL`; uploads then fail rather than returning a URL                                                                            |
 | AI assistant                            | Real RAG + tool-calling module, but needs `OPENROUTER_API_KEY`; without it a fallback provider answers                                                                                    |
 | ML dynamic pricing                      | Real ONNX model with 9 features; returns 503 when the model cannot be loaded. Booking is unaffected — slots carry a stored price                                                          |

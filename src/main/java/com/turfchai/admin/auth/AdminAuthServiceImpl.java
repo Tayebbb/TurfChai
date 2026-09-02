@@ -28,16 +28,13 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
     private final AdminAuthSupport support;
     private final AdminLoginChallengeStore challengeStore;
-    private final AdminOtpMailer otpMailer;
     private final Map<Long, ChallengeThrottle> throttles = new ConcurrentHashMap<>();
 
     public AdminAuthServiceImpl(
             AdminAuthSupport support,
-            AdminLoginChallengeStore challengeStore,
-            AdminOtpMailer otpMailer) {
+            AdminLoginChallengeStore challengeStore) {
         this.support = support;
         this.challengeStore = challengeStore;
-        this.otpMailer = otpMailer;
     }
 
     private record ChallengeThrottle(long windowStartSeconds, int count, long lastAtSeconds) {
@@ -58,14 +55,14 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         challengeStore.save(challenge, new AdminLoginChallengeStore.ChallengeEntry(
                 code, admin.getId(), Instant.now().plusSeconds(ttlSeconds), 0));
 
-        otpMailer.sendLoginCode(admin.getEmail(), code, ttlSeconds);
-
+        // No email delivery: the code is surfaced in the response as devCode
+        // (demo mode is the only delivery channel for this deployment).
         return new AdminLoginChallengeResponse(
                 challenge,
                 maskEmail(admin.getEmail()),
                 ttlSeconds,
                 support.exposeDevCode() ? code : null,
-                "A verification code was sent to " + maskEmail(admin.getEmail()));
+                "Demo mode: your verification code is shown on screen");
     }
 
     /**

@@ -18,10 +18,10 @@ import org.springframework.stereotype.Component;
 /**
  * Bridge between the separated admin 2FA module and the shared auth/security
  * layer. This is the only place the admin module touches shared beans
- * ({@link AuthenticationManager}, {@link UserRepository}, {@link JwtService},
- * {@link JwtProperties}) so future changes to the shared layer land here alone.
+ * ({@code AuthenticationManager}, {@code UserRepository}, {@code JwtService},
+ * {@code JwtProperties}) so future changes to the shared layer land here alone.
  *
- * When the shared auth contract moves (e.g. token shape, principal model), adjust
+ * <p>When the shared auth contract moves (e.g. token shape, principal model), adjust
  * only this class — never the admin module internals.
  */
 @Component
@@ -31,22 +31,16 @@ public class AdminAuthSupport {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
-    private final AdminAuthProperties adminAuthProperties;
-    private final String smtpHost;
 
     public AdminAuthSupport(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             JwtService jwtService,
-            JwtProperties jwtProperties,
-            AdminAuthProperties adminAuthProperties,
-            @org.springframework.beans.factory.annotation.Value("${spring.mail.host:}") String smtpHost) {
+            JwtProperties jwtProperties) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.jwtProperties = jwtProperties;
-        this.adminAuthProperties = adminAuthProperties;
-        this.smtpHost = smtpHost;
     }
 
     /**
@@ -94,10 +88,9 @@ public class AdminAuthSupport {
     }
 
     public boolean exposeDevCode() {
-        // Dev-code is only a demo fallback: never expose it while a real
-        // delivery channel (SMTP host) is configured, unless explicitly enabled.
-        return adminAuthProperties.exposeDevCode()
-                || smtpHost == null || smtpHost.isBlank();
+        // Email delivery has been removed entirely; the on-screen code is the
+        // only delivery channel, so it must stay exposed for sign-in to work.
+        return true;
     }
 
     private UserResponse toUserResponse(User user) {
