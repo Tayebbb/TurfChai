@@ -9,7 +9,7 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
-EMAIL="${SMOKE_ADMIN_EMAIL:-fazle.rabbi.mugdho@gmail.com}"
+EMAIL="${SMOKE_ADMIN_EMAIL:-nadia@turfchai.com}"
 PASSWORD="${SMOKE_ADMIN_PASSWORD:-TurfChai@123}"
 HEALTH_URL="${BASE_URL}/api/v1/health"
 TIMEOUT_SECS="${SMOKE_TIMEOUT_SECS:-180}"

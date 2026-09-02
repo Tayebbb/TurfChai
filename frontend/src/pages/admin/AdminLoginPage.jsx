@@ -91,7 +91,7 @@ export default function AdminLoginPage() {
       setCode('');
       setDevCode(response.devCode || '');
       otpRefs.current[0]?.focus();
-      showToast('A new verification code was sent');
+      showToast('A new verification code was generated');
     } catch (error) {
       showToast(error?.message || 'Could not resend the code', { duration: 5000 });
     } finally {
@@ -298,22 +298,11 @@ export default function AdminLoginPage() {
                       className="btn btn-sm btn-secondary"
                       style={{ fontSize: 12, padding: '4px 10px' }}
                       onClick={() => {
-                        setEmail('shahadat.cse.20230104008@aust.edu');
-                        setPassword('TurfChai@123');
-                      }}
-                    >
-                      🛡️ Super Admin (Shahadat)
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary"
-                      style={{ fontSize: 12, padding: '4px 10px' }}
-                      onClick={() => {
                         setEmail('nadia@turfchai.com');
                         setPassword('TurfChai@123');
                       }}
                     >
-                      🛡️ Admin (Nadia)
+                      🛡️ Super Admin (Nadia)
                     </button>
                   </div>
                 </div>
@@ -325,7 +314,7 @@ export default function AdminLoginPage() {
                 <div className="tc-otp-head">
                   <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Enter verification code</h2>
                   <p className="small" style={{ margin: '4px 0 0', color: 'var(--text-3)' }}>
-                    Check your email for the 6-digit code
+                    Demo mode — your code is shown below
                   </p>
                 </div>
 
@@ -341,7 +330,7 @@ export default function AdminLoginPage() {
                     }}
                   >
                     <span className="tiny subtle" style={{ display: 'block' }}>
-                      Development code (also emailed to the admin)
+                      Demo verification code
                     </span>
                     <b className="num" style={{ fontSize: 22, letterSpacing: 6, color: 'var(--green)' }}>
                       {devCode}

@@ -27,24 +27,16 @@ public class AdminDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDataSeeder.class);
 
-    public static final String SUPER_ADMIN_EMAIL = "shahadat.cse.20230104008@aust.edu";
-    public static final String SUPER_ADMIN_NAME = "Shahadat Hossain";
-    public static final String SUPER_ADMIN_PHONE = "+8801700000008";
-
-    public static final String SECONDARY_ADMIN_EMAIL = "fazle.rabbi.mugdho@gmail.com";
-    public static final String SECONDARY_ADMIN_NAME = "Fazle Rabbi Mugdho";
-    public static final String SECONDARY_ADMIN_PHONE = "+8801700000001";
+    public static final String SUPER_ADMIN_EMAIL = "nadia@turfchai.com";
+    public static final String SUPER_ADMIN_NAME = "Nadia Amin";
+    public static final String SUPER_ADMIN_PHONE = "+8801712000001";
 
     public static final String SUPER_ADMIN_PASSWORD = "TurfChai@123";
 
     @Bean
     @Order(0)   // before demo player/venue/tournament seeders
     CommandLineRunner seedSuperAdmin(UserRepository users, AdminRepository admins, PasswordEncoder passwordEncoder) {
-        return args -> {
-            seedAdminAccount(users, admins, passwordEncoder, SUPER_ADMIN_NAME, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PHONE, AdminRole.SUPER);
-            seedAdminAccount(users, admins, passwordEncoder, SECONDARY_ADMIN_NAME, SECONDARY_ADMIN_EMAIL, SECONDARY_ADMIN_PHONE, AdminRole.VERIFICATION);
-            seedAdminAccount(users, admins, passwordEncoder, "Nadia Amin", "nadia@turfchai.com", "+8801712000001", AdminRole.VERIFICATION);
-        };
+        return args -> seedAdminAccount(users, admins, passwordEncoder, SUPER_ADMIN_NAME, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PHONE, AdminRole.SUPER);
     }
 
     private void seedAdminAccount(UserRepository users, AdminRepository admins, PasswordEncoder passwordEncoder,
