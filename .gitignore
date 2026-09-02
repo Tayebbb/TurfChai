@@ -59,6 +59,7 @@ Mugdho/
 
 ### Local-only reports ###
 AUDIT_REPORT.md
+DEPLOYMENT.md
 
 ### Runtime logs ###
 boot.log
