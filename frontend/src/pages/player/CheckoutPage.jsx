@@ -77,15 +77,6 @@ const policyTiersOf = (cancelPolicy) => {
       </>
     ),
   };
-  const window = {
-    ok: <polyline points="20 6 9 17 4 12" />,
-    warn: (
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </>
-    ),
-  };
   const tier = (id, tone, strokeWidth, body) => ({
     id,
     tone,
