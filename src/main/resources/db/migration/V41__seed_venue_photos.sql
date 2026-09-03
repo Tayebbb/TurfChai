@@ -1,4 +1,7 @@
 -- V41: Seed / back-fill photos_csv for venues that currently have none
+-- NOTE: photo-1508098682722-e99c43a406b2 and photo-1518604667503-465ac943e86c
+-- originally used here now 404 on Unsplash; V44 repairs databases seeded
+-- with them. Keep this migration unchanged — Flyway checksums are history.
 UPDATE venues
 SET photos_csv = CASE (id % 6)
     WHEN 0 THEN 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80,https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'

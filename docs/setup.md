@@ -87,15 +87,14 @@ integrations.
 | `JWT_EXPIRATION_MS`                                   | Access-token lifetime                 | no                                    | `86400000`                                  |
 | `JWT_REFRESH_EXPIRATION_MS`                           | Refresh-token lifetime                | no                                    | `604800000`                                 |
 | `OTP_TTL_SECONDS`                                     | One-time-code lifetime                | no                                    | `300`                                       |
-| `OTP_EXPOSE_DEV_CODE`                                 | Return the code in the API response   | no — **dev/demo only**                | `true`                                      |
-| `SPRING_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` | SMTP for codes and notification email | no — skipped when unset               | —                                           |
+| `OTP_EXPOSE_DEV_CODE`                                 | Return the code in the API response   | no — demo mode, the only channel      | `true`                                      |
 | `OPENROUTER_API_KEY`                                  | AI assistant                          | no — falls back without it            | —                                           |
-| `HF_API_KEY`                                          | Hugging Face (optional model access)  | no                                    | —                                           |
+| `HF_API_KEY`                                           | Hugging Face (optional model access)  | no                                    | —                                           |
 | `CLOUDINARY_URL`                                      | Image uploads                         | no — uploads fail honestly without it | `cloudinary://key:secret@cloud`             |
 | `PORT`                                                | Backend port                          | no                                    | `8080`                                      |
 | `FRONTEND_URL`                                        | CORS origin                           | no                                    | `http://localhost:5173`                     |
 
-Never commit real values. `OTP_EXPOSE_DEV_CODE` must be `false` in production.
+Never commit real values. Email delivery has been removed from the app: admin 2FA shows the code on screen (`OTP_EXPOSE_DEV_CODE=true`, demo mode).
 
 ---
 

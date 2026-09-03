@@ -1,18 +1,12 @@
 package com.turfchai.service;
 
 import com.turfchai.model.Notification;
-import com.turfchai.model.User;
 import com.turfchai.repository.NotificationRepository;
-import com.turfchai.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -26,43 +20,14 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private JavaMailSender mailSender;
-
     @InjectMocks
     private NotificationService notificationService;
 
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(notificationService, "mailHost", "smtp.test.com");
-    }
-
     @Test
-    void testSend_SavesToDbAndEmails() {
-        User mockUser = new User();
-        mockUser.setId(300L);
-        mockUser.setEmail("player@test.com");
-        
-        when(userRepository.findById(300L)).thenReturn(Optional.of(mockUser));
-
+    void testSend_SavesToDb() {
         notificationService.send(300L, "SYSTEM", "Hello", "Body text", null);
 
         verify(notificationRepository, times(1)).save(any(Notification.class));
-        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
-    }
-
-    @Test
-    void testSend_SkipsEmailIfNoHost() {
-        ReflectionTestUtils.setField(notificationService, "mailHost", ""); // blank host
-
-        notificationService.send(300L, "SYSTEM", "Hello", "Body text", null);
-
-        verify(notificationRepository, times(1)).save(any(Notification.class));
-        verify(userRepository, never()).findById(any());
-        verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
     @Test

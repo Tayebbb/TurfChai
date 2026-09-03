@@ -108,7 +108,7 @@ export default async function globalSetup() {
   let superAdmin = null;
   try {
     superAdmin = await adminSession('superAdmin', [
-      'fazle.rabbi.mugdho@gmail.com',
+      'nadia@turfchai.com',
       'superadmin@turfchai.com',
     ]);
   } catch (error) {
