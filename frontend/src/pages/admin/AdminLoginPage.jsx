@@ -39,7 +39,6 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [challenge, setChallenge] = useState('');
@@ -263,16 +262,13 @@ export default function AdminLoginPage() {
                 </Field>
 
                 <div className="between" style={{ marginBottom: 22 }}>
-                  <label className="checkline" style={{ margin: 0, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      onChange={(event) => setRemember(event.target.checked)}
-                    />
-                    <span className="small">Remember device (30 days)</span>
-                  </label>
-                  <span className="small subtle" title="Self-service password reset isn't available yet — ask a super admin to reset your credentials.">
-                    Forgot password?
+                  <span className="small subtle" title="Remember-device is not implemented yet — you'll enter a code each sign-in.">
+                    Verification code every sign-in
+                  </span>
+                  {/* Self-service reset genuinely does not exist; a dead
+                      pseudo-link trained users to ignore affordances. */}
+                  <span className="small subtle">
+                    Forgot password? Ask a super admin to reset it.
                   </span>
                 </div>
 
