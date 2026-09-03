@@ -289,8 +289,7 @@ export default function ExplorePage() {
       .catch(() => {});
   }, [signedIn]);
 
-  const onToggleSave = async (event, venue) => {
-    event.preventDefault(); // heart sits inside the venue card link
+  const onToggleSave = async (venue) => {
     if (!signedIn) {
       showToast('Sign in to save venues');
       return;
@@ -364,19 +363,21 @@ export default function ExplorePage() {
         </div>
 
         <p className="results-meta" role="status">
-          {search.loading
+          {search.loading && venues.length === 0
             ? 'Searching venues…'
-            : search.error
-              ? 'Could not load venues.'
-              : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by ${
-                  near ? `distance from you (within ${near.radiusKm} km)` : 'rating'
-                }`}
+            : search.loading
+              ? 'Updating results…'
+              : search.error
+                ? 'Could not load venues.'
+                : `${totalItems} venue${totalItems === 1 ? '' : 's'} found · sorted by ${
+                    near ? `distance from you (within ${near.radiusKm} km)` : 'rating'
+                  }`}
         </p>
 
         {/* ── Split: list + map ── */}
         <div className="split">
           <div className="stack">
-            {search.loading ? <SkeletonList count={4} height={180} /> : null}
+            {search.loading && venues.length === 0 ? <SkeletonList count={4} height={180} /> : null}
             {!search.loading && search.error ? (
               // The old copy said "showing samples" while rendering nothing.
               <div className="card" style={{ padding: 20 }}>
@@ -398,128 +399,151 @@ export default function ExplorePage() {
                 </p>
               </div>
             ) : null}
-            {!search.loading && venues.map((venue) => (
-              <Link key={venue.id} className="vc" to={paths.player.venue(venue.id)} aria-label={venue.cardLabel}>
-                <div className="vc-photo">
-                  <Photo
-                    photos={venue.photos}
-                    imgUrl={venue.imgUrl || venue.photos?.[0]}
-                    variant={venue.photoVariant}
-                    glyph={venue.glyph}
-                  />
-                  {venue.promo ? <span className="vc-promo">{venue.promo}</span> : null}
-                  <button
-                    className="vc-save"
-                    type="button"
-                    aria-label={savedSlugs.has(venue.id) ? `Remove ${venue.name} from saved` : `Save ${venue.name}`}
-                    aria-pressed={savedSlugs.has(venue.id)}
-                    style={savedSlugs.has(venue.id) ? { color: 'var(--danger)' } : undefined}
-                    onClick={(event) => onToggleSave(event, venue)}
-                  >
-                    {HeartIcon}
-                  </button>
-                </div>
-                <div className="vc-body">
-                  <div className="vc-title-row">
-                    <div>
-                      <div className="vc-name">
-                        {venue.name}
-                        {venue.verified ? (
-                          <span
-                            className="verified"
-                            style={{ fontSize: 11, verticalAlign: 2, marginLeft: 4 }}
-                          >
-                            {CheckIcon}
-                            Verified
-                          </span>
-                        ) : null}
+            {/* Previous results stay visible while a filter/page change refetches. */}
+            {venues.length > 0 ? (
+              <>
+                {venues.map((venue) => (
+              /* ponytail: heart used to be a <button> nested inside the card
+                 <Link> (invalid HTML, two overlapping tab stops). It now sits
+                 beside the link, absolutely positioned over the card corner.
+                 Ceiling: whole-card overlay pattern with a details link. */
+              <div key={venue.id} className="vc-wrap" style={{ position: 'relative' }}>
+                <Link className="vc" to={paths.player.venue(venue.id)} aria-label={venue.cardLabel}>
+                  <div className="vc-photo">
+                    <Photo
+                      photos={venue.photos}
+                      imgUrl={venue.imgUrl || venue.photos?.[0]}
+                      variant={venue.photoVariant}
+                      glyph={venue.glyph}
+                    />
+                    {venue.promo ? <span className="vc-promo">{venue.promo}</span> : null}
+                  </div>
+                  <div className="vc-body">
+                    <div className="vc-title-row">
+                      <div>
+                        <div className="vc-name">
+                          {venue.name}
+                          {venue.verified ? (
+                            <span
+                              className="verified"
+                              style={{ fontSize: 11, verticalAlign: 2, marginLeft: 4 }}
+                            >
+                              {CheckIcon}
+                              Verified
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="vc-meta">{venue.meta}</div>
                       </div>
-                      <div className="vc-meta">{venue.meta}</div>
+                      <div className="vc-rating" aria-label={venue.ratingLabel}>
+                        {venue.rating}{' '}
+                        <span style={{ fontWeight: 400, color: 'var(--text-3)', fontSize: 12 }}>
+                          {venue.reviews}
+                        </span>
+                      </div>
                     </div>
-                    <div className="vc-rating" aria-label={venue.ratingLabel}>
-                      {venue.rating}{' '}
-                      <span style={{ fontWeight: 400, color: 'var(--text-3)', fontSize: 12 }}>
-                        {venue.reviews}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="vc-amenities" aria-label="Amenities">
-                    {venue.amenities.map((amenity) => (
-                      <span key={amenity.label} className="vc-amen" title={amenity.title}>
-                        {AMENITY_ICONS[amenity.icon]}
-                        {amenity.label}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="vc-footer">
-                    <div className="vc-price">
-                      <b>{venue.price}</b> <span>{venue.priceUnit}</span>
-                    </div>
-                    <div className="vc-slots" aria-label="Available slots">
-                      {venue.slots.map((slot) => (
-                        <span key={slot} className="slot-pill">
-                          {slot}
+                    <div className="vc-amenities" aria-label="Amenities">
+                      {venue.amenities.map((amenity) => (
+                        <span key={amenity.label} className="vc-amen" title={amenity.title}>
+                          {AMENITY_ICONS[amenity.icon]}
+                          {amenity.label}
                         </span>
                       ))}
                     </div>
+                    <div className="vc-footer">
+                      <div className="vc-price">
+                        <b>{venue.price}</b> <span>{venue.priceUnit}</span>
+                      </div>
+                      <div className="vc-slots" aria-label="Available slots">
+                        {venue.slots.map((slot) => (
+                          <span key={slot} className="slot-pill">
+                            {slot}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+                <button
+                  className="vc-save"
+                  type="button"
+                  aria-label={savedSlugs.has(venue.id) ? `Remove ${venue.name} from saved` : `Save ${venue.name}`}
+                  aria-pressed={savedSlugs.has(venue.id)}
+                  style={savedSlugs.has(venue.id) ? { color: 'var(--danger)' } : undefined}
+                  onClick={() => onToggleSave(venue)}
+                >
+                  {HeartIcon}
+                </button>
+              </div>
             ))}
 
-            {/* No-slot nudge */}
-            <div className="alert-nudge">
-              <p className="small" style={{ margin: 0, color: 'var(--text-2)' }}>
-                Didn&apos;t find a slot that works?{' '}
-                <Link to={paths.solo.alerts} style={{ fontWeight: 700, color: 'var(--brand-600)' }}>
-                  Set an availability alert
-                </Link>{' '}
-                and we&apos;ll notify you the moment one opens.
-              </p>
-            </div>
+            {/* No-slot nudge — only when the results genuinely have no slots. */}
+            {!search.loading && venues.length > 0 && venues.every((v) => v.slots.length === 0) ? (
+              <div className="alert-nudge">
+                <p className="small" style={{ margin: 0, color: 'var(--text-2)' }}>
+                  Didn&apos;t find a slot that works?{' '}
+                  <Link to={paths.solo.alerts} style={{ fontWeight: 700, color: 'var(--brand-600)' }}>
+                    Set an availability alert
+                  </Link>{' '}
+                  and we&apos;ll notify you the moment one opens.
+                </p>
+              </div>
+            ) : null}
 
-            {/* Pagination */}
-            <div
-              className="pagination"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                marginTop: 32,
-              }}
-            >
-              <Button
-                variant="tertiary"
-                size="sm"
-                disabled={page === 0 || search.loading}
-                style={{ padding: '0 12px' }}
-                onClick={() => setPage((current) => Math.max(0, current - 1))}
-              >
-                ← Prev
-              </Button>
-              {Array.from({ length: Math.max(totalPages, 1) }, (_, index) => (
-                <Button
-                  key={index}
-                  variant={index === page ? undefined : 'tertiary'}
-                  size="sm"
-                  className={index === page ? 'pg-current' : undefined}
-                  style={{ width: 36, padding: 0 }}
-                  onClick={() => setPage(index)}
+            {/* Pagination — window of pages around the current one, never
+                every page button (50 results pages once meant 50 buttons). */}
+            {(() => {
+              const current = Math.min(page, Math.max(totalPages - 1, 0));
+              const from = Math.max(0, Math.min(current - 1, Math.max(totalPages - 3, 0)));
+              const to = Math.min(totalPages, from + 3);
+              const pages = [];
+              for (let i = from; i < to; i += 1) pages.push(i);
+              return (
+                <div
+                  className="pagination"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    marginTop: 32,
+                  }}
                 >
-                  {index + 1}
-                </Button>
-              ))}
-              <Button
-                variant="tertiary"
-                size="sm"
-                disabled={page >= totalPages - 1 || search.loading}
-                style={{ padding: '0 12px' }}
-                onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
-              >
-                Next →
-              </Button>
-            </div>
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    disabled={current === 0 || search.loading}
+                    onClick={() => setPage(Math.max(0, current - 1))}
+                  >
+                    ← Prev
+                  </Button>
+                  {from > 0 ? <span className="tiny muted" aria-hidden="true">…</span> : null}
+                  {pages.map((index) => (
+                    <Button
+                      key={index}
+                      variant={index === current ? undefined : 'tertiary'}
+                      size="sm"
+                      className={index === current ? 'pg-current' : undefined}
+                      aria-current={index === current ? 'page' : undefined}
+                      onClick={() => setPage(index)}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+                  {to < totalPages ? <span className="tiny muted" aria-hidden="true">…</span> : null}
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    disabled={current >= totalPages - 1 || search.loading}
+                    onClick={() => setPage(Math.min(totalPages - 1, current + 1))}
+                  >
+                    Next →
+                  </Button>
+                </div>
+              );
+            })()}
+              </>
+            ) : null}
           </div>
 
           {/* ── Map (OpenStreetMap) ── */}

@@ -65,6 +65,8 @@ describe('Admin RequestReviewPage — approving and rejecting', () => {
 
     await screen.findByRole('heading', { name: /Riverside Turf/ });
     await userEvent.click(screen.getByRole('button', { name: /approve request/i }));
+    // Approve publishes the venue, so it confirms first.
+    await userEvent.click(await screen.findByRole('button', { name: /yes, approve & publish/i }));
 
     await waitFor(() => expect(reviewCalls(fetchMock)).toHaveLength(1));
     const [url, body] = reviewCalls(fetchMock)[0];
@@ -107,6 +109,7 @@ describe('Admin RequestReviewPage — approving and rejecting', () => {
 
     await screen.findByRole('heading', { name: /Riverside Turf/ });
     await userEvent.click(screen.getByRole('button', { name: /approve request/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /yes, approve & publish/i }));
 
     expect(await screen.findByText(/already been reviewed/i)).toBeInTheDocument();
     expect(screen.queryByText(/approved! Venue is now live/i)).not.toBeInTheDocument();

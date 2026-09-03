@@ -57,53 +57,63 @@ const BRAND_COLORS = {
   CARD: '#2660D8',
 };
 
-const POLICY = [
-  {
-    id: 'free',
-    tone: 'ok',
-    icon: <polyline points="20 6 9 17 4 12" />,
-    strokeWidth: '2.5',
-    body: 'Free cancellation 24h or more before your slot',
-  },
-  {
-    id: 'half',
-    tone: 'warn',
-    icon: (
+// ponytail: policy tiers derived from the venue's real cancelPolicy, same
+// logic VenuePage uses. Ceiling: fetch policy through the slot payload so
+// checkout never needs the extra venue fetch.
+const policyTiersOf = (cancelPolicy) => {
+  const icons = {
+    ok: <polyline points="20 6 9 17 4 12" />,
+    warn: (
       <>
         <circle cx="12" cy="12" r="10" />
         <polyline points="12 6 12 12 16 14" />
       </>
     ),
-    strokeWidth: '2.5',
-    body: '50% refund 6–24h before your slot',
-  },
-  {
-    id: 'none',
-    tone: 'no',
-    icon: (
+    no: (
       <>
         <circle cx="12" cy="12" r="10" />
         <line x1="15" y1="9" x2="9" y2="15" />
         <line x1="9" y1="9" x2="15" y2="15" />
       </>
     ),
-    strokeWidth: '2.5',
-    body: 'No refund within 6h of your slot',
-  },
-  {
-    id: 'window',
-    tone: '',
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
-      </>
-    ),
-    strokeWidth: '2',
-    body: 'Refunds return to your original payment method within a few days',
-  },
-];
+  };
+  const tier = (id, tone, strokeWidth, body) => ({
+    id,
+    tone,
+    strokeWidth,
+    icon: icons[tone] ?? icons.ok,
+    body,
+  });
+  if (cancelPolicy === 'FLEXIBLE_6H') {
+    return [
+      tier('free', 'ok', '2.5', 'Free cancellation any time more than 6h before your slot'),
+      tier('none', 'no', '2.5', 'No refund within 6h of your slot'),
+    ];
+  }
+  if (cancelPolicy === 'STRICT_NO_REFUND') {
+    return [tier('none', 'no', '2.5', 'No refund for cancellations — this venue has a strict policy')];
+  }
+  // FREE_24H_50_6H (default) and anything unknown.
+  return [
+    tier('free', 'ok', '2.5', 'Free cancellation 24h or more before your slot'),
+    tier('half', 'warn', '2.5', '50% refund 6–24h before your slot'),
+    tier('none', 'no', '2.5', 'No refund within 6h of your slot'),
+  ];
+};
+
+const REFUND_CHANNEL_NOTE = {
+  id: 'channel',
+  tone: '',
+  strokeWidth: '2',
+  body: 'Refunds are returned by the venue through your original payment channel',
+  icon: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </>
+  ),
+};
 
 const secondsUntil = (heldUntil) =>
   Math.max(0, Math.round((new Date(heldUntil).getTime() - Date.now()) / 1000));
@@ -147,7 +157,9 @@ export default function CheckoutPage() {
   const signInHref = `${paths.auth}?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
 
   const [method, setMethod] = useState('BKASH');
-  const [understood, setUnderstood] = useState(true);
+  // Deliberately NOT pre-checked: agreeing to terms the user never read is
+  // a dark pattern, and the venue's policy can be strict.
+  const [understood, setUnderstood] = useState(false);
   const [applyWallet, setApplyWallet] = useState(false);
   // On mount, check sessionStorage for a still-valid hold so a page refresh
   // doesn't reset the 5-minute window by calling holdSlot a second time.
@@ -170,6 +182,7 @@ export default function CheckoutPage() {
     return { state: 'holding', heldUntil: null, message: '' };
   });
   const [slotInfo, setSlotInfo] = useState(null);
+  const [venueInfo, setVenueInfo] = useState(null);
   const [lockSeconds, setLockSeconds] = useState(() => {
     if (!slotId) return 0;
     const cached = loadHold(slotId);
@@ -218,7 +231,7 @@ export default function CheckoutPage() {
   const ogCapacity = Math.max(2, Math.min(20, Number(openGameForm.capacity) || 10));
   const ogReserved = Math.max(1, Math.min(ogCapacity - 1, Number(openGameForm.reservedSpots) || 1));
   const ogOpenSpots = Math.max(1, ogCapacity - ogReserved);
-  const ogPricePerPlayer = fullPayable != null ? Math.max(0, Math.round(fullPayable / ogCapacity)) : 250;
+  const ogPricePerPlayer = fullPayable != null ? Math.max(0, Math.round(fullPayable / ogCapacity)) : null;
   const ogHostDue = ogPricePerPlayer;
 
   // Target amount due from host now based on active booking mode
@@ -338,7 +351,18 @@ export default function CheckoutPage() {
     if (!slotId || !venueSlug || !slotDate) return;
     let cancelled = false;
     getVenue(venueSlug)
-      .then((venue) => getVenueSlots(venue.id, slotDate))
+      .then((venue) => {
+        if (cancelled) return;
+        // The venue's real policy + identity must show at checkout; the
+        // summary previously had no venue name and the policy was hardcoded.
+        setVenueInfo({
+          id: venue.id,
+          name: venue.name,
+          photos: Array.isArray(venue.photos) ? venue.photos : [],
+          cancelPolicy: venue.cancelPolicy,
+        });
+        return getVenueSlots(venue.id, slotDate);
+      })
       .then((slots) => {
         if (cancelled) return;
         const match = (Array.isArray(slots) ? slots : []).find((s) => String(s.id) === String(slotId));
@@ -558,7 +582,7 @@ export default function CheckoutPage() {
 
             <div className="gw-foot">
               <Button variant="primary" size="lg" block onClick={confirmPayment} disabled={busy}>
-                {busy ? 'Confirming…' : `Confirm booking · ${bdt(dueNow)}`}
+                {busy ? 'Confirming…' : `Confirm & reserve · ${bdt(dueNow)}`}
               </Button>
             </div>
           </div>
@@ -732,9 +756,11 @@ export default function CheckoutPage() {
           renderGateway()
         ) : (
           <>
-            <h1 style={{ fontSize: 26, margin: '10px 0 4px' }}>Confirm and pay</h1>
+            <h1 style={{ fontSize: 26, margin: '10px 0 4px' }}>Confirm your booking</h1>
             <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28 }}>
-              Your slot is held for 5 minutes — no one else can take it while you pay.
+              {hold.state === 'held'
+                ? 'Your slot is held for 5 minutes — no one else can take it while you confirm.'
+                : 'Pick how to split the cost, confirm, and pay the venue directly.'}
             </p>
 
             <div className="co-grid">
@@ -864,7 +890,7 @@ export default function CheckoutPage() {
                   <div style={{ marginTop: 14 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600 }}>
                       <span style={{ color: 'var(--brand)' }}>👥 Your Squad: {ogReserved} spots</span>
-                      <span style={{ color: '#3b82f6' }}>📢 Public Open Game: {ogOpenSpots} spots</span>
+                      <span style={{ color: 'var(--info)' }}>📢 Public Open Game: {ogOpenSpots} spots</span>
                     </div>
 
                     <div className="spot-allocation-bar" aria-hidden="true">
@@ -884,7 +910,7 @@ export default function CheckoutPage() {
                       </div>
 
                       <div className="spot-summary-card public">
-                        <b style={{ display: 'block', color: '#3b82f6', marginBottom: 4 }}>
+                        <b style={{ display: 'block', color: 'var(--info)', marginBottom: 4 }}>
                           📢 Public Open Game ({ogOpenSpots} spots)
                         </b>
                         <div className="subtle small" style={{ fontSize: 12, lineHeight: 1.45 }}>
@@ -990,7 +1016,7 @@ export default function CheckoutPage() {
 
               <div className="policy-box">
                 <ul className="policy-list">
-                  {POLICY.map((rule) => (
+                  {[...policyTiersOf(venueInfo?.cancelPolicy), REFUND_CHANNEL_NOTE].map((rule) => (
                     <li className={rule.tone || undefined} key={rule.id}>
                       <svg
                         width="15"
@@ -1033,11 +1059,12 @@ export default function CheckoutPage() {
           <aside className="co-summary">
             <div className="co-venue-row">
               <div className="co-venue-thumb">
-                <Photo />
+                <Photo photos={venueInfo?.photos} />
               </div>
               <div>
-                <div className="co-venue-name">{slotInfo?.pitchName ?? 'Your pitch'}</div>
+                <div className="co-venue-name">{venueInfo?.name ?? slotInfo?.pitchName ?? 'Your venue'}</div>
                 <div className="co-venue-sub">
+                  {slotInfo?.pitchName ? `${slotInfo.pitchName} · ` : ''}
                   {formatDate(slotInfo?.slotDate)} &middot; {slotTimeLabel}
                 </div>
               </div>
@@ -1214,17 +1241,29 @@ export default function CheckoutPage() {
               size="lg"
               block
               id="pay-cta"
+              className="co-mobile-hide"
               onClick={onPay}
               loading={busy}
+              aria-busy={busy}
               disabled={signedIn && (hold.state !== 'held' || !understood)}
               style={{ marginTop: 16 }}
             >
               {signedIn
                 ? (bookingMode !== 'FULL'
-                  ? `Pay ${bdt(dueNow)} (Your share) with ${methodLabel}`
-                  : `Pay ${bdt(dueNow)} with ${methodLabel}`)
+                  ? `Confirm & pay ${bdt(dueNow)} (your share) at the venue`
+                  : `Confirm booking · ${bdt(dueNow)} due at venue`)
                 : 'Sign in to confirm this booking'}
             </Button>
+            {signedIn && hold.state !== 'held' ? (
+              <p className="tiny" role="status" style={{ color: 'var(--text-3)', margin: '8px 0 0', textAlign: 'center' }}>
+                {hold.state === 'holding' ? 'Locking your slot…' : lockText}
+              </p>
+            ) : null}
+            {signedIn && hold.state === 'held' && !understood ? (
+              <p className="tiny" role="status" style={{ color: 'var(--text-3)', margin: '8px 0 0', textAlign: 'center' }}>
+                Tick the policy confirmation above to continue.
+              </p>
+            ) : null}
             {signedIn ? (
               <Button
                 variant="tertiary"
@@ -1234,7 +1273,7 @@ export default function CheckoutPage() {
                 disabled={busy || cancelling}
                 style={{ marginTop: 8 }}
               >
-                {cancelling ? 'Cancelling booking…' : 'Cancel process'}
+                {cancelling ? 'Cancelling booking…' : 'Cancel & release this slot'}
               </Button>
             ) : null}
             {!signedIn ? (
@@ -1243,6 +1282,24 @@ export default function CheckoutPage() {
               </p>
             ) : null}
           </aside>
+          </div>
+
+          {/* Phones: total + primary CTA pinned at the thumb zone; the
+              summary column is below all three steps on small screens. */}
+          <div className="co-mobile-bar" role="region" aria-label="Booking total and confirm">
+            <div className="co-mobile-total">
+              <span className="lbl">{bookingMode !== 'FULL' ? 'Your share' : 'Due now'}</span>
+              <span className="val">{bdt(dueNow)}</span>
+            </div>
+            <Button
+              variant="primary"
+              onClick={onPay}
+              loading={busy}
+              aria-busy={busy}
+              disabled={signedIn && (hold.state !== 'held' || !understood)}
+            >
+              {signedIn ? 'Confirm booking' : 'Sign in to confirm'}
+            </Button>
           </div>
           </>
         )}

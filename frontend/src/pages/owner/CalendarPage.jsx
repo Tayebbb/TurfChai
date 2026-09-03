@@ -499,6 +499,8 @@ export default function CalendarPage() {
   const [selectedCell, setSelectedCell] = useState(null);
   const [targetCellForBooking, setTargetCellForBooking] = useState(null);
   const [slotActionBusy, setSlotActionBusy] = useState(null);
+  // Styled confirm for destructive slot actions (replaces window.confirm).
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [priceDraft, setPriceDraft] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null);
@@ -711,7 +713,8 @@ export default function CalendarPage() {
       pitchSize: pitch?.sizeLabel || 'Standard Pitch',
     });
 
-    setPriceDraft(String(cell.price || 2000));
+    // Money field: unknown price is '—', never an invented ৳2,000.
+    setPriceDraft(cell.price != null ? String(cell.price) : '');
     setAiSuggestion(null);
     detailModal.open();
 
@@ -736,7 +739,7 @@ export default function CalendarPage() {
             setAiSuggestion({
               suggestedPrice: quote.suggestedPrice || quote.recommendedPrice || quote.finalPrice,
               multiplier: quote.multiplier || 1.0,
-              baseRate: quote.baseRate || cell.price || 2000,
+              baseRate: quote.baseRate ?? cell.price ?? null,
             });
           } else {
             setAiSuggestion('unavailable');
@@ -819,9 +822,12 @@ export default function CalendarPage() {
   // Cancel booking
   async function handleCancelBooking() {
     if (!selectedCell?.bookingId) return;
-    if (!window.confirm('Are you sure you want to cancel this booking? This will free the slot for other players.')) {
-      return;
-    }
+    setConfirmCancelOpen(true);
+  }
+
+  async function confirmCancelBooking() {
+    if (!selectedCell?.bookingId) return;
+    setConfirmCancelOpen(false);
     setSlotActionBusy('cancelling');
     try {
       await cancelOwnerBooking(selectedCell.bookingId, 'Cancelled by pitch owner');
@@ -924,12 +930,10 @@ export default function CalendarPage() {
           <Button
             variant="primary"
             onClick={() => {
-              setTargetCellForBooking({
-                pitchId: pitches[0]?.id || null,
-                date: dateStr,
-                time: '16:00',
-                price: 2000,
-              });
+              // No pre-selected slot — the modal opens with defaults and
+              // the owner picks. The old hardcoded 16:00 / ৳2000 values were
+              // dead anyway (wrong prop names) and read as magic config.
+              setTargetCellForBooking(null);
               manualModal.open();
             }}
             style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}
@@ -1219,7 +1223,13 @@ export default function CalendarPage() {
 
                       if (status === 'BOOKED') {
                         return (
-                          <div key={pitch.id} className="cal-cell" onClick={() => handleSlotClick(cell, row.time)}>
+                          <button
+                            type="button"
+                            key={pitch.id}
+                            className="cal-cell"
+                            onClick={() => handleSlotClick(cell, row.time)}
+                            aria-label={`Slot ${cell.startTime || row.time}${pitch?.name ? `, ${pitch.name}` : ''} — booked`}
+                          >
                             <div className="slot-card booked">
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                                 <span className="slot-cust" title={cell.customerName || 'Booked'}>
@@ -1244,13 +1254,19 @@ export default function CalendarPage() {
                                 </div>
                               </div>
                             </div>
-                          </div>
+                          </button>
                         );
                       }
 
                       if (status === 'HELD') {
                         return (
-                          <div key={pitch.id} className="cal-cell" onClick={() => handleSlotClick(cell, row.time)}>
+                          <button
+                            type="button"
+                            key={pitch.id}
+                            className="cal-cell"
+                            onClick={() => handleSlotClick(cell, row.time)}
+                            aria-label={`Slot ${cell.startTime || row.time}${pitch?.name ? `, ${pitch.name}` : ''} — held`}
+                          >
                             <div className="slot-card held">
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                                 <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--warn)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1266,13 +1282,19 @@ export default function CalendarPage() {
                                 <span className="slot-pill sport">{cell.sport || 'Sport'}</span>
                               </div>
                             </div>
-                          </div>
+                          </button>
                         );
                       }
 
                       if (status === 'BLOCKED') {
                         return (
-                          <div key={pitch.id} className="cal-cell" onClick={() => handleSlotClick(cell, row.time)}>
+                          <button
+                            type="button"
+                            key={pitch.id}
+                            className="cal-cell"
+                            onClick={() => handleSlotClick(cell, row.time)}
+                            aria-label={`Slot ${cell.startTime || row.time}${pitch?.name ? `, ${pitch.name}` : ''} — blocked`}
+                          >
                             <div className="slot-card blocked">
                               <div style={{ fontSize: 11.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <Icon name="ban" size={12} />
@@ -1283,16 +1305,22 @@ export default function CalendarPage() {
                                 <span className="slot-pill dur">{duration}m</span>
                               </div>
                             </div>
-                          </div>
+                          </button>
                         );
                       }
 
                       // Available Slot
                       return (
-                        <div key={pitch.id} className="cal-cell" onClick={() => handleSlotClick(cell, row.time)}>
+                        <button
+                          type="button"
+                          key={pitch.id}
+                          className="cal-cell"
+                          onClick={() => handleSlotClick(cell, row.time)}
+                          aria-label={`Slot ${cell.startTime || row.time}${pitch?.name ? `, ${pitch.name}` : ''} — available`}
+                        >
                           <div className="slot-card available">
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                              <span className="slot-price">৳{Number(cell.price || 2000).toLocaleString()}</span>
+                              <span className="slot-price">{cell.price != null ? `৳${Number(cell.price).toLocaleString()}` : '৳—'}</span>
                               <span className="slot-pill sport">
                                 {cell.sport || pitch.sports?.[0] || 'Sport'}
                               </span>
@@ -1305,7 +1333,7 @@ export default function CalendarPage() {
                               <span className="slot-pill dur">{duration}m</span>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </Fragment>
@@ -1388,24 +1416,31 @@ export default function CalendarPage() {
                         </div>
                       ) : (
                         dayRows.map((r) => {
-                          const cell = r.cells?.[0];
-                          if (!cell) return null;
+                          // All pitches render — the old cells?.[0] silently
+                          // hid every pitch but the first in week view.
+                          return (r.cells || []).map((cell, cellIdx) => {
                           const isBooked = cell.status === 'BOOKED';
                           const isHeld = cell.status === 'HELD';
                           const isBlocked = cell.status === 'BLOCKED';
 
                           return (
-                            <div
-                              key={r.time}
+                            <button
+                              type="button"
+                              key={`${r.time}-${cellIdx}`}
                               onClick={() => {
                                 setDate(d);
                                 handleSlotClick(cell, r.time);
                               }}
+                              aria-label={`Slot ${r.time}${cell.sport ? `, ${cell.sport}` : ''} — ${cell.status?.toLowerCase() || 'available'}`}
                               style={{
                                 padding: '8px 10px',
                                 borderRadius: 10,
                                 fontSize: 11.5,
                                 cursor: 'pointer',
+                                textAlign: 'inherit',
+                                font: 'inherit',
+                                color: 'inherit',
+                                width: '100%',
                                 border: isBooked
                                   ? '1px solid var(--brand)'
                                   : isHeld
@@ -1427,14 +1462,15 @@ export default function CalendarPage() {
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700 }}>
                                 <span>{r.time}</span>
-                                <span style={{ fontWeight: 800 }}>৳{Number(cell.price || 2000).toLocaleString()}</span>
+                                <span style={{ fontWeight: 800 }}>{cell.price != null ? `৳${Number(cell.price).toLocaleString()}` : '৳—'}</span>
                               </div>
                               <div className="tiny subtle" style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span>{isBooked ? (cell.customerName || 'Booked') : isBlocked ? 'Blocked' : 'Available'}</span>
                                 <span>{cell.sport || 'Sport'}</span>
                               </div>
-                            </div>
+                            </button>
                           );
+                          });
                         })
                       )}
                     </div>
@@ -1821,14 +1857,39 @@ export default function CalendarPage() {
         )}
       </Overlay>
 
-      {/* Manual Booking Modal */}
+      {/* Cancel-booking confirmation (same pattern as BookingsPage) */}
+      <Overlay isOpen={confirmCancelOpen} onClose={() => setConfirmCancelOpen(false)} title="Confirm cancellation" maxWidth={440}>
+        <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>
+          Cancel this booking and free the slot for other players?
+        </p>
+        <p className="subtle small" style={{ margin: '0 0 20px' }}>
+          {selectedCell?.customerName ? `${selectedCell.customerName} · ` : ''}
+          {selectedCell?.startTime ? `${selectedCell.startTime} — ` : ''}
+          the player is notified and the slot returns to available immediately.
+        </p>
+        <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+          <Button size="sm" variant="secondary" onClick={() => setConfirmCancelOpen(false)}>
+            Keep booking
+          </Button>
+          <Button size="sm" variant="danger" onClick={confirmCancelBooking}>
+            Yes, cancel booking
+          </Button>
+        </div>
+      </Overlay>
+
+      {/* Manual Booking Modal — props match what the component actually
+          accepts. The old names (venueId/initialSlot/onBookingCreated) were
+          ignored, so the pre-selected slot was dropped and the calendar never
+          refreshed after a booking. */}
       {selectedVenueId && (
         <ManualBookingModal
           isOpen={manualModal.isOpen}
           onClose={manualModal.close}
-          venueId={selectedVenueId}
-          initialSlot={targetCellForBooking}
-          onBookingCreated={() => {
+          initialVenueId={selectedVenueId}
+          initialDate={targetCellForBooking?.date}
+          initialPitchId={targetCellForBooking?.pitchId}
+          initialSlotId={targetCellForBooking?.slotId}
+          onSuccess={() => {
             showToast('Manual booking recorded successfully ✓');
             refreshCalendar();
           }}

@@ -105,9 +105,13 @@ export function OwnerLayout() {
         links={OWNER_NAV_LINKS}
       >
         <div className="admin-actions owner-actions" ref={profileRef}>
-          <IconButton className="admin-ico" label="View alerts" onClick={alerts.open}>
+          <IconButton
+            className="admin-ico"
+            label={unreadCount > 0 ? `View alerts, ${unreadCount} unread` : 'View alerts'}
+            onClick={alerts.open}
+          >
             <Icon name="bell" />
-            {unreadCount > 0 && <span className="admin-badge owner-badge">{unreadCount}</span>}
+            {unreadCount > 0 && <span className="admin-badge owner-badge" aria-hidden="true">{unreadCount}</span>}
           </IconButton>
           <ThemeToggle className="admin-ico" />
           

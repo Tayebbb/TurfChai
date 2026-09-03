@@ -264,11 +264,13 @@ export default function ProfilePage() {
                   <b className="small" style={{ color: 'var(--text)' }}>
                     Two-Factor Authentication (2FA)
                   </b>
+                  {/* Honest: there is no authenticator-app flow — sign-in uses
+                      email + a one-time code shown in demo mode. */}
                   <div className="tiny subtle" style={{ marginTop: 2 }}>
-                    Authenticator App (Required)
+                    One-time code at every sign-in
                   </div>
                 </div>
-                <span className="badge green nodot">Enabled ✓</span>
+                <span className="badge green nodot">Active</span>
               </div>
 
               <div

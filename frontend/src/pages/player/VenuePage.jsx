@@ -142,7 +142,7 @@ function formatTime(time) {
 }
 
 const bdt = (value) =>
-  value == null ? null : `৳${Math.round(Number(value)).toLocaleString('en-IN')}`;
+  value == null ? null : `৳${Math.round(Number(value)).toLocaleString('en-BD')}`;
 
 /** Backend SlotResponse -> the { id, time, price, status } shape SlotGrid renders. */
 function toGridSlot(slot) {
@@ -333,9 +333,11 @@ function VenueGalleryCarousel({ photos = [], venueName, verified }) {
     setCurrentIndex((prev) => (prev - 1 + total) % total);
   }, [total]);
 
-  // Auto-rotation every 4.5 seconds when not paused and multiple photos exist
+  // Auto-rotation every 4.5 seconds when not paused and multiple photos exist.
+  // Honours prefers-reduced-motion: no rotation for those users.
   useEffect(() => {
     if (isPaused || total <= 1 || isLightboxOpen) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const timer = setInterval(nextSlide, 4500);
     return () => clearInterval(timer);
   }, [isPaused, total, isLightboxOpen, nextSlide]);
@@ -671,7 +673,8 @@ export default function VenuePage() {
   const venueAddress = venue?.address;
   const venueArea = venue?.area;
   const locationAddress = useMemo(() => {
-    if (!venue) return 'House 12, Road 27, Dhanmondi, Dhaka';
+    // Never a fabricated street address — '—' until the real one arrives.
+    if (!venue) return '—';
     const addr = (venueAddress || '').trim();
     const area = (venueArea || '').trim();
 
@@ -712,10 +715,12 @@ export default function VenuePage() {
       }
     }
     return [
-      { id: 'default-hero', variant: undefined, glyph: '🏟️', title: 'Main Turf Arena' },
-      { id: 'default-alt1', variant: 'alt1', glyph: '🌙', title: 'Night Floodlights' },
-      { id: 'default-alt2', variant: 'alt2', glyph: '🥅', title: 'Goal Area' },
-      { id: 'default-alt3', variant: 'alt3', glyph: '🏃', title: 'Player Bench & Pitch' },
+      // Honest placeholder art, labelled as such — full photo chrome (arrows,
+      // dots, lightbox) over gradient tiles implied real photos existed.
+      { id: 'default-hero', variant: undefined, glyph: '🏟️', title: 'No photos yet' },
+      { id: 'default-alt1', variant: 'alt1', glyph: '🌙', title: 'Placeholder art' },
+      { id: 'default-alt2', variant: 'alt2', glyph: '🥅', title: 'Placeholder art' },
+      { id: 'default-alt3', variant: 'alt3', glyph: '🏃', title: 'Placeholder art' },
     ];
   }, [venuePhotos, venueName]);
 
@@ -844,15 +849,20 @@ export default function VenuePage() {
   const handleBookClick = async (e) => {
     e.preventDefault();
     if (!signedIn) {
+      // AuthPage reads `next`; this used to send `redirect`, stranding the
+      // player on /player after signing in instead of returning to the slot.
       if (selectedSlot && checkoutHref) {
-        navigate(`${paths.auth}?redirect=${encodeURIComponent(checkoutHref)}`);
+        navigate(`${paths.auth}?next=${encodeURIComponent(checkoutHref)}`);
       } else {
-        navigate(`${paths.auth}?redirect=${encodeURIComponent(window.location.pathname)}`);
+        navigate(`${paths.auth}?next=${encodeURIComponent(window.location.pathname)}`);
       }
       return;
     }
     if (!selectedSlot) {
+      // The inline warning lives in the desktop-only booking panel; phones
+      // never see it, so the same message also goes through the toast.
       setSlotWarn(true);
+      showToast('Please select a time slot before booking.', { duration: 4000 });
       return;
     }
     if (selectedSlot.mine) {
@@ -939,7 +949,7 @@ export default function VenuePage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
               <h1 style={{ fontSize: 30, margin: 0 }}>{name}</h1>
-              {venue == null || venue.verified ? <Verified /> : null}
+              {venue?.verified ? <Verified /> : null}
             </div>
             <div
               style={{
@@ -969,6 +979,16 @@ export default function VenuePage() {
                   <span>(No reviews yet)</span>
                 </span>
               )}
+              {cheapestRule ? (
+                <span
+                  className="num"
+                  aria-label={`Slots from ${bdt(cheapestRule.rate)} per ${cheapestRule.slotDurationMin ?? slotDuration} minutes`}
+                  style={{ fontWeight: 700, color: 'var(--text)' }}
+                >
+                  from {bdt(cheapestRule.rate)}
+                  <span style={{ fontWeight: 500, color: 'var(--text-3)' }}> / {cheapestRule.slotDurationMin ?? slotDuration} min</span>
+                </span>
+              ) : null}
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
@@ -1107,7 +1127,9 @@ export default function VenuePage() {
                 aria-controls="rules-body"
                 onClick={rules.toggle}
               >
-                <h2 style={{ fontSize: 20, margin: 0 }}>Rules &amp; cancellation</h2>
+                {/* Heading text inside a button muddles both semantics; the
+                    section heading below carries the structure. */}
+                <span style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Rules &amp; cancellation</span>
                 <svg className="chevron" width="20" height="20" viewBox="0 0 24 24" strokeWidth="2.5" {...svgProps}>
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -1388,7 +1410,7 @@ export default function VenuePage() {
                       <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 8px' }}>{review.comment}</p>
                     ) : null}
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Verified player review'}
+                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
                     </span>
                     {review.ownerResponse ? (
                       <div
@@ -1425,7 +1447,7 @@ export default function VenuePage() {
         {/* Similar venues */}
         {!isOwner && similarVenues.length > 0 ? (
           <section style={{ paddingTop: 32, paddingBottom: 40 }}>
-            <h2 style={{ fontSize: 20, margin: '0 0 20px' }}>Similar venues nearby</h2>
+            <h2 style={{ fontSize: 20, margin: '0 0 20px' }}>Top-rated venues</h2>
             <div className="grid3">
               {similarVenues.map((venue) => (
                 <Link
@@ -1473,9 +1495,15 @@ export default function VenuePage() {
               {selectedDateLabel} · <span>{selectedSlot ? selectedSlot.time : 'select a slot'}</span>
             </div>
           </div>
-          <Button variant="primary" onClick={handleBookClick} loading={bookChecking}>
-            {!signedIn ? 'Sign in to book' : 'Book slot'}
-          </Button>
+          {isOffline ? (
+            <Button variant="secondary" disabled title="This turf is currently offline">
+              Turf offline
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={handleBookClick} loading={bookChecking} aria-busy={bookChecking}>
+              {!signedIn ? 'Sign in to book' : 'Book slot'}
+            </Button>
+          )}
         </div>
       </div>
     </>

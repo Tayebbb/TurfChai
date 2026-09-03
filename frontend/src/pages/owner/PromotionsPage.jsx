@@ -29,6 +29,7 @@ export default function PromotionsPage() {
   /** Set while the drawer is editing an existing promotion rather than creating one. */
   const [editingId, setEditingId] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const { data: venuesRes } = useApi(listMyVenues, []);
   const venues = Array.isArray(venuesRes) ? venuesRes : (Array.isArray(venuesRes?.data) ? venuesRes.data : []);
@@ -45,8 +46,26 @@ export default function PromotionsPage() {
   const handleLaunch = async () => {
     if (!activeVenueId) return;
 
-    if (!code || !label || !discountValue) {
-      showToast('Please fill out all required fields');
+    // Field-level messages instead of one generic toast.
+    if (!editingId && !code.trim()) {
+      showToast('Promo code is required');
+      return;
+    }
+    if (!label.trim()) {
+      showToast('Label is required');
+      return;
+    }
+    const numeric = Number(discountValue);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      showToast('Discount value must be a number greater than 0');
+      return;
+    }
+    if (discountType === 'PERCENT' && numeric > 90) {
+      showToast('Percent discounts above 90% would make slot prices negative');
+      return;
+    }
+    if (validFrom && validUntil && new Date(validUntil) <= new Date(validFrom)) {
+      showToast('End time must be after the start time');
       return;
     }
 
@@ -55,7 +74,7 @@ export default function PromotionsPage() {
       const payload = {
         label,
         discountType,
-        discountValue: Number(discountValue),
+        discountValue: numeric,
         usageLimit: usageLimit ? Number(usageLimit) : null,
         validFrom: validFrom ? new Date(validFrom).toISOString() : null,
         validUntil: validUntil ? new Date(validUntil).toISOString() : null,
@@ -65,7 +84,10 @@ export default function PromotionsPage() {
         await updatePromotion(activeVenueId, editingId, payload);
         showToast('Promotion updated ✓');
       } else {
-        await createPromotion(activeVenueId, { code, ...payload });
+        // Stored uppercase — the input shows uppercase but the old code kept
+        // the typed casing, so "offpeak30" displayed as OFFPEAK30 yet applied
+        // as typed.
+        await createPromotion(activeVenueId, { code: code.trim().toUpperCase(), ...payload });
         showToast('Promotion live — discounted slots now shown to players ✓');
       }
       drawer.close();
@@ -89,8 +111,15 @@ export default function PromotionsPage() {
     setValidUntil('');
   };
 
-  /** Datetime-local wants 'YYYY-MM-DDTHH:mm'; the API returns an ISO instant. */
-  const toLocalInput = (iso) => (iso ? new Date(iso).toISOString().slice(0, 16) : '');
+  /** Datetime-local wants 'YYYY-MM-DDTHH:mm' in LOCAL time; the API returns
+   *  an ISO instant. toISOString() is UTC, which shifted every edited promo
+   *  by the timezone offset (6h in Bangladesh). Build from local parts. */
+  const toLocalInput = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   const openCreate = () => {
     resetForm();
@@ -126,15 +155,12 @@ export default function PromotionsPage() {
 
   const handleDelete = async (promoId) => {
     if (!activeVenueId) return;
-    if (!confirm('Are you sure you want to delete this promotion?')) return;
-    
     try {
       await deletePromotion(activeVenueId, promoId);
       showToast('Promotion deleted ✓');
       reload();
     } catch (err) {
-      const msg = err.message || 'Failed to delete promotion';
-      showToast(`Error: ${msg}`);
+      showToast(toUserMessage(err, 'Failed to delete promotion'));
     }
   };
 
@@ -213,9 +239,11 @@ export default function PromotionsPage() {
                 <Button size="sm" variant="secondary" onClick={() => openEdit(promo)}>
                   Edit
                 </Button>
+                {/* Resume is secondary: a page of paused promos each showing
+                    primary "Resume" buried the one true primary (create). */}
                 <Button
                   size="sm"
-                  variant={promo.active ? 'secondary' : 'primary'}
+                  variant="secondary"
                   disabled={busyId === promo.id}
                   onClick={() => togglePaused(promo)}
                 >
@@ -223,8 +251,8 @@ export default function PromotionsPage() {
                 </Button>
                 <Button
                   size="sm"
-                  variant="tertiary"
-                  onClick={() => handleDelete(promo.id)}
+                  variant="ghostDanger"
+                  onClick={() => setConfirmDeleteId(promo.id)}
                 >
                   Delete
                 </Button>
@@ -367,10 +395,43 @@ export default function PromotionsPage() {
           block
           style={{ marginTop: 12 }}
           onClick={handleLaunch}
+          loading={isSubmitting}
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Saving…' : editingId ? 'Save changes' : 'Launch promotion'}
         </Button>
+      </Overlay>
+
+      {/* Delete confirmation — same Overlay pattern as every other
+          destructive action in the console. */}
+      <Overlay
+        isOpen={confirmDeleteId != null}
+        onClose={() => setConfirmDeleteId(null)}
+        title="Delete promotion"
+        maxWidth={440}
+      >
+        <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>
+          Delete this promotion permanently?
+        </p>
+        <p className="subtle small" style={{ margin: '0 0 20px' }}>
+          Players can no longer apply the code. Usage history stays in reports.
+        </p>
+        <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+          <Button size="sm" variant="secondary" onClick={() => setConfirmDeleteId(null)}>
+            Keep promotion
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={async () => {
+              const id = confirmDeleteId;
+              setConfirmDeleteId(null);
+              await handleDelete(id);
+            }}
+          >
+            Yes, delete
+          </Button>
+        </div>
       </Overlay>
     </>
   );

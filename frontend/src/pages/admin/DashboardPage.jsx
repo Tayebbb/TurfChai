@@ -119,7 +119,7 @@ export default function DashboardPage() {
       fee: Number(payoutSummary?.platformFeeCollected) || 0,
       payouts: settledPayouts,
       aov: bookings > 0 ? Math.round(gmv / bookings) : 0,
-      growth: series.growthPercent || '+0.0%'
+      growth: series.growthPercent ?? '—'
     };
   }, [series, payoutSummary?.settledAmount, payoutSummary?.platformFeeCollected]);
 
@@ -152,13 +152,15 @@ export default function DashboardPage() {
   const sessionUser = getUser();
   const userName = sessionUser?.fullName || 'Super Admin';
 
-  const { data: statsRes } = useApi(() => api('/admin/analytics/dashboard'));
+  const { data: statsRes, loading: statsLoading } = useApi(() => api('/admin/analytics/dashboard'));
   const stats = statsRes?.data || statsRes;
 
-  const pendingRequestsCount = stats?.pendingRequests ?? 0;
-  const activeTurfsCount = stats?.activeTurfs ?? 0;
-  const registeredUsersCount = stats?.registeredUsers ?? 0;
-  const adminAccountsCount = stats?.adminAccounts ?? 0;
+  // '—' while loading: the old `?? 0` fabricated zeros and CountUp animated
+  // to them before the response landed.
+  const pendingRequestsCount = statsLoading ? null : (stats?.pendingRequests ?? 0);
+  const activeTurfsCount = statsLoading ? null : (stats?.activeTurfs ?? 0);
+  const registeredUsersCount = statsLoading ? null : (stats?.registeredUsers ?? 0);
+  const adminAccountsCount = statsLoading ? null : (stats?.adminAccounts ?? 0);
 
   // Live segments for breakdown card
   const { data: segRes } = useApi(() => api('/admin/analytics/segments'), []);
@@ -228,7 +230,9 @@ export default function DashboardPage() {
       <div className="main-header" style={{ marginBottom: 24 }}>
         <div>
           <h1>Platform Overview</h1>
-          <span className="subtle small">Welcome back, {userName} · Super Admin Executive Console</span>
+          <span className="subtle small">
+            Welcome back, {userName} · {sessionUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'} Console
+          </span>
         </div>
         <div className="row" style={{ gap: 10 }}>
           <button
@@ -284,9 +288,9 @@ export default function DashboardPage() {
               className="value num"
               style={{ color: 'var(--warn)', fontSize: 36, display: 'block', margin: '6px 0 2px' }}
             >
-              <CountUp to={pendingRequestsCount} />
+              {pendingRequestsCount == null ? '—' : <CountUp to={pendingRequestsCount} />}
             </b>
-            <span className="delta down" style={{ fontSize: 12 }}>
+            <span className="delta nodot" style={{ fontSize: 12, color: 'var(--text-3)' }}>
               Awaiting verification
             </span>
           </div>
@@ -304,7 +308,7 @@ export default function DashboardPage() {
               <Icon name="pin" style={{ color: 'var(--brand)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              <CountUp to={activeTurfsCount} delay={120} />
+              {activeTurfsCount == null ? '—' : <CountUp to={activeTurfsCount} delay={120} />}
             </b>
             <span className="delta" style={{ fontSize: 12 }}>
               Venues on platform
@@ -324,7 +328,7 @@ export default function DashboardPage() {
               <Icon name="users" style={{ color: 'var(--info)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              <CountUp to={registeredUsersCount} delay={240} />
+              {registeredUsersCount == null ? '—' : <CountUp to={registeredUsersCount} delay={240} />}
             </b>
             <span className="delta" style={{ fontSize: 12 }}>
               Cumulative user base
@@ -344,10 +348,10 @@ export default function DashboardPage() {
               <Icon name="shield" style={{ color: 'var(--mint)' }} />
             </div>
             <b className="value num" style={{ fontSize: 36, display: 'block', margin: '6px 0 2px' }}>
-              <CountUp to={adminAccountsCount} delay={360} />
+              {adminAccountsCount == null ? '—' : <CountUp to={adminAccountsCount} delay={360} />}
             </b>
             <span className="delta nodot" style={{ color: 'var(--mint)', fontSize: 12 }}>
-              Super Admin privileges active
+              {sessionUser?.role === 'SUPER_ADMIN' ? 'Super admin' : 'Admin'} access
             </span>
           </div>
           <Link className="btn btn-sm btn-tertiary btn-link" to={paths.admin.admins}>
@@ -370,7 +374,7 @@ export default function DashboardPage() {
               </h2>
             </div>
             <p className="subtle small" style={{ margin: '4px 0 0' }}>
-              Real-time tracking of platform transactions, take-rate commission, and payout activity
+              Platform transactions, commission collected, and payout activity
             </p>
           </div>
 
@@ -437,13 +441,20 @@ export default function DashboardPage() {
               >
                 {formatBdtIn(totals.gmv)}
               </b>
-              {/* The arrow used to be hardcoded up, so a decline still read as growth. */}
-              <span
-                className={`tiny delta ${String(totals.growth).trim().startsWith('-') ? 'down' : 'up'}`}
-                style={{ display: 'inline-block', marginTop: 4 }}
-              >
-                {String(totals.growth).trim().startsWith('-') ? '▼' : '▲'} {totals.growth} vs prev period
-              </span>
+              {/* The arrow used to be hardcoded up, so a decline still read as
+                  growth. No data = an honest dash, not "+0.0% ▲". */}
+              {totals.growth !== '—' ? (
+                <span
+                  className={`tiny delta ${String(totals.growth).trim().startsWith('-') ? 'down' : 'up'}`}
+                  style={{ display: 'inline-block', marginTop: 4 }}
+                >
+                  {String(totals.growth).trim().startsWith('-') ? '▼' : '▲'} {totals.growth} vs prev period
+                </span>
+              ) : (
+                <span className="tiny muted" style={{ display: 'inline-block', marginTop: 4 }}>
+                  No comparison data for this period yet
+                </span>
+              )}
             </div>
 
             <div
@@ -482,7 +493,7 @@ export default function DashboardPage() {
                 className="tiny subtle"
                 style={{ display: 'inline-block', marginTop: 4, color: 'var(--text-3)' }}
               >
-                10% Take-Rate Commission
+                Commission collected on settled payouts
               </span>
             </div>
 
@@ -562,7 +573,7 @@ export default function DashboardPage() {
                 className="tiny subtle"
                 style={{ display: 'inline-block', marginTop: 4, color: 'var(--text-3)' }}
               >
-                Automated bKash &amp; Nagad
+                Settled via the payouts console
               </span>
             </div>
           </div>
@@ -693,7 +704,8 @@ export default function DashboardPage() {
                 }}
               >
                 <span style={{ fontSize: 20, fontWeight: 800, display: 'block', lineHeight: 1 }}>
-                  {seg ? ((seg.totalUsers || 0) / 1000).toFixed(1) + 'K' : '—'}
+                  {/* Same guard as UserSegmentsPage: 412 users must not read as "0.4K". */}
+                  {seg ? (seg.totalUsers >= 1000 ? `${(seg.totalUsers / 1000).toFixed(1)}K` : String(seg.totalUsers ?? 0)) : '—'}
                 </span>
                 <span style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700 }}>USERS</span>
               </div>

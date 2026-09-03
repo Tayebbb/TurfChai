@@ -84,7 +84,7 @@
 }
 
 .btn-sm {
-    min-height: 34px;
+    min-height: 44px;
     padding: 0 12px;
     font-size: 13px;
     border-radius: 999px
@@ -109,14 +109,19 @@
 .btn.loading {
     pointer-events: none;
     position: relative;
-    color: transparent !important
+    /* ponytail: label stays visible; spinner sits in the gap left of it.
+       ceiling: swap to a dedicated slot so custom slot content also hides. */
+    padding-left: 40px;
 }
 
 .btn.loading::after {
     content: "";
     position: absolute;
+    left: 16px;
+    top: 50%;
     width: 16px;
     height: 16px;
+    margin-top: -8px;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, .35);
     border-top-color: #fff;

@@ -325,7 +325,6 @@ function CustomTimePicker({ value, onChange, id }) {
 
 
 import {
-  createVenue,
   listMyVenues,
   getOwnerVenue,
   updateVenue,
@@ -827,6 +826,7 @@ export default function VenueSetupPage() {
   const editFileInputRef = useRef(null);
   const [editingPhotoId, setEditingPhotoId] = useState(null);
   const [deactivatingPitchId, setDeactivatingPitchId] = useState(null);
+  const [generatingSlots, setGeneratingSlots] = useState(false);
 
   async function handleSaveHours() {
     const vId = selectedVenueId || venueData?.id;
@@ -851,6 +851,14 @@ export default function VenueSetupPage() {
   }
 
   async function handleGenerateSlots() {
+    // No busy state before: a double-click fired the batch generator twice,
+    // duplicating the whole slot calendar.
+    if (generatingSlots) return;
+    if (!generateDraft.pitchId) {
+      showToast('Select a pitch first');
+      return;
+    }
+    setGeneratingSlots(true);
     try {
       const created = await apiGenerateSlots(generateDraft);
       const count = Array.isArray(created) ? created.length : null;
@@ -858,6 +866,8 @@ export default function VenueSetupPage() {
       generateSlotsModal.close();
     } catch (error) {
       showToast(toUserMessage(error, 'Failed to generate slots'));
+    } finally {
+      setGeneratingSlots(false);
     }
   }
 
@@ -877,26 +887,13 @@ export default function VenueSetupPage() {
         setSelectedVenueId(vId);
         refreshVenueDetails(vId);
         return vId;
-      } else {
-        const created = await createVenue({
-          name: 'My Venue',
-          area: 'Dhanmondi',
-          address: 'Dhanmondi',
-          lat: 23.8103,
-          lng: 90.4125,
-          basePrice: 2000,
-          openTime: '06:00',
-          closeTime: '23:00',
-        });
-        const newV = created?.data || created;
-        if (newV && newV.id) {
-          setVenues([newV]);
-          setSelectedVenueId(newV.id);
-          saveSelectedVenueId(newV.id);
-          refreshVenueDetails(newV.id);
-          return newV.id;
-        }
       }
+      // ponytail: no silent venue auto-creation. Uploading a photo or editing a
+      // section used to materialize a fake "My Venue" at hardcoded coordinates
+      // with zero disclosure. Owners now create their venue explicitly.
+      // Ceiling: an onboarding wizard that collects name/area before creation.
+      setVenues([]);
+      setSelectedVenueId(null);
     } catch (err) {
       console.error('Failed to resolve active venue', err);
     }
@@ -1284,6 +1281,12 @@ export default function VenueSetupPage() {
     { id: 'buffer', label: 'BUFFER', value: '10 min' },
   ];
 
+  // Real per-section completion — the badges below used to be hardcoded
+  // green "Done"/"Configured" even with zero photos/pricing/hours.
+  const photosDone = photos.length > 0;
+  const pricingDone = sportPricing.some((sport) => Number(sport.basePrice) > 0);
+  const hoursDone = Boolean(venueData?.openTime && venueData?.closeTime);
+
   // The bar used to read 83% for every unpublished venue and 100% once
   // published, regardless of what the owner had actually filled in.
   const setupSections = (() => {
@@ -1314,6 +1317,18 @@ export default function VenueSetupPage() {
           <Alert tone="danger" icon="⚠️" title="Venue details could not be loaded">
             {loadError} Editing now would save default values over your real settings.
           </Alert>
+        ) : !selectedVenueId ? (
+          /* No venue yet: sections used to auto-create a placeholder "My
+             Venue" on first interaction — explicit creation instead. */
+          <div className="card center" style={{ padding: '48px 24px' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 22 }}>Create your venue to start</h2>
+            <p className="subtle small" style={{ margin: '0 0 20px' }}>
+              Add your first venue, then set up pitches, pricing, photos and hours here.
+            </p>
+            <Button variant="primary" to={paths.owner.onboarding}>
+              Start venue onboarding
+            </Button>
+          </div>
         ) : (
           <>
             {venueData?.status === 'PUBLISHED' || venueData?.status === 'LIVE' ? (
@@ -1349,15 +1364,17 @@ export default function VenueSetupPage() {
                       background: 'var(--surface-2)',
                       border: '1px solid var(--border)',
                       borderRadius: 'var(--r-sm)',
-                      padding: '3px 9px',
-                      fontSize: 11.5,
+                      padding: '8px 12px',
+                      fontSize: 12,
                       fontWeight: 600,
                       color: 'var(--text-2)',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
+                      minHeight: 36,
                       transition: 'all 0.15s ease',
+                      font: 'inherit',
                     }}
                     title="Pause live bookings and set venue offline"
                   >
@@ -1502,8 +1519,8 @@ export default function VenueSetupPage() {
                 <section className="card">
                   <div className="between">
                     <h3 style={{ margin: 0 }}>📷 Photos</h3>
-                    <Badge tone="green" dot={false}>
-                      Done
+                    <Badge tone={photosDone ? 'green' : 'gray'} dot={false}>
+                      {photosDone ? `${photos.length} uploaded` : 'Not set'}
                     </Badge>
                   </div>
 
@@ -1524,18 +1541,20 @@ export default function VenueSetupPage() {
                               }}
                             />
                           </div>
-                          <div style={{ position: 'absolute', top: -6, right: -6, display: 'flex', gap: 2, background: 'rgba(0,0,0,0.7)', padding: 2, borderRadius: 12, boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                          <div style={{ position: 'absolute', top: -8, right: -8, display: 'flex', gap: 2, background: 'rgba(0,0,0,0.7)', padding: 2, borderRadius: 12, boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
                             <button
                               type="button"
                               title="Replace photo"
+                              aria-label="Replace photo"
                               onClick={(e) => { e.stopPropagation(); setEditingPhotoId(p.id || p.url); editFileInputRef.current?.click(); }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, padding: '2px 4px' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, padding: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32, minHeight: 32 }}
                             >✏️</button>
                             <button
                               type="button"
                               title="Delete photo"
+                              aria-label="Delete photo"
                               onClick={(e) => { e.stopPropagation(); handleDeletePhoto(p.id || p.url); }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5555', fontSize: 11, padding: '2px 4px' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5555', fontSize: 11, padding: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32, minHeight: 32 }}
                             >✖</button>
                           </div>
                         </div>
@@ -1632,8 +1651,8 @@ export default function VenueSetupPage() {
                 <section className="card">
                   <div className="between">
                     <h3 style={{ margin: 0 }}>💰 Pricing &amp; Slot Durations by Sport</h3>
-                    <Badge tone="green" dot={false}>
-                      Configured
+                    <Badge tone={pricingDone ? 'green' : 'gray'} dot={false}>
+                      {pricingDone ? 'Configured' : 'Not set'}
                     </Badge>
                   </div>
 
@@ -1643,7 +1662,8 @@ export default function VenueSetupPage() {
 
                   <div className="grid2" style={{ gap: 10, marginBottom: 12 }}>
                     {sportPricing.map((sport) => (
-                      <div
+                      <button
+                        type="button"
                         className="panel"
                         key={sport.id}
                         onClick={() => {
@@ -1663,8 +1683,12 @@ export default function VenueSetupPage() {
                           border: '1px solid var(--border-soft)',
                           borderRadius: 10,
                           background: 'var(--surface-1)',
+                          textAlign: 'left',
+                          font: 'inherit',
+                          color: 'inherit',
+                          width: '100%',
                         }}
-                        title={`Click to edit ${sport.title} time duration, buffer & base price`}
+                        title={`Edit ${sport.title} time duration, buffer & base price`}
                       >
                         <div style={{ flex: '1 1 120px', minWidth: 0 }}>
                           <b className="small" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
@@ -1690,32 +1714,8 @@ export default function VenueSetupPage() {
                         >
                           {bdt(sport.basePrice)} base
                         </Badge>
-                      </div>
+                      </button>
                     ))}
-                  </div>
-
-                  <div className="table-wrap">
-                    <table className="table">
-                      <thead>
-                        <tr>
-                          <th>Sport</th>
-                          <th>Slot duration</th>
-                          <th>Handover buffer</th>
-                          <th className="num">Base price</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {sportPricing.map((sport) => (
-                          <tr key={sport.id}>
-                            <td>{sport.title}</td>
-                            <td>{sport.duration} min</td>
-                            <td>{sport.buffer} min</td>
-                            <td className="num">{bdt(sport.basePrice)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
 
                   <Alert tone="info" icon="🤖" title="Peak and off-peak are set for you" style={{ marginTop: 12 }}>
@@ -1736,8 +1736,8 @@ export default function VenueSetupPage() {
                           ✏️ Edit hours
                         </Button>
                       ) : null}
-                      <Badge tone="green" dot={false}>
-                        Done
+                      <Badge tone={hoursDone ? 'green' : 'gray'} dot={false}>
+                        {hoursDone ? 'Done' : 'Not set'}
                       </Badge>
                     </div>
                   </div>
@@ -1787,6 +1787,8 @@ export default function VenueSetupPage() {
                 <section className="card">
                   <div className="between">
                     <h3 style={{ margin: 0 }}>🧾 Deposit &amp; cancellation</h3>
+                    {/* Defaults are a real server-side choice, so this section
+                        is genuinely configured once loaded. */}
                     <Badge tone="green" dot={false}>
                       Configured
                     </Badge>
@@ -1872,8 +1874,10 @@ export default function VenueSetupPage() {
                       {amenities.map((amenity) => {
                         const isActive = amenity.on;
                         return (
-                          <div
+                          <button
+                            type="button"
                             key={amenity.id}
+                            aria-pressed={isActive}
                             onClick={() => toggleAmenity(amenity.id)}
                             style={{
                               cursor: 'pointer',
@@ -1881,6 +1885,7 @@ export default function VenueSetupPage() {
                               alignItems: 'center',
                               gap: 6,
                               padding: '5px 10px',
+                              minHeight: 34,
                               borderRadius: 9999,
                               background: isActive ? 'var(--brand-soft)' : 'var(--surface-2)',
                               border: isActive ? '1px solid var(--brand)' : '1px solid var(--border)',
@@ -1889,32 +1894,44 @@ export default function VenueSetupPage() {
                               fontWeight: isActive ? 700 : 500,
                               userSelect: 'none',
                               transition: 'all 0.15s ease',
+                              font: 'inherit',
                             }}
                           >
                             <span>{amenity.label}</span>
                             {isActive ? <span style={{ fontSize: 11, fontWeight: 800 }}>✓</span> : null}
                             {amenity.custom ? (
-                              <button
-                                type="button"
+                              <span
+                                role="button"
+                                tabIndex={0}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleRemoveAmenity(amenity.id);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleRemoveAmenity(amenity.id);
+                                  }
                                 }}
                                 style={{
                                   background: 'none',
                                   border: 'none',
                                   color: 'var(--text-3)',
                                   cursor: 'pointer',
-                                  padding: '0 2px',
+                                  padding: '4px 2px',
                                   fontSize: 10,
                                   lineHeight: 1,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
                                 }}
                                 title="Remove"
+                                aria-label={`Remove ${amenity.label}`}
                               >
                                 ✕
-                              </button>
+                              </span>
                             ) : null}
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
@@ -1929,15 +1946,19 @@ export default function VenueSetupPage() {
                       {rules.map((rule) => {
                         const isActive = rule.on;
                         return (
-                          <div
+                          <button
+                            type="button"
                             key={rule.id}
+                            aria-pressed={isActive}
                             onClick={() => toggleRule(rule.id)}
                             style={{
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              padding: '6px 10px',
+                              gap: 8,
+                              width: '100%',
+                              padding: '8px 10px',
                               borderRadius: 'var(--r-sm)',
                               background: isActive ? 'var(--brand-soft)' : 'var(--surface-1)',
                               border: isActive ? '1px solid var(--brand-soft)' : '1px solid var(--border-soft)',
@@ -1945,38 +1966,50 @@ export default function VenueSetupPage() {
                               fontSize: 12.5,
                               userSelect: 'none',
                               transition: 'all 0.15s ease',
+                              font: 'inherit',
+                              textAlign: 'left',
                             }}
                           >
-                            <span style={{ textDecoration: isActive ? 'none' : 'line-through' }}>
-                              {rule.label}
-                            </span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {/* Strike implied deleted; Off label carries state. */}
+                            <span>{rule.label}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? 'var(--brand-600)' : 'var(--text-3)' }}>
                                 {isActive ? '✓ Active' : 'Off'}
                               </span>
                               {rule.custom ? (
-                                <button
-                                  type="button"
+                                <span
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleRemoveRule(rule.id);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleRemoveRule(rule.id);
+                                    }
                                   }}
                                   style={{
                                     background: 'none',
                                     border: 'none',
                                     color: 'var(--text-3)',
                                     cursor: 'pointer',
-                                    padding: '0 2px',
+                                    padding: '4px 2px',
                                     fontSize: 11,
                                     lineHeight: 1,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
                                   }}
                                   title="Delete"
+                                  aria-label={`Delete rule ${rule.label}`}
                                 >
                                   ✕
-                                </button>
+                                </span>
                               ) : null}
-                            </div>
-                          </div>
+                            </span>
+                          </button>
                         );
                       })}
                     </div>
@@ -2091,7 +2124,8 @@ export default function VenueSetupPage() {
         <h3>{venueData?.name || 'Venue'} is LIVE</h3>
 
         <p className="muted small">
-          Your slots are now bookable by 40,000+ players in Dhaka. First booking usually lands within 48 hours.
+          Your venue is now visible in Explore and your slots are bookable. Keep an eye on the
+          bookings page — new reservations appear there.
         </p>
 
         <Badge tone="green" style={{ margin: '8px 0 14px' }}>
@@ -2312,7 +2346,15 @@ export default function VenueSetupPage() {
         </Field>
 
         <div className="stack-sm" style={{ marginTop: 16 }}>
-          <Button variant="primary" block onClick={handleGenerateSlots}>Generate Slots</Button>
+          <Button
+            variant="primary"
+            block
+            onClick={handleGenerateSlots}
+            loading={generatingSlots}
+            disabled={generatingSlots}
+          >
+            {generatingSlots ? 'Generating…' : 'Generate Slots'}
+          </Button>
         </div>
       </Overlay>
 

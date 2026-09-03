@@ -86,9 +86,6 @@ const STEPS = [
   { id: 'review', label: 'Review & Submit' },
 ];
 
-const VENUE_SPORTS = 'Football · Cricket · Futsal · Badminton';
-const VENUE_PITCHES = '3 pitches (custom slot times per sport)';
-
 export default function OwnerOnboardingPage() {
   const { showToast } = useToast();
   const submitted = useDisclosure();
@@ -182,8 +179,10 @@ export default function OwnerOnboardingPage() {
       label: 'Coordinates',
       value: located ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'Not set yet',
     },
-    { id: 'sports', label: 'Sports', value: VENUE_SPORTS },
-    { id: 'pitches', label: 'Pitches & Slots', value: VENUE_PITCHES },
+    // Sports/pitch setup happens in Venue Setup after approval — the old
+    // review step asserted hardcoded "Football · Cricket · Futsal · Badminton"
+    // and "3 pitches" that submit() never sent (it sends pitchCount: 1).
+    { id: 'next', label: 'After approval', value: 'Add pitches, sports & pricing in Venue Setup' },
   ];
 
   const handleFileUpload = (event, docType) => {
@@ -560,7 +559,10 @@ export default function OwnerOnboardingPage() {
                 <Field label="NID number" htmlFor="on3">
                   <Input id="on3" className="num" value={nid} onChange={(e) => setNid(e.target.value)} />
                 </Field>
-                <Button block onClick={nextToVenue} style={{ marginTop: 20 }}>Next Step &rarr;</Button>
+                {/* Forward motion is the step's primary action; it used to be
+                    the default (secondary) variant while only submit was
+                    primary, making every wizard screen's key button weak. */}
+                <Button block variant="primary" onClick={nextToVenue} style={{ marginTop: 20 }}>Next Step &rarr;</Button>
               </Card>
             )}
 
@@ -576,7 +578,7 @@ export default function OwnerOnboardingPage() {
                 <LocationPicker value={location} onChange={setLocation} label="Exact turf location" />
                 <div className="row" style={{ marginTop: 24, gap: 12 }}>
                   <Button variant="secondary" onClick={() => setStep('owner')}>&larr; Back</Button>
-                  <Button block onClick={nextToDocs}>Next Step &rarr;</Button>
+                  <Button block variant="primary" onClick={nextToDocs}>Next Step &rarr;</Button>
                 </div>
               </Card>
             )}
@@ -589,23 +591,36 @@ export default function OwnerOnboardingPage() {
                 </p>
 
                 <div className="field" style={{ marginTop: 12 }}>
-                  <label>Trade License</label>
+                  <label htmlFor="doc-trade">Trade License</label>
                   <Panel className="between" style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
                     {documents.tradeLicense ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <span onClick={() => setPreviewFile(documents.tradeLicense)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewFile(documents.tradeLicense)}
+                            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
+                            title="View document"
+                          >
                             <b>{documents.tradeLicense.name}</b>
-                          </span>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Listed ✓</span>
+                          </button>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.tradeLicense.size} - Uploaded ✓</span>
                         </div>
                       </div>
                     ) : (
                       <span className="small muted">No trade license document attached yet</span>
                     )}
-                    <label style={{ cursor: 'pointer', margin: 0 }}>
-                      <input type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'tradeLicense')} />
+                    {/* Visually hidden but focusable: display:none file inputs
+                        removed the control from keyboard/AT reach entirely. */}
+                    <input
+                      id="doc-trade"
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      className="sr-only"
+                      onChange={(e) => handleFileUpload(e, 'tradeLicense')}
+                    />
+                    <label htmlFor="doc-trade" style={{ cursor: 'pointer', margin: 0 }}>
                       <Badge tone={documents.tradeLicense ? 'green' : 'blue'} dot={false}>
                         {documents.tradeLicense ? 'Change File' : 'Upload Document'}
                       </Badge>
@@ -614,23 +629,34 @@ export default function OwnerOnboardingPage() {
                 </div>
 
                 <div className="field" style={{ marginTop: 12 }}>
-                  <label>Ownership / Lease Proof</label>
+                  <label htmlFor="doc-lease">Ownership / Lease Proof</label>
                   <Panel className="between" style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
                     {documents.leaseProof ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 18 }}>[doc]</span>
                         <div>
-                          <span onClick={() => setPreviewFile(documents.leaseProof)} style={{ color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer' }} title="Click to view document">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewFile(documents.leaseProof)}
+                            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--brand-500)', textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
+                            title="View document"
+                          >
                             <b>{documents.leaseProof.name}</b>
-                          </span>
-                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Listed ✓</span>
+                          </button>
+                          <span className="tiny muted" style={{ display: 'block' }}>{documents.leaseProof.size} - Uploaded ✓</span>
                         </div>
                       </div>
                     ) : (
                       <span className="small muted">No ownership or lease agreement attached yet</span>
                     )}
-                    <label style={{ cursor: 'pointer', margin: 0 }}>
-                      <input type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'leaseProof')} />
+                    <input
+                      id="doc-lease"
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      className="sr-only"
+                      onChange={(e) => handleFileUpload(e, 'leaseProof')}
+                    />
+                    <label htmlFor="doc-lease" style={{ cursor: 'pointer', margin: 0 }}>
                       <Badge tone={documents.leaseProof ? 'green' : 'blue'} dot={false}>
                         {documents.leaseProof ? 'Change File' : 'Upload Document'}
                       </Badge>
@@ -645,13 +671,19 @@ export default function OwnerOnboardingPage() {
                   </div>
                   <Row style={{ gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     {photos.map((photo) => (
-                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }} onClick={() => setPreviewFile(photo)} title="Click to view full image">
-                        <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <button type="button" onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id); }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, lineHeight: '18px', textAlign: 'center', padding: 0 }} title="Remove photo">x</button>
+                      <div key={photo.id} style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'visible', border: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }} onClick={() => setPreviewFile(photo)} title="View full image">
+                        <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12 }} />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id); }}
+                          aria-label={`Remove ${photo.name}`}
+                          style={{ position: 'absolute', top: -6, right: -6, width: 26, height: 26, borderRadius: '50%', background: 'rgba(0,0,0,0.75)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 11, lineHeight: 1, textAlign: 'center', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Remove photo"
+                        >x</button>
                       </div>
                     ))}
-                    <label style={{ cursor: 'pointer', margin: 0 }}>
-                      <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePhotoUpload} />
+                    <input id="photos-upload" type="file" accept="image/*" multiple className="sr-only" onChange={handlePhotoUpload} />
+                    <label htmlFor="photos-upload" style={{ cursor: 'pointer', margin: 0 }}>
                       <div style={{ width: 72, height: 72, borderRadius: 12, border: '2px dashed var(--brand-600)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(34, 197, 94, 0.06)', color: 'var(--brand-600)', fontWeight: 700, fontSize: 11, gap: 2 }}>
                         <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Upload
                       </div>
@@ -661,7 +693,7 @@ export default function OwnerOnboardingPage() {
 
                 <div className="row" style={{ marginTop: 24, gap: 12 }}>
                   <Button variant="secondary" onClick={() => setStep('venue')}>&larr; Back</Button>
-                  <Button block onClick={nextToReview}>Next Step &rarr;</Button>
+                  <Button block variant="primary" onClick={nextToReview}>Next Step &rarr;</Button>
                 </div>
               </Card>
             )}
@@ -689,7 +721,8 @@ export default function OwnerOnboardingPage() {
                 <label className="checkline" style={{ marginTop: 16, marginBottom: 14 }}>
                   <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
                   <span>
-                    I confirm the information is accurate and I accept the <a href="#owner-terms">Owner Terms</a> and 6% platform commission.
+                    I confirm the information is accurate and I accept the platform&apos;s terms
+                    of service and 6% platform commission on bookings.
                   </span>
                 </label>
 
@@ -705,6 +738,9 @@ export default function OwnerOnboardingPage() {
         )}
       </div>
 
+      {/* Single success surface: the inline step==='submit' view below is
+          unreachable (submit() opens this overlay, never setStep), so the
+          overlay IS the confirmation. The old code opened both. */}
       <Overlay isOpen={submitted.isOpen} onClose={submitted.close} title="Request Submitted" hideHeader className="center">
         <div className="check-anim" style={{ background: 'var(--green)' }} aria-hidden="true">✓</div>
         <h3>Request Submitted</h3>

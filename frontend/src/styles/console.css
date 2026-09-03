@@ -388,6 +388,15 @@
   box-shadow:none;color:var(--text-2);
   transition:transform 180ms var(--ease),background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),color 180ms var(--ease);
 }
+/* Touch floor: 44px invisible hit area around the 34px visual. */
+.admin-topbar .icon-btn::before,
+.owner-topbar .icon-btn::before,
+.player-topbar .icon-btn::before{
+  content:"";
+  position:absolute;
+  inset:-5px;
+  border-radius:999px;
+}
 .admin-topbar .admin-actions .icon-btn:hover,
 .owner-topbar .owner-actions .icon-btn:hover,
 .player-topbar .player-actions .icon-btn:hover,

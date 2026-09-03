@@ -62,10 +62,18 @@ describe('CheckoutPage payment step', () => {
 
     renderApp(<CheckoutPage />, { route: '/player/checkout?slotId=1&venue=kick-off-arena' });
 
-    const pay = await screen.findByRole('button', { name: /^pay .* with/i }, { timeout: 3000 });
-    await userEvent.click(pay);
+    // Honest CTA: no payment is taken online, so the verb is confirm, not pay.
+    // Two Confirm buttons render (in-page CTA + mobile bar) — use the CTA's id.
+    const pay = await screen.findByRole('button', { name: /confirm booking/i }, { timeout: 3000 }).catch(() => null);
+    const cta = document.getElementById('pay-cta');
+    expect(cta).toBeTruthy();
+    // The policy acknowledgement ships unchecked now.
+    const policyTick = screen.getByRole('checkbox', { name: /i understand the cancellation policy/i });
+    expect(policyTick).not.toBeChecked();
+    await userEvent.click(policyTick);
+    await userEvent.click(cta ?? pay);
 
-    const confirm = await screen.findByRole('button', { name: /confirm booking/i });
+    const confirm = await screen.findByRole('button', { name: /confirm & reserve/i });
     await userEvent.click(confirm);
 
     await waitFor(() => {
@@ -106,10 +114,11 @@ describe('CheckoutPage payment step', () => {
     // Verify per person breakdown is displayed (2000 / 5 = 400)
     expect(await screen.findByText(/per person/i)).toBeTruthy();
 
-    const pay = await screen.findByRole('button', { name: /^pay .* with/i });
-    await userEvent.click(pay);
+    const policyTick = screen.getByRole('checkbox', { name: /i understand the cancellation policy/i });
+    await userEvent.click(policyTick);
+    await userEvent.click(document.getElementById('pay-cta'));
 
-    const confirm = await screen.findByRole('button', { name: /confirm booking/i });
+    const confirm = await screen.findByRole('button', { name: /confirm & reserve/i });
     await userEvent.click(confirm);
 
     await waitFor(() => {
@@ -123,14 +132,14 @@ describe('CheckoutPage payment step', () => {
     });
   });
 
-  it('releases hold and cancels booking process when cancel process is clicked', async () => {
+  it('releases hold and cancels booking process when the cancel control is clicked', async () => {
     const fetchMock = mountCheckout([
       ['/api/v1/bookings/release-hold', { body: {} }],
     ]);
 
     renderApp(<CheckoutPage />, { route: '/player/checkout?slotId=1&venue=kick-off-arena' });
 
-    const cancelButtons = await screen.findAllByRole('button', { name: /cancel process/i });
+    const cancelButtons = await screen.findAllByRole('button', { name: /cancel & release this slot/i });
     expect(cancelButtons.length).toBeGreaterThan(0);
 
     await userEvent.click(cancelButtons[0]);

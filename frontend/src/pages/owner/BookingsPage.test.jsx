@@ -136,7 +136,7 @@ describe('Owner BookingsPage — row actions', () => {
     expect(writes(fetchMock).length).toBe(0);
   });
 
-  it('filters Phone and Walk-in sources independently', async () => {
+  it('filters manual sources as one honest group (Phone vs Walk-in was fabricated from booking-code parity)', async () => {
     renderOwnerBookings([
       ...BASE_ROUTES,
       [
@@ -152,19 +152,19 @@ describe('Owner BookingsPage — row actions', () => {
     ]);
 
     await screen.findByText('MB-PHONE1');
-    const phoneFilter = screen.getByRole('button', { name: 'Phone' });
-    await userEvent.click(phoneFilter);
+    const manualFilter = screen.getByRole('button', { name: /manual \/ phone \/ walk-in/i });
+    await userEvent.click(manualFilter);
 
     expect(screen.getByText('MB-PHONE1')).toBeInTheDocument();
-    expect(screen.queryByText('MB-WALK1')).not.toBeInTheDocument();
-    expect(screen.queryByText('TC-ONLINE1')).not.toBeInTheDocument();
-
-    const walkInFilter = screen.getByRole('button', { name: 'Walk-in' });
-    await userEvent.click(walkInFilter);
-
     expect(screen.getByText('MB-WALK1')).toBeInTheDocument();
-    expect(screen.queryByText('MB-PHONE1')).not.toBeInTheDocument();
     expect(screen.queryByText('TC-ONLINE1')).not.toBeInTheDocument();
+
+    const onlineFilter = screen.getByRole('button', { name: 'Online' });
+    await userEvent.click(onlineFilter);
+
+    expect(screen.getByText('TC-ONLINE1')).toBeInTheDocument();
+    expect(screen.queryByText('MB-PHONE1')).not.toBeInTheDocument();
+    expect(screen.queryByText('MB-WALK1')).not.toBeInTheDocument();
   });
 
   it('reports the server\u2019s refusal instead of announcing a cancellation that never happened', async () => {
@@ -179,6 +179,10 @@ describe('Owner BookingsPage — row actions', () => {
 
     await screen.findByText('BK-4101');
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Cancel now confirms first (destructive action, same pattern as refund).
+    expect(await screen.findByText(/confirm cancellation/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /yes, cancel booking/i }));
 
     expect(await screen.findByText(/already started/i)).toBeInTheDocument();
     expect(screen.queryByText(/slot released/i)).not.toBeInTheDocument();

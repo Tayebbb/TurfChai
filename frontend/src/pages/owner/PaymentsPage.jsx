@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/useToast';
 import { useApi } from '@/hooks/useApi';
 import { fetchOwnerPayments } from '@/api/ownerPayments';
 import { downloadCsv } from '@/utils/deviceActions';
+import { toUserMessage } from '@/utils/errorMessage';
 import { paths } from '@/routes/paths';
 
 const TIMEFRAMES = [
@@ -22,11 +23,11 @@ const TIMEFRAMES = [
   { id: 'yearly', label: 'Yearly (5 Years)' },
 ];
 
-const METHOD_FILTERS = ['Today', 'bKash', 'Nagad', 'Cash', 'Card', 'Refunds', 'Unmatched'];
+const METHOD_FILTERS = ['All', 'bKash', 'Nagad', 'Cash', 'Card', 'Refunds', 'Unmatched'];
 
 const DANGER = { color: 'var(--danger)' };
 
-const CURRENCY = (value) => `৳${value.toLocaleString('en-IN')}`;
+const CURRENCY = (value) => `৳${value.toLocaleString('en-BD')}`;
 const AXIS_TICK = (v) =>
   `৳${v >= 100000 ? `${(v / 100000).toFixed(1)}L` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}`;
 const FONT = { family: 'Inter, system-ui, sans-serif', size: 12, weight: 500 };
@@ -206,11 +207,13 @@ function makeGradient(context, color) {
 export default function PaymentsPage() {
   const { showToast } = useToast();
   const { theme } = useTheme();
-  const [methodFilter, setMethodFilter] = useState('Today');
+  // 'All' is honest: the old 'Today' label filtered nothing (it returned
+  // true for every row) while promising a time window.
+  const [methodFilter, setMethodFilter] = useState('All');
 
   const [timeframe, setTimeframe] = useState('daily');
   const fetchPaymentsFn = useCallback(() => fetchOwnerPayments(timeframe), [timeframe]);
-  const { data: apiSummary } = useApi(fetchPaymentsFn, [timeframe]);
+  const { data: apiSummary, loading, error, reload } = useApi(fetchPaymentsFn, [timeframe]);
 
   const [selectedSport, setSelectedSport] = useState('ALL');
   const [sportFilter, setSportFilter] = useState('all');
@@ -339,30 +342,35 @@ export default function PaymentsPage() {
   }, [KPIS]);
 
   const resolvedLedger = useMemo(() => {
-    return LEDGER.map((row) => ({
+    return LEDGER.map((row) => {
+      // Refunds get a visible label, not just red paint (color-only meaning).
+      const isRefund = Boolean(row.isRefund) || (row.status?.text || '').toLowerCase().includes('refund');
+      return {
       id: row.id,
       time: row.time,
       booking: row.booking,
       customer: row.customer,
       method: row.method,
       txn: row.txn,
-      gross: row.gross,
+      gross: isRefund && row.gross != null ? `−${row.gross}` : row.gross,
       fee: row.fee,
-      net: row.net,
+      net: isRefund && row.net != null ? `−${row.net}` : row.net,
       status: row.status || { tone: 'green', text: 'Settled' },
       shift: row.shift,
-      grossStyle: row.isRefund ? DANGER : undefined,
-      netStyle: row.isRefund ? DANGER : undefined,
-    }));
+      isRefund,
+      grossStyle: isRefund ? DANGER : undefined,
+      netStyle: isRefund ? DANGER : undefined,
+    };
+    });
   }, [LEDGER]);
 
   const filteredLedger = useMemo(() => {
     return resolvedLedger.filter((row) => {
-      if (methodFilter === 'Today') {
+      if (methodFilter === 'All') {
         return true;
       }
       if (methodFilter === 'Refunds') {
-        return row.grossStyle != null || (row.status?.text || '').toLowerCase().includes('refund');
+        return row.isRefund || (row.status?.text || '').toLowerCase().includes('refund');
       }
       if (methodFilter === 'Unmatched') {
         return (row.status?.text || '').toLowerCase().includes('unmatched') || (row.status?.tone === 'amber');
@@ -473,11 +481,33 @@ export default function PaymentsPage() {
           height={280}
           label="Net income chart"
         />
+        {loading ? (
+          <p className="small muted" role="status" style={{ margin: '8px 4px 0' }}>
+            Updating figures…
+          </p>
+        ) : null}
+        {error ? (
+          <div className="alert warn" role="status" style={{ marginTop: 10 }}>
+            <span className="ico" aria-hidden="true">⚠️</span>
+            <div>
+              <b>Could not load payments</b>
+              {toUserMessage(error, 'Figures may be stale.')}{' '}
+              <Button size="sm" variant="secondary" style={{ marginLeft: 8 }} onClick={reload}>
+                Try again
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* KPI Cards */}
       <div className="grid4" style={{ marginBottom: 16 }}>
-        {resolvedKpis.map((kpi) => (
+        {loading && resolvedKpis.length === 0 ? (
+          <div className="kpi" style={{ gridColumn: 'span 4' }}>
+            <span className="label">Loading figures…</span>
+            <b className="value">—</b>
+          </div>
+        ) : resolvedKpis.map((kpi) => (
           <div className="kpi" key={kpi.label}>
             <span className="label">{kpi.label}</span>
             <b className="value num" style={kpi.valueColor ? { color: kpi.valueColor } : undefined}>
@@ -553,11 +583,15 @@ export default function PaymentsPage() {
           <div className="stack-sm" style={{ marginTop: 10 }}>
             <div className="between small">
               <span className="muted">Online (bKash · Nagad · card)</span>
-              <b className="num">{reconciliation.onlineMatched || '৳0 · auto-matched ✓'}</b>
+              {/* Real zero and "unknown" are different facts; the old
+                 `|| fallback` collapsed them into a reassuring checkmark. */}
+              <b className="num">
+                {reconciliation.onlineMatched != null ? reconciliation.onlineMatched : '—'}
+              </b>
             </div>
             <div className="between small">
               <span className="muted">Cash collected (staff-logged)</span>
-              <b className="num">{reconciliation.cashCollected || '৳0'}</b>
+              <b className="num">{reconciliation.cashCollected != null ? reconciliation.cashCollected : '—'}</b>
             </div>
             <div className="between small">
               <span className="muted">Deposits outstanding</span>
@@ -615,15 +649,10 @@ export default function PaymentsPage() {
             >
               Download summary report
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled
-              title="Digital invoices are not generated by the platform yet."
-            >
-              📄 Download digital invoice
-            </Button>
           </div>
+          <p className="tiny muted" style={{ margin: '10px 0 0' }}>
+            Payouts are released by the TurfChai admin team from the verified balance above.
+          </p>
         </section>
       </div>
 
@@ -679,8 +708,10 @@ export default function PaymentsPage() {
             </div>
           ))}
           {visibleSportCards.length === 0 && (
-            <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '24px 0' }} className="subtle small">
-              No sport performance data available for this owner.
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0' }} className="subtle small">
+              {loading
+                ? 'Loading sport performance…'
+                : 'No sport performance data available for this owner.'}
             </div>
           )}
         </div>

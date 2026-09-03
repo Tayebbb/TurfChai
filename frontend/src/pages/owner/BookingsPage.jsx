@@ -38,21 +38,14 @@ export default function BookingsPage() {
   // One in-flight action per row: a second click must not fire a second write.
   const [busyId, setBusyId] = useState(null);
   const [confirmRefundRow, setConfirmRefundRow] = useState(null);
+  const [confirmCancelRow, setConfirmCancelRow] = useState(null);
 
   const { data: res, loading, reload } = useApi(getOwnerBookings, []);
   const rawBookings = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-  const bookings = rawBookings.map((row) => {
-    const rawText = (row.source?.text || '').trim();
-    if (rawText.toLowerCase() === 'phone / walk-in' || (rawText.toLowerCase().includes('phone') && rawText.toLowerCase().includes('walk'))) {
-      const codeNum = String(row.bookingCode || '').replace(/\D/g, '') || String(row.id || '');
-      const isPhone = (Number(codeNum.slice(-1)) || String(row.bookingCode).charCodeAt(String(row.bookingCode).length - 1)) % 2 === 0;
-      return {
-        ...row,
-        source: isPhone ? { tone: 'purple', text: 'Phone' } : { tone: 'amber', text: 'Walk-in' },
-      };
-    }
-    return row;
-  });
+  // "Phone vs Walk-in" used to be invented from booking-code parity — a
+  // fabricated fact the filters then filtered on. The server does not expose
+  // the distinction, so offline/manual bookings stay labelled as they arrive.
+  const bookings = rawBookings;
 
   const { data: venuesRes } = useApi(listMyVenues, []);
   const venues = Array.isArray(venuesRes) ? venuesRes : (Array.isArray(venuesRes?.data) ? venuesRes.data : []);
@@ -70,8 +63,7 @@ export default function BookingsPage() {
     'This week',
     ...pitchFilters,
     'Online',
-    'Phone',
-    'Walk-in',
+    'Manual / phone / walk-in',
     'Payment pending',
   ];
 
@@ -99,13 +91,12 @@ export default function BookingsPage() {
       return (row.pitch || '').toLowerCase().includes(activeFilter.toLowerCase());
     }
     if (activeFilter === 'Online') {
-      return row.source?.text === 'Online' || (!row.source?.text?.includes('Phone') && !row.source?.text?.includes('Walk-in') && !String(row.bookingCode || '').startsWith('MB-'));
+      return row.source?.text === 'Online' || (!String(row.source?.text || '').toLowerCase().includes('walk') && !String(row.source?.text || '').toLowerCase().includes('phone'));
     }
-    if (activeFilter === 'Phone') {
-      return row.source?.text === 'Phone';
-    }
-    if (activeFilter === 'Walk-in') {
-      return row.source?.text === 'Walk-in';
+    if (activeFilter === 'Manual / phone / walk-in') {
+      return String(row.source?.text || '').toLowerCase().includes('phone')
+        || String(row.source?.text || '').toLowerCase().includes('walk')
+        || String(row.bookingCode || '').startsWith('MB-');
     }
     if (activeFilter === 'Payment pending') {
       return (row.payment?.tone === 'amber' || row.status === 'PENDING' || (row.payment?.text || '').toLowerCase().includes('pending'));
@@ -139,6 +130,12 @@ export default function BookingsPage() {
   const handleActionClick = (row, action) => {
     if (action === 'refund') {
       setConfirmRefundRow(row);
+      return;
+    }
+    // Cancelling frees a player's slot — destructive, so it confirms first,
+    // exactly like refund. It used to fire with zero protection.
+    if (action === 'cancel') {
+      setConfirmCancelRow(row);
       return;
     }
     runAction(row, action);
@@ -420,6 +417,9 @@ export default function BookingsPage() {
                 {visible.map((row) => (
                   <tr
                     key={row.id}
+                    // Dimmed = past booking; the label carries the meaning,
+                    // the fade only supports it (not color-only).
+                    aria-label={row.dim ? 'Past booking' : undefined}
                     style={
                       row.dim
                         ? {
@@ -457,7 +457,9 @@ export default function BookingsPage() {
                               key={action.label}
                               size="sm"
                               variant={action.variant}
-                              disabled={busyId != null}
+                              // Only this row locks; a write in flight elsewhere
+                              // no longer disables every action in the table.
+                              disabled={busyId === row.id}
                               onClick={() => handleActionClick(row, action.action)}
                             >
                               {busyId === row.id ? 'Working…' : action.label}
@@ -543,6 +545,44 @@ export default function BookingsPage() {
               }}
             >
               {busyId === confirmRefundRow.id ? 'Refunding…' : 'Yes, refund booking'}
+            </Button>
+          </div>
+        </Overlay>
+      )}
+
+      {confirmCancelRow && (
+        <Overlay
+          isOpen={true}
+          onClose={() => setConfirmCancelRow(null)}
+          title="Confirm cancellation"
+          maxWidth={440}
+        >
+          <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>
+            Cancel booking <strong>{confirmCancelRow.bookingCode}</strong> for <strong>{confirmCancelRow.customer}</strong> ({confirmCancelRow.amountFormatted})?
+          </p>
+          <p className="subtle small" style={{ margin: '0 0 20px' }}>
+            The slot is released back to available immediately and the player is notified.
+          </p>
+          <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busyId != null}
+              onClick={() => setConfirmCancelRow(null)}
+            >
+              Keep booking
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={busyId != null}
+              onClick={async () => {
+                const target = confirmCancelRow;
+                setConfirmCancelRow(null);
+                await runAction(target, 'cancel');
+              }}
+            >
+              Yes, cancel booking
             </Button>
           </div>
         </Overlay>

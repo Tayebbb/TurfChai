@@ -5,6 +5,7 @@ import { Button } from '@/components/buttons/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Field, Input } from '@/components/forms/Field';
 import { Overlay } from '@/components/modals/Overlay';
+import { TableScroll } from '@/components/tables/TableScroll';
 import { useApi } from '@/hooks/useApi';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -80,6 +81,10 @@ export default function PayoutsPage() {
     reload();
     showToast(`${payout.payoutCode} settled ✓`);
   };
+
+  // Releasing money needs the same confirmation every other destructive
+  // action gets — amount and target named in the dialog.
+  const [confirmSettle, setConfirmSettle] = useState(false);
 
   const submitFlag = async () => {
     const reason = flagReason.trim();
@@ -167,6 +172,9 @@ export default function PayoutsPage() {
         </div>
       </div>
 
+      {/* Bare table broke the page on mobile — every other console table
+          scrolls inside TableScroll. */}
+      <TableScroll label="Payouts" className="card" style={{ padding: 0, marginBottom: 16 }}>
       <table className="table">
         <thead>
           <tr>
@@ -190,7 +198,7 @@ export default function PayoutsPage() {
               <td className="num">{bdt(payout.platformFee)}</td>
               <td className="num">{bdt(payout.netAmount)}</td>
               <td>
-                <Badge tone={STATUS_TONE[payout.status] ?? 'gray'}>{payout.status}</Badge>
+                <Badge tone={STATUS_TONE[payout.status] ?? 'gray'}>{payout.status === 'ALL' ? 'All' : payout.status.charAt(0) + payout.status.slice(1).toLowerCase()}</Badge>
                 {payout.anomalyFlag ? (
                   <Badge tone="red" dot={false} style={{ marginLeft: 4 }}>
                     ⚠ anomaly
@@ -207,9 +215,16 @@ export default function PayoutsPage() {
           {!loading && payouts.length === 0 ? (
             <tr>
               <td colSpan={7} className="center subtle small" style={{ padding: '32px 0' }}>
-                {error
-                  ? toUserMessage(error, 'Could not load payouts.')
-                  : `No ${status === 'ALL' ? '' : status.toLowerCase() + ' '}payouts.`}
+                {error ? (
+                  <>
+                    {toUserMessage(error, 'Could not load payouts.')}{' '}
+                    <Button size="sm" variant="secondary" style={{ marginLeft: 8 }} onClick={reload}>
+                      Try again
+                    </Button>
+                  </>
+                ) : (
+                  `No ${status === 'ALL' ? '' : status.toLowerCase() + ' '}payouts.`
+                )}
               </td>
             </tr>
           ) : null}
@@ -222,6 +237,7 @@ export default function PayoutsPage() {
           ) : null}
         </tbody>
       </table>
+      </TableScroll>
 
       <Overlay
         isOpen={detail.isOpen}
@@ -264,17 +280,16 @@ export default function PayoutsPage() {
             variant="primary"
             block
             disabled={!isSuperAdmin || selected?.status === 'SETTLED' || busy !== null}
-            title={
-              !isSuperAdmin
-                ? 'Only a super admin can release a payout'
-                : selected?.status === 'SETTLED'
-                  ? 'Already settled'
-                  : undefined
-            }
-            onClick={() => runSettle(selected)}
+            onClick={() => setConfirmSettle(true)}
           >
             {busy === selected?.payoutCode ? 'Working…' : '✓ Settle payout'}
           </Button>
+          {!isSuperAdmin ? (
+            // title attributes are hover-only; the reason must be visible.
+            <p className="tiny muted" style={{ margin: '6px 0 0' }}>
+              Only a super admin can release a payout.
+            </p>
+          ) : null}
 
           <Button
             variant="ghostDanger"
@@ -302,6 +317,39 @@ export default function PayoutsPage() {
           </Field>
           <Button variant="primary" block disabled={!flagReason.trim() || busy !== null} onClick={submitFlag}>
             {busy ? 'Flagging…' : 'Flag payout'}
+          </Button>
+        </div>
+      </Overlay>
+
+      {/* Settle confirmation — releasing money must never be one click. */}
+      <Overlay
+        isOpen={confirmSettle}
+        onClose={() => setConfirmSettle(false)}
+        title="Release this payout?"
+        maxWidth={440}
+      >
+        <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>
+          Release <strong>{bdt(selected?.netAmount)}</strong> (owner #{selected?.ownerUserId}, venue #{selected?.venueId}) for payout{' '}
+          <strong>{selected?.payoutCode}</strong>?
+        </p>
+        <p className="subtle small" style={{ margin: '0 0 20px' }}>
+          This marks the payout settled and is logged to the audit trail. It cannot be undone from
+          the console.
+        </p>
+        <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+          <Button size="sm" variant="secondary" onClick={() => setConfirmSettle(false)}>
+            Not yet
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={busy !== null}
+            onClick={async () => {
+              setConfirmSettle(false);
+              await runSettle(selected);
+            }}
+          >
+            Yes, release {bdt(selected?.netAmount)}
           </Button>
         </div>
       </Overlay>
