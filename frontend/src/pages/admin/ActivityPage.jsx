@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast';
 import { paths } from '@/routes/paths';
 import { api } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
+import { toUserMessage } from '@/utils/errorMessage';
 import { downloadCsv } from '@/utils/deviceActions';
 
 const FILTERS = [
@@ -51,7 +52,7 @@ export default function ActivityPage() {
   const [page, setPage] = useState(0);
 
   const filterQuery = filter === 'All Activity' ? '' : filter;
-  const { data: res, loading } = useApi(
+  const { data: res, loading, error, reload } = useApi(
     () => api(`/admin/audit-log?page=${page}&size=10${filterQuery ? `&filter=${encodeURIComponent(filterQuery)}` : ''}`),
     [page, filter],
   );
@@ -148,6 +149,19 @@ export default function ActivityPage() {
             {loading ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>Loading audit entries...</td>
+              </tr>
+            ) : error ? (
+              // A broken audit log must not report silence as absence.
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>
+                  <b style={{ color: 'var(--danger)' }}>Could not load the audit log</b>
+                  <p className="subtle small" style={{ margin: '6px 0 12px' }}>
+                    {toUserMessage(error, 'Please try again.')}
+                  </p>
+                  <button className="btn btn-sm btn-secondary" type="button" onClick={reload}>
+                    Try again
+                  </button>
+                </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
