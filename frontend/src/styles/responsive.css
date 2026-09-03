@@ -38,8 +38,10 @@
   .avatar.lg{width:42px;height:42px;font-size:14px}
 }
 @media (max-width:360px){
-  .navlinks{display:none}
-  .chip{padding:0 11px;font-size:12px}
+  /* ponytail: chips shrink but stay tappable; nav used to vanish entirely —
+     now wraps instead. Ceiling: real drawer nav for consoles. */
+  .navlinks{flex-wrap:wrap;gap:6px}
+  .chip{padding:0 11px;font-size:12px;min-height:44px}
   .datebox{min-width:56px}
 }
 

@@ -109,7 +109,11 @@
   border-bottom:1px solid var(--border);border-right:1px solid var(--border);
   min-height:84px;padding:6px;position:relative;background:var(--surface);
   transition:background var(--dur) var(--ease);
+  /* Real buttons now: reset UA chrome, keep full-cell click. */
+  font:inherit;color:inherit;width:100%;border-left:none;border-top:none;
+  cursor:pointer;text-align:inherit;
 }
+.cal-cell:focus-visible{outline:2px solid var(--brand-600);outline-offset:-2px}
 .cal-cell:hover{background:var(--surface-2)}
 
 /* Slot Cards */
