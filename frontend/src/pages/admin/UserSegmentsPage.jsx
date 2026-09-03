@@ -4,6 +4,7 @@ import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { Icon } from '@/components/common/Icon';
 import { PageTitle } from '@/components/common/PageTitle';
 import { CountUp } from '@/components/ui/CountUp';
+import { Button } from '@/components/buttons/Button';
 import { paths } from '@/routes/paths';
 import { api } from '@/api/client';
 import { listAdminUsers, adminUserRows } from '@/api/adminUsers';
@@ -43,14 +44,14 @@ const BARE_TABLE_WRAP = {
 };
 
 export default function UserSegmentsPage() {
-  const { data: res } = useApi(() => api('/admin/analytics/segments'));
+  const { data: res, loading, error, reload } = useApi(() => api('/admin/analytics/segments'));
   const segments = res?.data || res;
 
-  const totalUsers = segments?.totalUsers || 0;
-  const playerCount = segments?.playerCount || 0;
-  const hostCount = segments?.hostCount || 0;
-  const inactiveCount = segments?.inactiveCount || 0;
-  const avgLtv = segments?.avgLifetimeValueBdt || 0;
+  const totalUsers = segments?.totalUsers ?? 0;
+  const playerCount = segments?.playerCount ?? 0;
+  const hostCount = segments?.hostCount ?? 0;
+  const inactiveCount = segments?.inactiveCount ?? 0;
+  const avgLtv = segments?.avgLifetimeValueBdt ?? 0;
   const otherCount = Math.max(0, totalUsers - playerCount - hostCount - inactiveCount);
 
   const donutData = useMemo(() => {
@@ -208,7 +209,24 @@ export default function UserSegmentsPage() {
       </div>
 
       <div className="grid4" style={{ gap: 20, marginBottom: 28 }}>
-        {kpiData.map((kpi, index) => (
+        {loading ? (
+          // Zeros + CountUp-to-zero fabricated data before the response
+          // landed; a plain loading card is honest.
+          <div className="liquid-glass kpi-card" style={{ gridColumn: '1 / -1', padding: 24 }}>
+            <span className="label">Loading segments…</span>
+            <b className="value">—</b>
+          </div>
+        ) : error ? (
+          <div className="liquid-glass kpi-card" style={{ gridColumn: '1 / -1', padding: 24 }}>
+            <span className="label">Could not load segments</span>
+            <p className="subtle small" style={{ margin: '4px 0 12px' }}>
+              The figures below may be empty. Try again.
+            </p>
+            <Button size="sm" variant="secondary" onClick={reload}>
+              Try again
+            </Button>
+          </div>
+        ) : kpiData.map((kpi, index) => (
           <div className="liquid-glass kpi-card" key={kpi.id}>
             <div>
               <div className="between">
