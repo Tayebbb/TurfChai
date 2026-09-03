@@ -50,8 +50,8 @@ const HOW_IT_WORKS = [
   {
     id: 'book',
     glyph: '🔒',
-    title: 'Book & pay securely',
-    body: 'Your slot is locked while you pay with bKash, Nagad, or card — split it with your team.',
+    title: 'Reserve in seconds',
+    body: 'Your slot is locked for 5 minutes while you confirm — split the cost with your team and pay the venue by bKash, Nagad, or cash.',
   },
   {
     id: 'play',
@@ -155,6 +155,16 @@ export default function LandingPage() {
         <SectionHead title="Venues on TurfChai" subtitle="Live from the venue catalogue" />
         {venuesApi.loading ? (
           <p className="muted center">Loading venues…</p>
+        ) : venuesApi.error ? (
+          // A failed fetch must not read as "the catalogue is empty".
+          <div className="center">
+            <p className="muted center" style={{ margin: '0 0 10px' }}>
+              Could not load venues right now — please try again.
+            </p>
+            <Button variant="secondary" size="sm" onClick={venuesApi.reload}>
+              Try again
+            </Button>
+          </div>
         ) : venues.length === 0 ? (
           <p className="muted center">
             No venues are listed yet. If you run a turf, you can be the first.
