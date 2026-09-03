@@ -38,6 +38,7 @@ export default function RequestReviewPage() {
   const { showToast } = useToast();
   const rejectModal = useDisclosure(false);
   const changesModal = useDisclosure(false);
+  const approveModal = useDisclosure(false);
   const [rejectReason, setRejectReason] = useState('');
   const [changesNote, setChangesNote] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
@@ -82,7 +83,12 @@ export default function RequestReviewPage() {
       <PageTitle title={`Review Request ${requestId}`} />
 
       {loading && <div style={{padding:40}} className="center">Loading request...</div>}
-      {error && <div style={{padding:40, color:'var(--red)'}} className="center">Failed to load: {error.message}</div>}
+      {error && (
+        <div style={{ padding: 40 }} className="center">
+          <b style={{ color: 'var(--danger)' }}>Failed to load</b>
+          <p className="subtle small" style={{ margin: '6px 0 0' }}>{error.message}</p>
+        </div>
+      )}
 
       {request && (
       <>
@@ -93,7 +99,9 @@ export default function RequestReviewPage() {
             &larr; Back to Requests
           </Link>
           <div className="row" style={{ gap: 12, alignItems: 'center' }}>
-            <h1 style={{ margin: 0, fontSize: 24 }}>Review Submission: {request.venueName} ({request.requestCode})</h1>
+            <h1 style={{ margin: 0, fontSize: 24, wordBreak: 'break-word', maxWidth: 480 }}>
+              Review Submission: {request.venueName} ({request.requestCode})
+            </h1>
           </div>
           <span className="subtle small">Submitted on {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'Unknown'}</span>
         </div>
@@ -105,7 +113,9 @@ export default function RequestReviewPage() {
           <button className="btn btn-danger" type="button" onClick={rejectModal.open}>
             Reject Request
           </button>
-          <button className="btn btn-primary" type="button" onClick={handleApprove}>
+          {/* Approving publishes the venue — the highest-impact action here,
+              so it confirms like reject/changes do. */}
+          <button className="btn btn-primary" type="button" onClick={approveModal.open}>
             ✓ Approve Request
           </button>
         </div>
@@ -137,7 +147,11 @@ export default function RequestReviewPage() {
               </div>
               <div className="between">
                 <span className="subtle small">Status</span>
-                <span className={`badge ${request.status === 'APPROVED' ? 'green' : request.status === 'REJECTED' ? 'red' : 'amber'}`}>{request.status}</span>
+                <span className={`badge ${request.status === 'APPROVED' ? 'green' : request.status === 'REJECTED' ? 'red' : 'amber'}`}>
+                  {request.status === 'CHANGES_REQUESTED'
+                    ? 'Changes requested'
+                    : request.status.charAt(0) + request.status.slice(1).toLowerCase()}
+                </span>
               </div>
             </div>
           </div>
@@ -163,9 +177,14 @@ export default function RequestReviewPage() {
                   <b style={{ fontSize: 14, display: 'block' }}>Owner National ID</b>
                   <span className="subtle tiny">Identity number</span>
                 </div>
-                <span className="badge nodot amber num font-semibold" style={{ fontSize: 13 }}>
-                  {request.docOwnerNid || 'Not provided'}
-                </span>
+                {/* Same DocLink treatment as the other two documents — the
+                    old always-amber badge showed "VERIFIED" in warning color
+                    and would print a URL as badge text. */}
+                <DocLink
+                  label="Owner National ID"
+                  value={request.docOwnerNid}
+                  onPreview={setPreviewDoc}
+                />
               </div>
               <div className="between" style={{ alignItems: 'center' }}>
                 <div>
@@ -237,7 +256,13 @@ export default function RequestReviewPage() {
           />
         </div>
         <div className="stack-sm" style={{ marginTop: 14 }}>
-          <button className="btn btn-danger btn-block" type="button" onClick={handleConfirmReject}>
+          <button
+            className="btn btn-danger btn-block"
+            type="button"
+            disabled={!rejectReason.trim()}
+            title={rejectReason.trim() ? undefined : 'The owner is told why — a reason is required'}
+            onClick={handleConfirmReject}
+          >
             Confirm Rejection
           </button>
           <button className="btn btn-tertiary btn-block" type="button" onClick={rejectModal.close}>
@@ -276,6 +301,31 @@ export default function RequestReviewPage() {
           </button>
           <button className="btn btn-tertiary btn-block" type="button" onClick={changesModal.close}>
             Cancel
+          </button>
+        </div>
+      </Overlay>
+
+      {/* Approve Modal — publishing a venue is public-facing and hard to
+          walk back; it confirms like every other decision here. */}
+      <Overlay
+        isOpen={approveModal.isOpen}
+        onClose={approveModal.close}
+        title="Approve and publish this venue?"
+        hideHeader
+      >
+        <div className="check-anim" aria-hidden="true">✓</div>
+        <h3 className="center" style={{ marginBottom: 8 }}>
+          Publish {request?.venueName}?
+        </h3>
+        <p className="muted small center" style={{ marginBottom: 12 }}>
+          The venue becomes visible to players immediately and can start taking bookings.
+        </p>
+        <div className="stack-sm" style={{ marginTop: 14 }}>
+          <button className="btn btn-primary btn-block" type="button" onClick={handleApprove}>
+            Yes, approve &amp; publish
+          </button>
+          <button className="btn btn-tertiary btn-block" type="button" onClick={approveModal.close}>
+            Not yet
           </button>
         </div>
       </Overlay>
