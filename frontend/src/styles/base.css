@@ -12,6 +12,8 @@ html, body {
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
@@ -24,4 +26,72 @@ a {
 
 button, input, select, textarea {
   font-family: inherit;
+}
+
+/* ---------- Text utility layer ----------
+   Referenced 200+ times across pages but never defined before; every
+   secondary line rendered identical to body text. One block restores
+   the whole intended hierarchy. Sizes stack (small+subtle = small AND
+   muted), so compose freely. */
+.subtle {
+  color: var(--text-2);
+}
+
+.tiny {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.small {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.muted {
+  color: var(--text-3);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.center {
+  text-align: center;
+}
+
+/* ---------- Missing token aliases ----------
+   Pages reference these vars directly; map to the real tokens. */
+:root {
+  --red: var(--danger);
+  --green: var(--brand);
+  --text-1: var(--text);
+  --border-soft: var(--border);
+}
+
+/* ---------- Focus visibility floor ----------
+   Buttons/chips/tabs had no :focus-visible rule; keyboard users got
+   the UA default at best. One ring, everywhere interactive. */
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.chip:focus-visible,
+.seg button:focus-visible,
+.tabs .tab:focus-visible,
+.badge:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
