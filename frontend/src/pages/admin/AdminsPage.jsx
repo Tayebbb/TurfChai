@@ -54,15 +54,23 @@ export default function AdminsPage() {
   const [editingAdmin, setEditingAdmin] = useState(null);
   const [editPermissions, setEditPermissions] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  // Deactivating revokes access — confirm first, like every other
+  // destructive action in the console.
+  const [confirmDeactivate, setConfirmDeactivate] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   const isSuperAdmin = getUser()?.role === 'SUPER_ADMIN';
 
   const loadAdmins = async () => {
     setLoading(true);
     try {
-      setAdmins(await listAdmins());
+      const rows = await listAdmins();
+      setAdmins(rows);
+      setLoadError(null);
     } catch (error) {
-      showToast(error?.message || 'Failed to load admins', { duration: 5000 });
+      // A failed fetch must not read as "there are no admins" — an empty
+      // roster on an access-control page is alarming and false.
+      setLoadError(error?.message || 'Failed to load admins');
     } finally {
       setLoading(false);
     }
@@ -182,10 +190,18 @@ export default function AdminsPage() {
       <div className="grid2" style={{ alignItems: 'start' }}>
         {/* Current Admins Roster */}
         <section className="liquid-glass" style={{ padding: 24, borderRadius: 24 }}>
-          <h3 style={{ marginBottom: 14 }}>Active Administrators ({admins.length})</h3>
+          <h3 style={{ marginBottom: 14 }}>Active Administrators ({loadError ? '—' : admins.length})</h3>
           {loading ? (
             <div className="subtle small" style={{ padding: 12 }}>
               Loading administrators…
+            </div>
+          ) : loadError ? (
+            <div style={{ padding: 12 }}>
+              <b style={{ color: 'var(--danger)' }}>Could not load the admin roster</b>
+              <p className="subtle small" style={{ margin: '6px 0 12px' }}>{loadError}</p>
+              <button className="btn btn-sm btn-secondary" type="button" onClick={loadAdmins}>
+                Try again
+              </button>
             </div>
           ) : (
             <div className="stack-sm">
@@ -224,7 +240,7 @@ export default function AdminsPage() {
                           <button
                             className="btn btn-sm btn-ghost-danger"
                             type="button"
-                            onClick={() => handleDeactivate(admin)}
+                            onClick={() => setConfirmDeactivate(admin)}
                           >
                             Deactivate
                           </button>
@@ -386,6 +402,37 @@ export default function AdminsPage() {
           </button>
           <button className="btn btn-tertiary btn-block" type="button" onClick={editOpen.close}>
             Cancel
+          </button>
+        </div>
+      </Overlay>
+
+      {/* Deactivate confirmation */}
+      <Overlay
+        isOpen={confirmDeactivate != null}
+        onClose={() => setConfirmDeactivate(null)}
+        title="Deactivate this admin?"
+        maxWidth={440}
+      >
+        <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>
+          Deactivate <strong>{confirmDeactivate?.fullName}</strong>?
+        </p>
+        <p className="subtle small" style={{ margin: '0 0 20px' }}>
+          They lose console access immediately. Logged to the audit trail.
+        </p>
+        <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={() => setConfirmDeactivate(null)}>
+            Keep active
+          </button>
+          <button
+            className="btn btn-danger btn-sm"
+            type="button"
+            onClick={async () => {
+              const target = confirmDeactivate;
+              setConfirmDeactivate(null);
+              await handleDeactivate(target);
+            }}
+          >
+            Yes, deactivate
           </button>
         </div>
       </Overlay>
