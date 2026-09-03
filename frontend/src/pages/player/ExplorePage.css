@@ -141,15 +141,17 @@
   }
   [data-theme="dark"] .vc-promo{color:#1A1205}
 
-  /* save button on card */
+  /* save button on card — 44px touch floor; the heart sits beside the
+     card link now (no nested interactive elements). */
   .vc-save{
-    position:absolute;top:10px;right:10px;
-    width:32px;height:32px;border-radius:50%;
+    position:absolute;top:6px;right:6px;z-index:2;
+    width:44px;height:44px;border-radius:50%;
     background:rgba(0,0,0,.3);backdrop-filter:blur(6px);
     display:flex;align-items:center;justify-content:center;
     border:none;cursor:pointer;color:#fff;
     transition:background .15s;
   }
+  .vc-save svg{width:18px;height:18px}
   .vc-save:hover{background:rgba(0,0,0,.5)}
 
   .vc-body{padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -210,7 +212,13 @@
     display:grid;place-items:center;text-align:center;
     padding:24px;font-size:13px;font-weight:600;color:var(--text-3);
   }
-  @media(max-width:1000px){.split{grid-template-columns:1fr}.mapbox{display:none}}
+  /* ponytail: map used to vanish entirely on mobile; now it stacks below
+     the list so discovery stays two-sided on phones.
+     Ceiling: sticky "Map / List" segmented toggle. */
+  @media(max-width:1000px){
+    .split{grid-template-columns:1fr}
+    .mapbox{min-height:340px;margin-top:20px;position:sticky;bottom:12px}
+  }
 
   /* ── No-results nudge ── */
   .alert-nudge{
