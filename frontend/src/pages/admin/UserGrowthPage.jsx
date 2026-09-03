@@ -87,6 +87,9 @@ export default function UserGrowthPage() {
 
     async function fetchGrowth() {
       try {
+        // ponytail: shared api() builder instead of a hardcoded /api/v1 path.
+        // Ceiling: merge with the dashboard's own growth fetch (same endpoint,
+        // two callers, two shapes).
         const json = await apiGet('/api/v1/admin/analytics/growth');
         // A 200 that carries no payload is still a failure. Returning quietly
         // left the badge saying "Loading..." for as long as the page was open.
@@ -225,7 +228,7 @@ export default function UserGrowthPage() {
             <div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Signup Growth Curve</h3>
               <span className="subtle small">
-                Daily registration registrations over past week
+                Daily registrations over the past week
               </span>
             </div>
             <span className={`badge nodot ${isLive ? 'blue' : error ? 'yellow' : 'gray'}`}>
@@ -274,7 +277,7 @@ export default function UserGrowthPage() {
       {/* Real-Time Registration Stream */}
       <div className="liquid-glass" style={{ padding: 24, borderRadius: 20 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800 }}>
-          Real-Time Registration Stream
+              Latest Registrations
         </h3>
         <div className="table-wrap" style={BARE_TABLE_WRAP}>
           <table className="table">
