@@ -162,18 +162,33 @@
 }
 
 .venue-carousel-dot {
-  width: 8px;
-  height: 8px;
+  /* ponytail: 24px transparent hit area keeps the 8px visual dot but makes
+     the control tappable. Ceiling: proper pagination dots with numbers. */
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.45);
+  background: transparent;
+  position: relative;
   border: none;
   padding: 0;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: background 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.venue-carousel-dot::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  transition: inherit;
 }
 
 .venue-carousel-dot.active {
-  width: 22px;
+  width: 38px;
+}
+
+.venue-carousel-dot.active::after {
   background: var(--brand);
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
 }
