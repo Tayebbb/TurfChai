@@ -343,8 +343,10 @@ export default function DashboardPage() {
               <Button variant="secondary" to={paths.owner.onboarding}>
                 Edit Onboarding Request ✏️
               </Button>
-              <Button variant="primary" onClick={() => { reloadRequests(); reloadVenues(); showToast('Checking verification status…'); }}>
-                Check Verification Status 🔄
+              {/* Not primary: it only refetches — a placebo dressed as the most
+                  important action on the screen. Tertiary + honest label. */}
+              <Button variant="tertiary" onClick={() => { reloadRequests(); reloadVenues(); showToast('Checking verification status…'); }}>
+                Refresh status
               </Button>
             </div>
           </GlassCard>
@@ -362,9 +364,9 @@ export default function DashboardPage() {
           </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <Button variant="secondary" to={paths.owner.calendar} disabled={isPendingVerification}>🗓️ Calendar</Button>
-          <Button variant="secondary" onClick={manualBookingModal.open} disabled={isPendingVerification}>+ Manual booking</Button>
-          <Button variant="primary" onClick={scanner.open} disabled={isPendingVerification}>
+          <Button variant="secondary" to={paths.owner.calendar} disabled={isPendingVerification} title={isPendingVerification ? 'Unlocks after verification' : undefined}>🗓️ Calendar</Button>
+          <Button variant="secondary" onClick={manualBookingModal.open} disabled={isPendingVerification} title={isPendingVerification ? 'Unlocks after verification' : undefined}>+ Manual booking</Button>
+          <Button variant="primary" onClick={scanner.open} disabled={isPendingVerification} title={isPendingVerification ? 'Unlocks after verification' : undefined}>
             📷 Scan player QR
           </Button>
         </div>
@@ -403,13 +405,17 @@ export default function DashboardPage() {
                   </span>
                 )}
               </div>
-              <Link
-                className={cn('btn btn-sm btn-secondary btn-link', isPendingVerification && 'disabled')}
-                to={actionLink.to}
-                style={isPendingVerification ? { pointerEvents: 'none', opacity: 0.5 } : undefined}
-              >
-                {actionLink.label}
-              </Link>
+              {isPendingVerification ? (
+                // pointer-events:none left the router <Link> keyboard-focusable
+                // and Enter still navigated. Render a real disabled button.
+                <Button size="sm" variant="secondary" disabled title="Unlocks after verification">
+                  {actionLink.label}
+                </Button>
+              ) : (
+                <Link className="btn btn-sm btn-secondary btn-link" to={actionLink.to}>
+                  {actionLink.label}
+                </Link>
+              )}
             </div>
           );
         })}
