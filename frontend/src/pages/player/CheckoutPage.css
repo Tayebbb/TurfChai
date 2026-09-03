@@ -12,6 +12,64 @@
     }
 }
 
+/* ponytail: phones get the total + CTA pinned above the fold instead of
+   below all three steps. Ceiling: collapsible sticky summary sheet. */
+@media(max-width:900px) {
+    .co-summary {
+        position: static;
+    }
+
+    .co-mobile-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+        background: var(--glass-bg-strong);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        border-top: 1px solid var(--glass-border);
+        box-shadow: 0 -6px 24px rgba(10, 30, 20, .12);
+    }
+
+    .co-mobile-bar .co-mobile-total {
+        display: flex;
+        flex-direction: column;
+        flex: none;
+    }
+
+    .co-mobile-bar .co-mobile-total .lbl {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--text-3);
+    }
+
+    .co-mobile-bar .co-mobile-total .val {
+        font-size: 17px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .co-mobile-bar .btn {
+        flex: 1;
+    }
+
+    /* The in-page CTA duplicates the bar's job on phones — hide it, keep the bar. */
+    .co-mobile-hide {
+        display: none;
+    }
+
+    .wrap:has(.co-mobile-bar) {
+        padding-bottom: 96px;
+    }
+}
+
 /* ── Steps (borderless sections) ── */
 .co-step {
     margin-bottom: 36px
@@ -150,6 +208,12 @@
 .method:has(input:checked) {
     background: var(--brand-soft);
     box-shadow: 0 0 0 1.5px var(--brand), 0 2px 12px rgba(0, 0, 0, .06);
+}
+
+/* Keyboard users had no visible indication while tabbing methods. */
+.method:has(input:focus-visible) {
+    outline: 2px solid var(--brand-600);
+    outline-offset: 2px;
 }
 
 [data-theme="dark"] .method:has(input:checked) {
@@ -640,7 +704,7 @@
 }
 
 .booking-mode-card:hover {
-    border-color: var(--text-4);
+    border-color: var(--border-strong);
     transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
 }
