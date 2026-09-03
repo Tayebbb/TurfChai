@@ -43,6 +43,24 @@
     color: var(--danger)
 }
 
+/* Same delta semantics outside .kpi cards (admin dashboard uses them
+   in kpi-card blocks) — was a silent no-op before. */
+.delta.up {
+    color: var(--brand-600)
+}
+
+[data-theme="dark"] .delta.up {
+    color: var(--brand)
+}
+
+.delta.down {
+    color: var(--danger)
+}
+
+.delta.nodot::before {
+    display: none
+}
+
 /* ---------- Tables ---------- */
 .table-wrap {
     background: var(--surface);

@@ -133,6 +133,12 @@
     color: var(--text-2)
 }
 
+/* FINANCE role + "Unavailable" status use yellow; was unstyled before. */
+.badge.yellow {
+    background: var(--warn-soft);
+    color: var(--warn)
+}
+
 .badge.nodot::before {
     display: none
 }
