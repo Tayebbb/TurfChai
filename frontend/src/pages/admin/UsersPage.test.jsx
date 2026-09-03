@@ -95,18 +95,21 @@ describe('Admin UsersPage — paged roster', () => {
     vi.useRealTimers();
   });
 
-  /** The dialog rendered `<Overlay>` without `isOpen`, so it always returned null. */
-  it('opens the edit dialog when Edit Profile is pressed', async () => {
+  /** The dialog rendered `<Overlay>` without `isOpen`, so it always returned null.
+   *  Name/phone are display-only now — the status endpoint only takes
+   *  status/isSuspended, so editable inputs were silently discarded. */
+  it('opens the standing dialog when Edit Standing is pressed', async () => {
     renderUsers();
 
     await screen.findByText('Person 1');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Edit Profile' })[0]);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Edit Standing' })[0]);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(screen.getByDisplayValue('Person 1')).toBeInTheDocument();
+    // The account's name shows inside the dialog (and in the table row).
+    expect(screen.getAllByText('Person 1').length).toBeGreaterThanOrEqual(2);
   });
 
   it('gives the scrolling table keyboard access', async () => {

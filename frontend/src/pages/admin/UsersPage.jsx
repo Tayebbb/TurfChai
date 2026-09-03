@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '@/components/common/PageTitle';
 import { TableScroll } from '@/components/tables/TableScroll';
 import { Overlay } from '@/components/modals/Overlay';
+import { Button } from '@/components/buttons/Button';
 import { Chip } from '@/components/ui/Chip';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useToast } from '@/hooks/useToast';
@@ -15,9 +16,31 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const FILTERS = ['All Accounts', 'Players', 'Turf Owners', 'Game Hosts', 'Suspended'];
 
-const ROLE_CHIPS = ['Player', 'Turf Owner', 'Game Host'];
+const ROLE_LABELS = {
+  PLAYER: 'Player',
+  SOLO_PLAYER: 'Solo player',
+  HOST: 'Game host',
+  OWNER: 'Turf owner',
+  ADMIN: 'Admin',
+  SUPER_ADMIN: 'Super admin',
+};
 
-const ACCOUNT_STANDINGS = ['Active', 'Restricted (No Matchmaking)', 'Suspended'];
+const ROLE_TONES = {
+  OWNER: 'amber',
+  HOST: 'blue',
+  ADMIN: 'purple',
+  SUPER_ADMIN: 'purple',
+};
+
+/** Humanized dropdown label -> the server's status enum. The raw label with
+ *  spaces/parens ("RESTRICTED (NO MATCHMAKING)") was sent as the status. */
+const STANDING_TO_STATUS = {
+  Active: 'ACTIVE',
+  'Restricted (No Matchmaking)': 'RESTRICTED',
+  Suspended: 'SUSPENDED',
+};
+
+const ACCOUNT_STANDINGS = Object.keys(STANDING_TO_STATUS);
 
 const PAGE_SIZE = 25;
 
@@ -37,11 +60,14 @@ export default function UsersPage() {
   const [filter, setFilter] = useState('All Accounts');
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
   const [editStanding, setEditStanding] = useState('Active');
+  // Destructive actions confirm first — suspend/reinstate used to fire
+  // instantly on click with no undo.
+  const [confirmAction, setConfirmAction] = useState(null); // { kind, user }
 
-  const roleParam = filter === 'Players' ? 'PLAYER' : filter === 'Turf Owners' ? 'HOST' : filter === 'Game Hosts' ? 'HOST' : null;
+  // Turf Owners -> OWNER; Game Hosts -> HOST. Both mapped to HOST before,
+  // so the two chips returned identical lists.
+  const roleParam = filter === 'Players' ? 'PLAYER' : filter === 'Turf Owners' ? 'OWNER' : filter === 'Game Hosts' ? 'HOST' : null;
   const statusParam = filter === 'Suspended' ? 'suspended' : null;
 
   // The roster used to arrive whole — 842 accounts, 421 KB, ~17k DOM nodes —
@@ -70,7 +96,7 @@ export default function UsersPage() {
         initials: initialsOf(u.fullName),
         avatarClass: 'avatar sm',
         phone: u.phone || '—',
-        roles: [{ label: u.role || 'Player', tone: u.role === 'HOST' ? 'blue' : 'green' }],
+        roles: [{ label: ROLE_LABELS[u.role] ?? (u.role || 'Player'), tone: ROLE_TONES[u.role] ?? 'green' }],
         bookings: u.gamesAttended || 0,
         reliability: `${u.reliabilityScore ?? 100}%`,
         joined: u.createdAt
@@ -86,18 +112,21 @@ export default function UsersPage() {
 
   const handleOpenEdit = (user) => {
     setSelectedUser(user);
-    setEditName(user.name);
-    setEditPhone(user.phone);
     setEditStanding(user.status);
     editUser.open();
   };
 
   const saveUser = async () => {
     if (!selectedUser?.dbId) return;
+    const mapped = STANDING_TO_STATUS[editStanding];
+    if (!mapped) {
+      showToast('Unknown account standing.');
+      return;
+    }
     try {
-      const isSusp = editStanding === 'Suspended';
+      const isSusp = mapped === 'SUSPENDED';
       await updateUserStatus(selectedUser.dbId, {
-        status: editStanding.toUpperCase(),
+        status: mapped,
         isSuspended: isSusp,
       });
       reload();
@@ -108,7 +137,7 @@ export default function UsersPage() {
       return;
     }
     editUser.close();
-    showToast('User account updated ✓');
+    showToast('Account standing updated ✓');
   };
 
   const handleReinstate = async (user) => {
@@ -285,7 +314,7 @@ export default function UsersPage() {
                         <button
                           className="btn btn-sm btn-secondary"
                           type="button"
-                          onClick={() => handleReinstate(user)}
+                          onClick={() => setConfirmAction({ kind: 'reinstate', user })}
                         >
                           Reinstate
                         </button>
@@ -297,12 +326,12 @@ export default function UsersPage() {
                           type="button"
                           onClick={() => handleOpenEdit(user)}
                         >
-                          Edit Profile
+                          Edit Standing
                         </button>
                         <button
                           className="btn btn-sm btn-danger"
                           type="button"
-                          onClick={() => handleSuspendQuick(user)}
+                          onClick={() => setConfirmAction({ kind: 'suspend', user })}
                         >
                           Suspend
                         </button>
@@ -346,29 +375,25 @@ export default function UsersPage() {
       {editUser.isOpen && (
         <Overlay
           isOpen
-          title={`Edit User Profile · ${selectedUser?.id}`}
+          title={`Account standing · ${selectedUser?.id}`}
           onClose={editUser.close}
         >
           <div className="col" style={{ gap: 14 }}>
+            {/* Name/phone are display-only: the status endpoint accepts status
+                + isSuspended, so editable inputs here were silently discarded
+                and then reported as "updated ✓". */}
             <div>
               <label className="label">Full Name</label>
-              <input
-                className="input"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-              />
+              <p className="small" style={{ margin: '4px 0 0', fontWeight: 600 }}>{selectedUser?.name}</p>
             </div>
             <div>
               <label className="label">Phone Number</label>
-              <input
-                className="input"
-                value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-              />
+              <p className="small num" style={{ margin: '4px 0 0', fontWeight: 600 }}>{selectedUser?.phone}</p>
             </div>
             <div>
-              <label className="label">Account Standing</label>
+              <label className="label" htmlFor="acct-standing">Account Standing</label>
               <select
+                id="acct-standing"
                 className="input"
                 value={editStanding}
                 onChange={(e) => setEditStanding(e.target.value)}
@@ -385,9 +410,47 @@ export default function UsersPage() {
                 Cancel
               </button>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveUser}>
-                Save Changes
+                Save Standing
               </button>
             </div>
+          </div>
+        </Overlay>
+      )}
+      {confirmAction && (
+        <Overlay
+          isOpen
+          title={confirmAction.kind === 'suspend' ? 'Suspend this account?' : 'Lift this suspension?'}
+          onClose={() => setConfirmAction(null)}
+          maxWidth={440}
+        >
+          <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>
+            {confirmAction.kind === 'suspend' ? (
+              <>Suspend <strong>{confirmAction.user.name}</strong> ({confirmAction.user.id})?</>
+            ) : (
+              <>Reinstate <strong>{confirmAction.user.name}</strong> ({confirmAction.user.id}) to full access?</>
+            )}
+          </p>
+          <p className="subtle small" style={{ margin: '0 0 20px' }}>
+            {confirmAction.kind === 'suspend'
+              ? 'The account cannot sign in until reinstated. Action is logged to the audit trail.'
+              : 'The account can sign in and book again immediately. Action is logged to the audit trail.'}
+          </p>
+          <div className="row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+            <Button size="sm" variant="secondary" onClick={() => setConfirmAction(null)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant={confirmAction.kind === 'suspend' ? 'danger' : 'primary'}
+              onClick={async () => {
+                const { kind, user } = confirmAction;
+                setConfirmAction(null);
+                if (kind === 'suspend') await handleSuspendQuick(user);
+                else await handleReinstate(user);
+              }}
+            >
+              {confirmAction.kind === 'suspend' ? 'Yes, suspend account' : 'Yes, reinstate'}
+            </Button>
           </div>
         </Overlay>
       )}
